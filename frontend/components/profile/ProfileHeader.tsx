@@ -51,13 +51,14 @@ export function ProfileHeader({ userId }: ProfileHeaderProps) {
 
 const styles = StyleSheet.create({
 	container: {
-		padding: 16,
 		backgroundColor: "#FFFFFF",
 	},
 	topBar: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		marginBottom: 20,
+		alignItems: "center",
+		paddingHorizontal: 16,
+		paddingVertical: 12,
 	},
 	backButton: {
 		fontSize: 24,
@@ -67,7 +68,8 @@ const styles = StyleSheet.create({
 	},
 	profileInfo: {
 		alignItems: "center",
-		marginBottom: 20,
+		paddingHorizontal: 16,
+		paddingBottom: 16,
 	},
 	avatar: {
 		width: 100,
@@ -95,6 +97,9 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "center",
 		alignItems: "center",
+		paddingVertical: 16,
+		borderTopWidth: 1,
+		borderTopColor: "#E1E1E1",
 	},
 	statItem: {
 		alignItems: "center",

@@ -1,14 +1,14 @@
 import React from "react";
-import { StyleSheet, SafeAreaView } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { ProfileHeader } from "../components/profile/ProfileHeader";
 import { VoiceNotesList } from "../components/profile/VoiceNotesList";
 
 export default function ProfileScreen() {
 	return (
-		<SafeAreaView style={styles.container}>
+		<View style={styles.container}>
 			<ProfileHeader userId="@username" />
 			<VoiceNotesList userId="@username" />
-		</SafeAreaView>
+		</View>
 	);
 }
 
