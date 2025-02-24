@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
 		width: 40,
 		height: 40,
 		borderRadius: 20,
-		backgroundColor: "#1DA1F2",
+		backgroundColor: "#6B2FBC",
 		justifyContent: "center",
 		alignItems: "center",
 		marginRight: 12,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
 	progressBar: {
 		position: "absolute",
 		height: "100%",
-		backgroundColor: "#1DA1F2",
+		backgroundColor: "#6B2FBC",
 		borderRadius: 2,
 	},
 	progressBackground: {
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
 		marginLeft: 6,
 	},
 	defaultAvatar: {
-		backgroundColor: "#1DA1F2",
+		backgroundColor: "#6B2FBC",
 		justifyContent: "center",
 		alignItems: "center",
 		borderWidth: 2,

@@ -97,11 +97,6 @@ const MOCK_VOICE_NOTES = [
 ];
 
 export function VoiceNotesList({ userId }: VoiceNotesListProps) {
-	const handleNewVoiceNote = () => {
-		// TODO: Implement voice note recording
-		console.log("New voice note");
-	};
-
 	return (
 		<View style={styles.container}>
 			<View style={styles.separatorContainer}>
@@ -114,9 +109,6 @@ export function VoiceNotesList({ userId }: VoiceNotesListProps) {
 					<VoiceNoteCard key={item.id} voiceNote={item} />
 				))}
 			</View>
-			<TouchableOpacity style={styles.fab} onPress={handleNewVoiceNote}>
-				<Feather name="mic" size={24} color="white" />
-			</TouchableOpacity>
 		</View>
 	);
 }
@@ -130,25 +122,6 @@ const styles = StyleSheet.create({
 		padding: 16,
 		backgroundColor: "#FFFFFF",
 	},
-	fab: {
-		position: "absolute",
-		right: 16,
-		bottom: 16,
-		width: 56,
-		height: 56,
-		borderRadius: 28,
-		backgroundColor: "#1DA1F2",
-		justifyContent: "center",
-		alignItems: "center",
-		elevation: 4,
-		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.25,
-		shadowRadius: 4,
-	},
 	separatorContainer: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -159,13 +132,13 @@ const styles = StyleSheet.create({
 	separatorLine: {
 		flex: 1,
 		height: 1,
-		backgroundColor: "rgba(29, 161, 242, 0.15)",
+		backgroundColor: "rgba(107, 47, 188, 0.15)", // Updated to purple theme
 	},
 	separatorDot: {
 		width: 4,
 		height: 4,
 		borderRadius: 2,
-		backgroundColor: "rgba(29, 161, 242, 0.3)",
+		backgroundColor: "rgba(107, 47, 188, 0.3)", // Updated to purple theme
 		marginHorizontal: 8,
 	},
 });

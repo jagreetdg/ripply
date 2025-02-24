@@ -1,8 +1,15 @@
 import React, { useRef, useState, useEffect } from "react";
-import { StyleSheet, View, Animated, Platform } from "react-native";
+import {
+	StyleSheet,
+	View,
+	Animated,
+	Platform,
+	TouchableOpacity,
+} from "react-native";
 import { ProfileHeader } from "../components/profile/ProfileHeader";
 import { VoiceNotesList } from "../components/profile/VoiceNotesList";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 
 const HEADER_HEIGHT = 350; // Full header height
 const HEADER_HEIGHT_COLLAPSED = 60; // Collapsed header height
@@ -35,6 +42,11 @@ export default function ProfileScreen() {
 		[{ nativeEvent: { contentOffset: { y: scrollY } } }],
 		{ useNativeDriver: true }
 	);
+
+	const handleNewVoiceNote = () => {
+		// TODO: Implement voice note recording
+		console.log("New voice note");
+	};
 
 	return (
 		<View style={[styles.container, { paddingTop: insets.top }]}>
@@ -92,6 +104,14 @@ export default function ProfileScreen() {
 				</Animated.View>
 				<VoiceNotesList userId="@username" />
 			</Animated.ScrollView>
+
+			{/* Floating Action Button */}
+			<TouchableOpacity
+				style={[styles.fab, { bottom: insets.bottom + 16 }]}
+				onPress={handleNewVoiceNote}
+			>
+				<Feather name="mic" size={24} color="white" />
+			</TouchableOpacity>
 		</View>
 	);
 }
@@ -112,5 +132,24 @@ const styles = StyleSheet.create({
 		height: HEADER_HEIGHT_COLLAPSED,
 		backgroundColor: "#fff",
 		zIndex: 1,
+	},
+	fab: {
+		position: "absolute",
+		right: 16,
+		width: 56,
+		height: 56,
+		borderRadius: 28,
+		backgroundColor: "#6B2FBC",
+		justifyContent: "center",
+		alignItems: "center",
+		elevation: 8,
+		zIndex: 1000,
+		shadowColor: "#000",
+		shadowOffset: {
+			width: 0,
+			height: 4,
+		},
+		shadowOpacity: 0.3,
+		shadowRadius: 4.65,
 	},
 });

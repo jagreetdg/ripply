@@ -54,6 +54,7 @@ interface Styles {
 	collapsedContainer: ViewStyle;
 	collapsedContent: ViewStyle;
 	collapsedInfo: ViewStyle;
+	collapsedNameRow: ViewStyle;
 	collapsedName: TextStyle;
 	collapsedUsername: TextStyle;
 	collapsedPostCount: TextStyle;
@@ -168,8 +169,10 @@ export function ProfileHeader({
 					</TouchableOpacity>
 
 					<View style={styles.collapsedInfo}>
-						<Text style={styles.collapsedName}>{name}</Text>
-						<Text style={styles.collapsedUsername}>{userId}</Text>
+						<View style={styles.collapsedNameRow}>
+							<Text style={styles.collapsedName}>{name}</Text>
+							<Text style={styles.collapsedUsername}>{userId}</Text>
+						</View>
 						<Text style={styles.collapsedPostCount}>
 							{postCount} voice notes
 						</Text>
@@ -219,7 +222,7 @@ export function ProfileHeader({
 								<MaterialIcons
 									name="verified"
 									size={24}
-									color="#1DA1F2"
+									color="#6B2FBC"
 									style={styles.verifiedBadge}
 								/>
 							)}
@@ -243,7 +246,7 @@ export function ProfileHeader({
 									<Feather
 										name={isVoiceBioPlaying ? "pause" : "play"}
 										size={16}
-										color="#1DA1F2"
+										color="#6B2FBC"
 										style={styles.playIcon}
 									/>
 								</View>
@@ -350,7 +353,7 @@ const styles = StyleSheet.create<Styles>({
 	defaultAvatar: {
 		width: "100%",
 		height: "100%",
-		backgroundColor: "#1DA1F2",
+		backgroundColor: "#6B2FBC",
 		justifyContent: "center",
 		alignItems: "center",
 	},
@@ -403,20 +406,20 @@ const styles = StyleSheet.create<Styles>({
 		textAlign: "center",
 	},
 	voiceBioButton: {
-		backgroundColor: "rgba(29, 161, 242, 0.1)",
+		backgroundColor: "rgba(107, 47, 188, 0.1)",
 		borderRadius: 16,
 		height: 32,
 		justifyContent: "center",
 		alignItems: "flex-start",
 		borderWidth: 1,
-		borderColor: "rgba(29, 161, 242, 0.2)",
+		borderColor: "rgba(107, 47, 188, 0.2)",
 		padding: 0,
 		marginTop: 6,
 		overflow: "hidden",
 	},
 	voiceBioButtonPlaying: {
-		backgroundColor: "rgba(29, 161, 242, 0.15)",
-		borderColor: "rgba(29, 161, 242, 0.3)",
+		backgroundColor: "rgba(107, 47, 188, 0.15)",
+		borderColor: "rgba(107, 47, 188, 0.3)",
 	},
 	voiceBioContent: {
 		flexDirection: "row",
@@ -439,17 +442,17 @@ const styles = StyleSheet.create<Styles>({
 		marginHorizontal: 12,
 		borderRadius: 2,
 		overflow: "hidden",
-		backgroundColor: "rgba(29, 161, 242, 0.1)",
+		backgroundColor: "rgba(107, 47, 188, 0.1)",
 	},
 	progressBackground: {
 		position: "absolute",
 		width: "100%",
 		height: "100%",
-		backgroundColor: "rgba(29, 161, 242, 0.1)",
+		backgroundColor: "rgba(107, 47, 188, 0.1)",
 	},
 	progressBar: {
 		height: "100%",
-		backgroundColor: "#1DA1F2",
+		backgroundColor: "#6B2FBC",
 		borderRadius: 2,
 	},
 	collapseButton: {
@@ -500,6 +503,13 @@ const styles = StyleSheet.create<Styles>({
 	collapsedInfo: {
 		flex: 1,
 		alignItems: "center",
+		justifyContent: "center",
+	},
+	collapsedNameRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		marginBottom: 2,
 	},
 	collapsedName: {
 		fontSize: 16,
