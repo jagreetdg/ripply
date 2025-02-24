@@ -9,9 +9,15 @@ import {
 	Animated,
 	ViewStyle,
 	TextStyle,
+	Modal,
+	Dimensions,
+	Pressable,
+	ImageStyle,
+	Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 
 interface ProfileHeaderProps {
 	userId: string;
@@ -61,6 +67,15 @@ interface Styles {
 	voiceBioButtonPlaying: ViewStyle;
 	voiceBioContainer: ViewStyle;
 	voiceBioDuration: TextStyle;
+	modalOverlay: ViewStyle;
+	modalContent: ViewStyle;
+	fullscreenImage: ImageStyle;
+	actionButton: ViewStyle;
+	actionButtonText: TextStyle;
+	actionButtons: ViewStyle;
+	fullscreenImageContainer: ViewStyle;
+	profileImageContainer: ViewStyle;
+	modalContainer: ViewStyle;
 }
 
 const DefaultProfilePicture = ({ userId }: { userId: string }) => (
@@ -94,6 +109,11 @@ export function ProfileHeader({
 	const [wave1] = useState(new Animated.Value(0));
 	const [wave2] = useState(new Animated.Value(0));
 	const [wave3] = useState(new Animated.Value(0));
+	const [modalVisible, setModalVisible] = useState(false);
+	const [activePhoto, setActivePhoto] = useState<"profile" | "cover" | null>(
+		null
+	);
+	const [imageAspectRatio, setImageAspectRatio] = useState(1);
 
 	const handleVoiceBioCollapse = () => {
 		setIsExpanded(false);
@@ -165,6 +185,23 @@ export function ProfileHeader({
 		// TODO: Implement actual audio seeking
 	};
 
+	const handlePhotoPress = (type: "profile" | "cover") => {
+		setActivePhoto(type);
+		setModalVisible(true);
+	};
+
+	const handleEditPhoto = () => {
+		// TODO: Implement photo editing
+		console.log(`Edit ${activePhoto} photo`);
+		setModalVisible(false);
+	};
+
+	const handleRemovePhoto = () => {
+		// TODO: Implement photo removal
+		console.log(`Remove ${activePhoto} photo`);
+		setModalVisible(false);
+	};
+
 	if (isCollapsed) {
 		return (
 			<View style={styles.collapsedContainer}>
@@ -196,31 +233,40 @@ export function ProfileHeader({
 
 	return (
 		<View style={styles.container}>
-			<ImageBackground
-				source={{
-					uri: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
-				}}
-				style={styles.coverPhoto}
+			<TouchableOpacity
+				activeOpacity={0.9}
+				onPress={() => handlePhotoPress("cover")}
 			>
-				<View style={styles.topBar}>
-					<TouchableOpacity
-						onPress={() => router.back()}
-						style={styles.iconButton}
-					>
-						<Feather name="arrow-left" size={24} color="white" />
-					</TouchableOpacity>
-					<TouchableOpacity style={styles.iconButton}>
-						<Feather name="more-vertical" size={24} color="white" />
-					</TouchableOpacity>
-				</View>
-			</ImageBackground>
+				<ImageBackground
+					source={{
+						uri: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
+					}}
+					style={styles.coverPhoto}
+				>
+					<View style={styles.topBar}>
+						<TouchableOpacity
+							onPress={() => router.back()}
+							style={styles.iconButton}
+						>
+							<Feather name="arrow-left" size={24} color="white" />
+						</TouchableOpacity>
+						<TouchableOpacity style={styles.iconButton}>
+							<Feather name="more-vertical" size={24} color="white" />
+						</TouchableOpacity>
+					</View>
+				</ImageBackground>
+			</TouchableOpacity>
 
 			<View style={styles.profileInfo}>
-				<View style={styles.avatarContainer}>
+				<TouchableOpacity
+					activeOpacity={0.9}
+					onPress={() => handlePhotoPress("profile")}
+					style={styles.avatarContainer}
+				>
 					<View style={styles.avatar}>
 						<DefaultProfilePicture userId={userId} />
 					</View>
-				</View>
+				</TouchableOpacity>
 
 				<View style={styles.nameContainer}>
 					<View style={styles.nameGroup}>
@@ -318,6 +364,78 @@ export function ProfileHeader({
 					<Text style={styles.statLabel}>Following</Text>
 				</View>
 			</View>
+
+			<Modal
+				animationType="none"
+				transparent={true}
+				visible={modalVisible}
+				onRequestClose={() => setModalVisible(false)}
+				statusBarTranslucent={true}
+			>
+				<View style={{ flex: 1 }}>
+					<BlurView
+						intensity={Platform.OS === "ios" ? 25 : 40}
+						tint="dark"
+						style={StyleSheet.absoluteFillObject}
+					/>
+					<Pressable
+						style={[
+							StyleSheet.absoluteFill,
+							{
+								backgroundColor: "rgba(0, 0, 0, 0.3)",
+								justifyContent: "center",
+								alignItems: "center",
+							},
+						]}
+						onPress={() => setModalVisible(false)}
+					>
+						<View style={styles.modalContent}>
+							<Pressable
+								style={styles.fullscreenImageContainer}
+								onPress={(e) => e.stopPropagation()}
+							>
+								{activePhoto === "cover" ? (
+									<Image
+										source={{
+											uri: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
+										}}
+										style={[
+											styles.fullscreenImage,
+											{ aspectRatio: imageAspectRatio },
+										]}
+										resizeMode="contain"
+										onLoad={(e) => {
+											const { width, height } = e.nativeEvent.source;
+											setImageAspectRatio(width / height);
+										}}
+									/>
+								) : (
+									<View style={styles.profileImageContainer}>
+										<DefaultProfilePicture userId={userId} />
+									</View>
+								)}
+							</Pressable>
+							<Pressable
+								style={styles.actionButtons}
+								onPress={(e) => e.stopPropagation()}
+							>
+								<TouchableOpacity
+									style={styles.actionButton}
+									onPress={handleEditPhoto}
+								>
+									<Feather name="edit-2" size={24} color="white" />
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={[styles.actionButton, { backgroundColor: "#FF3B30" }]}
+									onPress={handleRemovePhoto}
+								>
+									<Feather name="trash-2" size={24} color="white" />
+								</TouchableOpacity>
+							</Pressable>
+						</View>
+					</Pressable>
+				</View>
+			</Modal>
 		</View>
 	);
 }
@@ -552,5 +670,70 @@ const styles = StyleSheet.create<Styles>({
 		marginLeft: 2,
 		marginRight: 5,
 		marginBottom: 2,
+	},
+	modalContainer: {
+		flex: 1,
+		backgroundColor: "transparent",
+	},
+	modalOverlay: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	modalContent: {
+		width: "100%",
+		height: "100%",
+		justifyContent: "center",
+		alignItems: "center",
+		paddingHorizontal: 20,
+	},
+	fullscreenImageContainer: {
+		width: "100%",
+		backgroundColor: "#E1E1E1",
+		borderRadius: 12,
+		overflow: "hidden",
+	},
+	fullscreenImage: {
+		width: "100%",
+		height: undefined,
+		aspectRatio: 16 / 9, // This will be overridden by the actual image ratio
+	},
+	profileImageContainer: {
+		width: "100%",
+		aspectRatio: 1,
+		backgroundColor: "#E1E1E1",
+		borderRadius: 12,
+		overflow: "hidden",
+	},
+	actionButtons: {
+		position: "absolute",
+		bottom: 50,
+		left: 0,
+		right: 0,
+		flexDirection: "row",
+		justifyContent: "center",
+		gap: 16,
+		paddingHorizontal: 16,
+	},
+	actionButton: {
+		backgroundColor: "#6B2FBC",
+		width: 50,
+		height: 50,
+		borderRadius: 25,
+		justifyContent: "center",
+		alignItems: "center",
+		shadowColor: "#000",
+		shadowOffset: {
+			width: 0,
+			height: 2,
+		},
+		shadowOpacity: 0.25,
+		shadowRadius: 3.84,
+		elevation: 5,
+	},
+	actionButtonText: {
+		color: "white",
+		fontSize: 16,
+		fontWeight: "600",
 	},
 });
