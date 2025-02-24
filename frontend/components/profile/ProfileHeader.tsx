@@ -59,6 +59,8 @@ interface Styles {
 	collapsedUsername: TextStyle;
 	collapsedPostCount: TextStyle;
 	voiceBioButtonPlaying: ViewStyle;
+	voiceBioContainer: ViewStyle;
+	voiceBioDuration: TextStyle;
 }
 
 const DefaultProfilePicture = ({ userId }: { userId: string }) => (
@@ -68,6 +70,12 @@ const DefaultProfilePicture = ({ userId }: { userId: string }) => (
 		</Text>
 	</View>
 );
+
+const formatDuration = (seconds: number): string => {
+	const minutes = Math.floor(seconds / 60);
+	const remainingSeconds = seconds % 60;
+	return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+};
 
 export function ProfileHeader({
 	userId,
@@ -228,54 +236,61 @@ export function ProfileHeader({
 							)}
 						</View>
 						<Text style={styles.username}>{userId}</Text>
-						<TouchableOpacity
-							style={[
-								styles.voiceBioButton,
-								isVoiceBioPlaying && styles.voiceBioButtonPlaying,
-							]}
-							onPress={handleVoiceBioPlayPause}
-							accessibilityLabel={
-								isVoiceBioPlaying ? "Pause voice bio" : "Play voice bio"
-							}
-							accessibilityRole="button"
-						>
-							<Animated.View
-								style={[styles.voiceBioContent, { width: buttonWidth }]}
+						<View style={styles.voiceBioContainer}>
+							<TouchableOpacity
+								style={[
+									styles.voiceBioButton,
+									isVoiceBioPlaying && styles.voiceBioButtonPlaying,
+								]}
+								onPress={handleVoiceBioPlayPause}
+								accessibilityLabel={
+									isVoiceBioPlaying ? "Pause voice bio" : "Play voice bio"
+								}
+								accessibilityRole="button"
 							>
-								<View style={styles.iconWrapper}>
-									<Feather
-										name={isVoiceBioPlaying ? "pause" : "play"}
-										size={16}
-										color="#6B2FBC"
-										style={styles.playIcon}
-									/>
-								</View>
-								{isExpanded && (
-									<>
-										<View
-											style={styles.progressContainer}
-											onTouchStart={handleSeekStart}
-											onTouchEnd={handleSeekEnd}
-											onTouchMove={handleSeek}
-										>
-											<View style={styles.progressBackground} />
+								<Animated.View
+									style={[styles.voiceBioContent, { width: buttonWidth }]}
+								>
+									<View style={styles.iconWrapper}>
+										<Feather
+											name={isVoiceBioPlaying ? "pause" : "play"}
+											size={16}
+											color="#6B2FBC"
+											style={styles.playIcon}
+										/>
+									</View>
+									{!isExpanded && (
+										<Text style={styles.voiceBioDuration}>
+											{formatDuration(45)}
+										</Text>
+									)}
+									{isExpanded && (
+										<>
 											<View
-												style={[
-													styles.progressBar,
-													{ width: `${progress * 100}%` },
-												]}
-											/>
-										</View>
-										<TouchableOpacity
-											onPress={handleVoiceBioCollapse}
-											style={styles.collapseButton}
-										>
-											<Feather name="x" size={14} color="#666666" />
-										</TouchableOpacity>
-									</>
-								)}
-							</Animated.View>
-						</TouchableOpacity>
+												style={styles.progressContainer}
+												onTouchStart={handleSeekStart}
+												onTouchEnd={handleSeekEnd}
+												onTouchMove={handleSeek}
+											>
+												<View style={styles.progressBackground} />
+												<View
+													style={[
+														styles.progressBar,
+														{ width: `${progress * 100}%` },
+													]}
+												/>
+											</View>
+											<TouchableOpacity
+												onPress={handleVoiceBioCollapse}
+												style={styles.collapseButton}
+											>
+												<Feather name="x" size={14} color="#666666" />
+											</TouchableOpacity>
+										</>
+									)}
+								</Animated.View>
+							</TouchableOpacity>
+						</View>
 					</View>
 				</View>
 
@@ -405,6 +420,12 @@ const styles = StyleSheet.create<Styles>({
 		lineHeight: 18,
 		textAlign: "center",
 	},
+	voiceBioContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		marginTop: 6,
+	},
 	voiceBioButton: {
 		backgroundColor: "rgba(107, 47, 188, 0.1)",
 		borderRadius: 16,
@@ -414,8 +435,8 @@ const styles = StyleSheet.create<Styles>({
 		borderWidth: 1,
 		borderColor: "rgba(107, 47, 188, 0.2)",
 		padding: 0,
-		marginTop: 6,
 		overflow: "hidden",
+		marginTop: 6,
 	},
 	voiceBioButtonPlaying: {
 		backgroundColor: "rgba(107, 47, 188, 0.15)",
@@ -425,6 +446,7 @@ const styles = StyleSheet.create<Styles>({
 		flexDirection: "row",
 		alignItems: "center",
 		height: "100%",
+		minWidth: 80,
 	},
 	iconWrapper: {
 		width: 32,
@@ -434,7 +456,7 @@ const styles = StyleSheet.create<Styles>({
 		position: "relative",
 	},
 	playIcon: {
-		marginLeft: 2,
+		marginLeft: 10,
 	},
 	progressContainer: {
 		flex: 1,
@@ -523,5 +545,12 @@ const styles = StyleSheet.create<Styles>({
 	collapsedPostCount: {
 		fontSize: 12,
 		color: "#666666",
+	},
+	voiceBioDuration: {
+		fontSize: 15,
+		color: "#666666",
+		marginLeft: 2,
+		marginRight: 5,
+		marginBottom: 2,
 	},
 });

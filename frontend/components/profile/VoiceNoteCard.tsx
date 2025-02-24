@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
 	View,
 	Text,
@@ -66,11 +66,80 @@ const DefaultProfilePicture = ({
 export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [progress, setProgress] = useState(0);
+	const [isSeeking, setIsSeeking] = useState(false);
+	const progressInterval = useRef<NodeJS.Timeout | null>(null);
+	const progressContainerRef = useRef<View>(null);
+	const [progressContainerWidth, setProgressContainerWidth] = useState(0);
+
+	useEffect(() => {
+		if (isPlaying && !isSeeking) {
+			progressInterval.current = setInterval(() => {
+				setProgress((currentProgress) => {
+					const newProgress = currentProgress + 0.01;
+					if (newProgress >= 1) {
+						setIsPlaying(false);
+						return 0;
+					}
+					return newProgress;
+				});
+			}, 100);
+		} else if (!isPlaying && progressInterval.current) {
+			clearInterval(progressInterval.current);
+			progressInterval.current = null;
+		}
+
+		return () => {
+			if (progressInterval.current) {
+				clearInterval(progressInterval.current);
+				progressInterval.current = null;
+			}
+		};
+	}, [isPlaying, isSeeking]);
 
 	const handlePlayPause = () => {
 		setIsPlaying(!isPlaying);
 		// TODO: Implement actual audio playback
 	};
+
+	const calculateProgress = (pageX: number) => {
+		progressContainerRef.current?.measure(
+			(x, y, width, height, pageXOffset, pageYOffset) => {
+				const containerStart = pageXOffset;
+				const relativeX = Math.max(0, Math.min(width, pageX - containerStart));
+				const newProgress = Math.max(0, Math.min(1, relativeX / width));
+				setProgress(newProgress);
+			}
+		);
+	};
+
+	const handleSeekStart = (event: any) => {
+		setIsSeeking(true);
+		calculateProgress(event.nativeEvent.pageX);
+	};
+
+	const handleSeekMove = (event: any) => {
+		if (isSeeking) {
+			calculateProgress(event.nativeEvent.pageX);
+		}
+	};
+
+	const handleSeekEnd = () => {
+		setIsSeeking(false);
+	};
+
+	const renderProgressBar = () => (
+		<View
+			ref={progressContainerRef}
+			style={styles.progressContainer}
+			onTouchStart={handleSeekStart}
+			onTouchMove={handleSeekMove}
+			onTouchEnd={handleSeekEnd}
+		>
+			<View style={styles.progressBackground} />
+			<View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
+			<View style={styles.progressHitSlop} />
+		</View>
+	);
 
 	if (!voiceNote.backgroundImage) {
 		return (
@@ -94,10 +163,7 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 							/>
 						</TouchableOpacity>
 
-						<View style={styles.progressContainer}>
-							<View style={[styles.progressBar, { width: `${progress}%` }]} />
-							<View style={styles.progressBackground} />
-						</View>
+						{renderProgressBar()}
 
 						<Text style={styles.duration}>
 							{formatDuration(voiceNote.duration)}
@@ -181,10 +247,7 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 						/>
 					</TouchableOpacity>
 
-					<View style={styles.progressContainer}>
-						<View style={[styles.progressBar, { width: `${progress}%` }]} />
-						<View style={styles.progressBackground} />
-					</View>
+					{renderProgressBar()}
 
 					<Text style={styles.duration}>
 						{formatDuration(voiceNote.duration)}
@@ -286,24 +349,35 @@ const styles = StyleSheet.create({
 	},
 	progressContainer: {
 		flex: 1,
-		height: 4,
-		backgroundColor: "#E1E1E1",
+		height: 24,
+		backgroundColor: "transparent",
 		borderRadius: 2,
 		marginRight: 12,
-		overflow: "hidden",
-	},
-	progressBar: {
-		position: "absolute",
-		height: "100%",
-		backgroundColor: "#6B2FBC",
-		borderRadius: 2,
+		justifyContent: "center",
+		position: "relative",
 	},
 	progressBackground: {
 		position: "absolute",
 		width: "100%",
-		height: "100%",
-		backgroundColor: "#E1E1E1",
+		height: 4,
+		backgroundColor: "rgba(107, 47, 188, 0.2)",
 		borderRadius: 2,
+		top: 10,
+	},
+	progressBar: {
+		position: "absolute",
+		height: 4,
+		backgroundColor: "#6B2FBC",
+		borderRadius: 2,
+		top: 10,
+		left: 0,
+		zIndex: 1,
+	},
+	progressHitSlop: {
+		position: "absolute",
+		width: "100%",
+		height: "100%",
+		backgroundColor: "transparent",
 	},
 	duration: {
 		fontSize: 14,
