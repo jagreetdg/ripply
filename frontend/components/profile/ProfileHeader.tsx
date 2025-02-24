@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
 	View,
 	Text,
@@ -7,6 +7,8 @@ import {
 	TouchableOpacity,
 	ImageBackground,
 	Animated,
+	ViewStyle,
+	TextStyle,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
@@ -15,6 +17,47 @@ interface ProfileHeaderProps {
 	userId: string;
 	isCollapsed?: boolean;
 	postCount?: number;
+	name?: string;
+}
+
+interface Styles {
+	container: ViewStyle;
+	coverPhoto: ViewStyle;
+	topBar: ViewStyle;
+	iconButton: ViewStyle;
+	profileInfo: ViewStyle;
+	avatarContainer: ViewStyle;
+	avatar: ViewStyle;
+	defaultAvatar: ViewStyle;
+	defaultAvatarText: TextStyle;
+	nameContainer: ViewStyle;
+	nameGroup: ViewStyle;
+	nameRow: ViewStyle;
+	name: TextStyle;
+	username: TextStyle;
+	verifiedBadge: TextStyle;
+	biosContainer: ViewStyle;
+	bio: TextStyle;
+	voiceBioButton: ViewStyle;
+	voiceBioContent: ViewStyle;
+	iconWrapper: ViewStyle;
+	playIcon: TextStyle;
+	progressContainer: ViewStyle;
+	progressBackground: ViewStyle;
+	progressBar: ViewStyle;
+	collapseButton: ViewStyle;
+	stats: ViewStyle;
+	statItem: ViewStyle;
+	statNumber: TextStyle;
+	statLabel: TextStyle;
+	statDivider: ViewStyle;
+	collapsedContainer: ViewStyle;
+	collapsedContent: ViewStyle;
+	collapsedInfo: ViewStyle;
+	collapsedName: TextStyle;
+	collapsedUsername: TextStyle;
+	collapsedPostCount: TextStyle;
+	voiceBioButtonPlaying: ViewStyle;
 }
 
 const DefaultProfilePicture = ({ userId }: { userId: string }) => (
@@ -29,68 +72,88 @@ export function ProfileHeader({
 	userId,
 	isCollapsed = false,
 	postCount = 0,
+	name = "John Doe",
 }: ProfileHeaderProps) {
 	const router = useRouter();
 	const isVerified = true; // This would come from props or API in real app
 	const [isVoiceBioPlaying, setIsVoiceBioPlaying] = useState(false);
+	const [isExpanded, setIsExpanded] = useState(false);
+	const [progress, setProgress] = useState(0);
+	const [isSeeking, setIsSeeking] = useState(false);
+	const buttonWidth = useRef(new Animated.Value(32)).current;
+	const progressInterval = useRef<NodeJS.Timeout | null>(null);
 	const [wave1] = useState(new Animated.Value(0));
 	const [wave2] = useState(new Animated.Value(0));
 	const [wave3] = useState(new Animated.Value(0));
 
-	useEffect(() => {
-		if (isVoiceBioPlaying) {
-			Animated.loop(
-				Animated.sequence([
-					Animated.parallel([
-						Animated.sequence([
-							Animated.timing(wave1, {
-								toValue: 1,
-								duration: 500,
-								useNativeDriver: true,
-							}),
-							Animated.timing(wave1, {
-								toValue: 0,
-								duration: 500,
-								useNativeDriver: true,
-							}),
-						]),
-						Animated.sequence([
-							Animated.timing(wave2, {
-								toValue: 1,
-								duration: 400,
-								useNativeDriver: true,
-							}),
-							Animated.timing(wave2, {
-								toValue: 0,
-								duration: 400,
-								useNativeDriver: true,
-							}),
-						]),
-						Animated.sequence([
-							Animated.timing(wave3, {
-								toValue: 1,
-								duration: 600,
-								useNativeDriver: true,
-							}),
-							Animated.timing(wave3, {
-								toValue: 0,
-								duration: 600,
-								useNativeDriver: true,
-							}),
-						]),
-					]),
-				])
-			).start();
-		} else {
-			wave1.setValue(0);
-			wave2.setValue(0);
-			wave3.setValue(0);
+	const handleVoiceBioCollapse = () => {
+		setIsExpanded(false);
+		setIsVoiceBioPlaying(false);
+		setProgress(0);
+		if (progressInterval.current) {
+			clearInterval(progressInterval.current);
+			progressInterval.current = null;
 		}
-	}, [isVoiceBioPlaying]);
+		Animated.spring(buttonWidth, {
+			toValue: 32,
+			useNativeDriver: false,
+			friction: 8,
+		}).start();
+	};
+
+	useEffect(() => {
+		if (isVoiceBioPlaying && !isSeeking) {
+			progressInterval.current = setInterval(() => {
+				setProgress((currentProgress) => {
+					const newProgress = currentProgress + 0.01;
+					if (newProgress >= 1) {
+						handleVoiceBioCollapse();
+						return 0;
+					}
+					return newProgress;
+				});
+			}, 100); // Update every 100ms for smooth animation
+		} else if (!isVoiceBioPlaying && progressInterval.current) {
+			clearInterval(progressInterval.current);
+			progressInterval.current = null;
+		}
+
+		return () => {
+			if (progressInterval.current) {
+				clearInterval(progressInterval.current);
+				progressInterval.current = null;
+			}
+		};
+	}, [isVoiceBioPlaying, isSeeking]);
 
 	const handleVoiceBioPlayPause = () => {
 		setIsVoiceBioPlaying(!isVoiceBioPlaying);
+		if (!isExpanded) {
+			setIsExpanded(true);
+			Animated.spring(buttonWidth, {
+				toValue: 220,
+				useNativeDriver: false,
+				friction: 8,
+			}).start();
+		}
 		// TODO: Implement actual audio playback
+	};
+
+	const handleSeekStart = () => {
+		setIsSeeking(true);
+	};
+
+	const handleSeekEnd = () => {
+		setIsSeeking(false);
+	};
+
+	const handleSeek = (event: any) => {
+		if (!isSeeking) return;
+		const { locationX } = event.nativeEvent;
+		const progressBarWidth = 100; // Width of progress bar
+		const newProgress = Math.max(0, Math.min(1, locationX / progressBarWidth));
+		setProgress(newProgress);
+		// TODO: Implement actual audio seeking
 	};
 
 	if (isCollapsed) {
@@ -105,6 +168,7 @@ export function ProfileHeader({
 					</TouchableOpacity>
 
 					<View style={styles.collapsedInfo}>
+						<Text style={styles.collapsedName}>{name}</Text>
 						<Text style={styles.collapsedUsername}>{userId}</Text>
 						<Text style={styles.collapsedPostCount}>
 							{postCount} voice notes
@@ -148,34 +212,68 @@ export function ProfileHeader({
 				</View>
 
 				<View style={styles.nameContainer}>
-					<Text style={styles.username}>{userId}</Text>
-					{isVerified && (
-						<MaterialIcons
-							name="verified"
-							size={20}
-							color="#1DA1F2"
-							style={styles.verifiedBadge}
-						/>
-					)}
-					<TouchableOpacity
-						style={[
-							styles.voiceBioButton,
-							isVoiceBioPlaying && styles.voiceBioButtonPlaying,
-						]}
-						onPress={handleVoiceBioPlayPause}
-						accessibilityLabel={
-							isVoiceBioPlaying ? "Pause voice bio" : "Play voice bio"
-						}
-						accessibilityRole="button"
-					>
-						<View style={styles.iconWrapper}>
-							<Feather
-								name={isVoiceBioPlaying ? "pause" : "play"}
-								size={16}
-								color="#1DA1F2"
-							/>
+					<View style={styles.nameGroup}>
+						<View style={styles.nameRow}>
+							<Text style={styles.name}>{name}</Text>
+							{isVerified && (
+								<MaterialIcons
+									name="verified"
+									size={24}
+									color="#1DA1F2"
+									style={styles.verifiedBadge}
+								/>
+							)}
 						</View>
-					</TouchableOpacity>
+						<Text style={styles.username}>{userId}</Text>
+						<TouchableOpacity
+							style={[
+								styles.voiceBioButton,
+								isVoiceBioPlaying && styles.voiceBioButtonPlaying,
+							]}
+							onPress={handleVoiceBioPlayPause}
+							accessibilityLabel={
+								isVoiceBioPlaying ? "Pause voice bio" : "Play voice bio"
+							}
+							accessibilityRole="button"
+						>
+							<Animated.View
+								style={[styles.voiceBioContent, { width: buttonWidth }]}
+							>
+								<View style={styles.iconWrapper}>
+									<Feather
+										name={isVoiceBioPlaying ? "pause" : "play"}
+										size={16}
+										color="#1DA1F2"
+										style={styles.playIcon}
+									/>
+								</View>
+								{isExpanded && (
+									<>
+										<View
+											style={styles.progressContainer}
+											onTouchStart={handleSeekStart}
+											onTouchEnd={handleSeekEnd}
+											onTouchMove={handleSeek}
+										>
+											<View style={styles.progressBackground} />
+											<View
+												style={[
+													styles.progressBar,
+													{ width: `${progress * 100}%` },
+												]}
+											/>
+										</View>
+										<TouchableOpacity
+											onPress={handleVoiceBioCollapse}
+											style={styles.collapseButton}
+										>
+											<Feather name="x" size={14} color="#666666" />
+										</TouchableOpacity>
+									</>
+								)}
+							</Animated.View>
+						</TouchableOpacity>
+					</View>
 				</View>
 
 				<View style={styles.biosContainer}>
@@ -206,7 +304,7 @@ export function ProfileHeader({
 	);
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<Styles>({
 	container: {
 		backgroundColor: "#FFFFFF",
 	},
@@ -232,14 +330,14 @@ const styles = StyleSheet.create({
 	profileInfo: {
 		alignItems: "center",
 		paddingHorizontal: 16,
-		paddingBottom: 12,
+		paddingBottom: 8,
 		marginTop: -40,
 	},
 	avatarContainer: {
 		padding: 3,
 		backgroundColor: "#FFFFFF",
 		borderRadius: 54,
-		marginBottom: 8,
+		marginBottom: 4,
 	},
 	avatar: {
 		width: 100,
@@ -262,56 +360,104 @@ const styles = StyleSheet.create({
 		fontWeight: "bold",
 	},
 	nameContainer: {
+		alignItems: "center",
+		marginTop: 4,
+		marginBottom: 4,
+	},
+	nameGroup: {
+		alignItems: "center",
+		gap: 2,
+	},
+	nameRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		marginTop: 8,
-		marginBottom: 6,
-		gap: 8,
-		height: 32,
+		justifyContent: "center",
+		marginBottom: 0,
+	},
+	name: {
+		fontSize: 22,
+		fontWeight: "bold",
+		color: "#000000",
 	},
 	username: {
-		fontSize: 20,
-		fontWeight: "bold",
-		lineHeight: 24,
+		fontSize: 15,
+		color: "#666666",
+		lineHeight: 18,
+		textAlign: "center",
+		marginBottom: 2,
 	},
 	verifiedBadge: {
-		marginLeft: 4,
-		alignSelf: "center",
-		marginTop: 3,
+		marginLeft: 6,
+		marginTop: 1,
 	},
 	biosContainer: {
 		alignItems: "center",
 		width: "100%",
-		marginBottom: 12,
-		paddingHorizontal: 16,
+		marginBottom: 8,
+		paddingHorizontal: 12,
 	},
 	bio: {
 		color: "#666666",
 		fontSize: 14,
-		lineHeight: 20,
+		lineHeight: 18,
 		textAlign: "center",
 	},
 	voiceBioButton: {
 		backgroundColor: "rgba(29, 161, 242, 0.1)",
 		borderRadius: 16,
-		width: 32,
 		height: 32,
 		justifyContent: "center",
-		alignItems: "center",
+		alignItems: "flex-start",
 		borderWidth: 1,
 		borderColor: "rgba(29, 161, 242, 0.2)",
-		marginLeft: 4,
 		padding: 0,
+		marginTop: 6,
+		overflow: "hidden",
 	},
 	voiceBioButtonPlaying: {
 		backgroundColor: "rgba(29, 161, 242, 0.15)",
 		borderColor: "rgba(29, 161, 242, 0.3)",
 	},
+	voiceBioContent: {
+		flexDirection: "row",
+		alignItems: "center",
+		height: "100%",
+	},
 	iconWrapper: {
-		width: 16,
-		height: 16,
+		width: 32,
+		height: 32,
 		justifyContent: "center",
 		alignItems: "center",
+		position: "relative",
+	},
+	playIcon: {
+		marginLeft: 2,
+	},
+	progressContainer: {
+		flex: 1,
+		height: 4,
+		marginHorizontal: 12,
+		borderRadius: 2,
+		overflow: "hidden",
+		backgroundColor: "rgba(29, 161, 242, 0.1)",
+	},
+	progressBackground: {
+		position: "absolute",
+		width: "100%",
+		height: "100%",
+		backgroundColor: "rgba(29, 161, 242, 0.1)",
+	},
+	progressBar: {
+		height: "100%",
+		backgroundColor: "#1DA1F2",
+		borderRadius: 2,
+	},
+	collapseButton: {
+		width: 24,
+		height: 24,
+		justifyContent: "center",
+		alignItems: "center",
+		marginRight: 4,
 	},
 	stats: {
 		flexDirection: "row",
@@ -355,9 +501,14 @@ const styles = StyleSheet.create({
 		flex: 1,
 		alignItems: "center",
 	},
-	collapsedUsername: {
+	collapsedName: {
 		fontSize: 16,
 		fontWeight: "bold",
+		color: "#000000",
+	},
+	collapsedUsername: {
+		fontSize: 14,
+		color: "#666666",
 	},
 	collapsedPostCount: {
 		fontSize: 12,
