@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Pressable, Text } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -55,26 +55,16 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
-          // Override the tab press behavior for the profile tab
-          tabBarButton: (props) => {
-            const handleProfileTabPress = useCallback(() => {
-              // Use direct URL navigation instead of React Navigation
-              window.location.href = "/profile";
-            }, []);
-            
-            return (
-              <TouchableOpacity
-                onPress={handleProfileTabPress}
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {props.children}
-              </TouchableOpacity>
-            );
-          },
+          // Use a custom tab bar button to handle the navigation
+          tabBarButton: (props) => (
+            <Pressable
+              {...props}
+              onPress={() => {
+                // Use direct URL navigation
+                window.location.href = "/profile";
+              }}
+            />
+          ),
         }}
       />
     </Tabs>

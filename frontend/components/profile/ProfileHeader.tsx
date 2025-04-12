@@ -403,10 +403,27 @@ export function ProfileHeader({
 											styles.fullscreenImage,
 											{ aspectRatio: imageAspectRatio },
 										]}
-										resizeMode="contain"
+										resizeMode="cover"
 										onLoad={(e) => {
-											const { width, height } = e.nativeEvent.source;
-											setImageAspectRatio(width / height);
+											try {
+												// Check if source exists and has width/height properties
+												if (
+													e.nativeEvent &&
+													e.nativeEvent.source &&
+													e.nativeEvent.source.width &&
+													e.nativeEvent.source.height
+												) {
+													const { width, height } = e.nativeEvent.source;
+													setImageAspectRatio(width / height);
+												} else {
+													// Default to 16:9 aspect ratio if dimensions are not available
+													setImageAspectRatio(16 / 9);
+												}
+											} catch (error) {
+												console.warn("Error getting image dimensions:", error);
+												// Use a default aspect ratio
+												setImageAspectRatio(16 / 9);
+											}
 										}}
 									/>
 								) : (
@@ -686,24 +703,28 @@ const styles = StyleSheet.create<Styles>({
 		justifyContent: "center",
 		alignItems: "center",
 		paddingHorizontal: 20,
+		backgroundColor: "rgba(0, 0, 0, 0.75)", // Darker background for better contrast
 	},
 	fullscreenImageContainer: {
-		width: "100%",
-		backgroundColor: "#E1E1E1",
+		width: "80%", // Reduced from 100% to make it smaller
+		maxWidth: 500, // Maximum width to prevent it from being too large
+		backgroundColor: "transparent", // Changed from #E1E1E1 to transparent
 		borderRadius: 12,
 		overflow: "hidden",
 	},
 	fullscreenImage: {
 		width: "100%",
 		height: undefined,
-		aspectRatio: 16 / 9, // This will be overridden by the actual image ratio
+		// No default aspectRatio - will be set dynamically
 	},
 	profileImageContainer: {
-		width: "100%",
+		width: "70%", // Reduced from 100% to make it smaller
+		maxWidth: 300, // Maximum width for profile image
 		aspectRatio: 1,
-		backgroundColor: "#E1E1E1",
+		backgroundColor: "transparent", // Changed from #E1E1E1 to transparent
 		borderRadius: 12,
 		overflow: "hidden",
+		alignSelf: "center",
 	},
 	actionButtons: {
 		position: "absolute",
