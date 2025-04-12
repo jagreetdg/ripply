@@ -22,6 +22,9 @@ interface VoiceNote {
 
 interface VoiceNoteCardProps {
 	voiceNote: VoiceNote;
+	userId?: string;
+	userName?: string;
+	timePosted?: string;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -63,7 +66,7 @@ const DefaultProfilePicture = ({
 	</View>
 );
 
-export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
+export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: VoiceNoteCardProps) {
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [progress, setProgress] = useState(0);
 	const [isSeeking, setIsSeeking] = useState(false);
@@ -144,10 +147,25 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 	if (!voiceNote.backgroundImage) {
 		return (
 			<View style={[styles.container, styles.plainContainer]}>
-				<View style={styles.profilePictureContainer}>
-					<DefaultProfilePicture userId="@username" size={32} />
-				</View>
 				<View style={styles.content}>
+					{/* User info and options header */}
+					{(userId || userName) && (
+						<View style={styles.cardHeader}>
+							<View style={styles.userInfoContainer}>
+								<DefaultProfilePicture userId={userId || "@user"} size={32} />
+								<View style={styles.userInfo}>
+									<Text style={styles.userName}>{userName || "User"}</Text>
+									<Text style={styles.userId}>{userId || "@user"}</Text>
+								</View>
+							</View>
+							<View style={styles.headerActions}>
+								{timePosted && <Text style={styles.timePosted}>{timePosted}</Text>}
+								<TouchableOpacity style={styles.optionsButton}>
+									<Feather name="more-horizontal" size={16} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+								</TouchableOpacity>
+							</View>
+						</View>
+					)}
 					<Text style={styles.title}>{voiceNote.title}</Text>
 
 					<View style={styles.playerContainer}>
@@ -160,6 +178,11 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 								name={isPlaying ? "pause" : "play-arrow"}
 								size={24}
 								color="white"
+								style={{
+									textShadowColor: "#000000",
+									textShadowOffset: { width: 0.5, height: 0.5 },
+									textShadowRadius: 1
+								}}
 							/>
 						</TouchableOpacity>
 
@@ -176,7 +199,7 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 							activeOpacity={0.7}
 						>
 							<View style={styles.interactionContent}>
-								<Feather name="heart" size={18} color="#666666" />
+								<Feather name="heart" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 								<Text style={styles.interactionText}>
 									{formatNumber(voiceNote.likes)}
 								</Text>
@@ -187,7 +210,7 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 							activeOpacity={0.7}
 						>
 							<View style={styles.interactionContent}>
-								<Feather name="message-circle" size={18} color="#666666" />
+								<Feather name="message-circle" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 								<Text style={styles.interactionText}>
 									{formatNumber(voiceNote.comments)}
 								</Text>
@@ -198,7 +221,7 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 							activeOpacity={0.7}
 						>
 							<View style={styles.interactionContent}>
-								<Feather name="headphones" size={18} color="#666666" />
+								<Feather name="headphones" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 								<Text style={styles.interactionText}>
 									{formatNumber(voiceNote.plays || 0)}
 								</Text>
@@ -209,7 +232,7 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 							activeOpacity={0.7}
 						>
 							<View style={styles.interactionContent}>
-								<Feather name="share-2" size={18} color="#666666" />
+								<Feather name="share-2" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 								<Text style={styles.interactionText}>
 									{formatNumber(voiceNote.shares)}
 								</Text>
@@ -228,10 +251,25 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 			imageStyle={{ opacity: 1 }}
 		>
 			<View style={styles.overlay} />
-			<View style={styles.profilePictureContainer}>
-				<DefaultProfilePicture userId="@username" size={32} />
-			</View>
 			<View style={styles.content}>
+				{/* User info and options header */}
+				{(userId || userName) && (
+					<View style={styles.cardHeader}>
+						<View style={styles.userInfoContainer}>
+							<DefaultProfilePicture userId={userId || "@user"} size={32} />
+							<View style={styles.userInfo}>
+								<Text style={styles.userName}>{userName || "User"}</Text>
+								<Text style={styles.userId}>{userId || "@user"}</Text>
+							</View>
+						</View>
+						<View style={styles.headerActions}>
+							{timePosted && <Text style={styles.timePosted}>{timePosted}</Text>}
+							<TouchableOpacity style={styles.optionsButton}>
+								<Feather name="more-horizontal" size={16} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+							</TouchableOpacity>
+						</View>
+					</View>
+				)}
 				<Text style={styles.title}>{voiceNote.title}</Text>
 
 				<View style={styles.playerContainer}>
@@ -260,7 +298,7 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 						activeOpacity={0.7}
 					>
 						<View style={styles.interactionContent}>
-							<Feather name="heart" size={18} color="#666666" />
+							<Feather name="heart" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 							<Text style={styles.interactionText}>
 								{formatNumber(voiceNote.likes)}
 							</Text>
@@ -271,7 +309,7 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 						activeOpacity={0.7}
 					>
 						<View style={styles.interactionContent}>
-							<Feather name="message-circle" size={18} color="#666666" />
+							<Feather name="message-circle" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 							<Text style={styles.interactionText}>
 								{formatNumber(voiceNote.comments)}
 							</Text>
@@ -282,7 +320,7 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 						activeOpacity={0.7}
 					>
 						<View style={styles.interactionContent}>
-							<Feather name="headphones" size={18} color="#666666" />
+							<Feather name="headphones" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 							<Text style={styles.interactionText}>
 								{formatNumber(voiceNote.plays || 0)}
 							</Text>
@@ -293,7 +331,7 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 						activeOpacity={0.7}
 					>
 						<View style={styles.interactionContent}>
-							<Feather name="share-2" size={18} color="#666666" />
+							<Feather name="share-2" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 							<Text style={styles.interactionText}>
 								{formatNumber(voiceNote.shares)}
 							</Text>
@@ -307,7 +345,6 @@ export function VoiceNoteCard({ voiceNote }: VoiceNoteCardProps) {
 
 const styles = StyleSheet.create({
 	container: {
-		marginBottom: 16,
 		borderRadius: 12,
 		overflow: "hidden",
 		minHeight: 150,
@@ -327,11 +364,58 @@ const styles = StyleSheet.create({
 		padding: 16,
 		backgroundColor: "rgba(255, 255, 255, 0.7)",
 	},
+	cardHeader: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		marginBottom: 12,
+	},
+	userInfoContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+	},
+	userInfo: {
+		marginLeft: 8,
+		justifyContent: "center",
+	},
+	userName: {
+		fontWeight: "bold",
+		fontSize: 14,
+		color: "#000000",
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+	userId: {
+		fontSize: 12,
+		color: "#666666",
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+	headerActions: {
+		flexDirection: "row",
+		alignItems: "center",
+	},
+	timePosted: {
+		fontSize: 12,
+		color: "#666666",
+		marginRight: 8,
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+	optionsButton: {
+		padding: 4,
+	},
 	title: {
 		fontSize: 16,
 		fontWeight: "bold",
 		marginBottom: 12,
 		color: "#000000",
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
 	},
 	playerContainer: {
 		flexDirection: "row",
@@ -384,6 +468,9 @@ const styles = StyleSheet.create({
 		color: "#666666",
 		minWidth: 45,
 		textAlign: "right",
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
 	},
 	interactions: {
 		flexDirection: "row",
@@ -410,6 +497,9 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		color: "#666666",
 		marginLeft: 6,
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
 	},
 	defaultAvatar: {
 		backgroundColor: "#6B2FBC",
@@ -421,25 +511,9 @@ const styles = StyleSheet.create({
 	defaultAvatarText: {
 		color: "white",
 		fontWeight: "bold",
+		textShadowColor: "#000000",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
 	},
-	profilePictureContainer: {
-		position: "absolute",
-		top: 12,
-		right: 12,
-		zIndex: 2,
-		borderRadius: 16,
-		backgroundColor: "transparent",
-		overflow: Platform.OS === "android" ? "hidden" : "visible",
-		...Platform.select({
-			ios: {
-				shadowColor: "#000",
-				shadowOffset: { width: 0, height: 2 },
-				shadowOpacity: 0.25,
-				shadowRadius: 4,
-			},
-			android: {
-				elevation: 4,
-			},
-		}),
-	},
+
 });

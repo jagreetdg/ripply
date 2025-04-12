@@ -97,6 +97,9 @@ const MOCK_VOICE_NOTES = [
 ];
 
 export function VoiceNotesList({ userId }: VoiceNotesListProps) {
+	// Mock user data for profile
+	const userName = "User";
+	
 	return (
 		<View style={styles.container}>
 			<View style={styles.separatorContainer}>
@@ -106,7 +109,13 @@ export function VoiceNotesList({ userId }: VoiceNotesListProps) {
 			</View>
 			<View style={styles.content}>
 				{MOCK_VOICE_NOTES.map((item) => (
-					<VoiceNoteCard key={item.id} voiceNote={item} />
+					<View key={item.id} style={styles.cardContainer}>
+						<VoiceNoteCard 
+							voiceNote={item} 
+							userId={userId} 
+							userName={userName}
+						/>
+					</View>
 				))}
 			</View>
 		</View>
@@ -121,6 +130,9 @@ const styles = StyleSheet.create({
 	content: {
 		padding: 16,
 		backgroundColor: "#FFFFFF",
+	},
+	cardContainer: {
+		marginBottom: 16,
 	},
 	separatorContainer: {
 		flexDirection: "row",
