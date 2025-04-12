@@ -5,9 +5,9 @@ import {
 	ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { Slot, Stack, SplashScreen } from "expo-router";
+import { useEffect, useState } from "react";
+import { View } from "react-native";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/components/useColorScheme";
@@ -26,44 +26,53 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-	const [loaded, error] = useFonts({
+	// Use state to track font loading instead of directly using the hook result
+	const [appIsReady, setAppIsReady] = useState(false);
+	
+	// Load fonts
+	const [fontsLoaded, fontError] = useFonts({
 		SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
 		...FontAwesome.font,
 	});
 
-	// Expo Router uses Error Boundaries to catch errors in the navigation tree.
+	// Set up the app once fonts are loaded
 	useEffect(() => {
-		if (error) throw error;
-	}, [error]);
-
-	useEffect(() => {
-		if (loaded) {
-			SplashScreen.hideAsync();
+		async function prepare() {
+			try {
+				// Keep the splash screen visible while we fetch resources
+				if (fontsLoaded) {
+					// Hide the splash screen
+					await SplashScreen.hideAsync();
+					// Mark the app as ready
+					setAppIsReady(true);
+				}
+			} catch (e) {
+				console.warn('Error in prepare:', e);
+			}
 		}
-	}, [loaded]);
 
-	if (!loaded) {
+		prepare();
+	}, [fontsLoaded]);
+
+	// If the app isn't ready, show nothing (splash screen will be visible)
+	if (!appIsReady) {
 		return null;
 	}
 
+	// Once ready, render the app
 	return <RootLayoutNav />;
 }
 
 function RootLayoutNav() {
+	// Get the color scheme (light/dark mode)
 	const colorScheme = useColorScheme();
+	// Default to light theme if colorScheme is null or undefined
+	const theme = colorScheme === "dark" ? DarkTheme : DefaultTheme;
 
 	return (
-		<ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-			<Stack
-				screenOptions={{
-					headerShown: false,
-					contentStyle: { backgroundColor: "#FFFFFF" },
-				}}
-			>
-				<Stack.Screen name="index" />
-				<Stack.Screen name="profile" />
-				<Stack.Screen name="modal" options={{ presentation: "modal" }} />
-			</Stack>
+		<ThemeProvider value={theme}>
+			{/* Use Slot instead of Stack for better performance with less nesting */}
+			<Slot />
 		</ThemeProvider>
 	);
 }

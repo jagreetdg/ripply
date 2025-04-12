@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import {
   StyleSheet,
   View,
@@ -10,13 +10,54 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { VoiceNoteCard } from "../../components/profile/VoiceNoteCard";
 
 const HEADER_HEIGHT = 60; // Header height
+
+// Mock data for the feed
+const MOCK_FEED_ITEMS = [
+  {
+    id: "1",
+    userId: "@sarah_music",
+    userName: "Sarah",
+    userAvatar: null,
+    timePosted: "2h",
+    voiceNote: {
+      id: "1",
+      duration: 120,
+      title: "🎵 New song idea - let me know what you think!",
+      likes: 2341,
+      comments: 156,
+      plays: 15723,
+      shares: 432,
+      backgroundImage: "https://images.unsplash.com/photo-1511379938547-c1f69419868d",
+    },
+  },
+  {
+    id: "2",
+    userId: "@mike_thoughts",
+    userName: "Mike",
+    userAvatar: null,
+    timePosted: "4h",
+    voiceNote: {
+      id: "2",
+      duration: 45,
+      title: "Quick life update ✨",
+      likes: 892,
+      comments: 73,
+      plays: 3421,
+      shares: 127,
+      backgroundImage: null,
+    },
+  },
+];
 
 export default function HomeScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -35,6 +76,12 @@ export default function HomeScreen() {
     // TODO: Implement voice note recording
     console.log("New voice note");
   };
+
+  // Use Link component approach instead of programmatic navigation
+  const handleProfilePress = useCallback(() => {
+    // Navigate to profile page without using router API directly
+    window.location.href = "/profile";
+  }, []);
 
   // Header shadow animation
   const headerShadowOpacity = scrollY.interpolate({
@@ -56,7 +103,7 @@ export default function HomeScreen() {
         ]}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.profileButton}>
+          <TouchableOpacity onPress={handleProfilePress} style={styles.profileButton}>
             <View style={styles.profilePicture}>
               <Text style={styles.profileInitial}>U</Text>
             </View>
@@ -91,8 +138,38 @@ export default function HomeScreen() {
           <View style={styles.underline} />
         </View>
         
-        <View style={styles.comingSoon}>
-          <Text style={styles.comingSoonText}>Feed coming soon...</Text>
+        <View style={styles.feedContent}>
+          {MOCK_FEED_ITEMS.map((item) => (
+            <View key={item.id} style={styles.feedItem}>
+              <View style={styles.feedItemHeader}>
+                <TouchableOpacity 
+                  style={styles.userInfoContainer}
+                  onPress={handleProfilePress}
+                >
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {item.userName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.userInfo}>
+                    <Text style={styles.userName}>{item.userName}</Text>
+                    <Text style={styles.userId}>{item.userId}</Text>
+                  </View>
+                </TouchableOpacity>
+                
+                <View style={styles.timeContainer}>
+                  <Text style={styles.timeText}>{item.timePosted}</Text>
+                  <TouchableOpacity style={styles.moreButton}>
+                    <Feather name="more-horizontal" size={16} color="#666666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              <View style={styles.voiceNoteContainer}>
+                <VoiceNoteCard voiceNote={item.voiceNote} />
+              </View>
+            </View>
+          ))}
         </View>
       </Animated.ScrollView>
 
@@ -184,17 +261,67 @@ const styles = StyleSheet.create({
     backgroundColor: "#6B2FBC",
     borderRadius: 1.5,
   },
-  comingSoon: {
-    flex: 1,
-    height: 300,
+  feedContent: {
+    padding: 0,
+  },
+  feedItem: {
+    backgroundColor: "#FFFFFF",
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E1E1E1",
+  },
+  feedItemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  userInfoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#6B2FBC",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    marginTop: 8,
+    marginRight: 12,
   },
-  comingSoonText: {
+  avatarText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
     fontSize: 16,
+  },
+  userInfo: {
+    justifyContent: "center",
+  },
+  userName: {
+    fontWeight: "bold",
+    fontSize: 15,
+    color: "#000000",
+  },
+  userId: {
+    fontSize: 13,
     color: "#666666",
+  },
+  timeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  timeText: {
+    fontSize: 13,
+    color: "#666666",
+    marginRight: 8,
+  },
+  moreButton: {
+    padding: 4,
+  },
+  voiceNoteContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   fab: {
     position: "absolute",

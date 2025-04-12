@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import {
 	StyleSheet,
 	View,
@@ -15,38 +15,57 @@ const HEADER_HEIGHT = 350; // Full header height
 const HEADER_HEIGHT_COLLAPSED = 60; // Collapsed header height
 
 export default function ProfileScreen() {
+	// Use useRef to maintain the animated value between renders
 	const scrollY = useRef(new Animated.Value(0)).current;
+	// Memoize the isScrolled state to prevent unnecessary re-renders
 	const [isScrolled, setIsScrolled] = useState(false);
 	const insets = useSafeAreaInsets();
 
+	// Set up the scroll listener only once when the component mounts
 	useEffect(() => {
 		const scrollListener = scrollY.addListener(({ value }) => {
-			setIsScrolled(value > 0);
+			// Only update state if the scrolled status actually changes
+			const newIsScrolled = value > 0;
+			if (isScrolled !== newIsScrolled) {
+				setIsScrolled(newIsScrolled);
+			}
 		});
-		return () => scrollY.removeListener(scrollListener);
-	}, []);
+		
+		// Clean up the listener when the component unmounts
+		return () => {
+			scrollY.removeListener(scrollListener);
+		};
+	}, [isScrolled]); // Add isScrolled as a dependency
 
-	const headerOpacity = scrollY.interpolate({
-		inputRange: [0, HEADER_HEIGHT - HEADER_HEIGHT_COLLAPSED],
-		outputRange: [1, 0],
-		extrapolate: "clamp",
-	});
+	// Memoize these values to prevent recalculation on every render
+	const headerOpacity = useMemo(() => {
+		return scrollY.interpolate({
+			inputRange: [0, HEADER_HEIGHT - HEADER_HEIGHT_COLLAPSED],
+			outputRange: [1, 0],
+			extrapolate: "clamp",
+		});
+	}, [scrollY]);
 
-	const collapsedHeaderOpacity = scrollY.interpolate({
-		inputRange: [0, HEADER_HEIGHT - HEADER_HEIGHT_COLLAPSED],
-		outputRange: [0, 1],
-		extrapolate: "clamp",
-	});
+	const collapsedHeaderOpacity = useMemo(() => {
+		return scrollY.interpolate({
+			inputRange: [0, HEADER_HEIGHT - HEADER_HEIGHT_COLLAPSED],
+			outputRange: [0, 1],
+			extrapolate: "clamp",
+		});
+	}, [scrollY]);
 
-	const handleScroll = Animated.event(
-		[{ nativeEvent: { contentOffset: { y: scrollY } } }],
-		{ useNativeDriver: true }
+	// Use useCallback to memoize the scroll handler
+	const handleScroll = useCallback(
+		Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+			useNativeDriver: true,
+		}),
+		[scrollY]
 	);
 
-	const handleNewVoiceNote = () => {
+	const handleNewVoiceNote = useCallback(() => {
 		// TODO: Implement voice note recording
 		console.log("New voice note");
-	};
+	}, []);
 
 	return (
 		<View style={[styles.container, { paddingTop: insets.top }]}>
