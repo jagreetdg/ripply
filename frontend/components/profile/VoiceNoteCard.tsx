@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
 	View,
 	Text,
@@ -6,8 +6,10 @@ import {
 	TouchableOpacity,
 	ImageBackground,
 	Platform,
+	Animated,
 } from "react-native";
-import { Feather, MaterialIcons } from "@expo/vector-icons";
+import { Feather, MaterialIcons, FontAwesome } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 interface VoiceNote {
 	id: string;
@@ -67,12 +69,59 @@ const DefaultProfilePicture = ({
 );
 
 export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: VoiceNoteCardProps) {
+	const router = useRouter();
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [progress, setProgress] = useState(0);
 	const [isSeeking, setIsSeeking] = useState(false);
+	const [isLiked, setIsLiked] = useState(false);
+	const [likesCount, setLikesCount] = useState(voiceNote.likes);
 	const progressInterval = useRef<NodeJS.Timeout | null>(null);
 	const progressContainerRef = useRef<View>(null);
 	const [progressContainerWidth, setProgressContainerWidth] = useState(0);
+	
+	// Animation value for like button
+	const likeScale = useRef(new Animated.Value(1)).current;
+	
+	// Handle navigation to user profile
+	const handleProfilePress = useCallback(() => {
+		// Navigate to profile page using tab navigation
+		router.push("/(tabs)/profile");
+		// In a real app, you would pass the user ID as a parameter
+		// router.push({ pathname: "/(tabs)/profile", params: { userId } });
+	}, [router]);
+	
+	// Handle like button press
+	const handleLikePress = useCallback(() => {
+		// Toggle like state
+		setIsLiked(prevState => {
+			const newLikeState = !prevState;
+			
+			// Update likes count
+			setLikesCount(prevCount => newLikeState ? prevCount + 1 : prevCount - 1);
+			
+			// Trigger animation if liking
+			if (newLikeState) {
+				// Run scale animation on the like button
+				Animated.sequence([
+					Animated.spring(likeScale, {
+						toValue: 1.2,
+						friction: 5,
+						tension: 40,
+						useNativeDriver: true,
+					}),
+					Animated.spring(likeScale, {
+						toValue: 1,
+						friction: 5,
+						useNativeDriver: true,
+					})
+				]).start();
+			}
+			
+			return newLikeState;
+		});
+	}, []);
+	
+
 
 	useEffect(() => {
 		if (isPlaying && !isSeeking) {
@@ -151,13 +200,13 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 					{/* User info and options header */}
 					{(userId || userName) && (
 						<View style={styles.cardHeader}>
-							<View style={styles.userInfoContainer}>
+							<TouchableOpacity style={styles.userInfoContainer} onPress={handleProfilePress}>
 								<DefaultProfilePicture userId={userId || "@user"} size={32} />
 								<View style={styles.userInfo}>
 									<Text style={styles.userName}>{userName || "User"}</Text>
 									<Text style={styles.userId}>{userId || "@user"}</Text>
 								</View>
-							</View>
+							</TouchableOpacity>
 							<View style={styles.headerActions}>
 								{timePosted && <Text style={styles.timePosted}>{timePosted}</Text>}
 								<TouchableOpacity style={styles.optionsButton}>
@@ -197,17 +246,25 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 						<TouchableOpacity
 							style={styles.interactionButton}
 							activeOpacity={0.7}
+							onPress={handleLikePress}
 						>
 							<View style={styles.interactionContent}>
-								<Feather name="heart" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
-								<Text style={styles.interactionText}>
-									{formatNumber(voiceNote.likes)}
+								{isLiked ? (
+									<Animated.View style={{ transform: [{ scale: likeScale }] }}>
+										<FontAwesome name="heart" size={18} color="#FF4D67" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									</Animated.View>
+								) : (
+									<Feather name="heart" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+								)}
+								<Text style={[styles.interactionText, isLiked && styles.likedText]}>
+									{formatNumber(likesCount)}
 								</Text>
 							</View>
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={styles.interactionButton}
 							activeOpacity={0.7}
+							onPress={handleLikePress}
 						>
 							<View style={styles.interactionContent}>
 								<Feather name="message-circle" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
@@ -219,6 +276,7 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 						<TouchableOpacity
 							style={styles.interactionButton}
 							activeOpacity={0.7}
+							onPress={handleLikePress}
 						>
 							<View style={styles.interactionContent}>
 								<Feather name="headphones" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
@@ -230,6 +288,7 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 						<TouchableOpacity
 							style={styles.interactionButton}
 							activeOpacity={0.7}
+							onPress={handleLikePress}
 						>
 							<View style={styles.interactionContent}>
 								<Feather name="share-2" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
@@ -255,13 +314,13 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 				{/* User info and options header */}
 				{(userId || userName) && (
 					<View style={styles.cardHeader}>
-						<View style={styles.userInfoContainer}>
+						<TouchableOpacity style={styles.userInfoContainer} onPress={handleProfilePress}>
 							<DefaultProfilePicture userId={userId || "@user"} size={32} />
 							<View style={styles.userInfo}>
 								<Text style={styles.userName}>{userName || "User"}</Text>
 								<Text style={styles.userId}>{userId || "@user"}</Text>
 							</View>
-						</View>
+						</TouchableOpacity>
 						<View style={styles.headerActions}>
 							{timePosted && <Text style={styles.timePosted}>{timePosted}</Text>}
 							<TouchableOpacity style={styles.optionsButton}>
@@ -296,17 +355,25 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 					<TouchableOpacity
 						style={styles.interactionButton}
 						activeOpacity={0.7}
+						onPress={handleLikePress}
 					>
 						<View style={styles.interactionContent}>
-							<Feather name="heart" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
-							<Text style={styles.interactionText}>
-								{formatNumber(voiceNote.likes)}
+							{isLiked ? (
+								<Animated.View style={{ transform: [{ scale: likeScale }] }}>
+									<FontAwesome name="heart" size={18} color="#FF4D67" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+								</Animated.View>
+							) : (
+								<Feather name="heart" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+							)}
+							<Text style={[styles.interactionText, isLiked && styles.likedText]}>
+								{formatNumber(likesCount)}
 							</Text>
 						</View>
 					</TouchableOpacity>
 					<TouchableOpacity
 						style={styles.interactionButton}
 						activeOpacity={0.7}
+						onPress={handleLikePress}
 					>
 						<View style={styles.interactionContent}>
 							<Feather name="message-circle" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
@@ -318,6 +385,7 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 					<TouchableOpacity
 						style={styles.interactionButton}
 						activeOpacity={0.7}
+						onPress={handleLikePress}
 					>
 						<View style={styles.interactionContent}>
 							<Feather name="headphones" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
@@ -329,6 +397,7 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 					<TouchableOpacity
 						style={styles.interactionButton}
 						activeOpacity={0.7}
+						onPress={handleLikePress}
 					>
 						<View style={styles.interactionContent}>
 							<Feather name="share-2" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
@@ -500,6 +569,9 @@ const styles = StyleSheet.create({
 		textShadowColor: "#FFFFFF",
 		textShadowOffset: { width: 0.5, height: 0.5 },
 		textShadowRadius: 1,
+	},
+	likedText: {
+		color: "#FF4D67",
 	},
 	defaultAvatar: {
 		backgroundColor: "#6B2FBC",
