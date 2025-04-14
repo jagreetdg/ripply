@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Pressable, Text } from 'react-native';
 
@@ -16,6 +16,7 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
 
   return (
     <Tabs
@@ -55,16 +56,6 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
-          // Use a custom tab bar button to handle the navigation
-          tabBarButton: (props) => (
-            <Pressable
-              {...props}
-              onPress={() => {
-                // Use direct URL navigation
-                window.location.href = "/profile";
-              }}
-            />
-          ),
         }}
       />
     </Tabs>

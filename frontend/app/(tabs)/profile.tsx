@@ -1,7 +1,7 @@
 import React from "react";
-import { Redirect } from "expo-router";
+import ProfileScreen from "../profile";
 
 export default function ProfileTab() {
-  // Redirect to the main profile page
-  return <Redirect href="/profile" />;
+  // Render the profile screen directly instead of redirecting
+  return <ProfileScreen />;
 }

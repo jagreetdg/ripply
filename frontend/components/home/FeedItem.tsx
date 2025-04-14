@@ -27,11 +27,11 @@ interface FeedItemProps {
 function FeedItemComponent({ item }: FeedItemProps) {
   const router = useRouter();
 
-  // Use direct href navigation instead of router API
+  // Use proper expo-router navigation
   const handleProfilePress = useCallback(() => {
-    // Navigate to profile page using window.location for a clean navigation
-    window.location.href = "/profile";
-  }, []);
+    // Navigate to profile page using tab navigation
+    router.push("/(tabs)/profile");
+  }, [router]);
 
   return (
     <View style={styles.container}>

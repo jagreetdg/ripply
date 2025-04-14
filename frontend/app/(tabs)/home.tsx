@@ -213,11 +213,11 @@ export default function HomeScreen() {
     console.log("New voice note");
   };
 
-  // Use Link component approach instead of programmatic navigation
+  // Use proper expo-router navigation
   const handleProfilePress = useCallback(() => {
-    // Navigate to profile page without using router API directly
-    window.location.href = "/profile";
-  }, []);
+    // Navigate to profile page using tab navigation
+    router.push("/(tabs)/profile");
+  }, [router]);
 
   // Header shadow animation
   const headerShadowOpacity = scrollY.interpolate({
