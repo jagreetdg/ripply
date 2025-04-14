@@ -32,6 +32,7 @@ const MOCK_FEED_ITEMS = [
       plays: 15723,
       shares: 432,
       backgroundImage: "https://images.unsplash.com/photo-1511379938547-c1f69419868d",
+      tags: ["music", "songwriting", "acoustic", "indie", "newmusic"],
     },
   },
   {
@@ -49,6 +50,7 @@ const MOCK_FEED_ITEMS = [
       plays: 3421,
       shares: 127,
       backgroundImage: null,
+      tags: ["life", "update", "personal", "journey"],
     },
   },
   {
@@ -66,6 +68,7 @@ const MOCK_FEED_ITEMS = [
       plays: 5632,
       shares: 231,
       backgroundImage: "https://images.unsplash.com/photo-1505118380757-91f5f5632de0",
+      tags: ["travel", "ocean", "nature", "sounds", "morning", "walk"],
     },
   },
   {
@@ -83,6 +86,7 @@ const MOCK_FEED_ITEMS = [
       plays: 7821,
       shares: 342,
       backgroundImage: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b",
+      tags: ["tech", "trends", "ai", "innovation", "future", "gadgets", "review"],
     },
   },
   {
@@ -100,6 +104,7 @@ const MOCK_FEED_ITEMS = [
       plays: 12453,
       shares: 876,
       backgroundImage: "https://images.unsplash.com/photo-1506126613408-eca07ce68773",
+      tags: ["meditation", "mindfulness", "wellness", "stress", "relax", "selfcare", "health"],
     },
   },
   {
@@ -117,6 +122,7 @@ const MOCK_FEED_ITEMS = [
       plays: 2341,
       shares: 87,
       backgroundImage: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c",
+      tags: ["books", "reading", "bookreview", "fiction", "literature", "plottwist", "spoilers"],
     },
   },
   {
@@ -134,6 +140,7 @@ const MOCK_FEED_ITEMS = [
       plays: 3210,
       shares: 123,
       backgroundImage: "https://images.unsplash.com/photo-1509042239860-f550ce710b93",
+      tags: ["coffee", "espresso", "sounds", "asmr", "caffeine", "morningroutine"],
     },
   },
   {
@@ -151,6 +158,7 @@ const MOCK_FEED_ITEMS = [
       plays: 5421,
       shares: 234,
       backgroundImage: "https://images.unsplash.com/photo-1519681393784-d120267933ba",
+      tags: ["night", "city", "urban", "thoughts", "latenight", "ambient", "reflection"],
     },
   },
   {
@@ -168,6 +176,7 @@ const MOCK_FEED_ITEMS = [
       plays: 8765,
       shares: 543,
       backgroundImage: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438",
+      tags: ["fitness", "workout", "motivation", "health", "exercise", "gym", "morning", "strength"],
     },
   },
   {
@@ -185,6 +194,7 @@ const MOCK_FEED_ITEMS = [
       plays: 6543,
       shares: 321,
       backgroundImage: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1",
+      tags: ["food", "streetfood", "foodie", "travel", "culinary", "market", "cuisine", "sounds", "experience"],
     },
   },
 ];

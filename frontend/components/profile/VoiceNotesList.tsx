@@ -19,6 +19,7 @@ const MOCK_VOICE_NOTES = [
 		shares: 432,
 		backgroundImage:
 			"https://images.unsplash.com/photo-1511379938547-c1f69419868d", // Music studio image
+		tags: ["music", "songwriting", "acoustic", "indie", "newmusic"],
 	},
 	{
 		id: "2",
@@ -29,6 +30,7 @@ const MOCK_VOICE_NOTES = [
 		plays: 3421,
 		shares: 127,
 		backgroundImage: null,
+		tags: ["life", "update", "personal", "journey"],
 	},
 	{
 		id: "3",
@@ -40,6 +42,7 @@ const MOCK_VOICE_NOTES = [
 		shares: 345,
 		backgroundImage:
 			"https://images.unsplash.com/photo-1507525428034-b723cf961d3e", // Beautiful beach sunset
+		tags: ["sunset", "beach", "ocean", "reflection", "nature", "thoughts"],
 	},
 	{
 		id: "4",
@@ -51,6 +54,7 @@ const MOCK_VOICE_NOTES = [
 		shares: 98,
 		backgroundImage:
 			"https://images.unsplash.com/photo-1519692933481-e162a57d6721", // Starry night sky
+		tags: ["night", "vibes", "chill", "mood", "latenight", "ambient"],
 	},
 	{
 		id: "5",
@@ -61,6 +65,7 @@ const MOCK_VOICE_NOTES = [
 		plays: 1893,
 		shares: 76,
 		backgroundImage: null,
+		tags: ["motivation", "morning", "inspiration", "fitness", "wellness"],
 	},
 	{
 		id: "6",
@@ -72,6 +77,7 @@ const MOCK_VOICE_NOTES = [
 		shares: 187,
 		backgroundImage:
 			"https://images.unsplash.com/photo-1519692933481-e162a57d6721", // Rain on window
+		tags: ["rain", "thoughts", "cozy", "weather", "reflection", "mood"],
 	},
 	{
 		id: "7",
@@ -82,6 +88,7 @@ const MOCK_VOICE_NOTES = [
 		plays: 2789,
 		shares: 123,
 		backgroundImage: null,
+		tags: ["coffee", "cafe", "thoughts", "morning", "creative", "writing"],
 	},
 	{
 		id: "8",
@@ -93,6 +100,7 @@ const MOCK_VOICE_NOTES = [
 		shares: 276,
 		backgroundImage:
 			"https://images.unsplash.com/photo-1519501025264-65ba15a82390", // Night city view
+		tags: ["city", "urban", "night", "lights", "story", "adventure", "cityscape"],
 	},
 ];
 

@@ -20,6 +20,7 @@ interface VoiceNote {
 	plays: number;
 	shares: number;
 	backgroundImage: string | null;
+	tags?: string[];
 }
 
 interface VoiceNoteCardProps {
@@ -242,6 +243,17 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 						</Text>
 					</View>
 
+					{/* Tags section */}
+					{voiceNote.tags && voiceNote.tags.length > 0 && (
+						<View style={styles.tagsContainer}>
+							{voiceNote.tags.slice(0, 10).map((tag, index) => (
+								<TouchableOpacity key={index} style={styles.tagItem} activeOpacity={0.7}>
+									<Text style={styles.tagText}>#{tag}</Text>
+								</TouchableOpacity>
+							))}
+						</View>
+					)}
+
 					<View style={styles.interactions}>
 						<TouchableOpacity
 							style={styles.interactionButton}
@@ -351,6 +363,17 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 					</Text>
 				</View>
 
+				{/* Tags section */}
+				{voiceNote.tags && voiceNote.tags.length > 0 && (
+					<View style={styles.tagsContainer}>
+						{voiceNote.tags.slice(0, 10).map((tag, index) => (
+							<TouchableOpacity key={index} style={styles.tagItem} activeOpacity={0.7}>
+								<Text style={styles.tagText}>#{tag}</Text>
+							</TouchableOpacity>
+						))}
+					</View>
+				)}
+
 				<View style={styles.interactions}>
 					<TouchableOpacity
 						style={styles.interactionButton}
@@ -417,6 +440,31 @@ const styles = StyleSheet.create({
 		borderRadius: 12,
 		overflow: "hidden",
 		minHeight: 150,
+	},
+	tagsContainer: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		paddingHorizontal: 16,
+		marginBottom: 12,
+		gap: 8,
+	},
+	tagItem: {
+		backgroundColor: "rgba(107, 47, 188, 0.2)",
+		borderRadius: 16,
+		paddingHorizontal: 12,
+		paddingVertical: 6,
+		marginRight: 0,
+		marginBottom: 0,
+		borderWidth: 1,
+		borderColor: "rgba(107, 47, 188, 0.3)",
+	},
+	tagText: {
+		color: "#6B2FBC",
+		fontSize: 12,
+		fontWeight: "500",
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
 	},
 	plainContainer: {
 		backgroundColor: "#FFFFFF",
