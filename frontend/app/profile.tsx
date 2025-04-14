@@ -68,18 +68,20 @@ export default function ProfileScreen() {
 	}, []);
 
 	return (
-		<View style={[styles.container, { paddingTop: insets.top }]}>
+		<View style={styles.container}>
 			{/* Fixed collapsed header */}
 			<Animated.View
 				style={[
 					styles.collapsedHeader,
 					{
 						opacity: collapsedHeaderOpacity,
+						height: HEADER_HEIGHT_COLLAPSED + insets.top,
+						paddingTop: insets.top,
 						transform: [
 							{
 								translateY: scrollY.interpolate({
 									inputRange: [0, HEADER_HEIGHT - HEADER_HEIGHT_COLLAPSED],
-									outputRange: [-HEADER_HEIGHT_COLLAPSED, 0],
+									outputRange: [-(HEADER_HEIGHT_COLLAPSED + insets.top), 0],
 									extrapolate: "clamp",
 								}),
 							},

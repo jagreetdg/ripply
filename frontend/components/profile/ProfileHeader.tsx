@@ -470,7 +470,7 @@ const styles = StyleSheet.create<Styles>({
 		justifyContent: "space-between",
 		alignItems: "center",
 		paddingHorizontal: 16,
-		paddingTop: 12,
+		paddingTop: Platform.OS === 'ios' ? 48 : 12,
 	},
 	iconButton: {
 		width: 40,

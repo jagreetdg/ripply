@@ -227,14 +227,15 @@ export default function HomeScreen() {
   });
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       {/* Fixed header */}
       <Animated.View
         style={[
           styles.header,
           {
             shadowOpacity: headerShadowOpacity,
-            height: HEADER_HEIGHT,
+            height: HEADER_HEIGHT + insets.top,
+            paddingTop: insets.top,
           },
         ]}
       >
