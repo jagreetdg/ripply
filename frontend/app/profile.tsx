@@ -5,11 +5,15 @@ import {
 	Animated,
 	Platform,
 	TouchableOpacity,
+	Text,
+	ActivityIndicator,
 } from "react-native";
 import { ProfileHeader } from "../components/profile/ProfileHeader";
 import { VoiceNotesList } from "../components/profile/VoiceNotesList";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { getUserProfile, getUserVoiceNotes } from "../services/api/userService";
+import { recordPlay } from "../services/api/voiceNoteService";
 
 const HEADER_HEIGHT = 350; // Full header height
 const HEADER_HEIGHT_COLLAPSED = 60; // Collapsed header height
@@ -19,7 +23,15 @@ export default function ProfileScreen() {
 	const scrollY = useRef(new Animated.Value(0)).current;
 	// Memoize the isScrolled state to prevent unnecessary re-renders
 	const [isScrolled, setIsScrolled] = useState(false);
+	const [loading, setLoading] = useState(true);
+	const [userData, setUserData] = useState(null);
+	const [userVoiceNotes, setUserVoiceNotes] = useState([]);
+	const [error, setError] = useState(null);
 	const insets = useSafeAreaInsets();
+	
+	// For demo purposes, using a hardcoded user ID
+	// In a real app, this would come from authentication
+	const userId = "1"; // Replace with actual user ID from auth
 
 	// Set up the scroll listener only once when the component mounts
 	useEffect(() => {
@@ -36,6 +48,61 @@ export default function ProfileScreen() {
 			scrollY.removeListener(scrollListener);
 		};
 	}, [isScrolled]); // Add isScrolled as a dependency
+	
+	// Fetch user profile data
+	const fetchUserProfile = useCallback(async () => {
+		try {
+			setLoading(true);
+			const profileData = await getUserProfile(userId);
+			setUserData(profileData);
+			setError(null);
+		} catch (err) {
+			console.error('Error fetching user profile:', err);
+			setError('Failed to load user profile');
+			// Set fallback data if API fails
+			if (!userData) {
+				setUserData({
+					id: userId,
+					username: '@username',
+					display_name: 'User',
+					bio: 'This is a fallback profile while we connect to the server.',
+					avatar_url: null,
+				});
+			}
+		}
+	}, [userId]);
+	
+	// Fetch user voice notes
+	const fetchUserVoiceNotes = useCallback(async () => {
+		try {
+			const voiceNotesData = await getUserVoiceNotes(userId);
+			setUserVoiceNotes(voiceNotesData);
+		} catch (err) {
+			console.error('Error fetching user voice notes:', err);
+			// Set fallback data if API fails
+			if (userVoiceNotes.length === 0) {
+				setUserVoiceNotes([
+					{
+						id: '1',
+						title: 'My first voice note',
+						duration: 60,
+						likes: 42,
+						comments: 7,
+						plays: 120,
+						tags: ['first', 'demo'],
+					},
+				]);
+			}
+		} finally {
+			setLoading(false);
+		}
+	}, [userId]);
+	
+	// Load data when component mounts
+	useEffect(() => {
+		fetchUserProfile();
+		fetchUserVoiceNotes();
+	}, [fetchUserProfile, fetchUserVoiceNotes]);
 
 	// Memoize these values to prevent recalculation on every render
 	const headerOpacity = useMemo(() => {
@@ -66,6 +133,22 @@ export default function ProfileScreen() {
 		// TODO: Implement voice note recording
 		console.log("New voice note");
 	}, []);
+	
+	// Handle playing a voice note
+	const handlePlayVoiceNote = useCallback(async (voiceNoteId) => {
+		try {
+			// Record the play in the backend
+			await recordPlay(voiceNoteId, userId);
+		} catch (err) {
+			console.error('Error recording play:', err);
+		}
+	}, [userId]);
+	
+	// Handle refresh
+	const handleRefresh = useCallback(() => {
+		fetchUserProfile();
+		fetchUserVoiceNotes();
+	}, [fetchUserProfile, fetchUserVoiceNotes]);
 
 	return (
 		<View style={styles.container}>
@@ -90,7 +173,16 @@ export default function ProfileScreen() {
 				]}
 				pointerEvents={isScrolled ? "auto" : "none"}
 			>
-				<ProfileHeader userId="@username" isCollapsed postCount={8} />
+				<ProfileHeader 
+					userId={userData?.username || '@username'} 
+					isCollapsed 
+					postCount={userVoiceNotes?.length || 0} 
+					displayName={userData?.display_name || 'User'}
+					avatarUrl={userData?.avatar_url}
+					coverPhotoUrl={userData?.cover_photo_url}
+					bio={userData?.bio}
+					isVerified={userData?.is_verified}
+				/>
 			</Animated.View>
 
 			{/* Scrollable content */}
@@ -121,9 +213,36 @@ export default function ProfileScreen() {
 						}),
 					}}
 				>
-					<ProfileHeader userId="@username" postCount={8} />
+					<ProfileHeader 
+					userId={userData?.username || '@username'} 
+					postCount={userVoiceNotes?.length || 0} 
+					displayName={userData?.display_name || 'User'}
+					avatarUrl={userData?.avatar_url}
+					coverPhotoUrl={userData?.cover_photo_url}
+					bio={userData?.bio}
+					isVerified={userData?.is_verified}
+				/>
 				</Animated.View>
-				<VoiceNotesList userId="@username" />
+				{loading ? (
+					<View style={styles.loadingContainer}>
+						<ActivityIndicator size="large" color="#6B2FBC" />
+						<Text style={styles.loadingText}>Loading profile...</Text>
+					</View>
+				) : error ? (
+					<View style={styles.errorContainer}>
+						<Text style={styles.errorText}>{error}</Text>
+						<TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+							<Text style={styles.retryButtonText}>Retry</Text>
+						</TouchableOpacity>
+					</View>
+				) : (
+					<VoiceNotesList 
+						userId={userData?.username || '@username'} 
+						voiceNotes={userVoiceNotes} 
+						onPlayVoiceNote={handlePlayVoiceNote}
+						onRefresh={handleRefresh}
+					/>
+				)}
 			</Animated.ScrollView>
 
 			{/* Floating Action Button */}
@@ -141,6 +260,39 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: "#F5F5F5",
+	},
+	loadingContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		padding: 20,
+	},
+	loadingText: {
+		marginTop: 10,
+		fontSize: 16,
+		color: '#666',
+	},
+	errorContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		padding: 20,
+	},
+	errorText: {
+		fontSize: 16,
+		color: '#ff3b30',
+		textAlign: 'center',
+		marginBottom: 16,
+	},
+	retryButton: {
+		backgroundColor: '#6B2FBC',
+		paddingHorizontal: 20,
+		paddingVertical: 10,
+		borderRadius: 20,
+	},
+	retryButtonText: {
+		color: 'white',
+		fontWeight: 'bold',
 	},
 	scrollContent: {
 		flexGrow: 1,

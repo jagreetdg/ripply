@@ -7,15 +7,17 @@ import {
   TouchableOpacity,
   RefreshControl,
   Text,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "../../components/profile/VoiceNoteCard";
+import { getVoiceNotes, recordPlay } from "../../services/api/voiceNoteService";
 
 const HEADER_HEIGHT = 60; // Header height
 
-// Mock data for the feed
+// Fallback mock data for the feed (will be replaced with API data)
 const MOCK_FEED_ITEMS = [
   {
     id: "1",
@@ -202,6 +204,9 @@ const MOCK_FEED_ITEMS = [
 export default function HomeScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [feedItems, setFeedItems] = useState([]);
+  const [error, setError] = useState(null);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -210,17 +215,40 @@ export default function HomeScreen() {
     { useNativeDriver: true }
   );
 
+  // Fetch voice notes from the API
+  const fetchVoiceNotes = useCallback(async () => {
+    try {
+      const data = await getVoiceNotes();
+      setFeedItems(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching voice notes:', err);
+      setError('Failed to load voice notes. Please try again.');
+      // Fallback to mock data if API fails
+      if (feedItems.length === 0) {
+        setFeedItems(MOCK_FEED_ITEMS);
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchVoiceNotes();
+  }, [fetchVoiceNotes]);
+
+  // Handle refresh
   const handleRefresh = () => {
     setRefreshing(true);
-    // Simulate refresh
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
+    fetchVoiceNotes();
   };
 
   const handleNewVoiceNote = () => {
     // TODO: Implement voice note recording
     console.log("New voice note");
+    // Navigate to recording screen when implemented
   };
 
   // Use proper expo-router navigation
@@ -228,6 +256,16 @@ export default function HomeScreen() {
     // Navigate to profile page using tab navigation
     router.push("/(tabs)/profile");
   }, [router]);
+
+  // Handle playing a voice note
+  const handlePlayVoiceNote = useCallback(async (voiceNoteId, userId) => {
+    try {
+      // Record the play in the backend
+      await recordPlay(voiceNoteId, userId);
+    } catch (err) {
+      console.error('Error recording play:', err);
+    }
+  }, []);
 
   // Header shadow animation
   const headerShadowOpacity = scrollY.interpolate({
@@ -285,18 +323,39 @@ export default function HomeScreen() {
           <View style={styles.underline} />
         </View>
         
-        <View style={styles.feedContent}>
-          {MOCK_FEED_ITEMS.map((item) => (
-            <View key={item.id} style={styles.feedItem}>
-              <VoiceNoteCard 
-                voiceNote={item.voiceNote} 
-                userId={item.userId} 
-                userName={item.userName} 
-                timePosted={item.timePosted} 
-              />
-            </View>
-          ))}
-        </View>
+        {loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6B2FBC" />
+            <Text style={styles.loadingText}>Loading voice notes...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchVoiceNotes}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.feedContent}>
+            {feedItems.length > 0 ? (
+              feedItems.map((item) => (
+                <View key={item.id} style={styles.feedItem}>
+                  <VoiceNoteCard 
+                    voiceNote={item.voiceNote || item} 
+                    userId={item.userId || item.user_id} 
+                    userName={item.userName || item.display_name} 
+                    timePosted={item.timePosted || item.created_at} 
+                    onPlay={() => handlePlayVoiceNote(item.id, item.user_id)}
+                  />
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No voice notes found</Text>
+              </View>
+            )}
+          </View>
+        )}
       </Animated.ScrollView>
 
       {/* Floating Action Button */}
@@ -314,6 +373,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F5F5F5",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ff3b30',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#6B2FBC',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   scrollContent: {
     flexGrow: 1,

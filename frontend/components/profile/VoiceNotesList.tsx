@@ -1,13 +1,31 @@
-import React from "react";
-import { StyleSheet, View, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { StyleSheet, View, TouchableOpacity, Text, RefreshControl, ScrollView } from "react-native";
 import { VoiceNoteCard } from "./VoiceNoteCard";
 import { Feather } from "@expo/vector-icons";
 
-interface VoiceNotesListProps {
-	userId: string;
+// Define the VoiceNote interface to match both API and local formats
+interface VoiceNote {
+	id: string;
+	title: string;
+	duration: number;
+	likes: number;
+	comments: number;
+	plays: number;
+	shares: number;
+	backgroundImage: string | null;
+	tags?: string[];
+	user_id?: string;
+	created_at?: string;
 }
 
-// Temporary mock data
+interface VoiceNotesListProps {
+	userId: string;
+	voiceNotes?: VoiceNote[];
+	onPlayVoiceNote?: (voiceNoteId: string) => void;
+	onRefresh?: () => void;
+}
+
+// Fallback mock data (only used if API fails)
 const MOCK_VOICE_NOTES = [
 	{
 		id: "1",
@@ -104,9 +122,33 @@ const MOCK_VOICE_NOTES = [
 	},
 ];
 
-export function VoiceNotesList({ userId }: VoiceNotesListProps) {
-	// Mock user data for profile
+export function VoiceNotesList({ userId, voiceNotes = [], onPlayVoiceNote, onRefresh }: VoiceNotesListProps) {
+	// State for refresh control
+	const [refreshing, setRefreshing] = useState(false);
+	
+	// Default user name (will be overridden by actual data)
 	const userName = "User";
+	
+	// Handle refresh
+	const handleRefresh = () => {
+		if (onRefresh) {
+			setRefreshing(true);
+			// Call the parent's refresh function
+			onRefresh();
+			// Reset refreshing state after a timeout
+			setTimeout(() => setRefreshing(false), 1500);
+		}
+	};
+	
+	// Handle playing a voice note
+	const handlePlay = (voiceNoteId: string) => {
+		if (onPlayVoiceNote) {
+			onPlayVoiceNote(voiceNoteId);
+		}
+	};
+	
+	// Use provided voice notes or fallback to mock data if empty
+	const displayVoiceNotes = voiceNotes.length > 0 ? voiceNotes : MOCK_VOICE_NOTES;
 	
 	return (
 		<View style={styles.container}>
@@ -115,17 +157,51 @@ export function VoiceNotesList({ userId }: VoiceNotesListProps) {
 				<View style={styles.separatorDot} />
 				<View style={styles.separatorLine} />
 			</View>
-			<View style={styles.content}>
-				{MOCK_VOICE_NOTES.map((item) => (
-					<View key={item.id} style={styles.cardContainer}>
-						<VoiceNoteCard 
-							voiceNote={item} 
-							userId={userId} 
-							userName={userName}
-						/>
-					</View>
-				))}
-			</View>
+			
+			<ScrollView
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={handleRefresh}
+						tintColor="#6B2FBC"
+						colors={["#6B2FBC"]}
+					/>
+				}
+			>
+				<View style={styles.content}>
+					{displayVoiceNotes.length > 0 ? (
+						displayVoiceNotes.map((item) => {
+							// Normalize the voice note to match the expected format
+							const normalizedVoiceNote = {
+								id: item.id,
+								title: item.title,
+								duration: item.duration,
+								likes: item.likes,
+								comments: item.comments,
+								plays: item.plays,
+								shares: item.shares || 0,
+								backgroundImage: item.backgroundImage || null,
+								tags: item.tags || [],
+							};
+							
+							return (
+								<View key={item.id} style={styles.cardContainer}>
+									<VoiceNoteCard 
+										voiceNote={normalizedVoiceNote} 
+										userId={userId} 
+										userName={userName}
+										onPlay={() => handlePlay(item.id)}
+									/>
+								</View>
+							);
+						})
+					) : (
+						<View style={styles.emptyContainer}>
+							<Text style={styles.emptyText}>No voice notes found</Text>
+						</View>
+					)}
+				</View>
+			</ScrollView>
 		</View>
 	);
 }
@@ -134,6 +210,16 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: "#FFFFFF",
+	},
+	emptyContainer: {
+		padding: 40,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	emptyText: {
+		fontSize: 16,
+		color: '#666',
+		textAlign: 'center',
 	},
 	content: {
 		padding: 16,

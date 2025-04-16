@@ -28,6 +28,7 @@ interface VoiceNoteCardProps {
 	userId?: string;
 	userName?: string;
 	timePosted?: string;
+	onPlay?: () => void;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -69,7 +70,7 @@ const DefaultProfilePicture = ({
 	</View>
 );
 
-export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: VoiceNoteCardProps) {
+export function VoiceNoteCard({ voiceNote, userId, userName, timePosted, onPlay }: VoiceNoteCardProps) {
 	const router = useRouter();
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [progress, setProgress] = useState(0);
@@ -150,7 +151,14 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted }: Voice
 	}, [isPlaying, isSeeking]);
 
 	const handlePlayPause = () => {
-		setIsPlaying(!isPlaying);
+		const newPlayingState = !isPlaying;
+		setIsPlaying(newPlayingState);
+		
+		// If starting playback, record the play in the backend
+		if (newPlayingState && onPlay) {
+			onPlay();
+		}
+		
 		// TODO: Implement actual audio playback
 	};
 
