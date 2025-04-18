@@ -11,7 +11,7 @@ import {
 import { Feather, MaterialIcons, FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-interface VoiceNote {
+export interface VoiceNote {
 	id: string;
 	duration: number;
 	title: string;
@@ -121,6 +121,28 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted, onPlay 
 			
 			return newLikeState;
 		});
+	}, []);
+	
+	// Handle comment button press
+	const handleCommentPress = useCallback(() => {
+		// TODO: Implement comment functionality
+		console.log("Comment button pressed");
+		// Navigate to comments page or open comments modal
+		// router.push({ pathname: "/comments", params: { voiceNoteId: voiceNote.id } });
+	}, [voiceNote.id]);
+	
+	// Handle plays button press
+	const handlePlaysPress = useCallback(() => {
+		// TODO: Implement plays functionality
+		console.log("Plays button pressed");
+		// This might show who listened to the voice note
+	}, []);
+	
+	// Handle share button press
+	const handleSharePress = useCallback(() => {
+		// TODO: Implement share functionality
+		console.log("Share button pressed");
+		// Open share dialog or options
 	}, []);
 	
 
@@ -404,7 +426,7 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted, onPlay 
 					<TouchableOpacity
 						style={styles.interactionButton}
 						activeOpacity={0.7}
-						onPress={handleLikePress}
+						onPress={handleCommentPress}
 					>
 						<View style={styles.interactionContent}>
 							<Feather name="message-circle" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
@@ -416,7 +438,7 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted, onPlay 
 					<TouchableOpacity
 						style={styles.interactionButton}
 						activeOpacity={0.7}
-						onPress={handleLikePress}
+						onPress={handlePlaysPress}
 					>
 						<View style={styles.interactionContent}>
 							<Feather name="headphones" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
@@ -428,7 +450,7 @@ export function VoiceNoteCard({ voiceNote, userId, userName, timePosted, onPlay 
 					<TouchableOpacity
 						style={styles.interactionButton}
 						activeOpacity={0.7}
-						onPress={handleLikePress}
+						onPress={handleSharePress}
 					>
 						<View style={styles.interactionContent}>
 							<Feather name="share-2" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
