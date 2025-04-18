@@ -205,8 +205,28 @@ export default function HomeScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [feedItems, setFeedItems] = useState([]);
-  const [error, setError] = useState(null);
+  // Define interface for feed items
+  interface FeedItem {
+    id: string;
+    userId: string;
+    userName: string;
+    userAvatar: string | null;
+    timePosted: string;
+    voiceNote: {
+      id: string;
+      duration: number;
+      title: string;
+      likes: number;
+      comments: number;
+      plays: number;
+      shares: number;
+      backgroundImage: string | null;
+      tags: string[];
+    };
+  }
+
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -219,7 +239,29 @@ export default function HomeScreen() {
   const fetchVoiceNotes = useCallback(async () => {
     try {
       const data = await getVoiceNotes();
-      setFeedItems(data);
+      console.log('Fetched voice notes:', data);
+      
+      // Transform backend data format to match our frontend component expectations
+      const transformedData = data.map(item => ({
+        id: item.id,
+        userId: item.user_id,
+        userName: item.users?.display_name || 'User',
+        userAvatar: item.users?.avatar_url,
+        timePosted: new Date(item.created_at).toLocaleDateString(),
+        voiceNote: {
+          id: item.id,
+          duration: item.duration,
+          title: item.title,
+          likes: item.likes?.[0]?.count || 0,
+          comments: item.comments?.[0]?.count || 0,
+          plays: item.plays?.[0]?.count || 0,
+          shares: 0,
+          backgroundImage: item.background_image,
+          tags: item.tags || [],
+        }
+      }));
+      
+      setFeedItems(transformedData);
       setError(null);
     } catch (err) {
       console.error('Error fetching voice notes:', err);
@@ -258,7 +300,7 @@ export default function HomeScreen() {
   }, [router]);
 
   // Handle playing a voice note
-  const handlePlayVoiceNote = useCallback(async (voiceNoteId, userId) => {
+  const handlePlayVoiceNote = useCallback(async (voiceNoteId: string, userId: string) => {
     try {
       // Record the play in the backend
       await recordPlay(voiceNoteId, userId);
@@ -341,11 +383,11 @@ export default function HomeScreen() {
               feedItems.map((item) => (
                 <View key={item.id} style={styles.feedItem}>
                   <VoiceNoteCard 
-                    voiceNote={item.voiceNote || item} 
-                    userId={item.userId || item.user_id} 
-                    userName={item.userName || item.display_name} 
-                    timePosted={item.timePosted || item.created_at} 
-                    onPlay={() => handlePlayVoiceNote(item.id, item.user_id)}
+                    voiceNote={item.voiceNote} 
+                    userId={item.userId} 
+                    userName={item.userName} 
+                    timePosted={item.timePosted} 
+                    onPlay={() => handlePlayVoiceNote(item.id, item.userId)}
                   />
                 </View>
               ))

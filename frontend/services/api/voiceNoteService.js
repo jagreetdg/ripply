@@ -8,10 +8,14 @@ import { ENDPOINTS, apiRequest } from './config';
  * @param {Object} params - Query parameters
  * @returns {Promise<Array>} - List of voice notes
  */
-export const getVoiceNotes = (params = {}) => {
+export const getVoiceNotes = async (params = {}) => {
   const queryString = new URLSearchParams(params).toString();
   const endpoint = queryString ? `${ENDPOINTS.VOICE_NOTES}?${queryString}` : ENDPOINTS.VOICE_NOTES;
-  return apiRequest(endpoint);
+  const response = await apiRequest(endpoint);
+  
+  // The backend returns data in a nested structure with pagination
+  // Extract just the voice notes array from the response
+  return response.data || [];
 };
 
 /**

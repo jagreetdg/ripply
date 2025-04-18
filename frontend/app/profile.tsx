@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { getUserProfile, getUserVoiceNotes } from "../services/api/userService";
 import { recordPlay } from "../services/api/voiceNoteService";
+import { VoiceNote, VoiceNoteCard } from "../components/profile/VoiceNoteCard";
+
 
 const HEADER_HEIGHT = 350; // Full header height
 const HEADER_HEIGHT_COLLAPSED = 60; // Collapsed header height
@@ -24,14 +26,23 @@ export default function ProfileScreen() {
 	// Memoize the isScrolled state to prevent unnecessary re-renders
 	const [isScrolled, setIsScrolled] = useState(false);
 	const [loading, setLoading] = useState(true);
-	const [userData, setUserData] = useState(null);
-	const [userVoiceNotes, setUserVoiceNotes] = useState([]);
-	const [error, setError] = useState(null);
+	type UserProfile = {
+  id: string;
+  username: string;
+  display_name: string;
+  bio: string;
+  avatar_url: string | null;
+  cover_photo_url?: string | null;
+  is_verified?: boolean;
+};
+const [userData, setUserData] = useState<UserProfile | null>(null);
+const [userVoiceNotes, setUserVoiceNotes] = useState<VoiceNote[]>([]);
+	const [error, setError] = useState<string | null>(null);
 	const insets = useSafeAreaInsets();
 	
-	// For demo purposes, using a hardcoded user ID
+	// For demo purposes, using a hardcoded user ID from our mock data
 	// In a real app, this would come from authentication
-	const userId = "1"; // Replace with actual user ID from auth
+	const userId = "d0c028e7-a33c-4d41-a779-5d1e497b12b3"; // Jamie Jones from our mock data
 
 	// Set up the scroll listener only once when the component mounts
 	useEffect(() => {
@@ -54,7 +65,7 @@ export default function ProfileScreen() {
 		try {
 			setLoading(true);
 			const profileData = await getUserProfile(userId);
-			setUserData(profileData);
+			setUserData(profileData as UserProfile);
 			setError(null);
 		} catch (err) {
 			console.error('Error fetching user profile:', err);
@@ -90,6 +101,8 @@ export default function ProfileScreen() {
 						comments: 7,
 						plays: 120,
 						tags: ['first', 'demo'],
+						shares: 0,
+						backgroundImage: '',
 					},
 				]);
 			}
@@ -135,7 +148,7 @@ export default function ProfileScreen() {
 	}, []);
 	
 	// Handle playing a voice note
-	const handlePlayVoiceNote = useCallback(async (voiceNoteId) => {
+	const handlePlayVoiceNote = useCallback(async (voiceNoteId: string) => {
 		try {
 			// Record the play in the backend
 			await recordPlay(voiceNoteId, userId);

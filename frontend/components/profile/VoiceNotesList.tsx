@@ -8,11 +8,12 @@ interface VoiceNote {
 	id: string;
 	title: string;
 	duration: number;
-	likes: number;
-	comments: number;
-	plays: number;
-	shares: number;
-	backgroundImage: string | null;
+	likes: number | { count: number }[];
+	comments: number | { count: number }[];
+	plays: number | { count: number }[];
+	shares?: number;
+	backgroundImage?: string | null;
+	background_image?: string | null;
 	tags?: string[];
 	user_id?: string;
 	created_at?: string;
@@ -176,11 +177,12 @@ export function VoiceNotesList({ userId, voiceNotes = [], onPlayVoiceNote, onRef
 								id: item.id,
 								title: item.title,
 								duration: item.duration,
-								likes: item.likes,
-								comments: item.comments,
-								plays: item.plays,
+								// Handle different formats of likes/comments/plays
+								likes: Array.isArray(item.likes) ? (item.likes[0]?.count || 0) : (item.likes || 0),
+								comments: Array.isArray(item.comments) ? (item.comments[0]?.count || 0) : (item.comments || 0),
+								plays: Array.isArray(item.plays) ? (item.plays[0]?.count || 0) : (item.plays || 0),
 								shares: item.shares || 0,
-								backgroundImage: item.backgroundImage || null,
+								backgroundImage: item.backgroundImage || (item as any).background_image || null,
 								tags: item.tags || [],
 							};
 							

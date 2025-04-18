@@ -20,10 +20,14 @@ import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 
 interface ProfileHeaderProps {
-	userId: string;
-	isCollapsed?: boolean;
-	postCount?: number;
-	name?: string;
+  userId: string;
+  isCollapsed?: boolean;
+  postCount?: number;
+  displayName: string;
+  avatarUrl?: string | null;
+  coverPhotoUrl?: string | null;
+  bio?: string;
+  isVerified?: boolean;
 }
 
 interface Styles {
@@ -93,13 +97,16 @@ const formatDuration = (seconds: number): string => {
 };
 
 export function ProfileHeader({
-	userId,
-	isCollapsed = false,
-	postCount = 0,
-	name = "John Doe",
+  userId,
+  isCollapsed = false,
+  postCount = 0,
+  displayName,
+  avatarUrl = null,
+  coverPhotoUrl = null,
+  bio = '',
+  isVerified = false,
 }: ProfileHeaderProps) {
 	const router = useRouter();
-	const isVerified = true; // This would come from props or API in real app
 	const [isVoiceBioPlaying, setIsVoiceBioPlaying] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [progress, setProgress] = useState(0);
@@ -215,7 +222,7 @@ export function ProfileHeader({
 
 					<View style={styles.collapsedInfo}>
 						<View style={styles.collapsedNameRow}>
-							<Text style={styles.collapsedName}>{name}</Text>
+							<Text style={styles.collapsedName}>{displayName}</Text>
 							<Text style={styles.collapsedUsername}>{userId}</Text>
 						</View>
 						<Text style={styles.collapsedPostCount}>
@@ -271,7 +278,7 @@ export function ProfileHeader({
 				<View style={styles.nameContainer}>
 					<View style={styles.nameGroup}>
 						<View style={styles.nameRow}>
-							<Text style={styles.name}>{name}</Text>
+							<Text style={styles.name}>{displayName}</Text>
 							{isVerified && (
 								<MaterialIcons
 									name="verified"

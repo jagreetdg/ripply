@@ -39,6 +39,18 @@ export const followUser = (userId, followerId) => {
 };
 
 /**
+ * Get voice notes for a user
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>} - List of voice notes
+ */
+export const getUserVoiceNotes = async (userId) => {
+  const response = await apiRequest(`${ENDPOINTS.USERS}/${userId}/voice-notes`);
+  // The backend returns data in a nested structure with pagination
+  // Extract just the voice notes array from the response
+  return response.data || [];
+};
+
+/**
  * Unfollow a user
  * @param {string} userId - ID of user to unfollow
  * @param {string} followerId - ID of follower

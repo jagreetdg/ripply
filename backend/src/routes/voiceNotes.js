@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-// Use mock data service for development
-const mockDataService = require('../services/mockData');
+const supabase = require('../config/supabase');
 
 // Get all voice notes (with pagination)
 router.get('/', async (req, res) => {
@@ -9,26 +8,45 @@ router.get('/', async (req, res) => {
     const { page = 1, limit = 10, userId } = req.query;
     const offset = (page - 1) * limit;
     
-    // Get all voice notes from mock data service
-    let voiceNotes = await mockDataService.getVoiceNotes();
+    let query = supabase
+      .from('voice_notes')
+      .select(`
+        *,
+        users:user_id (id, username, display_name, avatar_url),
+        likes:voice_note_likes (count),
+        comments:voice_note_comments (count),
+        plays:voice_note_plays (count),
+        tags:voice_note_tags (tag_name)
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + parseInt(limit) - 1);
     
     // Filter by user if provided
     if (userId) {
-      voiceNotes = voiceNotes.filter(note => note.user_id === userId);
+      query = query.eq('user_id', userId);
     }
     
-    // Sort by created_at (newest first)
-    voiceNotes.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const { data, error, count } = await query;
     
-    // Apply pagination
-    const paginatedNotes = voiceNotes.slice(offset, offset + parseInt(limit));
+    if (error) throw error;
+    
+    // Process the data to format tags
+    const processedData = data.map(note => {
+      // Extract tags from the nested structure
+      const tags = note.tags ? note.tags.map(tag => tag.tag_name) : [];
+      
+      return {
+        ...note,
+        tags
+      };
+    });
     
     res.status(200).json({
-      data: paginatedNotes,
+      data: processedData,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: voiceNotes.length
+        total: count
       }
     });
   } catch (error) {
@@ -37,32 +55,65 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get likes for a voice note
+router.get('/:id/likes', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('voice_note_likes')
+      .select('user_id, users:user_id (id, username, display_name, avatar_url)')
+      .eq('voice_note_id', id);
+    if (error) throw error;
+    res.status(200).json({ data });
+  } catch (error) {
+    console.error('Error fetching likes:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get tags for a voice note
+router.get('/:id/tags', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('voice_note_tags')
+      .select('tag_name')
+      .eq('voice_note_id', id);
+    if (error) throw error;
+    const tags = data ? data.map(tag => tag.tag_name) : [];
+    res.status(200).json({ tags });
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get a single voice note by ID
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Get voice note from mock data service
-    const voiceNote = await mockDataService.getVoiceNoteById(id);
-    
-    if (!voiceNote) {
+    const { data, error } = await supabase
+      .from('voice_notes')
+      .select(`
+        *,
+        users:user_id (id, username, display_name, avatar_url),
+        likes:voice_note_likes (count),
+        comments:voice_note_comments (count),
+        plays:voice_note_plays (count),
+        tags:voice_note_tags (tag_name)
+      `)
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    if (!data) {
       return res.status(404).json({ message: 'Voice note not found' });
     }
-    
-    // Get user data for the voice note
-    const user = await mockDataService.getUserById(voiceNote.user_id);
-    
-    // Combine voice note with user data
+    // Process tags
+    const tags = data.tags ? data.tags.map(tag => tag.tag_name) : [];
     const responseData = {
-      ...voiceNote,
-      user: user ? {
-        id: user.id,
-        username: user.username,
-        display_name: user.display_name,
-        avatar_url: user.avatar_url
-      } : null
+      ...data,
+      tags
     };
-    
     res.status(200).json(responseData);
   } catch (error) {
     console.error('Error fetching voice note:', error);
@@ -89,15 +140,36 @@ router.post('/', async (req, res) => {
       });
     }
     
-    // Create voice note using mock data service
-    const voiceNote = await mockDataService.createVoiceNote({
-      title,
-      duration,
-      audio_url,
-      user_id,
-      background_image,
-      tags
-    });
+    // Insert the voice note
+    const { data: voiceNote, error: voiceNoteError } = await supabase
+      .from('voice_notes')
+      .insert([
+        { 
+          title, 
+          duration, 
+          audio_url, 
+          user_id,
+          background_image
+        }
+      ])
+      .select()
+      .single();
+    
+    if (voiceNoteError) throw voiceNoteError;
+    
+    // If there are tags, insert them
+    if (tags.length > 0) {
+      const tagInserts = tags.map(tag => ({
+        voice_note_id: voiceNote.id,
+        tag_name: tag.toLowerCase().trim()
+      }));
+      
+      const { error: tagError } = await supabase
+        .from('voice_note_tags')
+        .insert(tagInserts);
+      
+      if (tagError) throw tagError;
+    }
     
     res.status(201).json(voiceNote);
   } catch (error) {
@@ -117,14 +189,20 @@ router.put('/:id', async (req, res) => {
     delete updates.user_id;
     delete updates.created_at;
     
-    // Update voice note using mock data service
-    const updatedVoiceNote = await mockDataService.updateVoiceNote(id, updates);
+    const { data, error } = await supabase
+      .from('voice_notes')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
     
-    if (!updatedVoiceNote) {
+    if (error) throw error;
+    
+    if (!data) {
       return res.status(404).json({ message: 'Voice note not found' });
     }
     
-    res.status(200).json(updatedVoiceNote);
+    res.status(200).json(data);
   } catch (error) {
     console.error('Error updating voice note:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -136,12 +214,12 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Delete voice note using mock data service
-    const success = await mockDataService.deleteVoiceNote(id);
+    const { error } = await supabase
+      .from('voice_notes')
+      .delete()
+      .eq('id', id);
     
-    if (!success) {
-      return res.status(404).json({ message: 'Voice note not found' });
-    }
+    if (error) throw error;
     
     res.status(200).json({ message: 'Voice note deleted successfully' });
   } catch (error) {
@@ -160,8 +238,28 @@ router.post('/:id/like', async (req, res) => {
       return res.status(400).json({ message: 'user_id is required' });
     }
     
-    // Like voice note using mock data service
-    const like = await mockDataService.likeVoiceNote(id, user_id);
+    // Check if already liked
+    const { data: existingLike, error: checkError } = await supabase
+      .from('voice_note_likes')
+      .select('*')
+      .eq('voice_note_id', id)
+      .eq('user_id', user_id)
+      .single();
+    
+    if (checkError && checkError.code !== 'PGRST116') throw checkError;
+    
+    if (existingLike) {
+      return res.status(400).json({ message: 'Already liked this voice note' });
+    }
+    
+    // Insert like
+    const { data: like, error } = await supabase
+      .from('voice_note_likes')
+      .insert([{ voice_note_id: id, user_id }])
+      .select()
+      .single();
+    
+    if (error) throw error;
     
     res.status(201).json(like);
   } catch (error) {
@@ -180,12 +278,14 @@ router.post('/:id/unlike', async (req, res) => {
       return res.status(400).json({ message: 'user_id is required' });
     }
     
-    // Unlike voice note using mock data service
-    const success = await mockDataService.unlikeVoiceNote(id, user_id);
+    // Delete the like
+    const { error } = await supabase
+      .from('voice_note_likes')
+      .delete()
+      .eq('voice_note_id', id)
+      .eq('user_id', user_id);
     
-    if (!success) {
-      return res.status(404).json({ message: 'Like not found' });
-    }
+    if (error) throw error;
     
     res.status(200).json({ message: 'Voice note unliked successfully' });
   } catch (error) {
@@ -200,10 +300,18 @@ router.post('/:id/play', async (req, res) => {
     const { id } = req.params;
     const { user_id } = req.body;
     
-    // Record play using mock data service
-    const play = await mockDataService.recordPlay(id, user_id);
+    const { data, error } = await supabase
+      .from('voice_note_plays')
+      .insert([{ 
+        voice_note_id: id, 
+        user_id: user_id || null // Allow anonymous plays
+      }])
+      .select()
+      .single();
     
-    res.status(201).json(play);
+    if (error) throw error;
+    
+    res.status(201).json(data);
   } catch (error) {
     console.error('Error recording play:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -217,35 +325,21 @@ router.get('/:id/comments', async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     
-    // Get comments using mock data service
-    const comments = await mockDataService.getComments(id);
+    const { data, error, count } = await supabase
+      .from('voice_note_comments')
+      .select('*, users:user_id (id, username, display_name, avatar_url)', { count: 'exact' })
+      .eq('voice_note_id', id)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + parseInt(limit) - 1);
     
-    // Sort by created_at (newest first)
-    comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    
-    // Apply pagination
-    const paginatedComments = comments.slice(offset, offset + parseInt(limit));
-    
-    // Get user data for each comment
-    const commentsWithUserData = await Promise.all(paginatedComments.map(async (comment) => {
-      const user = await mockDataService.getUserById(comment.user_id);
-      return {
-        ...comment,
-        user: user ? {
-          id: user.id,
-          username: user.username,
-          display_name: user.display_name,
-          avatar_url: user.avatar_url
-        } : null
-      };
-    }));
+    if (error) throw error;
     
     res.status(200).json({
-      data: commentsWithUserData,
+      data,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: comments.length
+        total: count
       }
     });
   } catch (error) {
@@ -264,24 +358,15 @@ router.post('/:id/comments', async (req, res) => {
       return res.status(400).json({ message: 'user_id and content are required' });
     }
     
-    // Add comment using mock data service
-    const comment = await mockDataService.addComment(id, user_id, content);
+    const { data, error } = await supabase
+      .from('voice_note_comments')
+      .insert([{ voice_note_id: id, user_id, content }])
+      .select('*, users:user_id (id, username, display_name, avatar_url)')
+      .single();
     
-    // Get user data for the comment
-    const user = await mockDataService.getUserById(user_id);
+    if (error) throw error;
     
-    // Combine comment with user data
-    const responseData = {
-      ...comment,
-      user: user ? {
-        id: user.id,
-        username: user.username,
-        display_name: user.display_name,
-        avatar_url: user.avatar_url
-      } : null
-    };
-    
-    res.status(201).json(responseData);
+    res.status(201).json(data);
   } catch (error) {
     console.error('Error adding comment:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
