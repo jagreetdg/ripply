@@ -199,4 +199,128 @@ router.get('/:userId/voice-notes', async (req, res) => {
   }
 });
 
+// Get user by username
+router.get('/username/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .single();
+    
+    if (error) throw error;
+    
+    if (!data) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error fetching user by username:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update user verification status
+router.patch('/:userId/verify', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isVerified } = req.body;
+    
+    if (isVerified === undefined) {
+      return res.status(400).json({ message: 'isVerified field is required' });
+    }
+    
+    // Check if user exists
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+    
+    if (userError || !userData) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Update user verification status
+    const { data, error } = await supabase
+      .from('users')
+      .update({ 
+        is_verified: isVerified,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+    
+    if (error) {
+      if (error.code === '42703') {
+        // Column doesn't exist yet
+        return res.status(400).json({ 
+          message: 'is_verified column does not exist',
+          note: 'Please run the SQL script in the Supabase SQL Editor to add the necessary columns'
+        });
+      }
+      throw error;
+    }
+    
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error updating user verification status:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update user profile photos
+router.patch('/:userId/photos', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { photos } = req.body;
+    
+    if (!photos || !Array.isArray(photos)) {
+      return res.status(400).json({ message: 'photos array is required' });
+    }
+    
+    // Check if user exists
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+    
+    if (userError || !userData) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Update user profile photos
+    const { data, error } = await supabase
+      .from('users')
+      .update({ 
+        profile_photos: photos,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+    
+    if (error) {
+      if (error.code === '42703') {
+        // Column doesn't exist yet
+        return res.status(400).json({ 
+          message: 'profile_photos column does not exist',
+          note: 'Please run the SQL script in the Supabase SQL Editor to add the necessary columns'
+        });
+      }
+      throw error;
+    }
+    
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error updating user profile photos:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;

@@ -9,13 +9,37 @@ import { ENDPOINTS, apiRequest } from './config';
  * @returns {Promise<Array>} - List of voice notes
  */
 export const getVoiceNotes = async (params = {}) => {
+  console.log('Fetching all voice notes with params:', params);
   const queryString = new URLSearchParams(params).toString();
   const endpoint = queryString ? `${ENDPOINTS.VOICE_NOTES}?${queryString}` : ENDPOINTS.VOICE_NOTES;
   const response = await apiRequest(endpoint);
   
   // The backend returns data in a nested structure with pagination
   // Extract just the voice notes array from the response
-  return response.data || [];
+  const voiceNotes = response.data || [];
+  
+  // Log the data structure to help debug
+  console.log('Voice notes data structure sample:', 
+    voiceNotes.length > 0 ? JSON.stringify(voiceNotes[0], null, 2) : 'No voice notes');
+  
+  // Ensure each voice note has proper user data
+  return voiceNotes.map(note => {
+    // If the note already has user data, use it
+    if (note.users && note.users.display_name) {
+      return note;
+    }
+    
+    // If not, add a placeholder
+    return {
+      ...note,
+      users: note.users || {
+        id: note.user_id,
+        username: 'user',
+        display_name: 'User',
+        avatar_url: null
+      }
+    };
+  });
 };
 
 /**
@@ -131,4 +155,27 @@ export const recordPlay = (voiceNoteId, userId) => {
  */
 export const getUserVoiceNotes = (userId) => {
   return apiRequest(`${ENDPOINTS.USERS}/${userId}/voice-notes`);
+};
+
+/**
+ * Record a share for a voice note
+ * @param {string} voiceNoteId - Voice note ID
+ * @param {string} userId - ID of user sharing the voice note
+ * @returns {Promise<Object>} - Share data with updated count
+ */
+export const recordShare = async (voiceNoteId, userId) => {
+  return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+};
+
+/**
+ * Get share count for a voice note
+ * @param {string} voiceNoteId - Voice note ID
+ * @returns {Promise<Object>} - Share count data
+ */
+export const getShareCount = async (voiceNoteId) => {
+  const response = await apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`);
+  return response.data?.shareCount || 0;
 };

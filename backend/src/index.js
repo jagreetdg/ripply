@@ -5,6 +5,7 @@ require("dotenv").config();
 // Import routes
 const userRoutes = require("./routes/users");
 const voiceNoteRoutes = require("./routes/voiceNotes");
+const voiceBioRoutes = require("./routes/voiceBios");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,6 +17,7 @@ app.use(express.json());
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/voice-notes", voiceNoteRoutes);
+app.use("/api/voice-bios", voiceBioRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {

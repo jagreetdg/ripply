@@ -3,12 +3,13 @@
  */
 
 // Base URL for the API
-const API_URL = "http://localhost:3001/api";
+const API_URL = "http://localhost:3000/api";
 
 // API endpoints
 const ENDPOINTS = {
 	USERS: "/users",
 	VOICE_NOTES: "/voice-notes",
+	VOICE_BIOS: "/voice-bios",
 	HEALTH: "/health",
 };
 

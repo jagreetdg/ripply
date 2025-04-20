@@ -1,159 +1,179 @@
-import React from "react";
-import { StyleSheet, View, Text } from "react-native";
+import React, { useState, useEffect } from "react";
+import { StyleSheet, View, Text, ActivityIndicator } from "react-native";
 import { FeedItem } from "./FeedItem";
+import { getVoiceNotes } from "../../services/api/voiceNoteService";
+import { useRouter } from "expo-router";
 
-// Mock data for the feed
-const MOCK_FEED_ITEMS = [
-	{
-		id: "1",
-		userId: "@sarah_music",
-		userName: "Sarah",
-		userAvatar: null,
-		timePosted: "2h",
-		voiceNote: {
-			id: "1",
-			duration: 120,
-			title: "🎵 New song idea - let me know what you think!",
-			likes: 2341,
-			comments: 156,
-			plays: 15723,
-			shares: 432,
-			backgroundImage:
-				"https://images.unsplash.com/photo-1511379938547-c1f69419868d",
-		},
-	},
-	{
-		id: "2",
-		userId: "@mike_thoughts",
-		userName: "Mike",
-		userAvatar: null,
-		timePosted: "4h",
-		voiceNote: {
-			id: "2",
-			duration: 45,
-			title: "Quick life update ✨",
-			likes: 892,
-			comments: 73,
-			plays: 3421,
-			shares: 127,
-			backgroundImage: null,
-		},
-	},
-	{
-		id: "3",
-		userId: "@beach_lover",
-		userName: "Alex",
-		userAvatar: null,
-		timePosted: "6h",
-		voiceNote: {
-			id: "3",
-			duration: 180,
-			title: "Sunset thoughts at the beach 🌅",
-			likes: 1567,
-			comments: 89,
-			plays: 8932,
-			shares: 345,
-			backgroundImage:
-				"https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-		},
-	},
-	{
-		id: "4",
-		userId: "@night_owl",
-		userName: "Jamie",
-		userAvatar: null,
-		timePosted: "10h",
-		voiceNote: {
-			id: "4",
-			duration: 30,
-			title: "Late night vibes 🌙",
-			likes: 743,
-			comments: 42,
-			plays: 2156,
-			shares: 98,
-			backgroundImage:
-				"https://images.unsplash.com/photo-1519692933481-e162a57d6721",
-		},
-	},
-	{
-		id: "5",
-		userId: "@fitness_guru",
-		userName: "Taylor",
-		userAvatar: null,
-		timePosted: "12h",
-		voiceNote: {
-			id: "5",
-			duration: 60,
-			title: "Morning motivation 💪",
-			likes: 456,
-			comments: 28,
-			plays: 1893,
-			shares: 76,
-			backgroundImage: null,
-		},
-	},
-	{
-		id: "6",
-		userId: "@rainy_days",
-		userName: "Jordan",
-		userAvatar: null,
-		timePosted: "1d",
-		voiceNote: {
-			id: "6",
-			duration: 90,
-			title: "Rainy day thoughts 🌧️",
-			likes: 921,
-			comments: 67,
-			plays: 4521,
-			shares: 187,
-			backgroundImage:
-				"https://images.unsplash.com/photo-1519692933481-e162a57d6721",
-		},
-	},
-];
+// Empty array for when no feed items are available
+const EMPTY_FEED: any[] = [];
 
 export function HomeFeed() {
-	return (
-		<View style={styles.container}>
-			<View style={styles.feedHeader}>
-				<Text style={styles.feedTitle}>For You</Text>
-				<View style={styles.underline} />
-			</View>
+  const [feedItems, setFeedItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-			<View style={styles.feedContent}>
-				{MOCK_FEED_ITEMS.map((item) => (
-					<FeedItem key={item.id} item={item} />
-				))}
-			</View>
-		</View>
-	);
+  // Fetch feed data from the backend
+  useEffect(() => {
+    const fetchFeedData = async () => {
+      try {
+        setLoading(true);
+        const voiceNotesData = await getVoiceNotes();
+        console.log('Fetched voice notes for feed:', voiceNotesData);
+        
+        // Transform the voice notes into feed items
+        const transformedFeed = voiceNotesData.map((note: any) => ({
+          id: note.id,
+          userId: note.user_id,
+          userName: note.users?.display_name || "User",
+          userAvatar: note.users?.avatar_url,
+          timePosted: formatTimeAgo(note.created_at),
+          voiceNote: {
+            id: note.id,
+            duration: note.duration || 60,
+            title: note.title,
+            likes: note.likes || 0,
+            comments: note.comments || 0,
+            plays: note.plays || 0,
+            shares: note.shares || 0,
+            backgroundImage: note.background_image || null,
+          },
+        }));
+        
+        setFeedItems(transformedFeed);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching feed data:', err);
+        setError('Failed to load feed');
+        setFeedItems(EMPTY_FEED);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeedData();
+  }, []);
+
+  // Helper function to format time ago
+  const formatTimeAgo = (timestamp: string): string => {
+    if (!timestamp) return '';
+    
+    const now = new Date();
+    const postTime = new Date(timestamp);
+    const diffInSeconds = Math.floor((now.getTime() - postTime.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
+    return `${Math.floor(diffInSeconds / 86400)}d`;
+  };
+
+  // Handle navigation to user profile
+  const handleProfilePress = (userId: string) => {
+    if (userId) {
+      router.push({
+        pathname: '/profile',
+        params: { userId }
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#6B2FBC" />
+        <Text style={styles.loadingText}>Loading feed...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.feedHeader}>
+        <Text style={styles.feedTitle}>For You</Text>
+        <View style={styles.underline} />
+      </View>
+
+      {feedItems.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No voice notes found</Text>
+          <Text style={styles.emptySubtext}>Follow users to see their voice notes here</Text>
+        </View>
+      ) : (
+        feedItems.map((item) => (
+          <FeedItem 
+            key={item.id} 
+            item={item} 
+            onProfilePress={() => handleProfilePress(item.userId)}
+          />
+        ))
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: "#F5F5F5",
-	},
-	feedHeader: {
-		paddingVertical: 12,
-		alignItems: "center",
-		backgroundColor: "#FFFFFF",
-		borderBottomWidth: 1,
-		borderBottomColor: "#E1E1E1",
-	},
-	feedTitle: {
-		fontSize: 16,
-		fontWeight: "bold",
-		color: "#333333",
-	},
-	underline: {
-		marginTop: 8,
-		width: 40,
-		height: 3,
-		backgroundColor: "#6B2FBC",
-		borderRadius: 1.5,
-	},
-	feedContent: {
-		padding: 0,
-	},
+  container: {
+    flex: 1,
+    backgroundColor: "#F5F5F5",
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ff3b30',
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  feedHeader: {
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E1E1E1",
+  },
+  feedTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333333",
+  },
+  underline: {
+    marginTop: 8,
+    width: 40,
+    height: 3,
+    backgroundColor: "#6B2FBC",
+    borderRadius: 1.5,
+  },
 });

@@ -12,7 +12,7 @@ import { ProfileHeader } from "../components/profile/ProfileHeader";
 import { VoiceNotesList } from "../components/profile/VoiceNotesList";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { getUserProfile, getUserVoiceNotes } from "../services/api/userService";
+import { getUserProfile, getUserVoiceNotes, getUserFollowers, getUserFollowing } from "../services/api/userService";
 import { recordPlay } from "../services/api/voiceNoteService";
 import { VoiceNote, VoiceNoteCard } from "../components/profile/VoiceNoteCard";
 
@@ -20,7 +20,11 @@ import { VoiceNote, VoiceNoteCard } from "../components/profile/VoiceNoteCard";
 const HEADER_HEIGHT = 350; // Full header height
 const HEADER_HEIGHT_COLLAPSED = 60; // Collapsed header height
 
-export default function ProfileScreen() {
+interface ProfileScreenProps {
+	userId?: string;
+}
+
+export default function ProfileScreen({ userId = "d0c028e7-a33c-4d41-a779-5d1e497b12b3" }: ProfileScreenProps) {
 	// Use useRef to maintain the animated value between renders
 	const scrollY = useRef(new Animated.Value(0)).current;
 	// Memoize the isScrolled state to prevent unnecessary re-renders
@@ -34,15 +38,15 @@ export default function ProfileScreen() {
   avatar_url: string | null;
   cover_photo_url?: string | null;
   is_verified?: boolean;
+  followers_count?: number;
+  following_count?: number;
 };
 const [userData, setUserData] = useState<UserProfile | null>(null);
 const [userVoiceNotes, setUserVoiceNotes] = useState<VoiceNote[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const insets = useSafeAreaInsets();
 	
-	// For demo purposes, using a hardcoded user ID from our mock data
-	// In a real app, this would come from authentication
-	const userId = "d0c028e7-a33c-4d41-a779-5d1e497b12b3"; // Jamie Jones from our mock data
+	// userId is now passed as a prop, with a default value if not provided
 
 	// Set up the scroll listener only once when the component mounts
 	useEffect(() => {
@@ -60,12 +64,42 @@ const [userVoiceNotes, setUserVoiceNotes] = useState<VoiceNote[]>([]);
 		};
 	}, [isScrolled]); // Add isScrolled as a dependency
 	
+	// Helper function to check if a string is a UUID
+	const isUUID = (id: string): boolean => {
+		const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+		return uuidPattern.test(id);
+	};
+
 	// Fetch user profile data
 	const fetchUserProfile = useCallback(async () => {
 		try {
 			setLoading(true);
+			console.log('Fetching profile for user ID/username:', userId);
+			
+			// If the ID is not a UUID, it might be a username
+			// For now, we'll just try to fetch by ID as our backend expects UUIDs
+			if (!isUUID(userId)) {
+				console.warn('Received non-UUID user identifier:', userId);
+				// In a real app, we would have an endpoint to fetch by username
+				// For now, we'll use our default ID as a fallback
+				// setUserId(DEFAULT_USER_ID);
+			}
+			
 			const profileData = await getUserProfile(userId);
-			setUserData(profileData as UserProfile);
+			
+			// Get followers and following counts
+			const followersData = await getUserFollowers(userId);
+			const followingData = await getUserFollowing(userId);
+			
+			// Combine all data
+			const enrichedProfile = {
+				...profileData,
+				followers_count: followersData?.length || 0,
+				following_count: followingData?.length || 0
+			} as UserProfile;
+			
+			console.log('Fetched user profile:', enrichedProfile);
+			setUserData(enrichedProfile);
 			setError(null);
 		} catch (err) {
 			console.error('Error fetching user profile:', err);
@@ -86,7 +120,9 @@ const [userVoiceNotes, setUserVoiceNotes] = useState<VoiceNote[]>([]);
 	// Fetch user voice notes
 	const fetchUserVoiceNotes = useCallback(async () => {
 		try {
+			console.log('Fetching voice notes for user ID:', userId);
 			const voiceNotesData = await getUserVoiceNotes(userId);
+			console.log('Fetched voice notes:', voiceNotesData);
 			setUserVoiceNotes(voiceNotesData);
 		} catch (err) {
 			console.error('Error fetching user voice notes:', err);
@@ -236,11 +272,30 @@ const [userVoiceNotes, setUserVoiceNotes] = useState<VoiceNote[]>([]);
 					isVerified={userData?.is_verified}
 				/>
 				</Animated.View>
-				{loading ? (
-					<View style={styles.loadingContainer}>
-						<ActivityIndicator size="large" color="#6B2FBC" />
-						<Text style={styles.loadingText}>Loading profile...</Text>
-					</View>
+                {/* Stats section - always visible */}
+                <View style={styles.stats}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>{userData?.followers_count || 0}</Text>
+                        <Text style={styles.statLabel}>Followers</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>{userVoiceNotes?.length || 0}</Text>
+                        <Text style={styles.statLabel}>Posts</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>{userData?.following_count || 0}</Text>
+                        <Text style={styles.statLabel}>Following</Text>
+                    </View>
+                </View>
+
+                {/* Content section */}
+                {loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#6B2FBC" />
+                        <Text style={styles.loadingText}>Loading profile...</Text>
+                    </View>
 				) : error ? (
 					<View style={styles.errorContainer}>
 						<Text style={styles.errorText}>{error}</Text>
@@ -250,7 +305,8 @@ const [userVoiceNotes, setUserVoiceNotes] = useState<VoiceNote[]>([]);
 					</View>
 				) : (
 					<VoiceNotesList 
-						userId={userData?.username || '@username'} 
+						userId={userData?.id || userId} 
+						userName={userData?.display_name || 'User'}
 						voiceNotes={userVoiceNotes} 
 						onPlayVoiceNote={handlePlayVoiceNote}
 						onRefresh={handleRefresh}
@@ -306,6 +362,33 @@ const styles = StyleSheet.create({
 	retryButtonText: {
 		color: 'white',
 		fontWeight: 'bold',
+	},
+	stats: {
+		flexDirection: 'row',
+		justifyContent: 'space-around',
+		paddingVertical: 15,
+		backgroundColor: '#fff',
+		// Removed bottom border as requested
+	},
+	statItem: {
+		alignItems: 'center',
+		flex: 1,
+	},
+	statNumber: {
+		fontSize: 18,
+		fontWeight: 'bold',
+		color: '#333',
+	},
+	statLabel: {
+		fontSize: 14,
+		color: '#666',
+		marginTop: 4,
+	},
+	statDivider: {
+		width: 1,
+		height: '70%',
+		backgroundColor: '#eee',
+		alignSelf: 'center',
 	},
 	scrollContent: {
 		flexGrow: 1,

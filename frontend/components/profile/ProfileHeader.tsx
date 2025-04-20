@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
 	View,
 	Text,
@@ -14,10 +14,12 @@ import {
 	Pressable,
 	ImageStyle,
 	Platform,
+	ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import { getVoiceBio } from "../../services/api/voiceBioService";
 
 interface ProfileHeaderProps {
   userId: string;
@@ -28,6 +30,16 @@ interface ProfileHeaderProps {
   coverPhotoUrl?: string | null;
   bio?: string;
   isVerified?: boolean;
+}
+
+interface VoiceBio {
+  id: string;
+  user_id: string;
+  duration: number;
+  audio_url: string;
+  transcript?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Styles {
@@ -80,15 +92,30 @@ interface Styles {
 	fullscreenImageContainer: ViewStyle;
 	profileImageContainer: ViewStyle;
 	modalContainer: ViewStyle;
+	noVoiceBioText: TextStyle;
 }
 
-const DefaultProfilePicture = ({ userId }: { userId: string }) => (
-	<View style={styles.defaultAvatar}>
-		<Text style={styles.defaultAvatarText}>
-			{userId.charAt(1).toUpperCase()}
-		</Text>
-	</View>
-);
+const DefaultProfilePicture = ({ userId, size = 80 }: { userId: string, size?: number }) => {
+	const avatarStyle = {
+		...styles.defaultAvatar,
+		width: size,
+		height: size,
+		borderRadius: size / 2,
+	};
+
+	const textStyle = {
+		...styles.defaultAvatarText,
+		fontSize: size / 2.5,
+	};
+
+	return (
+		<View style={avatarStyle}>
+			<Text style={textStyle}>
+				{userId.charAt(1).toUpperCase()}
+			</Text>
+		</View>
+	);
+};
 
 const formatDuration = (seconds: number): string => {
 	const minutes = Math.floor(seconds / 60);
@@ -121,6 +148,28 @@ export function ProfileHeader({
 		null
 	);
 	const [imageAspectRatio, setImageAspectRatio] = useState(1);
+	const [voiceBio, setVoiceBio] = useState<VoiceBio | null>(null);
+	const [loadingVoiceBio, setLoadingVoiceBio] = useState(false);
+	const audioRef = useRef<HTMLAudioElement | null>(null);
+
+	// Fetch voice bio data
+	useEffect(() => {
+		const fetchVoiceBio = async () => {
+			if (!userId) return;
+			
+			try {
+				setLoadingVoiceBio(true);
+				const data = await getVoiceBio(userId);
+				setVoiceBio(data as VoiceBio | null);
+			} catch (error) {
+				console.error('Error fetching voice bio:', error);
+			} finally {
+				setLoadingVoiceBio(false);
+			}
+		};
+		
+		fetchVoiceBio();
+	}, [userId]);
 
 	const handleVoiceBioCollapse = () => {
 		setIsExpanded(false);
@@ -130,6 +179,13 @@ export function ProfileHeader({
 			clearInterval(progressInterval.current);
 			progressInterval.current = null;
 		}
+		
+		// Stop audio playback if it's playing
+		if (audioRef.current) {
+			audioRef.current.pause();
+			audioRef.current.currentTime = 0;
+		}
+		
 		Animated.spring(buttonWidth, {
 			toValue: 32,
 			useNativeDriver: false,
@@ -139,16 +195,32 @@ export function ProfileHeader({
 
 	useEffect(() => {
 		if (isVoiceBioPlaying && !isSeeking) {
-			progressInterval.current = setInterval(() => {
-				setProgress((currentProgress) => {
-					const newProgress = currentProgress + 0.01;
-					if (newProgress >= 1) {
+			// If we have an actual audio element, use it for progress
+			if (audioRef.current) {
+				progressInterval.current = setInterval(() => {
+					const currentTime = audioRef.current?.currentTime || 0;
+					const duration = audioRef.current?.duration || 1;
+					const newProgress = currentTime / duration;
+					
+					setProgress(newProgress);
+					
+					if (newProgress >= 0.999) {
 						handleVoiceBioCollapse();
-						return 0;
 					}
-					return newProgress;
-				});
-			}, 100); // Update every 100ms for smooth animation
+				}, 100);
+			} else {
+				// Fallback to simulated progress
+				progressInterval.current = setInterval(() => {
+					setProgress((currentProgress) => {
+						const newProgress = currentProgress + 0.01;
+						if (newProgress >= 1) {
+							handleVoiceBioCollapse();
+							return 0;
+						}
+						return newProgress;
+					});
+				}, 100);
+			}
 		} else if (!isVoiceBioPlaying && progressInterval.current) {
 			clearInterval(progressInterval.current);
 			progressInterval.current = null;
@@ -162,8 +234,14 @@ export function ProfileHeader({
 		};
 	}, [isVoiceBioPlaying, isSeeking]);
 
-	const handleVoiceBioPlayPause = () => {
+	const handleVoiceBioPlayPause = useCallback(() => {
+		if (!voiceBio && !loadingVoiceBio) {
+			console.log('No voice bio available');
+			return;
+		}
+		
 		setIsVoiceBioPlaying(!isVoiceBioPlaying);
+		
 		if (!isExpanded) {
 			setIsExpanded(true);
 			Animated.spring(buttonWidth, {
@@ -172,15 +250,34 @@ export function ProfileHeader({
 				friction: 8,
 			}).start();
 		}
-		// TODO: Implement actual audio playback
-	};
+		
+		// Handle actual audio playback if available
+		if (voiceBio?.audio_url) {
+			if (!audioRef.current) {
+				audioRef.current = new Audio(voiceBio.audio_url);
+				audioRef.current.addEventListener('ended', handleVoiceBioCollapse);
+			}
+			
+			if (isVoiceBioPlaying) {
+				audioRef.current.pause();
+			} else {
+				audioRef.current.play();
+			}
+		}
+	}, [voiceBio, isVoiceBioPlaying, isExpanded, loadingVoiceBio]);
 
 	const handleSeekStart = () => {
 		setIsSeeking(true);
+		if (audioRef.current) {
+			audioRef.current.pause();
+		}
 	};
 
 	const handleSeekEnd = () => {
 		setIsSeeking(false);
+		if (isVoiceBioPlaying && audioRef.current) {
+			audioRef.current.play();
+		}
 	};
 
 	const handleSeek = (event: any) => {
@@ -189,7 +286,11 @@ export function ProfileHeader({
 		const progressBarWidth = 100; // Width of progress bar
 		const newProgress = Math.max(0, Math.min(1, locationX / progressBarWidth));
 		setProgress(newProgress);
-		// TODO: Implement actual audio seeking
+		
+		// Update audio position if available
+		if (audioRef.current && voiceBio) {
+			audioRef.current.currentTime = newProgress * voiceBio.duration;
+		}
 	};
 
 	const handlePhotoPress = (type: "profile" | "cover") => {
@@ -223,7 +324,7 @@ export function ProfileHeader({
 					<View style={styles.collapsedInfo}>
 						<View style={styles.collapsedNameRow}>
 							<Text style={styles.collapsedName}>{displayName}</Text>
-							<Text style={styles.collapsedUsername}>{userId}</Text>
+							<Text style={styles.collapsedUsername}>@{userId}</Text>
 						</View>
 						<Text style={styles.collapsedPostCount}>
 							{postCount} voice notes
@@ -246,9 +347,35 @@ export function ProfileHeader({
 			>
 				<ImageBackground
 					source={{
-						uri: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
+						uri: coverPhotoUrl || "https://picsum.photos/seed/ripply/1200/400",
 					}}
 					style={styles.coverPhoto}
+					onError={(e) => {
+						console.log('Cover photo load error:', e.nativeEvent.error);
+						// Fallback is handled by the || operator in the uri
+					}}
+					resizeMode="cover"
+					onLoad={(e) => {
+						try {
+							// Check if source exists and has width/height properties
+							if (
+								e.nativeEvent &&
+								e.nativeEvent.source &&
+								e.nativeEvent.source.width &&
+								e.nativeEvent.source.height
+							) {
+								const { width, height } = e.nativeEvent.source;
+								setImageAspectRatio(width / height);
+							} else {
+								// Default to 16:9 aspect ratio if dimensions are not available
+								setImageAspectRatio(16 / 9);
+							}
+						} catch (error) {
+							console.warn("Error getting image dimensions:", error);
+							// Use a default aspect ratio
+							setImageAspectRatio(16 / 9);
+						}
+					}}
 				>
 					<View style={styles.topBar}>
 						<TouchableOpacity
@@ -271,7 +398,44 @@ export function ProfileHeader({
 					style={styles.avatarContainer}
 				>
 					<View style={styles.avatar}>
-						<DefaultProfilePicture userId={userId} />
+						{avatarUrl ? (
+							<Image 
+								source={{ uri: avatarUrl }} 
+								style={{
+									width: '100%',
+									height: '100%',
+									borderRadius: 50,
+								}} 
+								onError={(e) => {
+									console.log('Avatar load error:', e.nativeEvent.error);
+									// We'll handle fallback in the component
+								}}
+								resizeMode="cover"
+								onLoad={(e) => {
+									try {
+										// Check if source exists and has width/height properties
+										if (
+											e.nativeEvent &&
+											e.nativeEvent.source &&
+											e.nativeEvent.source.width &&
+											e.nativeEvent.source.height
+										) {
+											const { width, height } = e.nativeEvent.source;
+											setImageAspectRatio(width / height);
+										} else {
+											// Default to 1:1 aspect ratio if dimensions are not available
+											setImageAspectRatio(1);
+										}
+									} catch (error) {
+										console.warn("Error getting image dimensions:", error);
+										// Use a default aspect ratio
+										setImageAspectRatio(1);
+									}
+								}}
+							/>
+						) : (
+							<DefaultProfilePicture userId={userId} />
+						)}
 					</View>
 				</TouchableOpacity>
 
@@ -288,89 +452,79 @@ export function ProfileHeader({
 								/>
 							)}
 						</View>
-						<Text style={styles.username}>{userId}</Text>
+						<Text style={styles.username}>@{userId}</Text>
 						<View style={styles.voiceBioContainer}>
-							<TouchableOpacity
-								style={[
-									styles.voiceBioButton,
-									isVoiceBioPlaying && styles.voiceBioButtonPlaying,
-								]}
-								onPress={handleVoiceBioPlayPause}
-								accessibilityLabel={
-									isVoiceBioPlaying ? "Pause voice bio" : "Play voice bio"
-								}
-								accessibilityRole="button"
-							>
-								<Animated.View
-									style={[styles.voiceBioContent, { width: buttonWidth }]}
+							{loadingVoiceBio ? (
+								<View style={styles.voiceBioButton}>
+									<ActivityIndicator size="small" color="#6B2FBC" />
+								</View>
+							) : voiceBio ? (
+								<TouchableOpacity
+									style={[
+										styles.voiceBioButton,
+										isVoiceBioPlaying && styles.voiceBioButtonPlaying,
+									]}
+									onPress={handleVoiceBioPlayPause}
+									accessibilityLabel={
+										isVoiceBioPlaying ? "Pause voice bio" : "Play voice bio"
+									}
+									accessibilityRole="button"
 								>
-									<View style={styles.iconWrapper}>
-										<Feather
-											name={isVoiceBioPlaying ? "pause" : "play"}
-											size={16}
-											color="#6B2FBC"
-											style={styles.playIcon}
-										/>
-									</View>
-									{!isExpanded && (
-										<Text style={styles.voiceBioDuration}>
-											{formatDuration(45)}
-										</Text>
-									)}
-									{isExpanded && (
-										<>
-											<View
-												style={styles.progressContainer}
-												onTouchStart={handleSeekStart}
-												onTouchEnd={handleSeekEnd}
-												onTouchMove={handleSeek}
-											>
-												<View style={styles.progressBackground} />
+									<Animated.View
+										style={[styles.voiceBioContent, { width: buttonWidth }]}
+									>
+										<View style={styles.iconWrapper}>
+											<Feather
+												name={isVoiceBioPlaying ? "pause" : "play"}
+												size={16}
+												color="#6B2FBC"
+												style={styles.playIcon}
+											/>
+										</View>
+										{!isExpanded && (
+											<Text style={styles.voiceBioDuration}>
+												{formatDuration(voiceBio.duration)}
+											</Text>
+										)}
+										{isExpanded && (
+											<>
 												<View
-													style={[
-														styles.progressBar,
-														{ width: `${progress * 100}%` },
-													]}
-												/>
-											</View>
-											<TouchableOpacity
-												onPress={handleVoiceBioCollapse}
-												style={styles.collapseButton}
-											>
-												<Feather name="x" size={14} color="#666666" />
-											</TouchableOpacity>
-										</>
-									)}
-								</Animated.View>
-							</TouchableOpacity>
+													style={styles.progressContainer}
+													onTouchStart={handleSeekStart}
+													onTouchEnd={handleSeekEnd}
+													onTouchMove={handleSeek}
+												>
+													<View style={styles.progressBackground} />
+													<View
+														style={[
+															styles.progressBar,
+															{ width: `${progress * 100}%` },
+														]}
+													/>
+												</View>
+												<TouchableOpacity
+													onPress={handleVoiceBioCollapse}
+													style={styles.collapseButton}
+												>
+													<Feather name="x" size={14} color="#666666" />
+												</TouchableOpacity>
+											</>
+										)}
+									</Animated.View>
+								</TouchableOpacity>
+							) : null}
 						</View>
 					</View>
 				</View>
 
 				<View style={styles.biosContainer}>
 					<Text style={styles.bio}>
-						My Bio is a very big blob text with all the unnecessary details of
-						my life
+						{bio || 'No bio available'}
 					</Text>
 				</View>
 			</View>
 
-			<View style={styles.stats}>
-				<View style={styles.statItem}>
-					<Text style={styles.statNumber}>2.7m</Text>
-					<Text style={styles.statLabel}>Followers</Text>
-				</View>
-				<View style={styles.statDivider} />
-				<View style={styles.statItem}>
-					<Text style={styles.statNumber}>{postCount}</Text>
-					<Text style={styles.statLabel}>Posts</Text>
-				</View>
-				<View style={styles.statDivider} />
-				<View style={styles.statItem}>
-					<Text style={styles.statNumber}>1.9k</Text>
-					<Text style={styles.statLabel}>Following</Text>
-				</View>
-			</View>
+			{/* Stats section removed - now handled in the profile screen */}
 
 			<Modal
 				animationType="none"
@@ -404,12 +558,16 @@ export function ProfileHeader({
 								{activePhoto === "cover" ? (
 									<Image
 										source={{
-											uri: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
+											uri: coverPhotoUrl || "https://picsum.photos/seed/ripply/1200/400",
 										}}
 										style={[
 											styles.fullscreenImage,
 											{ aspectRatio: imageAspectRatio },
 										]}
+										onError={(e) => {
+											console.log('Cover photo load error:', e.nativeEvent.error);
+											// Fallback is handled by the || operator in the uri
+										}}
 										resizeMode="cover"
 										onLoad={(e) => {
 											try {
@@ -435,7 +593,23 @@ export function ProfileHeader({
 									/>
 								) : (
 									<View style={styles.profileImageContainer}>
-										<DefaultProfilePicture userId={userId} />
+										{avatarUrl ? (
+											<Image 
+												source={{ uri: avatarUrl }} 
+												style={{
+													width: '100%',
+													height: '100%',
+													borderRadius: 12,
+												}}
+												resizeMode="cover"
+												onError={(e) => {
+													console.log('Avatar load error:', e.nativeEvent.error);
+													// We'll handle fallback in the component
+												}}
+											/>
+										) : (
+											<DefaultProfilePicture userId={userId} size={300} />
+										)}
 									</View>
 								)}
 							</Pressable>
@@ -508,15 +682,16 @@ const styles = StyleSheet.create<Styles>({
 		position: "relative",
 	},
 	defaultAvatar: {
-		width: "100%",
-		height: "100%",
+		width: 80, // Default size, will be overridden by inline styles
+		height: 80, // Default size, will be overridden by inline styles
 		backgroundColor: "#6B2FBC",
 		justifyContent: "center",
 		alignItems: "center",
+		borderRadius: 40, // Default, will be overridden
 	},
 	defaultAvatarText: {
 		color: "white",
-		fontSize: 40,
+		fontSize: 40, // Default size, will be overridden by inline styles
 		fontWeight: "bold",
 	},
 	nameContainer: {
@@ -763,5 +938,10 @@ const styles = StyleSheet.create<Styles>({
 		color: "white",
 		fontSize: 16,
 		fontWeight: "600",
+	},
+	noVoiceBioText: {
+		fontSize: 14,
+		color: "#666666",
+		marginTop: 6,
 	},
 });
