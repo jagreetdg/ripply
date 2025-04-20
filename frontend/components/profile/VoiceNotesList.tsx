@@ -1,112 +1,143 @@
-import React from "react";
-import { StyleSheet, View, TouchableOpacity } from "react-native";
+import React, { useState, useEffect } from "react";
+import { StyleSheet, View, TouchableOpacity, Text, RefreshControl, ScrollView } from "react-native";
+import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "./VoiceNoteCard";
 import { Feather } from "@expo/vector-icons";
+import { recordShare, recordPlay } from "../../services/api/voiceNoteService";
+
+// Define the VoiceNote interface to match both API and local formats
+interface VoiceNote {
+	id: string;
+	title: string;
+	duration: number;
+	likes: number | { count: number }[];
+	comments: number | { count: number }[];
+	plays: number | { count: number }[];
+	shares?: number;
+	backgroundImage?: string | null;
+	background_image?: string | null;
+	tags?: string[];
+	user_id?: string;
+	created_at?: string;
+	// User data that might be included in the API response
+	users?: {
+		id: string;
+		username: string;
+		display_name: string;
+		avatar_url: string | null;
+	};
+}
 
 interface VoiceNotesListProps {
 	userId: string;
+	userName?: string;
+	voiceNotes?: VoiceNote[];
+	onPlayVoiceNote?: (voiceNoteId: string) => void;
+	onRefresh?: () => void;
 }
 
-// Temporary mock data
-const MOCK_VOICE_NOTES = [
-	{
-		id: "1",
-		duration: 120,
-		title: "🎵 New song idea - let me know what you think!",
-		likes: 2341,
-		comments: 156,
-		plays: 15723,
-		shares: 432,
-		backgroundImage:
-			"https://images.unsplash.com/photo-1511379938547-c1f69419868d", // Music studio image
-		tags: ["music", "songwriting", "acoustic", "indie", "newmusic"],
-	},
-	{
-		id: "2",
-		duration: 45,
-		title: "Quick life update ✨",
-		likes: 892,
-		comments: 73,
-		plays: 3421,
-		shares: 127,
-		backgroundImage: null,
-		tags: ["life", "update", "personal", "journey"],
-	},
-	{
-		id: "3",
-		duration: 180,
-		title: "Sunset thoughts at the beach 🌅",
-		likes: 1567,
-		comments: 89,
-		plays: 8932,
-		shares: 345,
-		backgroundImage:
-			"https://images.unsplash.com/photo-1507525428034-b723cf961d3e", // Beautiful beach sunset
-		tags: ["sunset", "beach", "ocean", "reflection", "nature", "thoughts"],
-	},
-	{
-		id: "4",
-		duration: 30,
-		title: "Late night vibes 🌙",
-		likes: 743,
-		comments: 42,
-		plays: 2156,
-		shares: 98,
-		backgroundImage:
-			"https://images.unsplash.com/photo-1519692933481-e162a57d6721", // Starry night sky
-		tags: ["night", "vibes", "chill", "mood", "latenight", "ambient"],
-	},
-	{
-		id: "5",
-		duration: 60,
-		title: "Morning motivation 💪",
-		likes: 456,
-		comments: 28,
-		plays: 1893,
-		shares: 76,
-		backgroundImage: null,
-		tags: ["motivation", "morning", "inspiration", "fitness", "wellness"],
-	},
-	{
-		id: "6",
-		duration: 90,
-		title: "Rainy day thoughts 🌧️",
-		likes: 921,
-		comments: 67,
-		plays: 4521,
-		shares: 187,
-		backgroundImage:
-			"https://images.unsplash.com/photo-1519692933481-e162a57d6721", // Rain on window
-		tags: ["rain", "thoughts", "cozy", "weather", "reflection", "mood"],
-	},
-	{
-		id: "7",
-		duration: 40,
-		title: "Coffee shop musings ☕",
-		likes: 634,
-		comments: 45,
-		plays: 2789,
-		shares: 123,
-		backgroundImage: null,
-		tags: ["coffee", "cafe", "thoughts", "morning", "creative", "writing"],
-	},
-	{
-		id: "8",
-		duration: 150,
-		title: "City lights story 🌆",
-		likes: 1243,
-		comments: 92,
-		plays: 6234,
-		shares: 276,
-		backgroundImage:
-			"https://images.unsplash.com/photo-1519501025264-65ba15a82390", // Night city view
-		tags: ["city", "urban", "night", "lights", "story", "adventure", "cityscape"],
-	},
-];
+// Empty array for when no voice notes are available
+const EMPTY_VOICE_NOTES: VoiceNote[] = [];
 
-export function VoiceNotesList({ userId }: VoiceNotesListProps) {
-	// Mock user data for profile
-	const userName = "User";
+// Define response types for API calls
+interface PlayResponse {
+  data?: {
+    playCount: number;
+    voiceNoteId: string;
+  };
+}
+
+interface ShareResponse {
+  data?: {
+    shareCount: number;
+    voiceNoteId: string;
+  };
+}
+
+export function VoiceNotesList({ userId, userName, voiceNotes = [], onPlayVoiceNote, onRefresh }: VoiceNotesListProps) {
+	// Get router for navigation
+	const router = useRouter();
+	// State for refresh control
+	const [refreshing, setRefreshing] = useState(false);
+	// State for voice notes
+	const [localVoiceNotes, setLocalVoiceNotes] = useState<VoiceNote[]>(voiceNotes);
+	
+	// Use the provided userName or default to "User"
+	const displayName = userName || "User";
+	
+	// Update local state when props change
+	useEffect(() => {
+		setLocalVoiceNotes(voiceNotes);
+	}, [voiceNotes]);
+	
+	// Handle refresh
+	const handleRefresh = () => {
+		if (onRefresh) {
+			setRefreshing(true);
+			onRefresh();
+			setRefreshing(false);
+		}
+	};
+	
+	// Handle play voice note
+	const handlePlayVoiceNote = (voiceNoteId: string) => {
+		// Call the provided callback if available
+		if (onPlayVoiceNote) {
+			onPlayVoiceNote(voiceNoteId);
+		}
+		
+		// Record the play in the backend
+		recordPlay(voiceNoteId, userId)
+			.then((response: PlayResponse) => {
+				// Update the local state with the new play count
+				if (response?.data?.playCount) {
+					setLocalVoiceNotes(prev => 
+						prev.map(vn => 
+							vn.id === voiceNoteId 
+								? { ...vn, plays: response.data!.playCount } 
+								: vn
+						)
+					);
+				}
+			})
+			.catch(error => {
+				console.error('Error recording play:', error);
+			});
+	};
+	
+	// Handle share voice note
+	const handleShareVoiceNote = (voiceNoteId: string) => {
+		// Record the share in the backend
+		recordShare(voiceNoteId, userId)
+			.then((response: ShareResponse) => {
+				// Update the local state with the new share count
+				if (response?.data?.shareCount) {
+					setLocalVoiceNotes(prev => 
+						prev.map(vn => 
+							vn.id === voiceNoteId 
+								? { ...vn, shares: response.data!.shareCount } 
+								: vn
+						)
+					);
+				}
+			})
+			.catch(error => {
+				console.error('Error recording share:', error);
+			});
+	};
+	
+	// Handle playing a voice note
+	const handlePlay = (voiceNoteId: string) => {
+		if (onPlayVoiceNote) {
+			onPlayVoiceNote(voiceNoteId);
+		}
+	};
+	
+	// Use provided voice notes or empty array
+	const displayVoiceNotes = localVoiceNotes && localVoiceNotes.length > 0 ? localVoiceNotes : EMPTY_VOICE_NOTES;
+	
+	// Debug voice notes data
+	console.log('VoiceNotesList received voice notes:', displayVoiceNotes);
 	
 	return (
 		<View style={styles.container}>
@@ -115,17 +146,67 @@ export function VoiceNotesList({ userId }: VoiceNotesListProps) {
 				<View style={styles.separatorDot} />
 				<View style={styles.separatorLine} />
 			</View>
-			<View style={styles.content}>
-				{MOCK_VOICE_NOTES.map((item) => (
-					<View key={item.id} style={styles.cardContainer}>
-						<VoiceNoteCard 
-							voiceNote={item} 
-							userId={userId} 
-							userName={userName}
+			
+			{displayVoiceNotes.length === 0 ? (
+				<View style={styles.emptyStateContainer}>
+					<Feather name="mic-off" size={48} color="#ccc" />
+					<Text style={styles.emptyStateText}>No voice notes yet</Text>
+					<Text style={styles.emptyStateSubtext}>Voice notes you create will appear here</Text>
+				</View>
+			) : (
+				<ScrollView
+					refreshControl={
+						<RefreshControl
+							refreshing={refreshing}
+							onRefresh={handleRefresh}
+							tintColor="#6B2FBC"
+							colors={["#6B2FBC"]}
 						/>
+					}
+				>
+					<View style={styles.content}>
+						{displayVoiceNotes.map((item) => {
+							// Normalize the voice note to match the expected format
+							const normalizedVoiceNote = {
+								id: item.id,
+								title: item.title,
+								duration: item.duration,
+								// Handle different formats of likes/comments/plays
+								likes: Array.isArray(item.likes) ? (item.likes[0]?.count || 0) : (typeof item.likes === 'number' ? item.likes : 0),
+								comments: Array.isArray(item.comments) ? (item.comments[0]?.count || 0) : (typeof item.comments === 'number' ? item.comments : 0),
+								plays: Array.isArray(item.plays) ? (item.plays[0]?.count || 0) : (typeof item.plays === 'number' ? item.plays : 0),
+								shares: item.shares || 0,
+								backgroundImage: item.backgroundImage || item.background_image || null,
+								tags: item.tags || [],
+								// Add user avatar URL
+								userAvatarUrl: item.users?.avatar_url || null
+							};
+							
+							// Get the correct user ID and name for this specific voice note
+							const noteUserId = item.user_id || userId;
+							const noteUserName = item.users?.display_name || displayName;
+							
+							return (
+								<View key={item.id} style={styles.cardContainer}>
+									<VoiceNoteCard 
+										voiceNote={normalizedVoiceNote} 
+										userId={noteUserId} 
+										userName={noteUserName}
+										userAvatarUrl={normalizedVoiceNote.userAvatarUrl}
+										onPlay={() => handlePlayVoiceNote(item.id)}
+										onShare={() => handleShareVoiceNote(item.id)}
+										onProfilePress={() => {
+											// Use the voice note's user ID for navigation
+											router.push(`/profile?userId=${noteUserId}`);
+										}}
+										currentUserId={userId}
+									/>
+								</View>
+							);
+						})}
 					</View>
-				))}
-			</View>
+				</ScrollView>
+			)}
 		</View>
 	);
 }
@@ -135,30 +216,48 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: "#FFFFFF",
 	},
-	content: {
-		padding: 16,
-		backgroundColor: "#FFFFFF",
-	},
-	cardContainer: {
-		marginBottom: 16,
-	},
 	separatorContainer: {
 		flexDirection: "row",
 		alignItems: "center",
-		paddingHorizontal: 24,
-		paddingVertical: 8,
-		backgroundColor: "#FFFFFF",
+		paddingVertical: 16,
+		paddingHorizontal: 20,
 	},
 	separatorLine: {
 		flex: 1,
 		height: 1,
-		backgroundColor: "rgba(107, 47, 188, 0.15)", // Updated to purple theme
+		backgroundColor: "#EEEEEE",
 	},
 	separatorDot: {
-		width: 4,
-		height: 4,
-		borderRadius: 2,
-		backgroundColor: "rgba(107, 47, 188, 0.3)", // Updated to purple theme
+		width: 6,
+		height: 6,
+		borderRadius: 3,
+		backgroundColor: "#6B2FBC",
 		marginHorizontal: 8,
+	},
+	content: {
+		paddingHorizontal: 16,
+		paddingBottom: 20,
+	},
+	cardContainer: {
+		marginBottom: 16,
+	},
+	emptyStateContainer: {
+		flex: 1,
+		alignItems: 'center',
+		justifyContent: 'center',
+		paddingVertical: 60,
+	},
+	emptyStateText: {
+		fontSize: 18,
+		fontWeight: 'bold',
+		color: '#666',
+		marginTop: 16,
+	},
+	emptyStateSubtext: {
+		fontSize: 14,
+		color: '#999',
+		marginTop: 8,
+		textAlign: 'center',
+		paddingHorizontal: 32,
 	},
 });

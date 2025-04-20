@@ -22,16 +22,24 @@ interface FeedItemProps {
       backgroundImage: string | null;
     };
   };
+  onProfilePress?: (userId: string) => void;
 }
 
-function FeedItemComponent({ item }: FeedItemProps) {
+function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
   const router = useRouter();
 
   // Use proper expo-router navigation
   const handleProfilePress = useCallback(() => {
-    // Navigate to profile page using tab navigation
-    router.push("/(tabs)/profile");
-  }, [router]);
+    if (onProfilePress) {
+      onProfilePress(item.userId);
+    } else {
+      // Fallback to default navigation if no custom handler is provided
+      router.push({
+        pathname: '/profile',
+        params: { userId: item.userId }
+      });
+    }
+  }, [item.userId, onProfilePress, router]);
 
   return (
     <View style={styles.container}>
@@ -60,7 +68,12 @@ function FeedItemComponent({ item }: FeedItemProps) {
       </View>
       
       <View style={styles.content}>
-        <VoiceNoteCard voiceNote={item.voiceNote} />
+        <VoiceNoteCard 
+          voiceNote={item.voiceNote} 
+          userId={item.userId}
+          userName={item.userName}
+          onProfilePress={handleProfilePress}
+        />
       </View>
     </View>
   );
