@@ -14,6 +14,7 @@ import {
 import { Feather, MaterialIcons, FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { recordShare } from "../../services/api/voiceNoteService";
+import { CommentPopup } from "../comments/CommentPopup";
 
 export interface VoiceNote {
 	id: string;
@@ -116,6 +117,8 @@ export function VoiceNoteCard({
 	const [likesCount, setLikesCount] = useState(typeof voiceNote.likes === 'number' ? voiceNote.likes : 0);
 	const [sharesCount, setSharesCount] = useState(typeof voiceNote.shares === 'number' ? voiceNote.shares : 0);
 	const [isShared, setIsShared] = useState(false);
+	const [showCommentPopup, setShowCommentPopup] = useState(false);
+	const [commentsCount, setCommentsCount] = useState(typeof voiceNote.comments === 'number' ? voiceNote.comments : 0);
 	const progressContainerRef = useRef<View>(null);
 	const likeScale = useRef(new Animated.Value(1)).current;
 
@@ -188,11 +191,14 @@ export function VoiceNoteCard({
 
 	// Handle comment button press
 	const handleCommentPress = useCallback(() => {
-		// TODO: Implement comment functionality
-		console.log("Comment button pressed");
-		// Navigate to comments page or open comments modal
-		// router.push({ pathname: "/comments", params: { voiceNoteId: voiceNote.id } });
-	}, [voiceNote.id]);
+		setShowCommentPopup(true);
+	}, []);
+	
+	// Handle when a comment is added
+	const handleCommentAdded = useCallback(() => {
+		// Increment the comments count
+		setCommentsCount(prevCount => prevCount + 1);
+	}, []);
 
 	// Handle plays button press
 	const handlePlaysPress = useCallback(() => {
@@ -308,7 +314,154 @@ export function VoiceNoteCard({
 
 	if (!voiceNote.backgroundImage) {
 		return (
-			<View style={[styles.container, styles.plainContainer]}>
+			<>
+				<View style={[styles.container, styles.plainContainer]}>
+					<View style={styles.content}>
+						{/* User info and options header */}
+						{(userId || userName) && (
+							<View style={styles.cardHeader}>
+								<TouchableOpacity style={styles.userInfoContainer} onPress={handleProfilePress}>
+									<DefaultProfilePicture 
+										userId={userName || "@user"} 
+										size={32} 
+										avatarUrl={userAvatarUrl || voiceNote.userAvatarUrl || null}
+									/>
+									<View style={styles.userInfo}>
+										<Text style={styles.userName}>{userName || "User"}</Text>
+										<Text style={styles.userId}>@{userName?.toLowerCase().replace(/\s+/g, '') || "user"}</Text>
+									</View>
+								</TouchableOpacity>
+								<View style={styles.headerActions}>
+									{timePosted && <Text style={styles.timePosted}>{timePosted}</Text>}
+									<TouchableOpacity style={styles.optionsButton}>
+										<Feather name="more-horizontal" size={16} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									</TouchableOpacity>
+								</View>
+							</View>
+						)}
+						<Text style={styles.title}>{voiceNote.title}</Text>
+
+						<View style={styles.playerContainer}>
+							<TouchableOpacity
+								onPress={handlePlayPause}
+								style={styles.playButton}
+								activeOpacity={0.7}
+							>
+								<MaterialIcons
+									name={isPlaying ? "pause" : "play-arrow"}
+									size={24}
+									color="white"
+									style={{
+										textShadowColor: "#000000",
+										textShadowOffset: { width: 0.5, height: 0.5 },
+										textShadowRadius: 1
+									}}
+								/>
+							</TouchableOpacity>
+
+							{renderProgressBar()}
+
+							<Text style={styles.duration}>
+								{formatDuration(voiceNote.duration)}
+							</Text>
+						</View>
+
+						{/* Tags section */}
+						{voiceNote.tags && voiceNote.tags.length > 0 && (
+							<View style={styles.tagsContainer}>
+								{voiceNote.tags.slice(0, 10).map((tag, index) => (
+									<TouchableOpacity key={index} style={styles.tagItem} activeOpacity={0.7}>
+										<Text style={styles.tagText}>#{tag}</Text>
+									</TouchableOpacity>
+								))}
+							</View>
+						)}
+
+						<View style={styles.interactions}>
+							<TouchableOpacity
+								style={styles.interactionButton}
+								activeOpacity={0.7}
+								onPress={handleLikePress}
+							>
+								<View style={styles.interactionContent}>
+									{isLiked ? (
+										<Animated.View style={{ transform: [{ scale: likeScale }] }}>
+											<FontAwesome name="heart" size={18} color="#FF4D67" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										</Animated.View>
+									) : (
+										<Feather name="heart" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									)}
+									<Text style={[styles.interactionText, isLiked && styles.likedText]}>
+										{formatNumber(likesCount)}
+									</Text>
+								</View>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={styles.interactionButton}
+								activeOpacity={0.7}
+								onPress={handleCommentPress}
+							>
+								<View style={styles.interactionContent}>
+									<Feather name="message-circle" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									<Text style={styles.interactionText}>
+										{formatNumber(commentsCount)}
+									</Text>
+								</View>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={styles.interactionButton}
+								activeOpacity={0.7}
+								onPress={handlePlaysPress}
+							>
+								<View style={styles.interactionContent}>
+									<Feather name="headphones" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									<Text style={styles.interactionText}>
+										{formatNumber(voiceNote.plays || 0)}
+									</Text>
+								</View>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={styles.interactionButton}
+								activeOpacity={0.7}
+								onPress={handleSharePress}
+							>
+								<View style={styles.interactionContent}>
+									{isShared ? (
+										<Animated.View style={{ transform: [{ scale: shareScale }] }}>
+											<FontAwesome name="share" size={18} color="#4D9EFF" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										</Animated.View>
+									) : (
+										<Feather name="share-2" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									)}
+									<Text style={[styles.interactionText, isShared && styles.sharedText]}>
+										{formatNumber(sharesCount)}
+									</Text>
+								</View>
+							</TouchableOpacity>
+						</View>
+					</View>
+				</View>
+				
+				{/* Comment Popup */}
+				<CommentPopup
+					visible={showCommentPopup}
+					voiceNoteId={voiceNote.id}
+					currentUserId={currentUserId}
+					onClose={() => setShowCommentPopup(false)}
+					onCommentAdded={handleCommentAdded}
+				/>
+			</>
+		);
+	}
+
+	return (
+		<>
+			<ImageBackground
+				source={{ uri: voiceNote.backgroundImage }}
+				style={styles.container}
+				imageStyle={{ opacity: 1 }}
+			>
+				<View style={styles.overlay} />
 				<View style={styles.content}>
 					{/* User info and options header */}
 					{(userId || userName) && (
@@ -344,11 +497,6 @@ export function VoiceNoteCard({
 								name={isPlaying ? "pause" : "play-arrow"}
 								size={24}
 								color="white"
-								style={{
-									textShadowColor: "#000000",
-									textShadowOffset: { width: 0.5, height: 0.5 },
-									textShadowRadius: 1
-								}}
 							/>
 						</TouchableOpacity>
 
@@ -397,7 +545,7 @@ export function VoiceNoteCard({
 							<View style={styles.interactionContent}>
 								<Feather name="message-circle" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 								<Text style={styles.interactionText}>
-									{formatNumber(voiceNote.comments)}
+									{formatNumber(commentsCount)}
 								</Text>
 							</View>
 						</TouchableOpacity>
@@ -433,137 +581,17 @@ export function VoiceNoteCard({
 						</TouchableOpacity>
 					</View>
 				</View>
-			</View>
-		);
-	}
-
-	return (
-		<ImageBackground
-			source={{ uri: voiceNote.backgroundImage }}
-			style={styles.container}
-			imageStyle={{ opacity: 1 }}
-		>
-			<View style={styles.overlay} />
-			<View style={styles.content}>
-				{/* User info and options header */}
-				{(userId || userName) && (
-					<View style={styles.cardHeader}>
-						<TouchableOpacity style={styles.userInfoContainer} onPress={handleProfilePress}>
-							<DefaultProfilePicture 
-								userId={userName || "@user"} 
-								size={32} 
-								avatarUrl={userAvatarUrl || voiceNote.userAvatarUrl || null}
-							/>
-							<View style={styles.userInfo}>
-								<Text style={styles.userName}>{userName || "User"}</Text>
-								<Text style={styles.userId}>@{userName?.toLowerCase().replace(/\s+/g, '') || "user"}</Text>
-							</View>
-						</TouchableOpacity>
-						<View style={styles.headerActions}>
-							{timePosted && <Text style={styles.timePosted}>{timePosted}</Text>}
-							<TouchableOpacity style={styles.optionsButton}>
-								<Feather name="more-horizontal" size={16} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
-							</TouchableOpacity>
-						</View>
-					</View>
-				)}
-				<Text style={styles.title}>{voiceNote.title}</Text>
-
-				<View style={styles.playerContainer}>
-					<TouchableOpacity
-						onPress={handlePlayPause}
-						style={styles.playButton}
-						activeOpacity={0.7}
-					>
-						<MaterialIcons
-							name={isPlaying ? "pause" : "play-arrow"}
-							size={24}
-							color="white"
-						/>
-					</TouchableOpacity>
-
-					{renderProgressBar()}
-
-					<Text style={styles.duration}>
-						{formatDuration(voiceNote.duration)}
-					</Text>
-				</View>
-
-				{/* Tags section */}
-				{voiceNote.tags && voiceNote.tags.length > 0 && (
-					<View style={styles.tagsContainer}>
-						{voiceNote.tags.slice(0, 10).map((tag, index) => (
-							<TouchableOpacity key={index} style={styles.tagItem} activeOpacity={0.7}>
-								<Text style={styles.tagText}>#{tag}</Text>
-							</TouchableOpacity>
-						))}
-					</View>
-				)}
-
-				<View style={styles.interactions}>
-					<TouchableOpacity
-						style={styles.interactionButton}
-						activeOpacity={0.7}
-						onPress={handleLikePress}
-					>
-						<View style={styles.interactionContent}>
-							{isLiked ? (
-								<Animated.View style={{ transform: [{ scale: likeScale }] }}>
-									<FontAwesome name="heart" size={18} color="#FF4D67" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
-								</Animated.View>
-							) : (
-								<Feather name="heart" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
-							)}
-							<Text style={[styles.interactionText, isLiked && styles.likedText]}>
-								{formatNumber(likesCount)}
-							</Text>
-						</View>
-					</TouchableOpacity>
-					<TouchableOpacity
-						style={styles.interactionButton}
-						activeOpacity={0.7}
-						onPress={handleCommentPress}
-					>
-						<View style={styles.interactionContent}>
-							<Feather name="message-circle" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
-							<Text style={styles.interactionText}>
-								{formatNumber(voiceNote.comments)}
-							</Text>
-						</View>
-					</TouchableOpacity>
-					<TouchableOpacity
-						style={styles.interactionButton}
-						activeOpacity={0.7}
-						onPress={handlePlaysPress}
-					>
-						<View style={styles.interactionContent}>
-							<Feather name="headphones" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
-							<Text style={styles.interactionText}>
-								{formatNumber(voiceNote.plays || 0)}
-							</Text>
-						</View>
-					</TouchableOpacity>
-					<TouchableOpacity
-						style={styles.interactionButton}
-						activeOpacity={0.7}
-						onPress={handleSharePress}
-					>
-						<View style={styles.interactionContent}>
-							{isShared ? (
-								<Animated.View style={{ transform: [{ scale: shareScale }] }}>
-									<FontAwesome name="share" size={18} color="#4D9EFF" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
-								</Animated.View>
-							) : (
-								<Feather name="share-2" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
-							)}
-							<Text style={[styles.interactionText, isShared && styles.sharedText]}>
-								{formatNumber(sharesCount)}
-							</Text>
-						</View>
-					</TouchableOpacity>
-				</View>
-			</View>
-		</ImageBackground>
+			</ImageBackground>
+			
+			{/* Comment Popup */}
+			<CommentPopup
+				visible={showCommentPopup}
+				voiceNoteId={voiceNote.id}
+				currentUserId={currentUserId}
+				onClose={() => setShowCommentPopup(false)}
+				onCommentAdded={handleCommentAdded}
+			/>
+		</>
 	);
 }
 
