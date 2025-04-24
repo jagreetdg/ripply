@@ -18,14 +18,15 @@ import { getComments, addComment } from '../../services/api/voiceNoteService';
 
 interface Comment {
   id: string;
+  voice_note_id?: string;
   content: string;
   created_at: string;
   user_id: string;
-  users: {
-    id: string;
+  user?: {
+    id?: string;
     username: string;
     display_name: string;
-    avatar_url: string | null;
+    avatar_url?: string | null;
   };
 }
 
@@ -109,7 +110,6 @@ export function CommentPopup({
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<TextInput>(null);
   
-  // Fetch comments when the popup becomes visible
   useEffect(() => {
     if (visible) {
       fetchComments();
@@ -137,20 +137,16 @@ export function CommentPopup({
     
     setSubmitting(true);
     try {
-      const commentData = {
+      const response = await addComment(voiceNoteId, {
         user_id: currentUserId,
         content: newComment.trim(),
-      };
-      
-      const response = await addComment(voiceNoteId, commentData);
+      });
       if (response) {
-        // Add the new comment to the list
         setComments(prevComments => [response as Comment, ...prevComments]);
         setNewComment('');
         if (onCommentAdded) {
           onCommentAdded();
         }
-        Keyboard.dismiss();
       }
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -162,14 +158,14 @@ export function CommentPopup({
   const renderCommentItem = ({ item }: { item: Comment }) => (
     <View style={styles.commentItem}>
       <DefaultProfilePicture 
-        userId={item.users?.username || item.user_id} 
+        userId={item.user?.username || item.user_id} 
         size={40} 
-        avatarUrl={item.users?.avatar_url} 
+        avatarUrl={item.user?.avatar_url} 
       />
       <View style={styles.commentContent}>
         <View style={styles.commentHeader}>
           <Text style={styles.commentUserName}>
-            {item.users?.display_name || 'User'}
+            {item.user?.display_name || 'User'}
           </Text>
           <Text style={styles.commentTime}>
             {formatDate(item.created_at)}

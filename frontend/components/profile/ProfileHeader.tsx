@@ -111,7 +111,7 @@ const DefaultProfilePicture = ({ userId, size = 80 }: { userId: string, size?: n
 	return (
 		<View style={avatarStyle}>
 			<Text style={textStyle}>
-				{userId.charAt(1).toUpperCase()}
+				{userId.charAt(0).toUpperCase()}
 			</Text>
 		</View>
 	);
@@ -434,7 +434,9 @@ export function ProfileHeader({
 								}}
 							/>
 						) : (
-							<DefaultProfilePicture userId={userId} />
+							<View style={{width: '100%', height: '100%', borderRadius: 50}}>
+							<DefaultProfilePicture userId={userId} size={100} />
+						</View>
 						)}
 					</View>
 				</TouchableOpacity>
@@ -608,7 +610,11 @@ export function ProfileHeader({
 												}}
 											/>
 										) : (
-											<DefaultProfilePicture userId={userId} size={300} />
+											<View style={{width: 300, height: 300, borderRadius: 150, overflow: "hidden", backgroundColor: "#6B2FBC", justifyContent: "center", alignItems: "center"}}>
+										<Text style={{color: "white", fontSize: 150, fontWeight: "bold"}}>
+											{userId.charAt(0).toUpperCase()}
+										</Text>
+									</View>
 										)}
 									</View>
 								)}
@@ -688,6 +694,13 @@ const styles = StyleSheet.create<Styles>({
 		justifyContent: "center",
 		alignItems: "center",
 		borderRadius: 40, // Default, will be overridden
+		alignSelf: "center", // Ensure it's centered within its container
+		overflow: "hidden", // Match the regular avatar overflow property
+		position: "absolute", // Position it absolutely to fill the container
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
 	},
 	defaultAvatarText: {
 		color: "white",
@@ -907,6 +920,8 @@ const styles = StyleSheet.create<Styles>({
 		borderRadius: 12,
 		overflow: "hidden",
 		alignSelf: "center",
+		justifyContent: "center",
+		alignItems: "center",
 	},
 	actionButtons: {
 		position: "absolute",

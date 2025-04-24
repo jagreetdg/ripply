@@ -78,6 +78,7 @@ export default function HomeScreen() {
 
   // Fetch voice notes from the API
   const fetchVoiceNotes = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await getVoiceNotes();
       console.log('Fetched voice notes:', data);
@@ -238,12 +239,13 @@ export default function HomeScreen() {
               feedItems.map((item) => (
                 <View key={item.id} style={styles.feedItem}>
                   <VoiceNoteCard 
+                    key={item.id}
                     voiceNote={item.voiceNote} 
                     userId={item.userId} 
                     userName={item.userName} 
                     userAvatarUrl={item.userAvatar}
                     timePosted={item.timePosted} 
-                    onPlay={() => handlePlayVoiceNote(item.id, item.userId)}
+                    onPlay={() => handlePlayVoiceNote(item.voiceNote.id, item.userId)}
                     onProfilePress={() => handleUserProfilePress(item.userId)}
                   />
                 </View>
@@ -345,6 +347,7 @@ const styles = StyleSheet.create({
   },
   profileButton: {
     padding: 4,
+    width: 40,
   },
   profilePicture: {
     width: 32,
@@ -360,6 +363,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   logoContainer: {
+    flex: 1,
     alignItems: "center",
   },
   logoText: {
@@ -369,6 +373,7 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     padding: 4,
+    width: 40,
   },
   feedHeader: {
     paddingVertical: 12,
@@ -376,6 +381,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E1E1E1",
+    flexDirection: "column",
   },
   feedTitle: {
     fontSize: 16,

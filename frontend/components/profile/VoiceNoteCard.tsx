@@ -1,20 +1,29 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
 	View,
 	Text,
 	StyleSheet,
 	TouchableOpacity,
-	ImageBackground,
-	Platform,
-	Animated,
-	Alert,
-	Share,
 	Image,
+	ImageBackground,
+	Pressable,
+	Animated,
+	ViewStyle,
+	TextStyle,
+	ImageStyle,
+	FlatList,
+	Platform,
+	Share,
+	Alert,
 } from "react-native";
 import { Feather, MaterialIcons, FontAwesome } from "@expo/vector-icons";
+import { Audio } from "expo-av";
+import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
-import { recordShare } from "../../services/api/voiceNoteService";
 import { CommentPopup } from "../comments/CommentPopup";
+import { recordShare } from "../../services/api/voiceNoteService";
+// Development mode flag
+const isDev = process.env.NODE_ENV === 'development' || __DEV__;
 
 export interface VoiceNote {
 	id: string;
@@ -92,7 +101,7 @@ const DefaultProfilePicture = ({
 			]}
 		>
 			<Text style={[styles.defaultAvatarText, { fontSize: size * 0.4 }]}>
-				{userId.charAt(1).toUpperCase()}
+				{userId.charAt(0).toUpperCase()}
 			</Text>
 		</View>
 	);
