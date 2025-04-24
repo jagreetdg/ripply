@@ -216,55 +216,52 @@ export function VoiceNoteCard({
 		// This might show who listened to the voice note
 	}, []);
 
-	// Handle share button press
+	// Handle share button press (retweet-style)
 	const handleSharePress = async () => {
-		try {
-			// Use React Native's Share API to show the native share dialog
-			const result = await Share.share({
-				message: `Check out this voice note: ${voiceNote.title}`,
-				url: `ripply://voice-note/${voiceNote.id}`, // Deep link to the voice note
-			});
-
-			if (result.action === Share.sharedAction) {
-				// Record the share in the backend
-				if (currentUserId && onShare) {
+		console.log('Share button pressed (retweet-style)');
+		
+		// Toggle the shared state
+		const newSharedState = !isShared;
+		setIsShared(newSharedState);
+		
+		// Update the shares count
+		setSharesCount(prevCount => newSharedState ? prevCount + 1 : Math.max(0, prevCount - 1));
+		
+		// Animate the share icon
+		Animated.sequence([
+			Animated.timing(shareScale, {
+				toValue: 1.3,
+				duration: 200,
+				useNativeDriver: true,
+			}),
+			Animated.timing(shareScale, {
+				toValue: 1,
+				duration: 200,
+				useNativeDriver: true,
+			}),
+		]).start();
+		
+		// If we have a user ID, record the share in the backend
+		if (currentUserId) {
+			try {
+				if (onShare) {
+					// Use the callback if provided
 					onShare(voiceNote.id);
-				} else if (currentUserId) {
+				} else {
+					// Otherwise call the API directly
+					// Note: We're ignoring the backend error for now since we don't have user auth
+					// This will be fixed when user authentication is implemented
 					try {
 						const response = await recordShare(voiceNote.id, currentUserId);
-						if (response && 
-							typeof response === 'object' && 
-							'data' in response && 
-							response.data && 
-							typeof response.data === 'object' && 
-							'shareCount' in response.data) {
-							setSharesCount(response.data.shareCount as number);
-						} else {
-							setSharesCount(sharesCount + 1);
-						}
-						setIsShared(true);
-
-						// Animate the share icon
-						Animated.sequence([
-							Animated.timing(shareScale, {
-								toValue: 1.3,
-								duration: 200,
-								useNativeDriver: true,
-							}),
-							Animated.timing(shareScale, {
-								toValue: 1,
-								duration: 200,
-								useNativeDriver: true,
-							}),
-						]).start();
+						console.log('Share response:', response);
 					} catch (error) {
 						console.error('Error recording share:', error);
+						// Continue anyway since we want the UI to update
 					}
 				}
+			} catch (error) {
+				console.error('Error in share process:', error);
 			}
-		} catch (error) {
-			Alert.alert('Error', 'Could not share the voice note');
-			console.error('Error sharing voice note:', error);
 		}
 	};
 
@@ -437,10 +434,10 @@ export function VoiceNoteCard({
 								<View style={styles.interactionContent}>
 									{isShared ? (
 										<Animated.View style={{ transform: [{ scale: shareScale }] }}>
-											<FontAwesome name="share" size={18} color="#4D9EFF" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+											<FontAwesome name="retweet" size={18} color="#4CAF50" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 										</Animated.View>
 									) : (
-										<Feather name="share-2" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<Feather name="refresh-cw" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 									)}
 									<Text style={[styles.interactionText, isShared && styles.sharedText]}>
 										{formatNumber(sharesCount)}
@@ -578,10 +575,10 @@ export function VoiceNoteCard({
 							<View style={styles.interactionContent}>
 								{isShared ? (
 									<Animated.View style={{ transform: [{ scale: shareScale }] }}>
-										<FontAwesome name="share" size={18} color="#4D9EFF" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<FontAwesome name="retweet" size={18} color="#4CAF50" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 									</Animated.View>
 								) : (
-									<Feather name="share-2" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									<Feather name="refresh-cw" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 								)}
 								<Text style={[styles.interactionText, isShared && styles.sharedText]}>
 									{formatNumber(sharesCount)}
@@ -791,7 +788,8 @@ const styles = StyleSheet.create({
 		color: "#FF4D67",
 	},
 	sharedText: {
-		color: "#4D9EFF",
+		color: "#4CAF50", // Green color to match the retweet icon
+		fontWeight: "600",
 	},
 	defaultAvatar: {
 		backgroundColor: "#6B2FBC",
