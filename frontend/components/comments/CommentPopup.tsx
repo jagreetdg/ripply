@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { getComments, addComment } from '../../services/api/voiceNoteService';
+import { useRouter } from 'expo-router';
 
 interface Comment {
   id: string;
@@ -60,26 +61,24 @@ const DefaultProfilePicture = ({
   userId,
   size = 32,
   avatarUrl = null,
+  onPress,
 }: {
   userId: string;
   size: number;
   avatarUrl?: string | null;
+  onPress?: () => void;
 }) => {
-  if (avatarUrl) {
-    return (
-      <Image
-        source={{ uri: avatarUrl }}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-        }}
-        onError={() => console.log('Error loading avatar in CommentPopup')}
-      />
-    );
-  }
-  
-  return (
+  const content = avatarUrl ? (
+    <Image
+      source={{ uri: avatarUrl }}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+      }}
+      onError={() => console.log('Error loading avatar in CommentPopup')}
+    />
+  ) : (
     <View
       style={[
         styles.defaultAvatar,
@@ -95,6 +94,16 @@ const DefaultProfilePicture = ({
       </Text>
     </View>
   );
+  
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  
+  return content;
 };
 
 export function CommentPopup({
@@ -109,6 +118,7 @@ export function CommentPopup({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  const router = useRouter();
   
   useEffect(() => {
     if (visible) {
@@ -155,18 +165,29 @@ export function CommentPopup({
     }
   };
   
+  const handleProfilePress = (userId: string) => {
+    // Navigate to the user profile
+    router.push({
+      pathname: '/profile',
+      params: { userId }
+    });
+  };
+
   const renderCommentItem = ({ item }: { item: Comment }) => (
     <View style={styles.commentItem}>
       <DefaultProfilePicture 
         userId={item.user?.username || item.user_id} 
         size={40} 
         avatarUrl={item.user?.avatar_url} 
+        onPress={() => handleProfilePress(item.user_id)}
       />
       <View style={styles.commentContent}>
         <View style={styles.commentHeader}>
-          <Text style={styles.commentUserName}>
-            {item.user?.display_name || 'User'}
-          </Text>
+          <TouchableOpacity onPress={() => handleProfilePress(item.user_id)}>
+            <Text style={styles.commentUserName}>
+              {item.user?.display_name || 'User'}
+            </Text>
+          </TouchableOpacity>
           <Text style={styles.commentTime}>
             {formatDate(item.created_at)}
           </Text>

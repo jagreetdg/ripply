@@ -14,6 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "../../components/profile/VoiceNoteCard";
 import { getVoiceNotes, recordPlay } from "../../services/api/voiceNoteService";
+import { HomeHeader } from "../../components/home/HomeHeader";
 
 const HEADER_HEIGHT = 60; // Header height
 
@@ -174,32 +175,19 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Fixed header */}
+      {/* Fixed Header */}
       <Animated.View
         style={[
           styles.header,
           {
-            shadowOpacity: headerShadowOpacity,
             height: HEADER_HEIGHT + insets.top,
             paddingTop: insets.top,
+            shadowOpacity: headerShadowOpacity,
+            // Remove the transform to keep the header fixed
           },
         ]}
       >
-        <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} style={styles.profileButton}>
-            <View style={styles.profilePicture}>
-              <Text style={styles.profileInitial}>U</Text>
-            </View>
-          </TouchableOpacity>
-          
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>Ripply</Text>
-          </View>
-          
-          <TouchableOpacity style={styles.searchButton}>
-            <Feather name="search" size={22} color="#333" />
-          </TouchableOpacity>
-        </View>
+        <HomeHeader />
       </Animated.View>
 
       {/* Scrollable content */}
@@ -216,6 +204,7 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* Temporarily removed the feed header */}
         <View style={styles.feedHeader}>
           <Text style={styles.feedTitle}>For You</Text>
           <View style={styles.underline} />
@@ -330,11 +319,10 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: "#fff",
     zIndex: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E1E1E1",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 5,
   },
@@ -376,11 +364,10 @@ const styles = StyleSheet.create({
     width: 40,
   },
   feedHeader: {
+    paddingHorizontal: 16,
     paddingVertical: 12,
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E1E1E1",
     flexDirection: "column",
   },
   feedTitle: {

@@ -335,8 +335,17 @@ router.get('/:id/comments', async (req, res) => {
     
     if (error) throw error;
     
+    // Process the data to ensure user info is properly structured
+    const processedData = data.map(comment => {
+      // Ensure user data is properly structured
+      return {
+        ...comment,
+        user: comment.users // Rename users to user to match frontend expectations
+      };
+    });
+    
     res.status(200).json({
-      data,
+      data: processedData,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -367,7 +376,13 @@ router.post('/:id/comments', async (req, res) => {
     
     if (error) throw error;
     
-    res.status(201).json(data);
+    // Process the data to ensure user info is properly structured
+    const processedData = {
+      ...data,
+      user: data.users // Rename users to user to match frontend expectations
+    };
+    
+    res.status(201).json(processedData);
   } catch (error) {
     console.error('Error adding comment:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

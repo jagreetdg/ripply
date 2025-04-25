@@ -7,19 +7,21 @@ router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     
+    // First check if the user exists without using .single()
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('id', userId)
-      .single();
+      .eq('id', userId);
     
     if (error) throw error;
     
-    if (!data) {
+    if (!data || data.length === 0) {
+      console.log(`User not found with ID: ${userId}`);
       return res.status(404).json({ message: 'User not found' });
     }
     
-    res.status(200).json(data);
+    // Return the first user found (should be only one)
+    res.status(200).json(data[0]);
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -204,19 +206,21 @@ router.get('/username/:username', async (req, res) => {
   try {
     const { username } = req.params;
     
+    // First check if the user exists without using .single()
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('username', username)
-      .single();
+      .eq('username', username);
     
     if (error) throw error;
     
-    if (!data) {
+    if (!data || data.length === 0) {
+      console.log(`User not found with username: ${username}`);
       return res.status(404).json({ message: 'User not found' });
     }
     
-    res.status(200).json(data);
+    // Return the first user found (should be only one)
+    res.status(200).json(data[0]);
   } catch (error) {
     console.error('Error fetching user by username:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
