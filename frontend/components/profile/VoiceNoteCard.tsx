@@ -434,10 +434,10 @@ export function VoiceNoteCard({
 								<View style={styles.interactionContent}>
 									{isShared ? (
 										<Animated.View style={{ transform: [{ scale: shareScale }] }}>
-											<FontAwesome name="retweet" size={18} color="#4CAF50" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+											<Feather name="repeat" size={18} color="#4CAF50" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 										</Animated.View>
 									) : (
-										<Feather name="refresh-cw" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<Feather name="repeat" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 									)}
 									<Text style={[styles.interactionText, isShared && styles.sharedText]}>
 										{formatNumber(sharesCount)}
@@ -575,10 +575,10 @@ export function VoiceNoteCard({
 							<View style={styles.interactionContent}>
 								{isShared ? (
 									<Animated.View style={{ transform: [{ scale: shareScale }] }}>
-										<FontAwesome name="retweet" size={18} color="#4CAF50" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<Feather name="repeat" size={18} color="#4CAF50" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 									</Animated.View>
 								) : (
-									<Feather name="refresh-cw" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									<Feather name="repeat" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
 								)}
 								<Text style={[styles.interactionText, isShared && styles.sharedText]}>
 									{formatNumber(sharesCount)}
