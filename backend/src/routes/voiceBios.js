@@ -8,12 +8,11 @@ router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     
-    // Get voice bio from the voice_bios table
+    // Get voice bio from the voice_bios table without using .single()
     const { data, error } = await supabase
       .from('voice_bios')
       .select('*')
-      .eq('user_id', userId)
-      .single();
+      .eq('user_id', userId);
     
     if (error) {
       if (error.code === '42P01') {
@@ -26,11 +25,15 @@ router.get('/:userId', async (req, res) => {
       throw error;
     }
     
-    if (!data) {
+    if (!data || data.length === 0) {
+      console.log(`Voice bio not found for user ID: ${userId}`);
       return res.status(404).json({ message: 'Voice bio not found' });
     }
     
-    res.status(200).json(data);
+    // Return the first voice bio found (should be only one)
+    const voiceBio = data[0];
+    
+    res.status(200).json(voiceBio);
   } catch (error) {
     console.error('Error fetching voice bio:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

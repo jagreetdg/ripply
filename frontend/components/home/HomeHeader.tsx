@@ -7,7 +7,11 @@ export function HomeHeader() {
   const router = useRouter();
 
   const handleProfilePress = () => {
-    router.push("/(tabs)/profile");
+    router.push("/profile");
+  };
+
+  const handleNotificationsPress = () => {
+    router.push("/notifications");
   };
 
   return (
@@ -22,8 +26,8 @@ export function HomeHeader() {
         <Text style={styles.logoText}>Ripply</Text>
       </View>
       
-      <TouchableOpacity style={styles.searchButton}>
-        <Feather name="search" size={22} color="#333" />
+      <TouchableOpacity style={styles.notificationButton} onPress={handleNotificationsPress}>
+        <Feather name="bell" size={22} color="#333" />
       </TouchableOpacity>
     </View>
   );
@@ -62,7 +66,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#6B2FBC",
   },
-  searchButton: {
+  notificationButton: {
     padding: 4,
   },
 });
