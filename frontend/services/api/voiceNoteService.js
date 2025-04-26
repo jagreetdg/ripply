@@ -166,7 +166,7 @@ export const getUserVoiceNotes = (userId) => {
 export const recordShare = async (voiceNoteId, userId) => {
   return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`, {
     method: 'POST',
-    body: JSON.stringify({ userId }),
+    body: JSON.stringify({ userId: userId }),
   });
 };
 

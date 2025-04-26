@@ -314,7 +314,7 @@ async function createFollows(users) {
       follows.push({
         id: uuidv4(),
         follower_id: follower.id,
-        followee_id: followee.id,
+        following_id: followee.id,  // Changed from followee_id to following_id to match schema
         created_at: getRandomDate(new Date(Math.max(new Date(follower.created_at).getTime(), new Date(followee.created_at).getTime())), new Date())
       });
     }
@@ -376,24 +376,24 @@ async function createLikes(users, voiceNotes) {
 async function createComments(users, voiceNotes) {
   console.log('Creating comments...');
   
-  const voiceNoteComments = [];
+  const allComments = [];
   
   for (const voiceNote of voiceNotes) {
-    // Get potential users who can comment on this voice note
-    const potentialCommenters = users.filter(user => true); // Anyone can comment, including the creator
+    // Get potential commenters (excluding the creator)
+    const potentialCommenters = users.filter(user => user.id !== voiceNote.user_id);
     
     // Determine how many comments this voice note will have
     const commentsCount = getRandomInt(COMMENTS_PER_VOICE_NOTE_MIN, Math.min(COMMENTS_PER_VOICE_NOTE_MAX, potentialCommenters.length));
     
-    // Get random users who will comment on this voice note
+    // Get random users to comment
     const commenters = getRandomElements(potentialCommenters, commentsCount, commentsCount);
     
     for (const commenter of commenters) {
-      voiceNoteComments.push({
+      allComments.push({
         id: uuidv4(),
         voice_note_id: voiceNote.id,
         user_id: commenter.id,
-        text: getRandomElement(comments),
+        content: getRandomElement(comments),  // Changed from text to content to match schema
         created_at: getRandomDate(new Date(Math.max(new Date(commenter.created_at).getTime(), new Date(voiceNote.created_at).getTime())), new Date()),
         updated_at: getRandomDate(new Date(Math.max(new Date(commenter.created_at).getTime(), new Date(voiceNote.created_at).getTime())), new Date())
       });
@@ -402,15 +402,15 @@ async function createComments(users, voiceNotes) {
   
   const { error } = await supabase
     .from('voice_note_comments')
-    .insert(voiceNoteComments);
+    .insert(allComments);
   
   if (error) {
     console.error('Error creating comments:', error);
     return [];
   }
   
-  console.log(`Created ${voiceNoteComments.length} comments`);
-  return voiceNoteComments;
+  console.log(`Created ${allComments.length} comments`);
+  return allComments;
 }
 
 // Create plays for voice notes
@@ -434,7 +434,7 @@ async function createPlays(users, voiceNotes) {
         id: uuidv4(),
         voice_note_id: voiceNote.id,
         user_id: player.id,
-        played_at: getRandomDate(new Date(Math.max(new Date(player.created_at).getTime(), new Date(voiceNote.created_at).getTime())), new Date())
+        created_at: getRandomDate(new Date(Math.max(new Date(player.created_at).getTime(), new Date(voiceNote.created_at).getTime())), new Date())  // Changed from played_at to created_at to match schema
       });
     }
   }
@@ -469,7 +469,7 @@ async function createTags(voiceNotes) {
       voiceNoteTags.push({
         id: uuidv4(),
         voice_note_id: voiceNote.id,
-        tag: tag,
+        tag_name: tag.toLowerCase(),
         created_at: getRandomDate(new Date(voiceNote.created_at), new Date())
       });
     }
