@@ -17,14 +17,15 @@ const isIOS = Platform.OS === 'ios';
 const API_URLS = {
   // For physical devices - try these in order
   physical: [
-    "http://10.100.206.36:3000/api", // Primary local network IP
-    "http://192.168.1.1:3000/api",   // Common local network IP
-    "https://api.ripply.app/api"     // Production API (if available)
+    "https://ripply-backend.onrender.com/api", // Render deployed backend
+    "http://10.100.206.36:3000/api",          // Primary local network IP
+    "http://192.168.1.1:3000/api",            // Common local network IP
+    "https://api.ripply.app/api"              // Production API (if available)
   ],
   // For simulators/emulators
   simulator: {
-    ios: "http://localhost:3000/api",
-    android: "http://10.0.2.2:3000/api"
+    ios: "https://ripply-backend.onrender.com/api",  // Render deployed backend
+    android: "https://ripply-backend.onrender.com/api"  // Render deployed backend
   }
 };
 
