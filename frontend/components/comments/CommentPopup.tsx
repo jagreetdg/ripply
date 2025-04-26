@@ -208,21 +208,19 @@ export function CommentPopup({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <TouchableOpacity 
-          style={styles.overlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
           onPress={onClose}
         >
-        <TouchableOpacity 
-          activeOpacity={1} 
-          style={styles.popup}
-          onPress={(e) => e.stopPropagation()}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Comments</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Feather name="x" size={24} color="#333" />
-            </TouchableOpacity>
+          <View
+            style={styles.popup}
+          >
+            <View style={styles.header}>
+              <Text style={styles.title}>Comments</Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Feather name="x" size={24} color="#333" />
+              </TouchableOpacity>
           </View>
           
           {loading ? (
@@ -235,6 +233,7 @@ export function CommentPopup({
               renderItem={renderCommentItem}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.commentsList}
+              nestedScrollEnabled={true}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>No comments yet. Be the first to comment!</Text>
@@ -269,7 +268,7 @@ export function CommentPopup({
               )}
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
         </TouchableOpacity>
       </KeyboardAvoidingView>
     </Modal>
