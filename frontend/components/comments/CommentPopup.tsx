@@ -6,13 +6,12 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  Modal,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Keyboard,
   Image,
 } from 'react-native';
+import { ModalPopup } from './ModalPopup';
 import { Feather } from '@expo/vector-icons';
 import { getComments, addComment } from '../../services/api/voiceNoteService';
 import { useRouter } from 'expo-router';
@@ -198,30 +197,13 @@ export function CommentPopup({
   );
   
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={onClose}
-        >
-          <View
-            style={styles.popup}
-          >
-            <View style={styles.header}>
-              <Text style={styles.title}>Comments</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Feather name="x" size={24} color="#333" />
-              </TouchableOpacity>
-          </View>
+    <ModalPopup visible={visible} onClose={onClose}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Comments</Text>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <Feather name="x" size={24} color="#333" />
+        </TouchableOpacity>
+      </View>
           
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -268,30 +250,11 @@ export function CommentPopup({
               )}
             </TouchableOpacity>
           </View>
-        </View>
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
-    </Modal>
+    </ModalPopup>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  popup: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: '80%',
-    paddingBottom: Platform.OS === 'ios' ? 30 : 10,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

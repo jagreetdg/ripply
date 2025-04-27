@@ -308,13 +308,9 @@ export function VoiceNoteCard({
 		<View
 			ref={progressContainerRef}
 			style={styles.progressContainer}
-			onTouchStart={handleSeekStart}
-			onTouchMove={handleSeekMove}
-			onTouchEnd={handleSeekEnd}
 		>
 			<View style={styles.progressBackground} />
 			<View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
-			<View style={styles.progressHitSlop} />
 		</View>
 	);
 
@@ -757,7 +753,7 @@ const styles = StyleSheet.create({
 	},
 	interactions: {
 		flexDirection: "row",
-		justifyContent: "space-between",
+		justifyContent: "space-evenly", // Use space-evenly for even distribution
 		alignItems: "center",
 		paddingTop: 12,
 		paddingHorizontal: 16,
@@ -765,16 +761,19 @@ const styles = StyleSheet.create({
 		borderTopColor: "#E1E1E1",
 	},
 	interactionButton: {
-		flex: 1,
+		// Remove flex: 1 to prevent expanding to fill space
 		alignItems: "center",
 		justifyContent: "center",
-		paddingHorizontal: 4,
+		paddingHorizontal: 8,
+		marginHorizontal: 12, // Increased from 4 to 12 for more spacing
+		// Add a fixed width to make buttons consistent
+		width: 60,
 	},
 	interactionContent: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
-		width: 65,
+		width: 60,
 	},
 	interactionText: {
 		fontSize: 14,
