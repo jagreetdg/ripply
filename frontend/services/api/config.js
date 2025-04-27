@@ -49,9 +49,9 @@ const DEFAULT_HEADERS = {
 
 // Network timeout settings
 const NETWORK_CONFIG = {
-  timeout: 30000, // 30 seconds timeout - increased for mobile networks
-  retries: 2,     // Number of retry attempts
-  retryDelay: 1500 // Delay between retries in ms
+  timeout: 60000, // 60 seconds timeout for iOS simulator which can be slower
+  retries: 1,     // Reduced retry attempts to avoid excessive waiting
+  retryDelay: 1000 // Shorter delay between retries
 };
 
 /**
@@ -61,8 +61,8 @@ const NETWORK_CONFIG = {
  * @returns {Promise<any>} - Response data
  */
 const apiRequest = async (endpoint, options = {}) => {
-  // For physical devices, try multiple API URLs
-  const apiUrls = isPhysicalDevice ? API_URLS.physical : [API_URL];
+  // Always try the Render backend first, especially for simulators
+  const apiUrls = ["https://ripply-backend.onrender.com/api", ...API_URLS.physical];
   let lastError = null;
   
   // Try each API URL until one works or we run out of options
@@ -85,12 +85,15 @@ const apiRequest = async (endpoint, options = {}) => {
         const url = `${currentApiUrl}${endpoint}`;
         const headers = { ...DEFAULT_HEADERS, ...options.headers };
         
-        // Create AbortController for timeout
+        // Create AbortController for timeout with longer timeout for iOS simulator
         const controller = new AbortController();
+        const effectiveTimeout = Platform.OS === 'ios' && !isPhysicalDevice ? 
+          NETWORK_CONFIG.timeout * 1.5 : NETWORK_CONFIG.timeout; // 50% longer timeout for iOS simulator
+        
         const timeoutId = setTimeout(() => {
           controller.abort();
-          console.log(`Request timeout after ${NETWORK_CONFIG.timeout}ms for ${url}`);
-        }, NETWORK_CONFIG.timeout);
+          console.log(`Request timeout after ${effectiveTimeout}ms for ${url}`);
+        }, effectiveTimeout);
         
         try {
           console.log(`Fetching from ${url}...`);
@@ -104,6 +107,21 @@ const apiRequest = async (endpoint, options = {}) => {
           
           // Check if the response is successful
           if (!response.ok) {
+            // Special handling for user not found errors
+            if (response.status === 404 && endpoint.includes('/users/')) {
+              console.warn(`User not found: ${endpoint}`);
+              // For user endpoints, return a standardized empty user object instead of throwing
+              if (endpoint.startsWith('/users/')) {
+                return {
+                  id: endpoint.split('/').pop(),
+                  username: 'unknown_user',
+                  display_name: 'Unknown User',
+                  avatar_url: null,
+                  // Add other default user fields as needed
+                };
+              }
+            }
+            
             const errorData = await response.json().catch(() => ({}));
             throw new Error(
               errorData.message || `Request failed with status ${response.status}`

@@ -75,7 +75,11 @@ const DefaultProfilePicture = ({
 	size: number;
 	avatarUrl?: string | null;
 }) => {
-	if (avatarUrl) {
+	// State to track if the avatar image failed to load
+	const [imageError, setImageError] = useState(false);
+	
+	// Only try to load the avatar if a URL is provided and there hasn't been an error
+	if (avatarUrl && !imageError) {
 		return (
 			<Image
 				source={{ uri: avatarUrl }}
@@ -84,11 +88,17 @@ const DefaultProfilePicture = ({
 					height: size,
 					borderRadius: size / 2,
 				}}
-				onError={() => console.log('Error loading avatar in VoiceNoteCard')}
+				onError={() => {
+					console.log('Error loading avatar in VoiceNoteCard');
+					setImageError(true); // Mark this image as failed
+				}}
+				// Don't use local assets for default source
+				defaultSource={Platform.OS === 'ios' ? { uri: 'https://ui-avatars.com/api/?name=' + (userId || 'U') } : undefined}
 			/>
 		);
 	}
 	
+	// Fallback to default avatar with first letter
 	return (
 		<View
 			style={[
@@ -101,7 +111,7 @@ const DefaultProfilePicture = ({
 			]}
 		>
 			<Text style={[styles.defaultAvatarText, { fontSize: size * 0.4 }]}>
-				{userId.charAt(0).toUpperCase()}
+				{userId ? userId.charAt(0).toUpperCase() : 'U'}
 			</Text>
 		</View>
 	);

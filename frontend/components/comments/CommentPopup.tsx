@@ -10,8 +10,9 @@ import {
   ActivityIndicator,
   Keyboard,
   Image,
+  Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
-import { ModalPopup } from './ModalPopup';
 import { Feather } from '@expo/vector-icons';
 import { getComments, addComment } from '../../services/api/voiceNoteService';
 import { useRouter } from 'expo-router';
@@ -67,7 +68,11 @@ const DefaultProfilePicture = ({
   avatarUrl?: string | null;
   onPress?: () => void;
 }) => {
-  const content = avatarUrl ? (
+  // State to track if the avatar image failed to load
+  const [imageError, setImageError] = useState(false);
+  
+  // Generate the content based on whether we have a valid avatar URL
+  const content = (avatarUrl && !imageError) ? (
     <Image
       source={{ uri: avatarUrl }}
       style={{
@@ -75,7 +80,12 @@ const DefaultProfilePicture = ({
         height: size,
         borderRadius: size / 2,
       }}
-      onError={() => console.log('Error loading avatar in CommentPopup')}
+      onError={() => {
+        console.log('Error loading avatar in CommentPopup');
+        setImageError(true); // Mark this image as failed
+      }}
+      // Use a web-based avatar service instead of local assets
+      defaultSource={Platform.OS === 'ios' ? { uri: 'https://ui-avatars.com/api/?name=' + (userId || 'U') } : undefined}
     />
   ) : (
     <View
@@ -89,11 +99,12 @@ const DefaultProfilePicture = ({
       ]}
     >
       <Text style={[styles.defaultAvatarText, { fontSize: size * 0.4 }]}>
-        {userId.charAt(0).toUpperCase()}
+        {userId ? userId.charAt(0).toUpperCase() : 'U'}
       </Text>
     </View>
   );
   
+  // If onPress is provided, wrap the content in a TouchableOpacity
   if (onPress) {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
@@ -197,13 +208,28 @@ export function CommentPopup({
   );
   
   return (
-    <ModalPopup visible={visible} onClose={onClose}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Comments</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Feather name="x" size={24} color="#333" />
-        </TouchableOpacity>
-      </View>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalContainer}>
+        {/* Overlay - closes modal when tapped */}
+        <TouchableOpacity 
+          style={styles.overlay} 
+          activeOpacity={1} 
+          onPress={onClose}
+        />
+        
+        {/* Comment popup content */}
+        <View style={styles.popupContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Comments</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Feather name="x" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
           
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -211,11 +237,16 @@ export function CommentPopup({
             </View>
           ) : (
             <FlatList
+              style={styles.flatList}
               data={comments}
               renderItem={renderCommentItem}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.commentsList}
-              nestedScrollEnabled={true}
+              scrollEnabled={true}
+              scrollEventThrottle={16}
+              showsVerticalScrollIndicator={true}
+              bounces={true}
+              onScrollBeginDrag={() => Keyboard.dismiss()}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>No comments yet. Be the first to comment!</Text>
@@ -224,37 +255,61 @@ export function CommentPopup({
             />
           )}
           
-          <View style={styles.inputContainer}>
-            <TextInput
-              ref={inputRef}
-              style={styles.input}
-              placeholder="Add a comment..."
-              value={newComment}
-              onChangeText={setNewComment}
-              multiline
-              maxLength={500}
-              autoFocus={false}
-            />
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                (!newComment.trim() || submitting) && styles.sendButtonDisabled,
-              ]}
-              onPress={handleSubmitComment}
-              disabled={!newComment.trim() || submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Feather name="send" size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </View>
-    </ModalPopup>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          >
+            <View style={styles.inputContainer}>
+              <TextInput
+                ref={inputRef}
+                style={styles.input}
+                placeholder="Add a comment..."
+                value={newComment}
+                onChangeText={setNewComment}
+                multiline
+                maxLength={500}
+                autoFocus={false}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  (!newComment.trim() || submitting) && styles.sendButtonDisabled,
+                ]}
+                onPress={handleSubmitComment}
+                disabled={!newComment.trim() || submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Feather name="send" size={20} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  popupContainer: {
+    height: '80%',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -262,6 +317,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#EEEEEE',
+    backgroundColor: '#FFFFFF',
+    zIndex: 10,
   },
   title: {
     fontSize: 18,
@@ -275,6 +332,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  flatList: {
+    flex: 1,
+    width: '100%',
   },
   commentsList: {
     padding: 16,

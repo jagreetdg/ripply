@@ -4,9 +4,11 @@ import {
   Modal,
   StyleSheet,
   TouchableWithoutFeedback,
+  TouchableOpacity,
   Platform,
   KeyboardAvoidingView,
   Dimensions,
+  GestureResponderEvent,
 } from 'react-native';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -43,13 +45,17 @@ export function ModalPopup({
         </TouchableWithoutFeedback>
         
         {/* This is the actual popup content */}
-        {/* We wrap it in a TouchableWithoutFeedback to prevent clicks from propagating */}
-        <View style={styles.popupContainer}>
-          <TouchableWithoutFeedback>
-            <View style={styles.popup}>
-              {children}
-            </View>
-          </TouchableWithoutFeedback>
+        <View 
+          style={styles.popupContainer}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={(e: GestureResponderEvent) => {
+            // Prevent the event from bubbling to the overlay
+            e.stopPropagation();
+          }}
+        >
+          <View style={styles.popup}>
+            {children}
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
