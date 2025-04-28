@@ -6,6 +6,7 @@ import { VoiceNotesList } from "../components/profile/VoiceNotesList";
 import { getUserProfile, getUserVoiceNotes } from "../services/api/userService";
 import { getVoiceBio } from "../services/api/voiceBioService";
 import { VoiceBioRecorder } from "../components/profile/VoiceBioRecorder";
+import { UserNotFound } from "../components/common/UserNotFound";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -51,7 +52,7 @@ interface VoiceBio {
 
 export default function ProfileScreen() {
   // Get userId from URL params if available
-  const params = useLocalSearchParams<{ userId: string }>();
+  const params = useLocalSearchParams<{ userId: string, username: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [currentUserId, setCurrentUserId] = useState<string>(DEFAULT_USER_ID);
@@ -60,6 +61,8 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [voiceBio, setVoiceBio] = useState<VoiceBio | null>(null);
   const [showVoiceBioRecorder, setShowVoiceBioRecorder] = useState(false);
+  const [userNotFound, setUserNotFound] = useState(false);
+  const [usernameNotFound, setUsernameNotFound] = useState<string | undefined>();
   
   const handleBackPress = () => {
     router.back();
@@ -84,26 +87,13 @@ export default function ProfileScreen() {
   const fetchUserData = async () => {
     setLoading(true);
     try {
+      // Reset user not found state
+      setUserNotFound(false);
+      setUsernameNotFound(undefined);
+      
       // Fetch user profile
       const profileData = await getUserProfile(currentUserId);
-      
-      if (profileData) {
-        setUserProfile(profileData as UserProfile);
-      } else {
-        // Create a fallback user profile if the user is not found
-        console.log(`Creating fallback profile for user ID: ${currentUserId}`);
-        setUserProfile({
-          id: currentUserId,
-          username: 'user',
-          display_name: 'User',
-          avatar_url: null,
-          cover_photo_url: null,
-          bio: 'No bio available',
-          is_verified: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-      }
+      setUserProfile(profileData as UserProfile);
 
       // Fetch user voice notes
       const voiceNotesData = await getUserVoiceNotes(currentUserId);
@@ -122,8 +112,16 @@ export default function ProfileScreen() {
       // Fetch voice bio
       const voiceBioData = await getVoiceBio(currentUserId);
       setVoiceBio(voiceBioData as VoiceBio | null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching user data:", error);
+      
+      // Check if this is a user not found error
+      if (error.name === 'UserNotFoundError') {
+        console.log('User not found error detected');
+        setUserNotFound(true);
+        // If we have a username in params, use that for the not found message
+        setUsernameNotFound(params.username || `user-${currentUserId}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -142,6 +140,10 @@ export default function ProfileScreen() {
         <ActivityIndicator size="large" color="#6B2FBC" />
       </View>
     );
+  }
+
+  if (userNotFound) {
+    return <UserNotFound username={usernameNotFound} />;
   }
 
   if (!userProfile) {
