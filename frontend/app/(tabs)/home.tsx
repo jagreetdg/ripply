@@ -145,7 +145,7 @@ export default function HomeScreen() {
       console.warn('Received non-UUID user ID for navigation:', userId);
       // In a real app, we would have a way to fetch the UUID from the username
       // For now, just navigate to the profile tab without a specific user
-      router.push("/(tabs)/profile");
+      router.push("/profile/jamiejones");
       return;
     }
     

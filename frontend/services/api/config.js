@@ -82,13 +82,20 @@ const apiRequest = async (endpoint, options = {}) => {
         // Check if the response is successful
         if (!response.ok) {
           // Special handling for user not found errors
-          if (response.status === 404 && endpoint.includes('/users/')) {
-            console.warn(`User not found: ${endpoint}`);
-            // Throw a custom error for user not found that can be caught by the UI
-            const error = new Error('USER_NOT_FOUND');
-            error.name = 'UserNotFoundError';
-            error.userId = endpoint.split('/').pop();
-            throw error;
+          if (response.status === 404) {
+            console.warn(`[API Config] 404 response for endpoint: ${endpoint}`);
+            
+            // For username endpoints, log but don't throw an error
+            if (endpoint.includes('/users/username/')) {
+              console.warn(`[API Config] User not found by username: ${endpoint}`);
+              // Return null instead of throwing an error
+              return null;
+            } 
+            // For user ID endpoints, also return null
+            else if (endpoint.includes('/users/')) {
+              console.warn(`[API Config] User not found by ID: ${endpoint}`);
+              return null;
+            }
           }
           
           const errorData = await response.json().catch(() => ({}));

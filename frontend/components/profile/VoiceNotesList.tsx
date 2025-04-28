@@ -203,9 +203,10 @@ export function VoiceNotesList({ userId, userName, voiceNotes = [], onPlayVoiceN
 							// Format the post date
 							const timePosted = item.created_at ? formatTimeAgo(new Date(item.created_at)) : '';
 							
-							// Get the correct user ID and name for this specific voice note
+							// Get the correct user ID, name and username for this specific voice note
 							const noteUserId = item.user_id || userId;
 							const noteUserName = item.users?.display_name || displayName;
+							const noteUsername = item.users?.username || userName || 'user';
 							
 							return (
 								<View key={item.id} style={styles.cardContainer}>
@@ -218,8 +219,8 @@ export function VoiceNotesList({ userId, userName, voiceNotes = [], onPlayVoiceN
 										onPlay={() => handlePlayVoiceNote(item.id)}
 										onShare={() => handleShareVoiceNote(item.id)}
 										onProfilePress={() => {
-											// Use the voice note's user ID for navigation
-											router.push(`/profile?userId=${noteUserId}`);
+											// Use the voice note's username for navigation
+											router.push(`/profile/${noteUsername}`);
 										}}
 										currentUserId={userId}
 									/>

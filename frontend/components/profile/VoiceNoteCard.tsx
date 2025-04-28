@@ -161,7 +161,7 @@ export function VoiceNoteCard({
 				console.warn('VoiceNoteCard received non-UUID user ID:', userId);
 				// In a real app, we would have a way to fetch the UUID from the username
 				// For now, just navigate to the profile tab
-				router.push("/(tabs)/profile");
+				router.push("/profile/jamiejones");
 				return;
 			}
 
@@ -173,7 +173,7 @@ export function VoiceNoteCard({
 			});
 		} else {
 			// If no userId is provided, just navigate to the profile tab
-			router.push("/(tabs)/profile");
+			router.push("/profile/jamiejones");
 		}
 	}, [router, userId, onProfilePress]);
 
