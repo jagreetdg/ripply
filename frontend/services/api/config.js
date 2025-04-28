@@ -3,20 +3,11 @@
  */
 import { Platform } from 'react-native';
 
-// Base URL for the API
-// Use your computer's local network IP address when testing on physical devices
-// For simulators/emulators, you can use special addresses:
-// - iOS simulator: http://localhost:3000/api
-// - Android emulator: http://10.0.2.2:3000/api
+// Base URL for the API - deployed to Render
+const API_URL = "https://ripply-backend.onrender.com/api";
 
 // Detect platform and environment
 const isPhysicalDevice = Platform.OS === 'ios' || Platform.OS === 'android';
-const isIOS = Platform.OS === 'ios';
-
-// Single API URL for all environments
-const API_URL = "https://ripply-backend.onrender.com/api"; // Render deployed backend
-
-// API_URL is now a constant defined above
 
 // API endpoints
 const ENDPOINTS = {
@@ -33,9 +24,9 @@ const DEFAULT_HEADERS = {
 
 // Network timeout settings
 const NETWORK_CONFIG = {
-  timeout: 60000, // 60 seconds timeout for iOS simulator which can be slower
-  retries: 1,     // Reduced retry attempts to avoid excessive waiting
-  retryDelay: 1000 // Shorter delay between retries
+  timeout: 60000, // 60 seconds timeout
+  retries: 1,     // Number of retry attempts
+  retryDelay: 1000 // Delay between retries
 };
 
 /**
@@ -59,18 +50,16 @@ const apiRequest = async (endpoint, options = {}) => {
       const url = `${API_URL}${endpoint}`;
       const headers = { ...DEFAULT_HEADERS, ...options.headers };
       
-      // Create AbortController for timeout with longer timeout for iOS simulator
+      // Create AbortController for timeout
       const controller = new AbortController();
       const effectiveTimeout = Platform.OS === 'ios' && !isPhysicalDevice ? 
-        NETWORK_CONFIG.timeout * 1.5 : NETWORK_CONFIG.timeout; // 50% longer timeout for iOS simulator
+        NETWORK_CONFIG.timeout * 1.5 : NETWORK_CONFIG.timeout;
       
       const timeoutId = setTimeout(() => {
         controller.abort();
-        console.log(`Request timeout after ${effectiveTimeout}ms for ${url}`);
       }, effectiveTimeout);
       
       try {
-        console.log(`Fetching from ${url}...`);
         const response = await fetch(url, {
           ...options,
           headers,
@@ -83,17 +72,8 @@ const apiRequest = async (endpoint, options = {}) => {
         if (!response.ok) {
           // Special handling for user not found errors
           if (response.status === 404) {
-            console.warn(`[API Config] 404 response for endpoint: ${endpoint}`);
-            
-            // For username endpoints, log but don't throw an error
-            if (endpoint.includes('/users/username/')) {
-              console.warn(`[API Config] User not found by username: ${endpoint}`);
-              // Return null instead of throwing an error
-              return null;
-            } 
-            // For user ID endpoints, also return null
-            else if (endpoint.includes('/users/')) {
-              console.warn(`[API Config] User not found by ID: ${endpoint}`);
+            // For user endpoints, return null instead of throwing an error
+            if (endpoint.includes('/users/username/') || endpoint.includes('/users/')) {
               return null;
             }
           }
@@ -113,13 +93,9 @@ const apiRequest = async (endpoint, options = {}) => {
       }
     } catch (error) {
       lastError = error;
-      const isTimeout = error.name === 'AbortError';
-      const errorType = isTimeout ? 'timeout' : error.message;
-      console.warn(`API request attempt ${attempt + 1} failed (${errorType}) for ${API_URL}${endpoint}`);
       
       // If we've tried all attempts, throw the last error
       if (attempt >= NETWORK_CONFIG.retries) {
-        console.error("All API request attempts failed:", lastError);
         throw lastError || new Error('API request failed after all retry attempts');
       }
     }

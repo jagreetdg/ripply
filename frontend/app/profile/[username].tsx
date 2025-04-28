@@ -65,87 +65,63 @@ export default function ProfileByUsernameScreen() {
 
   useEffect(() => {
     if (params.username) {
-      console.log('[Profile] Received username param:', params.username);
       setUsername(params.username);
-    } else {
-      console.log('[Profile] No username param received');
     }
   }, [params.username]);
 
   useEffect(() => {
     if (username) {
-      console.log('[Profile] Username set, fetching user data for:', username);
       fetchUserData();
-    } else {
-      console.log('[Profile] No username set yet');
     }
   }, [username]);
 
   const fetchUserData = async () => {
-    console.log('[Profile] Starting fetchUserData for username:', username);
     setLoading(true);
     try {
       // Reset user not found state
       setUserNotFound(false);
       
       // Fetch user profile by username
-      console.log('[Profile] Calling getUserProfileByUsername for:', username);
       const profileData = await getUserProfileByUsername(username);
-      console.log('[Profile] Profile data received:', profileData);
       
       if (!profileData) {
-        console.log('[Profile] User not found for username:', username);
         setUserNotFound(true);
         setLoading(false);
         return;
-      } else {
-        console.log('[Profile] Valid profile data found for username:', username);
       }
       
       // Ensure we have a valid user profile object
       if (typeof profileData === 'object' && 'id' in profileData && 'username' in profileData) {
-        console.log('[Profile] Profile data is valid with id and username');
         const typedProfile = profileData as UserProfile;
         setUserProfile(typedProfile);
-        console.log('[Profile] User profile set to:', typedProfile);
         
         // Fetch user voice notes using the user ID from the profile
-        console.log('[Profile] Fetching voice notes for user ID:', typedProfile.id);
         const voiceNotesData = await getUserVoiceNotes(typedProfile.id);
-        console.log('[Profile] Voice notes data received:', voiceNotesData);
         
-        // Ensure we're properly handling the response structure
-        if (voiceNotesData && typeof voiceNotesData === 'object' && 'data' in voiceNotesData) {
-          setVoiceNotes(voiceNotesData.data);
-        } else if (Array.isArray(voiceNotesData)) {
+        if (Array.isArray(voiceNotesData)) {
           setVoiceNotes(voiceNotesData);
         } else {
-          console.error('Unexpected voice notes data format:', voiceNotesData);
           setVoiceNotes([]);
         }
         
-        // Fetch voice bio
-        const voiceBioData = await getVoiceBio(typedProfile.id);
-        setVoiceBio(voiceBioData);
+        // Fetch user voice bio if available
+        try {
+          const voiceBioData = await getVoiceBio(typedProfile.id);
+          if (voiceBioData) {
+            setVoiceBio(voiceBioData as VoiceBio);
+          }
+        } catch (bioError) {
+          // Voice bio not found or error fetching it - this is optional
+        }
       } else {
-        console.error('[Profile] Invalid user profile data format:', profileData);
-        console.log('[Profile] Profile data type:', typeof profileData);
-        console.log('[Profile] Has id property:', 'id' in (profileData || {}));
-        console.log('[Profile] Has username property:', 'username' in (profileData || {}));
         setUserNotFound(true);
       }
     } catch (error: any) {
-      console.error("[Profile] Error fetching user data:", error);
-      console.log("[Profile] Error name:", error.name);
-      console.log("[Profile] Error message:", error.message);
-      
       // Check if this is a user not found error
       if (error.name === 'UserNotFoundError') {
-        console.log('[Profile] User not found error detected');
         setUserNotFound(true);
       }
     } finally {
-      console.log('[Profile] Finished fetchUserData, setting loading to false');
       setLoading(false);
     }
   };

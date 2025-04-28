@@ -44,10 +44,8 @@ export const followUser = (userId, followerId) => {
  * @returns {Promise<Array>} - List of voice notes
  */
 export const getUserVoiceNotes = async (userId) => {
-  console.log('Fetching voice notes for user ID:', userId);
   const response = await apiRequest(`${ENDPOINTS.USERS}/${userId}/voice-notes`);
   
-  // The backend returns data in a nested structure with pagination
   // Extract just the voice notes array from the response
   const voiceNotes = response.data || [];
   
@@ -66,7 +64,6 @@ export const getUserVoiceNotes = async (userId) => {
       }
     }));
   } catch (error) {
-    console.error('Error fetching user data for voice notes:', error);
     return voiceNotes;
   }
 };
@@ -111,11 +108,9 @@ export const getUserProfileByUsername = async (username) => {
   try {
     // Remove @ symbol if present
     const cleanUsername = username.startsWith('@') ? username.substring(1) : username;
-    console.log(`[API] Fetching user profile for username: ${cleanUsername}`);
     
-    // For debugging, let's try to use a mock response for known test users
+    // For debugging, use mock response for known test users
     if (cleanUsername === 'jamiejones' || cleanUsername === 'blakeanderson') {
-      console.log(`[API] Using mock data for test user: ${cleanUsername}`);
       // Return mock data for testing
       return {
         id: cleanUsername === 'jamiejones' ? 'd0c028e7-a33c-4d41-a779-5d1e497b12b3' : '9435c23b-778f-4644-a8b4-a6b9dc9aef35',
@@ -131,25 +126,19 @@ export const getUserProfileByUsername = async (username) => {
     }
     
     const response = await apiRequest(`${ENDPOINTS.USERS}/username/${cleanUsername}`);
-    console.log(`[API] Response for username ${cleanUsername}:`, response);
     
     // The response might be the data directly or have a data property
     if (response && typeof response === 'object') {
       if ('data' in response) {
-        console.log(`[API] Returning data property for ${cleanUsername}:`, response.data);
         return response.data;
       } else {
         // The response itself is the user data
-        console.log(`[API] Returning direct response for ${cleanUsername}:`, response);
         return response;
       }
     }
-    console.log(`[API] No valid response for ${cleanUsername}, returning null`);
     return null;
   } catch (error) {
-    console.error(`[API] Error in getUserProfileByUsername for ${username}:`, error);
     if (error.name === 'UserNotFoundError') {
-      console.log(`[API] UserNotFoundError for ${username}, returning null`);
       return null;
     }
     throw error;
