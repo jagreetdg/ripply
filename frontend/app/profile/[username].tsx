@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import { View, StyleSheet, ScrollView, ActivityIndicator, Text, TouchableOpacity, Animated } from "react-native";
+import { View, StyleSheet, ScrollView, ActivityIndicator, Text, TouchableOpacity, Animated, RefreshControl } from "react-native";
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
 import { VoiceNotesList } from "../../components/profile/VoiceNotesList";
 import { getUserProfileByUsername, getUserVoiceNotes } from "../../services/api/userService";
@@ -47,6 +47,18 @@ interface VoiceBio {
 }
 
 export default function ProfileByUsernameScreen() {
+  // ...existing code...
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Handler for pull-to-refresh
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchUserData();
+    } finally {
+      setRefreshing(false);
+    }
+  }
   // Get username from URL params
   const params = useLocalSearchParams<{ username: string }>();
   const router = useRouter();
@@ -177,7 +189,9 @@ export default function ProfileByUsernameScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container]}>      
+      {/* Status bar background to prevent content from showing behind it */}
+      <View style={[styles.statusBarBackground, { height: insets.top }]} />
       <Stack.Screen 
         options={{
           // Hide the default header when we're using our custom collapsible header
@@ -188,9 +202,14 @@ export default function ProfileByUsernameScreen() {
       <Animated.View 
         style={[
           styles.fixedHeader,
-          { opacity: collapsedHeaderOpacity }
+          { 
+            opacity: collapsedHeaderOpacity,
+            top: 0, // Start from the very top of the screen
+          }
         ]}
       >
+        {/* Status bar spacer inside the header */}
+        <View style={{ height: insets.top }} />
         <ProfileHeader
           userId={userProfile.username}
           displayName={userProfile.display_name}
@@ -210,9 +229,19 @@ export default function ProfileByUsernameScreen() {
           { useNativeDriver: false }
         )}
         scrollEventThrottle={8}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#6B2FBC"
+            colors={["#6B2FBC"]}
+          />
+        }
       >
         {/* Always render the expanded header with animated opacity */}
         <Animated.View style={{ opacity: headerOpacity }}>
+          {/* Add padding at the top to account for status bar */}
+          <View style={{ paddingTop: insets.top }} />
           <ProfileHeader
             userId={userProfile.username}
             displayName={userProfile.display_name}
@@ -255,9 +284,16 @@ export default function ProfileByUsernameScreen() {
 }
 
 const styles = StyleSheet.create({
-  fixedHeader: {
+  statusBarBackground: {
     position: 'absolute',
     top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    zIndex: 101, // Higher than the header
+  },
+  fixedHeader: {
+    position: 'absolute',
     left: 0,
     right: 0,
     zIndex: 100,
@@ -274,6 +310,8 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    // Remove any top padding from the scroll view itself
+    paddingTop: 0,
   },
   headerTitle: {
     color: "#6B2FBC",

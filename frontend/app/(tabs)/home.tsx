@@ -46,6 +46,16 @@ const EMPTY_FEED: VoiceNote[] = [];
 export default function HomeScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [refreshing, setRefreshing] = useState(false);
+
+  // Handler for pull-to-refresh
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchVoiceNotes();
+    } finally {
+      setRefreshing(false);
+    }
+  }
   const [loading, setLoading] = useState(true);
   // Define interface for feed items
   interface FeedItem {
@@ -130,11 +140,7 @@ export default function HomeScreen() {
     fetchVoiceNotes();
   }, [fetchVoiceNotes]);
 
-  // Handle refresh
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchVoiceNotes();
-  };
+
 
   const handleNewVoiceNote = () => {
     // TODO: Implement voice note recording
@@ -189,25 +195,31 @@ export default function HomeScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: "#FFFFFF" }]}>
+      {/* Status bar background to prevent content from showing behind it */}
+      <View style={[styles.statusBarBackground, { height: insets.top }]} />
       {/* Fixed Header */}
       <Animated.View
         style={[
           styles.header,
           {
-            height: HEADER_HEIGHT + insets.top,
-            paddingTop: insets.top,
+            height: HEADER_HEIGHT + (Platform.OS === 'ios' ? 0 : insets.top),
+            paddingTop: Platform.OS === 'ios' ? 0 : insets.top,
             shadowOpacity: headerShadowOpacity,
-            // Remove the transform to keep the header fixed
+            // Position header at the very top of the screen
+            top: 0,
           },
         ]}
       >
+        {/* Status bar spacer inside the header */}
+        {Platform.OS === 'ios' && <View style={{ height: insets.top }} />}
         <HomeHeader />
       </Animated.View>
 
       {/* Scrollable content */}
       <Animated.ScrollView
-        contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + (Platform.OS === 'ios' ? insets.top : 0) }]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         refreshControl={
@@ -216,14 +228,11 @@ export default function HomeScreen() {
             onRefresh={handleRefresh}
             tintColor="#6B2FBC"
             colors={["#6B2FBC"]}
+            progressBackgroundColor="#FFFFFF"
           />
         }
       >
-        {/* Temporarily removed the feed header */}
-        <View style={styles.feedHeader}>
-          <Text style={styles.feedTitle}>For You</Text>
-          <View style={styles.underline} />
-        </View>
+        {/* Feed header removed as requested */}
         
         {loading && !refreshing ? (
           <View style={styles.loadingContainer}>
@@ -276,9 +285,17 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  statusBarBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    zIndex: 101, // Higher than the header
+  },
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#FFFFFF", // White background to match the screenshot
   },
   loadingContainer: {
     flex: 1,
@@ -324,19 +341,23 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
+  scrollView: {
+    flex: 1,
+    backgroundColor: "#FFFFFF", // White background to match the screenshot
+  },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: HEADER_HEIGHT, // Add padding for fixed header
+    // Base padding is handled inline to account for dynamic insets
   },
   header: {
     position: "absolute",
-    top: 0,
     left: 0,
     right: 0,
     backgroundColor: "#fff",
-    zIndex: 10,
+    zIndex: 100,
     borderBottomWidth: 1,
     borderBottomColor: "#E1E1E1",
+    // Only show shadow at the bottom
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,

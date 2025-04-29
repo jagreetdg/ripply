@@ -790,15 +790,15 @@ const styles = StyleSheet.create({
 		justifyContent: "space-evenly",
 		alignItems: "center",
 		paddingTop: 12,
-		paddingHorizontal: 16,
 		borderTopWidth: 1,
 		borderTopColor: "#E1E1E1",
 	},
 	interactionButton: {
 		alignItems: "center",
 		justifyContent: "center",
-		paddingHorizontal: 8,
-		marginHorizontal: 12,
+		paddingHorizontal: 16,
+		marginHorizontal: 16,
+		minWidth: 48,
 		width: 60,
 	},
 	interactionContent: {
