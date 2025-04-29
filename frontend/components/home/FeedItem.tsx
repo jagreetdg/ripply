@@ -35,11 +35,11 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
     } else {
       // Fallback to default navigation if no custom handler is provided
       router.push({
-        pathname: '/profile',
-        params: { userId: item.userId }
+        pathname: "/profile/[username]",
+        params: { username: item.userName }
       });
     }
-  }, [item.userId, onProfilePress, router]);
+  }, [item.userId, item.userName, onProfilePress, router]);
 
   return (
     <View style={styles.container}>
@@ -71,7 +71,7 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
         <VoiceNoteCard 
           voiceNote={item.voiceNote} 
           userId={item.userId}
-          userName={item.userName}
+          username={item.userName}
           onProfilePress={handleProfilePress}
         />
       </View>
