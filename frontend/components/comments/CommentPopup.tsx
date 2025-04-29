@@ -175,25 +175,34 @@ export function CommentPopup({
     }
   };
   
-  const handleProfilePress = (userId: string) => {
-    // Navigate to the user profile
-    router.push({
-      pathname: '/profile',
-      params: { userId }
-    });
+  const handleProfilePress = (userId: string, username?: string) => {
+    // Navigate to the user profile using username if available, otherwise use userId
+    if (username) {
+      console.log('Navigating to profile by username:', username);
+      router.push({
+        pathname: '/profile/[username]',
+        params: { username }
+      });
+    } else {
+      console.log('Navigating to profile by userId:', userId);
+      router.push({
+        pathname: '/[userId]',
+        params: { userId }
+      });
+    }
   };
 
   const renderCommentItem = ({ item }: { item: Comment }) => (
     <View style={styles.commentItem}>
-      <DefaultProfilePicture 
-        userId={item.user?.username || item.user_id} 
-        size={40} 
-        avatarUrl={item.user?.avatar_url} 
-        onPress={() => handleProfilePress(item.user_id)}
+      <DefaultProfilePicture
+        userId={item.user_id}
+        size={40}
+        avatarUrl={item.user?.avatar_url || null}
+        onPress={() => handleProfilePress(item.user_id, item.user?.username)}
       />
       <View style={styles.commentContent}>
         <View style={styles.commentHeader}>
-          <TouchableOpacity onPress={() => handleProfilePress(item.user_id)}>
+          <TouchableOpacity onPress={() => handleProfilePress(item.user_id, item.user?.username)}>
             <Text style={styles.commentUserName}>
               {item.user?.display_name || 'User'}
             </Text>

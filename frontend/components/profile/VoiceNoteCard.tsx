@@ -8,10 +8,6 @@ import {
 	ImageBackground,
 	Pressable,
 	Animated,
-	ViewStyle,
-	TextStyle,
-	ImageStyle,
-	FlatList,
 	Platform,
 	Share,
 	Alert,
@@ -22,6 +18,7 @@ import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { CommentPopup } from "../comments/CommentPopup";
 import { recordShare } from "../../services/api/voiceNoteService";
+
 // Development mode flag
 const isDev = process.env.NODE_ENV === 'development' || __DEV__;
 
@@ -36,12 +33,20 @@ export interface VoiceNote {
 	backgroundImage: string | null;
 	tags?: string[];
 	userAvatarUrl?: string | null;
+	// Add the users property to match the API response structure
+	users?: {
+		id: string;
+		username: string;
+		display_name: string;
+		avatar_url: string | null;
+	};
 }
 
 interface VoiceNoteCardProps {
 	voiceNote: VoiceNote;
 	userId?: string;
-	userName?: string;
+	displayName?: string; // Display name (human-readable)
+	username?: string; // Username for routing and @ mentions
 	userAvatarUrl?: string | null;
 	timePosted?: string;
 	onPlay?: () => void;
@@ -120,7 +125,8 @@ const DefaultProfilePicture = ({
 export function VoiceNoteCard({
 	voiceNote,
 	userId,
-	userName,
+	displayName,
+	username,
 	userAvatarUrl,
 	timePosted,
 	onPlay,
@@ -130,6 +136,14 @@ export function VoiceNoteCard({
 }: VoiceNoteCardProps) {
 	const router = useRouter();
 	const [isPlaying, setIsPlaying] = useState(false);
+	
+	// Debug log to check the username value
+	console.log('VoiceNoteCard received props:', { userId, displayName, username, userAvatarUrl, voiceNoteUsers: voiceNote.users });
+	
+	// Ensure we have a valid username for display and navigation
+	// If username is undefined, try to extract it from voiceNote.users
+	const effectiveUsername = username || voiceNote.users?.username || (displayName ? displayName.toLowerCase().replace(/\s+/g, '') : 'user');
+	console.log('Using effectiveUsername:', effectiveUsername);
 	const [progress, setProgress] = useState(0);
 	const [isSeeking, setIsSeeking] = useState(false);
 	const [isLiked, setIsLiked] = useState(false);
@@ -140,42 +154,33 @@ export function VoiceNoteCard({
 	const [commentsCount, setCommentsCount] = useState(typeof voiceNote.comments === 'number' ? voiceNote.comments : 0);
 	const progressContainerRef = useRef<View>(null);
 	const likeScale = useRef(new Animated.Value(1)).current;
-
-	// Animation value for like button
 	const shareScale = useRef(new Animated.Value(1)).current;
-
-	// Helper function to check if a string is a UUID
-	const isUUID = (id: string): boolean => {
-		const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-		return uuidPattern.test(id);
-	};
 
 	// Handle navigation to user profile
 	const handleProfilePress = useCallback(() => {
 		// Use the provided onProfilePress prop if available
 		if (onProfilePress) {
 			onProfilePress();
-		} else if (userId) {
-			// Check if the userId is a valid UUID
-			if (!isUUID(userId)) {
-				console.warn('VoiceNoteCard received non-UUID user ID:', userId);
-				// In a real app, we would have a way to fetch the UUID from the username
-				// For now, just navigate to the profile tab
-				router.push("/profile/jamiejones");
-				return;
-			}
-
-			// Navigate to profile page with the specific user ID (which is a UUID)
-			console.log('VoiceNoteCard navigating to profile for user:', userId);
+		} else if (effectiveUsername) {
+			// Navigate to the profile by username
+			console.log('Navigating to profile by username:', effectiveUsername);
+			// Use the href property instead of a template string to avoid parameter conflicts
 			router.push({
-				pathname: "/profile",
+				pathname: '/profile/[username]',
+				params: { username: effectiveUsername }
+			});
+		} else if (userId) {
+			// Fallback to userId if username is not available
+			console.log('Navigating to user profile with UUID:', userId);
+			router.push({
+				pathname: '/[userId]',
 				params: { userId }
 			});
 		} else {
-			// If no userId is provided, just navigate to the profile tab
-			router.push("/profile/jamiejones");
+			// If no userId or username is provided, navigate to a default profile
+			router.push('/profile/user');
 		}
-	}, [router, userId, onProfilePress]);
+	}, [router, userId, username, onProfilePress]);
 
 	// Handle like button press
 	const handleLikePress = useCallback(() => {
@@ -186,36 +191,31 @@ export function VoiceNoteCard({
 			// Update likes count
 			setLikesCount(prevCount => newLikeState ? prevCount + 1 : prevCount - 1);
 
-			// Trigger animation if liking
-			if (newLikeState) {
-				// Run scale animation on the like button
-				Animated.sequence([
-					Animated.spring(likeScale, {
-						toValue: 1.2,
-						friction: 5,
-						tension: 40,
-						useNativeDriver: true,
-					}),
-					Animated.spring(likeScale, {
-						toValue: 1,
-						friction: 5,
-						useNativeDriver: true,
-					})
-				]).start();
-			}
+			// Animate the like button
+			Animated.sequence([
+				Animated.timing(likeScale, {
+					toValue: 1.2,
+					duration: 100,
+					useNativeDriver: true,
+				}),
+				Animated.timing(likeScale, {
+					toValue: 1,
+					duration: 100,
+					useNativeDriver: true,
+				}),
+			]).start();
 
 			return newLikeState;
 		});
-	}, []);
+	}, [likeScale]);
 
 	// Handle comment button press
 	const handleCommentPress = useCallback(() => {
 		setShowCommentPopup(true);
 	}, []);
-	
-	// Handle when a comment is added
+
+	// Handle comment added
 	const handleCommentAdded = useCallback(() => {
-		// Increment the comments count
 		setCommentsCount(prevCount => prevCount + 1);
 	}, []);
 
@@ -227,120 +227,143 @@ export function VoiceNoteCard({
 	}, []);
 
 	// Handle share button press (retweet-style)
-	const handleSharePress = async () => {
-		console.log('Share button pressed (retweet-style)');
-		
-		// Toggle the shared state
-		const newSharedState = !isShared;
-		setIsShared(newSharedState);
-		
-		// Update the shares count
-		setSharesCount(prevCount => newSharedState ? prevCount + 1 : Math.max(0, prevCount - 1));
-		
-		// Animate the share icon
-		Animated.sequence([
-			Animated.timing(shareScale, {
-				toValue: 1.3,
-				duration: 200,
-				useNativeDriver: true,
-			}),
-			Animated.timing(shareScale, {
-				toValue: 1,
-				duration: 200,
-				useNativeDriver: true,
-			}),
-		]).start();
-		
-		// If we have a user ID, record the share in the backend
-		if (currentUserId) {
-			try {
-				if (onShare) {
-					// Use the callback if provided
-					onShare(voiceNote.id);
-				} else {
-					// Otherwise call the API directly
-					// Note: We're ignoring the backend error for now since we don't have user auth
-					// This will be fixed when user authentication is implemented
-					try {
-						const response = await recordShare(voiceNote.id, currentUserId);
-						console.log('Share response:', response);
-					} catch (error) {
+	const handleSharePress = useCallback(() => {
+		// Toggle shared state
+		setIsShared(prevState => {
+			const newSharedState = !prevState;
+
+			// Update shares count locally
+			setSharesCount(prevCount => newSharedState ? prevCount + 1 : prevCount - 1);
+
+			// Animate the share button
+			Animated.sequence([
+				Animated.timing(shareScale, {
+					toValue: 1.2,
+					duration: 100,
+					useNativeDriver: true,
+				}),
+				Animated.timing(shareScale, {
+					toValue: 1,
+					duration: 100,
+					useNativeDriver: true,
+				}),
+			]).start();
+
+			// Record the share in the backend
+			if (newSharedState && onShare) {
+				onShare(voiceNote.id);
+			} else if (newSharedState) {
+				recordShare(voiceNote.id, currentUserId)
+					.catch(error => {
 						console.error('Error recording share:', error);
-						// Continue anyway since we want the UI to update
-					}
-				}
-			} catch (error) {
-				console.error('Error in share process:', error);
+						// Revert the UI change if the API call fails
+						setIsShared(false);
+						setSharesCount(prevCount => prevCount - 1);
+					});
 			}
+
+			return newSharedState;
+		});
+	}, [shareScale, voiceNote.id, currentUserId, onShare]);
+
+	// Handle system share (native share sheet)
+	const handleSystemShare = useCallback(async () => {
+		try {
+			const result = await Share.share({
+				message: `Check out this voice note: ${voiceNote.title}`,
+				url: `https://ripply.app/voice-notes/${voiceNote.id}`,
+				title: voiceNote.title,
+			});
+
+			if (result.action === Share.sharedAction) {
+				if (result.activityType) {
+					// Shared with activity type of result.activityType
+					console.log(`Shared with ${result.activityType}`);
+				} else {
+					// Shared
+					console.log('Shared');
+				}
+			} else if (result.action === Share.dismissedAction) {
+				// Dismissed
+				console.log('Share dismissed');
+			}
+		} catch (error) {
+			Alert.alert('Error', 'Something went wrong while sharing');
 		}
-	};
+	}, [voiceNote.id, voiceNote.title]);
 
 	// Handle play/pause button press
-	const handlePlayPause = () => {
-		const newPlayingState = !isPlaying;
-		setIsPlaying(newPlayingState);
-
-		// If starting playback, record the play in the backend
-		if (newPlayingState && onPlay) {
+	const handlePlayPause = useCallback(() => {
+		setIsPlaying(prev => !prev);
+		if (onPlay) {
 			onPlay();
 		}
+	}, [onPlay]);
 
-		// TODO: Implement actual audio playback
-	};
-
-	const calculateProgress = (pageX: number) => {
-		progressContainerRef.current?.measure(
-			(x, y, width, height, pageXOffset, pageYOffset) => {
+	// Calculate progress based on touch position
+	const calculateProgress = useCallback((pageX: number) => {
+		if (progressContainerRef.current) {
+			progressContainerRef.current.measure((x, y, width, height, pageXOffset, pageYOffset) => {
 				const containerStart = pageXOffset;
-				const relativeX = Math.max(0, Math.min(width, pageX - containerStart));
-				const newProgress = Math.max(0, Math.min(1, relativeX / width));
+				const newProgress = Math.max(0, Math.min(1, (pageX - containerStart) / width));
 				setProgress(newProgress);
-			}
-		);
-	};
+			});
+		}
+	}, []);
 
-	const handleSeekStart = (event: any) => {
+	// Handle seek start
+	const handleSeekStart = useCallback((event: any) => {
 		setIsSeeking(true);
 		calculateProgress(event.nativeEvent.pageX);
-	};
+	}, [calculateProgress]);
 
-	const handleSeekMove = (event: any) => {
+	// Handle seek move
+	const handleSeekMove = useCallback((event: any) => {
 		if (isSeeking) {
 			calculateProgress(event.nativeEvent.pageX);
 		}
-	};
+	}, [isSeeking, calculateProgress]);
 
-	const handleSeekEnd = () => {
+	// Handle seek end
+	const handleSeekEnd = useCallback(() => {
 		setIsSeeking(false);
-	};
+	}, []);
 
-	const renderProgressBar = () => (
+	// Render progress bar
+	const renderProgressBar = useCallback(() => (
 		<View
 			ref={progressContainerRef}
 			style={styles.progressContainer}
 		>
 			<View style={styles.progressBackground} />
 			<View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
+			<Pressable
+				style={styles.progressHitSlop}
+				onPressIn={handleSeekStart}
+				onTouchMove={handleSeekMove}
+				onPressOut={handleSeekEnd}
+			/>
 		</View>
-	);
+	), [progress, handleSeekStart, handleSeekMove, handleSeekEnd]);
 
+	// Render the card with or without background image
 	if (!voiceNote.backgroundImage) {
 		return (
 			<>
 				<View style={[styles.container, styles.plainContainer]}>
 					<View style={styles.content}>
 						{/* User info and options header */}
-						{(userId || userName) && (
+						{(userId || displayName) && (
 							<View style={styles.cardHeader}>
 								<TouchableOpacity style={styles.userInfoContainer} onPress={handleProfilePress}>
 									<DefaultProfilePicture 
-										userId={userName || "@user"} 
+										userId={userId || "user"} 
 										size={32} 
 										avatarUrl={userAvatarUrl || voiceNote.userAvatarUrl || null}
 									/>
 									<View style={styles.userInfo}>
-										<Text style={styles.userName}>{userName || "User"}</Text>
-										<Text style={styles.userId}>@{userName?.toLowerCase().replace(/\s+/g, '') || "user"}</Text>
+										<Text style={styles.displayName}>{displayName || "User"}</Text>
+										<Text style={styles.username}>@{effectiveUsername}</Text>
 									</View>
 								</TouchableOpacity>
 								<View style={styles.headerActions}>
@@ -476,17 +499,17 @@ export function VoiceNoteCard({
 				<View style={styles.overlay} />
 				<View style={styles.content}>
 					{/* User info and options header */}
-					{(userId || userName) && (
+					{(userId || displayName) && (
 						<View style={styles.cardHeader}>
 							<TouchableOpacity style={styles.userInfoContainer} onPress={handleProfilePress}>
 								<DefaultProfilePicture 
-									userId={userName || "@user"} 
+									userId={userId || "@user"} 
 									size={32} 
 									avatarUrl={userAvatarUrl || voiceNote.userAvatarUrl || null}
 								/>
 								<View style={styles.userInfo}>
-									<Text style={styles.userName}>{userName || "User"}</Text>
-									<Text style={styles.userId}>@{userName?.toLowerCase().replace(/\s+/g, '') || "user"}</Text>
+									<Text style={styles.displayName}>{displayName || "User"}</Text>
+									<Text style={styles.username}>@{username || "user"}</Text>
 								</View>
 							</TouchableOpacity>
 							<View style={styles.headerActions}>
@@ -509,6 +532,11 @@ export function VoiceNoteCard({
 								name={isPlaying ? "pause" : "play-arrow"}
 								size={24}
 								color="white"
+								style={{
+									textShadowColor: "#000000",
+									textShadowOffset: { width: 0.5, height: 0.5 },
+									textShadowRadius: 1
+								}}
 							/>
 						</TouchableOpacity>
 
@@ -609,24 +637,22 @@ export function VoiceNoteCard({
 
 const styles = StyleSheet.create({
 	container: {
-		borderRadius: 12,
+		borderRadius: 16,
 		overflow: "hidden",
-		minHeight: 150,
+		backgroundColor: "#FFFFFF",
 	},
 	tagsContainer: {
 		flexDirection: "row",
 		flexWrap: "wrap",
-		paddingHorizontal: 16,
 		marginBottom: 12,
-		gap: 8,
 	},
 	tagItem: {
-		backgroundColor: "rgba(107, 47, 188, 0.2)",
+		backgroundColor: "rgba(107, 47, 188, 0.1)",
 		borderRadius: 16,
 		paddingHorizontal: 12,
 		paddingVertical: 6,
-		marginRight: 0,
-		marginBottom: 0,
+		marginRight: 8,
+		marginBottom: 8,
 		borderWidth: 1,
 		borderColor: "rgba(107, 47, 188, 0.3)",
 	},
@@ -646,8 +672,6 @@ const styles = StyleSheet.create({
 	overlay: {
 		...StyleSheet.absoluteFillObject,
 		backgroundColor: "rgba(0, 0, 0, 0.3)",
-		backgroundImage:
-			"linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%)",
 	},
 	content: {
 		padding: 16,
@@ -667,7 +691,7 @@ const styles = StyleSheet.create({
 		marginLeft: 8,
 		justifyContent: "center",
 	},
-	userName: {
+	displayName: {
 		fontWeight: "bold",
 		fontSize: 14,
 		color: "#000000",
@@ -675,7 +699,7 @@ const styles = StyleSheet.create({
 		textShadowOffset: { width: 0.5, height: 0.5 },
 		textShadowRadius: 1,
 	},
-	userId: {
+	username: {
 		fontSize: 12,
 		color: "#666666",
 		textShadowColor: "#FFFFFF",
@@ -763,7 +787,7 @@ const styles = StyleSheet.create({
 	},
 	interactions: {
 		flexDirection: "row",
-		justifyContent: "space-evenly", // Use space-evenly for even distribution
+		justifyContent: "space-evenly",
 		alignItems: "center",
 		paddingTop: 12,
 		paddingHorizontal: 16,
@@ -771,12 +795,10 @@ const styles = StyleSheet.create({
 		borderTopColor: "#E1E1E1",
 	},
 	interactionButton: {
-		// Remove flex: 1 to prevent expanding to fill space
 		alignItems: "center",
 		justifyContent: "center",
 		paddingHorizontal: 8,
-		marginHorizontal: 12, // Increased from 4 to 12 for more spacing
-		// Add a fixed width to make buttons consistent
+		marginHorizontal: 12,
 		width: 60,
 	},
 	interactionContent: {
@@ -797,7 +819,7 @@ const styles = StyleSheet.create({
 		color: "#FF4D67",
 	},
 	sharedText: {
-		color: "#4CAF50", // Green color to match the retweet icon
+		color: "#4CAF50",
 		fontWeight: "600",
 	},
 	defaultAvatar: {

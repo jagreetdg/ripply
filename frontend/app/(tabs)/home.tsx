@@ -51,7 +51,8 @@ export default function HomeScreen() {
   interface FeedItem {
     id: string;
     userId: string;
-    userName: string;
+    displayName: string;
+    username: string;
     userAvatar: string | null;
     timePosted: string;
     voiceNote: {
@@ -64,6 +65,12 @@ export default function HomeScreen() {
       shares: number;
       backgroundImage: string | null;
       tags: string[];
+      users?: {
+        id: string;
+        username: string;
+        display_name: string;
+        avatar_url: string | null;
+      };
     };
   }
 
@@ -88,7 +95,8 @@ export default function HomeScreen() {
       const transformedData = data.map(item => ({
         id: item.id,
         userId: item.user_id,
-        userName: item.users?.display_name || 'User',
+        displayName: item.users?.display_name || 'User',
+        username: item.users?.username || '',
         userAvatar: item.users?.avatar_url,
         timePosted: new Date(item.created_at).toLocaleDateString(),
         voiceNote: {
@@ -101,6 +109,8 @@ export default function HomeScreen() {
           shares: 0,
           backgroundImage: item.background_image,
           tags: item.tags || [],
+          // Include the users object from the API response
+          users: item.users
         }
       }));
       
@@ -139,21 +149,26 @@ export default function HomeScreen() {
   };
 
   // Handle user profile navigation
-  const handleUserProfilePress = useCallback((userId: string) => {
-    // Ensure we're using a valid UUID
-    if (!isUUID(userId)) {
-      console.warn('Received non-UUID user ID for navigation:', userId);
-      // In a real app, we would have a way to fetch the UUID from the username
-      // For now, just navigate to the profile tab without a specific user
-      router.push("/profile/jamiejones");
-      return;
+  const handleUserProfilePress = useCallback((userId: string, username?: string) => {
+    if (username) {
+      // If we have a username, use that for navigation (preferred)
+      console.log('Navigating to profile by username:', username);
+      router.push({
+        pathname: '/profile/[username]',
+        params: { username }
+      });
+    } else if (userId && isUUID(userId)) {
+      // Fallback to userId if username is not available
+      console.log('Navigating to user profile with UUID:', userId);
+      router.push({
+        pathname: '/[userId]',
+        params: { userId }
+      });
+    } else {
+      // If no valid userId or username is provided, navigate to a default profile
+      console.warn('No valid user identifier for navigation');
+      router.push('/profile/user');
     }
-    
-    console.log('Navigating to user profile with UUID:', userId);
-    router.push({
-      pathname: '/profile',
-      params: { userId }
-    });
   }, [router]);
 
   // Handle playing a voice note
@@ -231,11 +246,12 @@ export default function HomeScreen() {
                     key={item.id}
                     voiceNote={item.voiceNote} 
                     userId={item.userId} 
-                    userName={item.userName} 
+                    displayName={item.displayName} 
+                    username={item.username}
                     userAvatarUrl={item.userAvatar}
                     timePosted={item.timePosted} 
                     onPlay={() => handlePlayVoiceNote(item.voiceNote.id, item.userId)}
-                    onProfilePress={() => handleUserProfilePress(item.userId)}
+                    onProfilePress={() => handleUserProfilePress(item.userId, item.username)}
                   />
                 </View>
               ))

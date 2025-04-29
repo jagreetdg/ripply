@@ -22,15 +22,16 @@ interface VoiceNote {
 	// User data that might be included in the API response
 	users?: {
 		id: string;
-		username: string;
-		display_name: string;
+		username: string; // Unique identifier for routing
+		display_name: string; // Human-readable name
 		avatar_url: string | null;
 	};
 }
 
 interface VoiceNotesListProps {
 	userId: string;
-	userName?: string;
+	username?: string; // Username for routing
+	displayName?: string; // Display name for showing
 	voiceNotes?: VoiceNote[];
 	onPlayVoiceNote?: (voiceNoteId: string) => void;
 	onRefresh?: () => void;
@@ -72,7 +73,7 @@ interface ShareResponse {
   };
 }
 
-export function VoiceNotesList({ userId, userName, voiceNotes = [], onPlayVoiceNote, onRefresh }: VoiceNotesListProps) {
+export function VoiceNotesList({ userId, username, displayName, voiceNotes = [], onPlayVoiceNote, onRefresh }: VoiceNotesListProps) {
 	// Get router for navigation
 	const router = useRouter();
 	// State for refresh control
@@ -80,8 +81,8 @@ export function VoiceNotesList({ userId, userName, voiceNotes = [], onPlayVoiceN
 	// State for voice notes
 	const [localVoiceNotes, setLocalVoiceNotes] = useState<VoiceNote[]>(voiceNotes);
 	
-	// Use the provided userName or default to "User"
-	const displayName = userName || "User";
+	// Use the provided displayName or default to "User"
+	const userDisplayName = displayName || "User";
 	
 	// Update local state when props change
 	useEffect(() => {
@@ -197,30 +198,49 @@ export function VoiceNotesList({ userId, userName, voiceNotes = [], onPlayVoiceN
 								backgroundImage: item.backgroundImage || item.background_image || null,
 								tags: item.tags || [],
 								// Add user avatar URL
-								userAvatarUrl: item.users?.avatar_url || null
+								userAvatarUrl: item.users?.avatar_url || null,
+								// Include the users object from the API response
+								users: item.users
 							};
 							
 							// Format the post date
 							const timePosted = item.created_at ? formatTimeAgo(new Date(item.created_at)) : '';
 							
-							// Get the correct user ID, name and username for this specific voice note
+							// Get the correct user ID, username and display name for this specific voice note
 							const noteUserId = item.user_id || userId;
-							const noteUserName = item.users?.display_name || displayName;
-							const noteUsername = item.users?.username || userName || 'user';
+							
+							// Extract username from the users object - this is critical for routing
+							// The API response has the username in item.users.username
+							const noteUsername = item.users?.username || username || 'user'; // Username for routing
+							const noteDisplayName = item.users?.display_name || userDisplayName; // Display name for showing
+							
+							// Debug log to check the voice note data
+							console.log('Voice note data:', {
+								itemId: item.id,
+								itemUserId: item.user_id,
+								itemUsers: item.users,
+								noteUserId,
+								noteUsername,
+								noteDisplayName
+							});
 							
 							return (
 								<View key={item.id} style={styles.cardContainer}>
 									<VoiceNoteCard 
 										voiceNote={normalizedVoiceNote} 
 										userId={noteUserId} 
-										userName={noteUserName}
+										displayName={noteDisplayName}
+										username={noteUsername}
 										userAvatarUrl={normalizedVoiceNote.userAvatarUrl}
 										timePosted={timePosted}
 										onPlay={() => handlePlayVoiceNote(item.id)}
 										onShare={() => handleShareVoiceNote(item.id)}
 										onProfilePress={() => {
 											// Use the voice note's username for navigation
-											router.push(`/profile/${noteUsername}`);
+											router.push({
+												pathname: '/profile/[username]',
+												params: { username: noteUsername }
+											});
 										}}
 										currentUserId={userId}
 									/>
