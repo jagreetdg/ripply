@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import { View, StyleSheet, ScrollView, ActivityIndicator, Text, TouchableOpacity } from "react-native";
+import { View, StyleSheet, ScrollView, ActivityIndicator, Text, TouchableOpacity, Animated } from "react-native";
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
 import { VoiceNotesList } from "../../components/profile/VoiceNotesList";
 import { getUserProfileByUsername, getUserVoiceNotes } from "../../services/api/userService";
@@ -58,6 +58,36 @@ export default function ProfileByUsernameScreen() {
   const [loading, setLoading] = useState(true);
   const [voiceBio, setVoiceBio] = useState<VoiceBio | null>(null);
   const [userNotFound, setUserNotFound] = useState(false);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  
+  // Create animated values for smooth transitions
+  const headerHeight = useRef(new Animated.Value(0)).current;
+  const headerOpacity = useRef(new Animated.Value(1)).current;
+  const collapsedHeaderOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Add a listener to scrollY to update header collapse state
+  useEffect(() => {
+    const listenerId = scrollY.addListener(({ value }) => {
+      // Calculate progress of collapse (0 to 1)
+      const COLLAPSE_THRESHOLD = 120;
+      const COLLAPSE_RANGE = 40;
+      
+      // Calculate progress between 0 and 1 based on scroll position
+      const progress = Math.max(0, Math.min(1, (value - (COLLAPSE_THRESHOLD - COLLAPSE_RANGE)) / COLLAPSE_RANGE));
+      
+      // Update the animated values based on progress
+      headerOpacity.setValue(1 - progress);
+      collapsedHeaderOpacity.setValue(progress);
+      
+      // Update the collapsed state for conditional logic
+      setIsHeaderCollapsed(progress > 0.5);
+    });
+    
+    return () => {
+      scrollY.removeListener(listenerId);
+    };
+  }, [scrollY]);
   
   const handleBackPress = () => {
     router.back();
@@ -150,20 +180,17 @@ export default function ProfileByUsernameScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen 
         options={{
-          headerShown: true,
-          headerTitle: userProfile ? userProfile.display_name : "Profile",
-          headerTitleStyle: styles.headerTitle,
-          headerLeft: () => (
-            <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-              <Feather name="arrow-left" size={24} color="#333" />
-            </TouchableOpacity>
-          ),
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
+          // Hide the default header when we're using our custom collapsible header
+          headerShown: false
         }} 
       />
-      <ScrollView style={styles.scrollView}>
+      {/* Always render the collapsed header as an overlay with animated opacity */}
+      <Animated.View 
+        style={[
+          styles.fixedHeader,
+          { opacity: collapsedHeaderOpacity }
+        ]}
+      >
         <ProfileHeader
           userId={userProfile.username}
           displayName={userProfile.display_name}
@@ -171,7 +198,32 @@ export default function ProfileByUsernameScreen() {
           coverPhotoUrl={userProfile.cover_photo_url}
           bio={userProfile.bio || undefined}
           isVerified={userProfile.is_verified}
+          isCollapsed={true}
+          postCount={voiceNotes.length}
         />
+      </Animated.View>
+      
+      <Animated.ScrollView 
+        style={styles.scrollView}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={8}
+      >
+        {/* Always render the expanded header with animated opacity */}
+        <Animated.View style={{ opacity: headerOpacity }}>
+          <ProfileHeader
+            userId={userProfile.username}
+            displayName={userProfile.display_name}
+            avatarUrl={userProfile.avatar_url}
+            coverPhotoUrl={userProfile.cover_photo_url}
+            bio={userProfile.bio || undefined}
+            isVerified={userProfile.is_verified}
+            isCollapsed={false}
+            postCount={voiceNotes.length}
+          />
+        </Animated.View>
       
       {/* Stats bar */}
       <View style={styles.statsContainer}>
@@ -193,15 +245,29 @@ export default function ProfileByUsernameScreen() {
       
         <VoiceNotesList
           userId={userProfile.id}
-          userName={userProfile.username}
+          username={userProfile.username}
+          displayName={userProfile.display_name}
           voiceNotes={voiceNotes}
         />
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+  },
   container: {
     flex: 1,
     backgroundColor: "#fff",
