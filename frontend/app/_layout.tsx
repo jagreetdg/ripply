@@ -1,16 +1,9 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import {
-	DarkTheme,
-	DefaultTheme,
-	ThemeProvider,
-} from "@react-navigation/native";
+import { ThemeProvider, DefaultTheme } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Slot, Stack, SplashScreen } from "expo-router";
+import { Slot, SplashScreen } from "expo-router";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
 import "react-native-reanimated";
-
-import { useColorScheme } from "@/components/useColorScheme";
 
 export {
 	// Catch any errors thrown by the Layout component.
@@ -19,7 +12,7 @@ export {
 
 export const unstable_settings = {
 	// Ensure that reloading on `/modal` keeps a back button present.
-	initialRouteName: "(tabs)",
+	initialRouteName: "index",
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -64,14 +57,9 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-	// Get the color scheme (light/dark mode)
-	const colorScheme = useColorScheme();
-	// Default to light theme if colorScheme is null or undefined
-	const theme = colorScheme === "dark" ? DarkTheme : DefaultTheme;
-
 	return (
-		<ThemeProvider value={theme}>
-			{/* Use Slot instead of Stack for better performance with less nesting */}
+		<ThemeProvider value={DefaultTheme}>
+			{/* Use Slot for better performance with less nesting */}
 			<Slot />
 		</ThemeProvider>
 	);

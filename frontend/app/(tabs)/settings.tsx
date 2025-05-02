@@ -9,7 +9,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   
   const handleProfilePress = () => {
-    router.push("/profile");
+    router.push("/profile/jamiejones");
   };
   
   return (

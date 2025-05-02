@@ -1,21 +1,28 @@
 import React from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { Pressable, Text } from 'react-native';
+import { Pressable } from 'react-native';
 
 import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+
+import { View, Platform } from 'react-native';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof Feather>['name'];
   color: string;
 }) {
-  return <Feather size={24} style={{ marginBottom: -3 }} {...props} />;
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <Feather
+        size={24}
+        style={{}}
+        {...props}
+      />
+    </View>
+  );
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
 
   return (
@@ -25,6 +32,12 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#666666',
         tabBarStyle: {
           borderTopColor: '#E1E1E1',
+          ...Platform.select({ ios: { paddingBottom: 0 }, android: { paddingBottom: 0 }, default: {} }),
+        },
+        tabBarShowLabel: false,
+        tabBarItemStyle: {
+          alignItems: 'center',
+          justifyContent: 'center',
         },
         // Disable the static render of the header on web
         // to prevent a hydration error in React Navigation v6.
@@ -33,21 +46,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Home',
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
           tabBarIcon: ({ color }) => <TabBarIcon name="search" color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
           tabBarIcon: ({ color }) => <TabBarIcon name="settings" color={color} />,
         }}
       />
