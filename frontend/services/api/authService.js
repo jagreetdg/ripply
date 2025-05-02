@@ -2,11 +2,18 @@
  * Authentication service for the Ripply app
  */
 import { apiRequest } from './config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Storage keys
+const TOKEN_KEY = '@ripply_auth_token';
+const USER_KEY = '@ripply_user';
 
 // Auth endpoints
 const AUTH_ENDPOINTS = {
   REGISTER: '/auth/register',
   LOGIN: '/auth/login',
+  LOGOUT: '/auth/logout',
+  VERIFY_TOKEN: '/auth/verify-token',
   CHECK_USERNAME: '/auth/check-username',
   CHECK_EMAIL: '/auth/check-email',
 };
@@ -25,7 +32,15 @@ const registerUser = async (userData) => {
     const response = await apiRequest(AUTH_ENDPOINTS.REGISTER, {
       method: 'POST',
       body: JSON.stringify(userData),
+      credentials: 'include', // Include cookies in the request
     });
+    
+    // Store token and user data in AsyncStorage
+    if (response.token) {
+      await AsyncStorage.setItem(TOKEN_KEY, response.token);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.user));
+    }
+    
     return response;
   } catch (error) {
     console.error('Error registering user:', error);
@@ -45,7 +60,15 @@ const loginUser = async (credentials) => {
     const response = await apiRequest(AUTH_ENDPOINTS.LOGIN, {
       method: 'POST',
       body: JSON.stringify(credentials),
+      credentials: 'include', // Include cookies in the request
     });
+    
+    // Store token and user data in AsyncStorage
+    if (response.token) {
+      await AsyncStorage.setItem(TOKEN_KEY, response.token);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.user));
+    }
+    
     return response;
   } catch (error) {
     console.error('Error logging in:', error);
@@ -83,9 +106,96 @@ const checkEmailAvailability = async (email) => {
   }
 };
 
+/**
+ * Logout the current user
+ * @returns {Promise<Object>} - Logout response
+ */
+const logoutUser = async () => {
+  try {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    
+    // Call the logout endpoint
+    const response = await apiRequest(AUTH_ENDPOINTS.LOGOUT, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include', // Include cookies in the request
+    });
+    
+    // Clear local storage
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    await AsyncStorage.removeItem(USER_KEY);
+    
+    return response;
+  } catch (error) {
+    console.error('Error logging out:', error);
+    
+    // Still clear local storage even if the API call fails
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    await AsyncStorage.removeItem(USER_KEY);
+    
+    throw error;
+  }
+};
+
+/**
+ * Verify the current auth token
+ * @returns {Promise<Object>} - User data if token is valid
+ */
+const verifyToken = async () => {
+  try {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    
+    if (!token) {
+      throw new Error('No token found');
+    }
+    
+    const response = await apiRequest(AUTH_ENDPOINTS.VERIFY_TOKEN, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include', // Include cookies in the request
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get the current authenticated user
+ * @returns {Promise<Object|null>} - User data or null if not authenticated
+ */
+const getCurrentUser = async () => {
+  try {
+    const userJson = await AsyncStorage.getItem(USER_KEY);
+    return userJson ? JSON.parse(userJson) : null;
+  } catch (error) {
+    console.error('Error getting current user:', error);
+    return null;
+  }
+};
+
+/**
+ * Check if user is authenticated
+ * @returns {Promise<boolean>} - True if authenticated
+ */
+const isAuthenticated = async () => {
+  try {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    return !!token;
+  } catch (error) {
+    console.error('Error checking authentication:', error);
+    return false;
+  }
+};
+
 export {
   registerUser,
   loginUser,
+  logoutUser,
+  verifyToken,
+  getCurrentUser,
+  isAuthenticated,
   checkUsernameAvailability,
   checkEmailAvailability,
 };
