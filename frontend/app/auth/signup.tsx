@@ -1,8 +1,18 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
+import { registerUser, checkUsernameAvailability, checkEmailAvailability } from '../../services/api/authService';
+
+interface ApiResponse {
+  exists?: boolean;
+  available?: boolean;
+  message?: string;
+  user?: any;
+  field?: string;
+  [key: string]: any;
+}
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -10,32 +20,199 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Field-specific errors
+  const [usernameError, setUsernameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  
+  // Validation states
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [isUsernameValid, setIsUsernameValid] = useState(true);
+  const [isEmailValid, setIsEmailValid] = useState(true);
+
+  // Validate username with debounce
+  useEffect(() => {
+    // Clear previous errors
+    setUsernameError('');
+    setIsUsernameValid(true);
+    
+    if (!username) return;
+    
+    // Basic validation
+    if (username.length < 3) {
+      setUsernameError('Username must be at least 3 characters');
+      setIsUsernameValid(false);
+      return;
+    }
+    
+    // Check if username contains only allowed characters
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setUsernameError('Username can only contain letters, numbers, and underscores');
+      setIsUsernameValid(false);
+      return;
+    }
+    
+    // Debounce the API call
+    const timer = setTimeout(async () => {
+      if (username.length >= 3) {
+        setIsCheckingUsername(true);
+        try {
+          const response = await checkUsernameAvailability(username) as ApiResponse;
+          if (response && !response.available) {
+            setUsernameError('Username is already taken');
+            setIsUsernameValid(false);
+          }
+        } catch (error: any) {
+          console.error('Error checking username:', error);
+        } finally {
+          setIsCheckingUsername(false);
+        }
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(timer);
+  }, [username]);
+  
+  // Validate email with debounce
+  useEffect(() => {
+    // Clear previous errors
+    setEmailError('');
+    setIsEmailValid(true);
+    
+    if (!email) return;
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid email address');
+      setIsEmailValid(false);
+      return;
+    }
+    
+    // Debounce the API call
+    const timer = setTimeout(async () => {
+      if (emailRegex.test(email)) {
+        setIsCheckingEmail(true);
+        try {
+          const response = await checkEmailAvailability(email) as ApiResponse;
+          if (response && !response.available) {
+            setEmailError('Email is already registered');
+            setIsEmailValid(false);
+          }
+        } catch (error: any) {
+          console.error('Error checking email:', error);
+        } finally {
+          setIsCheckingEmail(false);
+        }
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(timer);
+  }, [email]);
+  
+  // Validate password
+  useEffect(() => {
+    // Clear previous errors
+    setPasswordError('');
+    
+    if (!password) return;
+    
+    if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+    }
+  }, [password]);
+  
+  // Validate confirm password
+  useEffect(() => {
+    // Clear previous errors
+    setConfirmPasswordError('');
+    
+    if (!confirmPassword) return;
+    
+    if (password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
+    }
+  }, [confirmPassword, password]);
 
   const handleSignup = async () => {
-    // Basic validation
-    if (!username || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
+    // Reset all errors
     setError('');
+    setUsernameError('');
+    setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+    
+    // Comprehensive validation
+    let hasError = false;
+    
+    if (!username) {
+      setUsernameError('Username is required');
+      hasError = true;
+    } else if (!isUsernameValid) {
+      hasError = true;
+    }
+    
+    if (!email) {
+      setEmailError('Email is required');
+      hasError = true;
+    } else if (!isEmailValid) {
+      hasError = true;
+    }
+    
+    if (!password) {
+      setPasswordError('Password is required');
+      hasError = true;
+    } else if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      hasError = true;
+    }
+    
+    if (!confirmPassword) {
+      setConfirmPasswordError('Please confirm your password');
+      hasError = true;
+    } else if (password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
+      hasError = true;
+    }
+    
+    if (hasError) return;
+    
     setIsLoading(true);
 
     try {
-      // Simulate a brief loading period
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Redirect to home page after successful signup
-      router.push('/(tabs)/home');
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
+      // Register the user
+      const userData = {
+        username,
+        email,
+        password,
+        displayName: displayName || username
+      };
+      
+      const response = await registerUser(userData) as ApiResponse;
+      
+      if (response && response.user) {
+        // Store user data in local storage or context
+        // For now, just redirect to home page
+        router.push('/(tabs)/home');
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      
+      // Handle specific error types
+      if (error.message && error.message.includes('Username already exists')) {
+        setUsernameError('Username is already taken');
+      } else if (error.message && error.message.includes('Email already exists')) {
+        setEmailError('Email is already registered');
+      } else {
+        setError(error.message || 'Something went wrong. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -66,8 +243,8 @@ export default function SignupScreen() {
 
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Username</Text>
-            <View style={styles.inputWrapper}>
-              <Feather name="user" size={20} color="#999" style={styles.inputIcon} />
+            <View style={[styles.inputWrapper, usernameError ? styles.inputError : null]}>
+              <Feather name="user" size={20} color={usernameError ? "#e74c3c" : "#999"} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Choose a username"
@@ -76,13 +253,15 @@ export default function SignupScreen() {
                 value={username}
                 onChangeText={setUsername}
               />
+              {isCheckingUsername && <ActivityIndicator size="small" color="#6B2FBC" style={{ marginRight: 8 }} />}
             </View>
+            {usernameError ? <Text style={styles.fieldErrorText}>{usernameError}</Text> : null}
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Email</Text>
-            <View style={styles.inputWrapper}>
-              <Feather name="mail" size={20} color="#999" style={styles.inputIcon} />
+            <View style={[styles.inputWrapper, emailError ? styles.inputError : null]}>
+              <Feather name="mail" size={20} color={emailError ? "#e74c3c" : "#999"} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your email"
@@ -91,39 +270,40 @@ export default function SignupScreen() {
                 autoCapitalize="none"
                 value={email}
                 onChangeText={setEmail}
+                textContentType="emailAddress"
               />
+              {isCheckingEmail && <ActivityIndicator size="small" color="#6B2FBC" style={{ marginRight: 8 }} />}
             </View>
+            {emailError ? <Text style={styles.fieldErrorText}>{emailError}</Text> : null}
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Password</Text>
-            <View style={styles.inputWrapper}>
-              <Feather name="lock" size={20} color="#999" style={styles.inputIcon} />
+            <View style={[styles.inputWrapper, passwordError ? styles.inputError : null]}>
+              <Feather name="lock" size={20} color={passwordError ? "#e74c3c" : "#999"} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Create a password"
+                placeholder="Create a password (min. 8 characters)"
                 placeholderTextColor="#999"
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
+                textContentType="newPassword"
               />
               <Pressable 
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.passwordToggle}
               >
-                <Feather 
-                  name={showPassword ? "eye-off" : "eye"} 
-                  size={20} 
-                  color="#999" 
-                />
+                <Feather name={showPassword ? "eye-off" : "eye"} size={20} color="#999" />
               </Pressable>
             </View>
+            {passwordError ? <Text style={styles.fieldErrorText}>{passwordError}</Text> : null}
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Confirm Password</Text>
-            <View style={styles.inputWrapper}>
-              <Feather name="lock" size={20} color="#999" style={styles.inputIcon} />
+            <View style={[styles.inputWrapper, confirmPasswordError ? styles.inputError : null]}>
+              <Feather name="lock" size={20} color={confirmPasswordError ? "#e74c3c" : "#999"} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Confirm your password"
@@ -133,6 +313,21 @@ export default function SignupScreen() {
                 onChangeText={setConfirmPassword}
               />
             </View>
+            {confirmPasswordError ? <Text style={styles.fieldErrorText}>{confirmPasswordError}</Text> : null}
+          </View>
+          
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Display Name (Optional)</Text>
+            <View style={styles.inputWrapper}>
+              <Feather name="user-check" size={20} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="How you want to be called"
+                placeholderTextColor="#999"
+                value={displayName}
+                onChangeText={setDisplayName}
+              />
+            </View>
           </View>
 
           <Text style={styles.termsText}>
@@ -140,12 +335,18 @@ export default function SignupScreen() {
           </Text>
 
           <Pressable 
-            style={[styles.signupButton, isLoading && styles.signupButtonDisabled]}
+            style={[styles.signupButton, 
+              (isLoading || isCheckingUsername || isCheckingEmail || !isUsernameValid || !isEmailValid) ? 
+              styles.signupButtonDisabled : null
+            ]} 
             onPress={handleSignup}
-            disabled={isLoading}
+            disabled={isLoading || isCheckingUsername || isCheckingEmail || !isUsernameValid || !isEmailValid}
           >
             {isLoading ? (
-              <Text style={styles.signupButtonText}>Creating account...</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.signupButtonText}>Creating Account...</Text>
+              </View>
             ) : (
               <Text style={styles.signupButtonText}>Create Account</Text>
             )}
@@ -243,6 +444,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     backgroundColor: '#F9F9F9',
+  },
+  inputError: {
+    borderColor: '#e74c3c',
+    backgroundColor: '#fdeaea',
+  },
+  fieldErrorText: {
+    color: '#e74c3c',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
   },
   inputIcon: {
     marginRight: 12,

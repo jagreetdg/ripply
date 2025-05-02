@@ -11,6 +11,7 @@ const isPhysicalDevice = Platform.OS === 'ios' || Platform.OS === 'android';
 
 // API endpoints
 const ENDPOINTS = {
+	AUTH: "/auth",
 	USERS: "/users",
 	VOICE_NOTES: "/voice-notes",
 	VOICE_BIOS: "/voice-bios",
