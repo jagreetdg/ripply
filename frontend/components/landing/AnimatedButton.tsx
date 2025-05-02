@@ -7,7 +7,8 @@ import {
   ViewStyle, 
   TextStyle,
   Easing,
-  View
+  View,
+  Platform
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
@@ -85,17 +86,17 @@ export default function AnimatedButton({
 
   const animatedStyles = {
     transform: [{ scale: scaleAnim }],
-    shadowOpacity: shadowAnim,
+    shadowOpacity: Platform.OS === 'web' ? shadowAnim : undefined,
   };
 
   return (
     <Animated.View style={animatedStyles}>
       <Pressable
-        style={buttonStyles}
+        style={({ pressed }) => pressed ? [buttonStyles, { opacity: 0.9 }] : buttonStyles}
         onPress={disabled ? undefined : onPress}
         onPressIn={disabled ? undefined : handlePressIn}
         onPressOut={disabled ? undefined : handlePressOut}
-        android_ripple={disabled ? undefined : { color: primary ? '#5B27A0' : '#E8DEF8', borderless: false }}
+        android_ripple={disabled ? undefined : { color: primary ? '#5B27A0' : '#E8DEF8', borderless: true, radius: -1 }}
       >
         <View style={styles.contentContainer}>
           {icon && iconPosition === 'left' && (
@@ -134,6 +135,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     flex: 1,
+    ...(Platform.OS === 'ios' ? {
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+    } : {}),
   },
   primaryButton: {
     backgroundColor: '#6B2FBC',

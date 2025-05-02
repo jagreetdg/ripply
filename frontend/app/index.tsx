@@ -219,7 +219,7 @@ export default function LandingPage() {
 										onPress={handleSignup}
 										primary={true}
 										icon="user-plus"
-										style={styles.authButton}
+										style={[styles.authButton, styles.signupButton] as any}
 									/>
 								</View>
 
@@ -567,6 +567,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     backgroundColor: 'rgba(212, 193, 236, 0.25)',
   },
+  signupButton: {
+    borderColor: '#FFFFFF',
+    borderWidth: 2,
+  },
   socialButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -581,9 +585,10 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
     borderWidth: 1,
-    borderColor: 'rgba(157, 123, 199, 0.5)',
+    borderColor: 'rgba(157, 123, 199, 0.6)',
+    overflow: 'hidden',
   },
   divider: {
     flexDirection: 'row',

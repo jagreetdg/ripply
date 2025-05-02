@@ -7,7 +7,8 @@ import {
   ViewStyle, 
   TextStyle,
   Easing,
-  View
+  View,
+  Platform
 } from 'react-native';
 
 interface SocialAuthButtonProps {
@@ -78,17 +79,17 @@ export default function SocialAuthButton({
 
   const animatedStyles = {
     transform: [{ scale: scaleAnim }],
-    shadowOpacity: shadowAnim,
+    shadowOpacity: Platform.OS === 'web' ? shadowAnim : 0.1,
   };
 
   return (
     <Animated.View style={animatedStyles}>
       <Pressable
-        style={buttonStyles}
+        style={({ pressed }) => pressed ? [buttonStyles, { opacity: 0.9 }] : buttonStyles}
         onPress={disabled ? undefined : onPress}
         onPressIn={disabled ? undefined : handlePressIn}
         onPressOut={disabled ? undefined : handlePressOut}
-        android_ripple={disabled ? undefined : { color: '#E8DEF8', borderless: false }}
+        android_ripple={disabled ? undefined : { color: '#E8DEF8', borderless: true, radius: -1 }}
       >
         <View style={[styles.contentContainer, !text && styles.iconOnlyContainer]}>
           <View style={[styles.iconContainer, !text && styles.iconOnlyIconContainer]}>{icon}</View>
@@ -115,6 +116,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     flex: 1,
+    ...(Platform.OS === 'ios' ? {
+      shadowOffset: { width: 0, height: 2 },
+    } : {}),
   },
   disabledButton: {
     opacity: 0.7,
@@ -141,6 +145,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+    borderRadius: 4,
   },
   iconOnlyContainer: {
     justifyContent: 'center',
