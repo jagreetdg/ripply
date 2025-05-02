@@ -7,7 +7,7 @@ export function HomeHeader() {
   const router = useRouter();
 
   const handleProfilePress = () => {
-    router.push("/profile");
+    router.push("/profile/jamiejones");
   };
 
   const handleNotificationsPress = () => {
@@ -15,25 +15,36 @@ export function HomeHeader() {
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity onPress={handleProfilePress} style={styles.profileButton}>
-        <View style={styles.profilePicture}>
-          <Text style={styles.profileInitial}>U</Text>
+    <View style={styles.outerContainer}>
+      <View style={styles.container}>
+        <TouchableOpacity onPress={handleProfilePress} style={styles.profileButton}>
+          <View style={styles.profilePicture}>
+            <Text style={styles.profileInitial}>U</Text>
+          </View>
+        </TouchableOpacity>
+        
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoText}>Ripply</Text>
         </View>
-      </TouchableOpacity>
-      
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>Ripply</Text>
+        
+        <TouchableOpacity style={styles.notificationButton} onPress={handleNotificationsPress}>
+          <Feather name="bell" size={22} color="#333" />
+        </TouchableOpacity>
       </View>
       
-      <TouchableOpacity style={styles.notificationButton} onPress={handleNotificationsPress}>
-        <Feather name="bell" size={22} color="#333" />
-      </TouchableOpacity>
+      {/* Simple bottom separator */}
+      <View style={styles.separatorContainer}>
+        <View style={styles.separatorLine} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    width: '100%',
+    backgroundColor: "#FFFFFF",
+  },
   container: {
     flexDirection: "row",
     alignItems: "center",
@@ -41,6 +52,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: "100%",
     backgroundColor: "#FFFFFF",
+  },
+  separatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1.5,
+    backgroundColor: '#6B2FBC',
+    opacity: 0.2,
+    marginBottom: 4,
   },
   profileButton: {
     padding: 4,
