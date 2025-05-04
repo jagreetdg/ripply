@@ -2,9 +2,10 @@
  * API configuration for the Ripply app
  */
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base URL for the API - deployed to Render
-const API_URL = "https://ripply-backend.onrender.com/api";
+const API_URL = "https://ripply-backend.onrender.com";
 
 // Detect platform and environment
 const isPhysicalDevice = Platform.OS === 'ios' || Platform.OS === 'android';
@@ -21,6 +22,11 @@ const ENDPOINTS = {
 // Default request headers
 const DEFAULT_HEADERS = {
 	"Content-Type": "application/json",
+	"Accept": "application/json",
+	// Add CORS headers for web platform
+	...(Platform.OS === 'web' ? {
+		'Origin': typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081',
+	} : {}),
 };
 
 // Network timeout settings
@@ -38,6 +44,9 @@ const NETWORK_CONFIG = {
  */
 const apiRequest = async (endpoint, options = {}) => {
   let lastError = null;
+  
+  // Debug log for API request
+  console.log(`Making API request to: ${API_URL}${endpoint}`, options);
   
   // Try multiple times with the Render backend URL
   for (let attempt = 0; attempt <= NETWORK_CONFIG.retries; attempt++) {
@@ -61,10 +70,17 @@ const apiRequest = async (endpoint, options = {}) => {
       }, effectiveTimeout);
       
       try {
+        // Configure CORS for web platform
+        const corsOptions = Platform.OS === 'web' ? {
+          mode: 'cors',
+          credentials: 'include',
+        } : {};
+
         const response = await fetch(url, {
           ...options,
           headers,
-          signal: controller.signal
+          signal: controller.signal,
+          ...corsOptions
         });
         
         clearTimeout(timeoutId); // Clear the timeout

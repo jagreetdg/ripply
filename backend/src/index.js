@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({
 	origin: process.env.NODE_ENV === 'production' 
 		? ['https://ripply-app.netlify.app', 'https://ripply.app'] 
-		: ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006'],
+		: ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006', 'http://localhost:8081'],
 	credentials: true
 }));
 app.use(express.json());
