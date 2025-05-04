@@ -2,25 +2,48 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useUser } from "../../context/UserContext";
 
 export function HomeHeader() {
   const router = useRouter();
+  const { user, loading } = useUser();
 
   const handleProfilePress = () => {
-    router.push("/profile/jamiejones");
+    if (user && user.username) {
+      router.push(`/profile/${user.username}`);
+    } else {
+      router.push("/auth/login");
+    }
   };
 
   const handleNotificationsPress = () => {
     router.push("/notifications");
   };
 
+  // Get the first letter of the display name or username for the avatar fallback
+  const getInitial = () => {
+    if (user) {
+      if (user.display_name) return user.display_name.charAt(0).toUpperCase();
+      if (user.username) return user.username.charAt(0).toUpperCase();
+    }
+    return "G"; // Guest
+  };
+
   return (
     <View style={styles.outerContainer}>
       <View style={styles.container}>
         <TouchableOpacity onPress={handleProfilePress} style={styles.profileButton}>
-          <View style={styles.profilePicture}>
-            <Text style={styles.profileInitial}>U</Text>
-          </View>
+          {user && user.avatar_url ? (
+            <Image 
+              source={{ uri: user.avatar_url }} 
+              style={styles.profilePicture} 
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.profilePicture}>
+              <Text style={styles.profileInitial}>{getInitial()}</Text>
+            </View>
+          )}
         </TouchableOpacity>
         
         <View style={styles.logoContainer}>

@@ -1,20 +1,52 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
+import { loginUser, getCurrentUser } from '../../services/api/authService';
+import { useUser } from '../../context/UserContext';
+
+// Define the type for the login response
+interface LoginResponse {
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    [key: string]: any; // For any other properties the user object might have
+  };
+  token: string;
+}
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { setUser } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          console.log('User already logged in:', user);
+          // User is already logged in, redirect to home
+          router.replace('/(tabs)/home');
+        }
+      } catch (err) {
+        console.error('Error checking auth status:', err);
+        // Don't redirect on error
+      }
+    };
+    
+    checkAuthStatus();
+  }, []);
+
   const handleLogin = async () => {
-    // For now, we'll accept any input as valid
-    // Just show an error if fields are empty
+    // Validate inputs
     if (!email || !password) {
       setError('Please enter both email and password');
       return;
@@ -24,12 +56,57 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      // Simulate a brief loading period
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Redirect to home page
-      router.push('/(tabs)/home');
+      console.log('Login button pressed, attempting to login with:', { email });
+      
+      // Call the login API
+      const response = await loginUser({ email, password }) as LoginResponse;
+      console.log('Login response in component:', response ? 'Received' : 'Empty');
+      
+      // Check if login was successful by verifying we have both user and token
+      if (response && response.user && response.token) {
+        console.log('Login successful:', response.user);
+        
+        // Update the user context with proper type casting to match User interface
+        setUser({
+          id: response.user.id,
+          username: response.user.username,
+          email: response.user.email,
+          display_name: response.user.display_name || response.user.username,
+          avatar_url: response.user.avatar_url || null,
+          // Include other fields as needed
+          bio: response.user.bio || null,
+          is_verified: response.user.is_verified || false,
+          created_at: response.user.created_at,
+          updated_at: response.user.updated_at
+        });
+        
+        // Redirect to home page
+        router.replace('/(tabs)/home');
+      } else {
+        // This handles the case where the API returns a success but without proper data
+        console.warn('Login response missing user or token');
+        setError('Authentication failed. Please check your credentials.');
+        setIsLoading(false); // Make sure to set loading to false
+        return; // Don't proceed further
+      }
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      console.error('Login error:', err);
+      // Display user-friendly error message
+      const error = err as Error; // Type assertion to Error type
+      
+      if (error.message && error.message.includes('401')) {
+        setError('Invalid email or password. Please try again.');
+      } else if (error.message && error.message.includes('404')) {
+        setError('User not found. Please check your email.');
+      } else if (error.message && error.message.includes('CORS')) {
+        setError('Network error. Please try again later.');
+      } else if (error.message && error.message.includes('fetch')) {
+        setError('Cannot connect to server. Please check your internet connection.');
+      } else {
+        setError('Login failed. Please try again later.');
+      }
+      setIsLoading(false);
+      return; // Make sure to return and not continue execution
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +186,7 @@ export default function LoginScreen() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <Text style={styles.loginButtonText}>Logging in...</Text>
+              <ActivityIndicator color="#fff" size="small" />
             ) : (
               <Text style={styles.loginButtonText}>Log In</Text>
             )}

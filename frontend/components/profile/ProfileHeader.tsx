@@ -4,6 +4,7 @@ import {
 	Text,
 	StyleSheet,
 	Image,
+	ImageStyle,
 	TouchableOpacity,
 	ImageBackground,
 	Animated,
@@ -12,7 +13,6 @@ import {
 	Modal,
 	Dimensions,
 	Pressable,
-	ImageStyle,
 	Platform,
 	ActivityIndicator,
 } from "react-native";
@@ -30,6 +30,7 @@ interface ProfileHeaderProps {
   coverPhotoUrl?: string | null;
   bio?: string;
   isVerified?: boolean;
+  isOwnProfile?: boolean;
 }
 
 interface VoiceBio {
@@ -49,7 +50,7 @@ interface Styles {
 	iconButton: ViewStyle;
 	profileInfo: ViewStyle;
 	avatarContainer: ViewStyle;
-	avatar: ViewStyle;
+	avatar: ImageStyle;
 	defaultAvatar: ViewStyle;
 	defaultAvatarText: TextStyle;
 	nameContainer: ViewStyle;
@@ -132,6 +133,7 @@ export function ProfileHeader({
   coverPhotoUrl = null,
   bio = '',
   isVerified = false,
+  isOwnProfile = false,
 }: ProfileHeaderProps) {
 	const router = useRouter();
 	const [isVoiceBioPlaying, setIsVoiceBioPlaying] = useState(false);
@@ -341,105 +343,72 @@ export function ProfileHeader({
 
 	return (
 		<View style={styles.container}>
-			<TouchableOpacity
-				activeOpacity={0.9}
+			<TouchableOpacity 
+				style={styles.coverPhoto} 
 				onPress={() => handlePhotoPress("cover")}
+				disabled={!isOwnProfile && !coverPhotoUrl} // Only allow press if own profile or has cover photo
 			>
-				<ImageBackground
-					source={{
-						uri: coverPhotoUrl || "https://picsum.photos/seed/ripply/1200/400",
-					}}
-					style={styles.coverPhoto}
-					onError={(e) => {
-						console.log('Cover photo load error:', e.nativeEvent.error);
-						// Fallback is handled by the || operator in the uri
-					}}
-					resizeMode="cover"
-					onLoad={(e) => {
-						try {
-							// Check if source exists and has width/height properties
-							if (
-								e.nativeEvent &&
-								e.nativeEvent.source &&
-								e.nativeEvent.source.width &&
-								e.nativeEvent.source.height
-							) {
-								const { width, height } = e.nativeEvent.source;
-								setImageAspectRatio(width / height);
-							} else {
-								// Default to 16:9 aspect ratio if dimensions are not available
-								setImageAspectRatio(16 / 9);
-							}
-						} catch (error) {
-							console.warn("Error getting image dimensions:", error);
-							// Use a default aspect ratio
-							setImageAspectRatio(16 / 9);
-						}
-					}}
-				>
-					<View style={styles.topBar}>
-						<TouchableOpacity
-							onPress={() => router.back()}
-							style={styles.iconButton}
-						>
-							<Feather name="arrow-left" size={24} color="white" />
-						</TouchableOpacity>
-						<TouchableOpacity style={styles.iconButton}>
-							<Feather name="more-vertical" size={24} color="white" />
-						</TouchableOpacity>
+				{coverPhotoUrl ? (
+					<ImageBackground
+						source={{ uri: coverPhotoUrl }}
+						style={{ width: "100%", height: "100%" }}
+						resizeMode="cover"
+					>
+						{/* Edit button for cover photo if own profile */}
+						{isOwnProfile && (
+							<TouchableOpacity 
+								style={[styles.iconButton, { position: 'absolute', top: 10, right: 10 }]}
+								onPress={() => handlePhotoPress("cover")}
+							>
+								<Feather name="edit-2" size={18} color="#fff" />
+							</TouchableOpacity>
+						)}
+					</ImageBackground>
+				) : (
+					<View style={{ width: "100%", height: "100%", backgroundColor: "#E1E1E1" }}>
+						{/* Add cover photo button if own profile */}
+						{isOwnProfile && (
+							<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+								<TouchableOpacity 
+									style={[styles.iconButton, { backgroundColor: 'rgba(107, 47, 188, 0.7)' }]}
+									onPress={() => handlePhotoPress("cover")}
+								>
+									<Feather name="image" size={18} color="#fff" />
+								</TouchableOpacity>
+								<Text style={{ color: '#666', marginTop: 8 }}>Add Cover Photo</Text>
+							</View>
+						)}
 					</View>
-				</ImageBackground>
+				)}
 			</TouchableOpacity>
 
 			<View style={styles.profileInfo}>
-				<TouchableOpacity
-					activeOpacity={0.9}
-					onPress={() => handlePhotoPress("profile")}
-					style={styles.avatarContainer}
-				>
-					<View style={styles.avatar}>
+				<View style={styles.avatarContainer}>
+					<TouchableOpacity 
+						onPress={() => handlePhotoPress("profile")}
+						disabled={!isOwnProfile && !avatarUrl} // Only allow press if own profile or has avatar
+					>
 						{avatarUrl ? (
-							<Image 
-								source={{ uri: avatarUrl }} 
-								style={{
-									width: '100%',
-									height: '100%',
-									borderRadius: 50,
-								}} 
-								onError={(e) => {
-									console.log('Avatar load error:', e.nativeEvent.error);
-									// We'll handle fallback in the component
-								}}
+							<Image
+								source={{ uri: avatarUrl }}
+								style={styles.avatar}
 								resizeMode="cover"
-								onLoad={(e) => {
-									try {
-										// Check if source exists and has width/height properties
-										if (
-											e.nativeEvent &&
-											e.nativeEvent.source &&
-											e.nativeEvent.source.width &&
-											e.nativeEvent.source.height
-										) {
-											const { width, height } = e.nativeEvent.source;
-											setImageAspectRatio(width / height);
-										} else {
-											// Default to 1:1 aspect ratio if dimensions are not available
-											setImageAspectRatio(1);
-										}
-									} catch (error) {
-										console.warn("Error getting image dimensions:", error);
-										// Use a default aspect ratio
-										setImageAspectRatio(1);
-									}
-								}}
 							/>
 						) : (
-							<View style={{width: '100%', height: '100%', borderRadius: 50}}>
-							<DefaultProfilePicture userId={userId} size={100} />
-						</View>
+							<DefaultProfilePicture userId={userId} size={80} />
 						)}
-					</View>
-				</TouchableOpacity>
+						
+						{/* Edit button for profile photo if own profile */}
+						{isOwnProfile && (
+							<TouchableOpacity 
+								style={[styles.iconButton, { position: 'absolute', bottom: 0, right: 0, backgroundColor: 'rgba(107, 47, 188, 0.7)' }]}
+								onPress={() => handlePhotoPress("profile")}
+							>
+								<Feather name={avatarUrl ? "edit-2" : "plus"} size={16} color="#fff" />
+							</TouchableOpacity>
+						)}
+					</TouchableOpacity>
+				</View>
 
 				<View style={styles.nameContainer}>
 					<View style={styles.nameGroup}>
@@ -602,7 +571,7 @@ export function ProfileHeader({
 													width: '100%',
 													height: '100%',
 													borderRadius: 12,
-												}}
+												}} 
 												resizeMode="cover"
 												onError={(e) => {
 													console.log('Avatar load error:', e.nativeEvent.error);
@@ -623,18 +592,26 @@ export function ProfileHeader({
 								style={styles.actionButtons}
 								onPress={(e) => e.stopPropagation()}
 							>
-								<TouchableOpacity
-									style={styles.actionButton}
-									onPress={handleEditPhoto}
-								>
-									<Feather name="edit-2" size={24} color="white" />
-								</TouchableOpacity>
-								<TouchableOpacity
-									style={[styles.actionButton, { backgroundColor: "#FF3B30" }]}
-									onPress={handleRemovePhoto}
-								>
-									<Feather name="trash-2" size={24} color="white" />
-								</TouchableOpacity>
+								{isOwnProfile && (
+									<>
+										<TouchableOpacity
+											style={styles.actionButton}
+											onPress={handleEditPhoto}
+										>
+											<Feather name="edit-2" size={24} color="white" />
+										</TouchableOpacity>
+
+										{(activePhoto === "profile" && avatarUrl) ||
+										(activePhoto === "cover" && coverPhotoUrl) ? (
+											<TouchableOpacity
+												style={[styles.actionButton, { backgroundColor: "#e74c3c" }]}
+												onPress={handleRemovePhoto}
+											>
+												<Feather name="trash-2" size={24} color="white" />
+											</TouchableOpacity>
+										) : null}
+									</>
+								)}
 							</Pressable>
 						</View>
 					</Pressable>
@@ -684,7 +661,7 @@ const styles = StyleSheet.create<Styles>({
 		height: 100,
 		borderRadius: 50,
 		backgroundColor: "#E1E1E1",
-		overflow: "hidden",
+		overflow: "hidden", // Change from 'scroll' to 'hidden'
 		position: "relative",
 	},
 	defaultAvatar: {

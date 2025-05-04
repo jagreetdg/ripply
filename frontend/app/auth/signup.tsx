@@ -4,18 +4,21 @@ import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { registerUser, checkUsernameAvailability, checkEmailAvailability } from '../../services/api/authService';
+import { useUser } from '../../context/UserContext';
 
 interface ApiResponse {
   exists?: boolean;
   available?: boolean;
   message?: string;
   user?: any;
+  token?: string;
   field?: string;
   [key: string]: any;
 }
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { user, setUser } = useUser();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -197,10 +200,23 @@ export default function SignupScreen() {
       
       const response = await registerUser(userData) as ApiResponse;
       
-      if (response && response.user) {
+      if (response && response.user && response.token) {
         // Store user data in local storage or context
+        setUser({
+          id: response.user.id,
+          username: response.user.username,
+          email: response.user.email,
+          display_name: response.user.display_name || response.user.username,
+          avatar_url: response.user.avatar_url || null,
+          bio: response.user.bio || null,
+          is_verified: response.user.is_verified || false,
+          created_at: response.user.created_at,
+          updated_at: response.user.updated_at
+        });
         // For now, just redirect to home page
         router.push('/(tabs)/home');
+      } else {
+        setError('Registration failed. Please try again.');
       }
     } catch (error: any) {
       console.error('Registration error:', error);

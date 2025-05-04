@@ -12,10 +12,10 @@ const isPhysicalDevice = Platform.OS === 'ios' || Platform.OS === 'android';
 
 // API endpoints
 const ENDPOINTS = {
-	AUTH: "/auth",
-	USERS: "/users",
-	VOICE_NOTES: "/voice-notes",
-	VOICE_BIOS: "/voice-bios",
+	AUTH: "/api/auth",
+	USERS: "/api/users",
+	VOICE_NOTES: "/api/voice-notes",
+	VOICE_BIOS: "/api/voice-bios",
 	HEALTH: "/health",
 };
 
@@ -23,10 +23,6 @@ const ENDPOINTS = {
 const DEFAULT_HEADERS = {
 	"Content-Type": "application/json",
 	"Accept": "application/json",
-	// Add CORS headers for web platform
-	...(Platform.OS === 'web' ? {
-		'Origin': typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081',
-	} : {}),
 };
 
 // Network timeout settings
@@ -70,17 +66,10 @@ const apiRequest = async (endpoint, options = {}) => {
       }, effectiveTimeout);
       
       try {
-        // Configure CORS for web platform
-        const corsOptions = Platform.OS === 'web' ? {
-          mode: 'cors',
-          credentials: 'include',
-        } : {};
-
         const response = await fetch(url, {
           ...options,
           headers,
-          signal: controller.signal,
-          ...corsOptions
+          signal: controller.signal
         });
         
         clearTimeout(timeoutId); // Clear the timeout

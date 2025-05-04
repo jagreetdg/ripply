@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Modal, Pressable, Text, TextInput, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Modal, Pressable, Text, TextInput, Dimensions, Platform, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { loginUser, registerUser, checkUsernameAvailability, checkEmailAvailability } from '../../services/api/authService';
+import { useUser } from '../../context/UserContext';
 
 type AuthModalProps = {
   isVisible: boolean;
@@ -11,8 +13,34 @@ type AuthModalProps = {
   onSwitchToSignup?: () => void;
 };
 
+// Define interfaces for API responses
+interface AvailabilityResponse {
+  available: boolean;
+  message?: string;
+}
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  display_name?: string;
+  avatar_url?: string | null;
+  bio?: string | null;
+  is_verified?: boolean;
+  created_at: string;
+  updated_at: string;
+  [key: string]: any; // For any other properties
+}
+
+interface AuthResponse {
+  user: User;
+  token: string;
+  message?: string;
+}
+
 export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, onSwitchToSignup }: AuthModalProps) {
   const router = useRouter();
+  const { setUser } = useUser();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,6 +54,44 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
   const [emailIsFocused, setEmailIsFocused] = useState(false);
   const [passwordIsFocused, setPasswordIsFocused] = useState(false);
   const [confirmPasswordIsFocused, setConfirmPasswordIsFocused] = useState(false);
+  
+  // Validation states
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+
+  // Check username availability
+  const checkUsername = async (value: string) => {
+    if (!value || value.length < 3) return;
+    
+    try {
+      setIsCheckingUsername(true);
+      const response = await checkUsernameAvailability(value) as AvailabilityResponse;
+      setUsernameAvailable(response.available);
+    } catch (err) {
+      console.error('Error checking username:', err);
+      setUsernameAvailable(null);
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  };
+
+  // Check email availability
+  const checkEmail = async (value: string) => {
+    if (!value || !value.includes('@')) return;
+    
+    try {
+      setIsCheckingEmail(true);
+      const response = await checkEmailAvailability(value) as AvailabilityResponse;
+      setEmailAvailable(response.available);
+    } catch (err) {
+      console.error('Error checking email:', err);
+      setEmailAvailable(null);
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
 
   const handleAuth = async () => {
     if (type === 'login') {
@@ -43,18 +109,104 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
         setError('Passwords do not match');
         return;
       }
+      
+      if (usernameAvailable === false) {
+        setError('Username is already taken');
+        return;
+      }
+      
+      if (emailAvailable === false) {
+        setError('Email is already registered');
+        return;
+      }
     }
 
     setError('');
     setIsLoading(true);
 
     try {
-      // Simulate a brief loading period
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Redirect to home page
-      router.push('/(tabs)/home');
+      if (type === 'login') {
+        // Call the login API
+        const response = await loginUser({ email, password }) as AuthResponse;
+        
+        // Check if login was successful
+        if (response && response.token && response.user) {
+          console.log('Login successful through modal');
+          
+          // Update the user context
+          setUser({
+            id: response.user.id,
+            username: response.user.username,
+            email: response.user.email,
+            display_name: response.user.display_name || response.user.username,
+            avatar_url: response.user.avatar_url || null,
+            bio: response.user.bio || null,
+            is_verified: response.user.is_verified || false,
+            created_at: response.user.created_at,
+            updated_at: response.user.updated_at
+          });
+          
+          // Close modal and redirect to home page
+          handleClose();
+          router.push('/(tabs)/home');
+        } else {
+          setError('Authentication failed. Please check your credentials.');
+        }
+      } else {
+        // Call the register API
+        const response = await registerUser({
+          username,
+          email,
+          password,
+          displayName: username // Use username as display name by default
+        }) as AuthResponse;
+        
+        // Check if registration was successful
+        if (response && response.token && response.user) {
+          console.log('Registration successful through modal');
+          
+          // Update the user context
+          setUser({
+            id: response.user.id,
+            username: response.user.username,
+            email: response.user.email,
+            display_name: response.user.display_name || response.user.username,
+            avatar_url: response.user.avatar_url || null,
+            bio: response.user.bio || null,
+            is_verified: response.user.is_verified || false,
+            created_at: response.user.created_at,
+            updated_at: response.user.updated_at
+          });
+          
+          // Close modal and redirect to home page
+          handleClose();
+          router.push('/(tabs)/home');
+        } else {
+          setError('Registration failed. Please try again.');
+        }
+      }
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      console.error('Auth error:', err);
+      // Display user-friendly error message
+      const error = err as Error;
+      
+      if (error.message && error.message.includes('401')) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else if (error.message && error.message.includes('404')) {
+        setError('User not found. Please check your email or register for a new account.');
+      } else if (error.message && error.message.includes('409')) {
+        if (type === 'signup') {
+          setError('Username or email already exists. Please try another.');
+        } else {
+          setError('Authentication failed. Please try again.');
+        }
+      } else if (error.message && error.message.includes('CORS')) {
+        setError('Network error. Please try again later.');
+      } else if (error.message && error.message.includes('fetch')) {
+        setError('Cannot connect to server. Please check your internet connection.');
+      } else {
+        setError(type === 'login' ? 'Login failed. Invalid email or password.' : 'Registration failed. Please try again later.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -67,6 +219,8 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
     setConfirmPassword('');
     setError('');
     setIsLoading(false);
+    setUsernameAvailable(null);
+    setEmailAvailable(null);
   };
 
   const handleClose = () => {
@@ -108,13 +262,22 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
                   placeholderTextColor="#999"
                   autoCapitalize="none"
                   value={username}
-                  onChangeText={setUsername}
+                  onChangeText={(text) => {
+                    setUsername(text);
+                    setUsernameAvailable(null);
+                  }}
                   onFocus={() => setUsernameIsFocused(true)}
                   onBlur={() => setUsernameIsFocused(false)}
                   blurOnSubmit
                   textContentType="username"
+                  onEndEditing={() => checkUsername(username)}
                 />
               </View>
+              {isCheckingUsername ? (
+                <ActivityIndicator size="small" color="#6B2FBC" style={styles.checkingIndicator} />
+              ) : usernameAvailable === false ? (
+                <Text style={styles.unavailableText}>Username is already taken</Text>
+              ) : null}
             </View>
           )}
 
@@ -129,12 +292,21 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setEmailAvailable(null);
+                }}
                 onFocus={() => setEmailIsFocused(true)}
                 onBlur={() => setEmailIsFocused(false)}
                 textContentType="emailAddress"
+                onEndEditing={() => checkEmail(email)}
               />
             </View>
+            {isCheckingEmail ? (
+              <ActivityIndicator size="small" color="#6B2FBC" style={styles.checkingIndicator} />
+            ) : emailAvailable === false ? (
+              <Text style={styles.unavailableText}>Email is already registered</Text>
+            ) : null}
           </View>
 
           <View style={styles.inputContainer}>
@@ -416,5 +588,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6B2FBC',
     marginLeft: 4,
+  },
+  checkingIndicator: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  unavailableText: {
+    fontSize: 12,
+    color: '#e74c3c',
+    marginTop: 4,
   },
 });

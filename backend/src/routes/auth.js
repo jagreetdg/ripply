@@ -87,12 +87,21 @@ router.get('/check-email/:email', async (req, res) => {
 // Register a new user
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password, displayName } = req.body;
+    const { username, email, password, displayName, timestamp } = req.body;
     
     // Validate required fields
     if (!username || !email || !password) {
       return res.status(400).json({ 
         message: 'Missing required fields: username, email, and password are required' 
+      });
+    }
+    
+    // Validate timestamp to prevent replay attacks (within 5 minutes)
+    const currentTime = Date.now();
+    const requestTime = timestamp || currentTime;
+    if (Math.abs(currentTime - requestTime) > 5 * 60 * 1000) { // 5 minutes
+      return res.status(400).json({ 
+        message: 'Request expired, please try again' 
       });
     }
     
@@ -126,7 +135,8 @@ router.post('/register', async (req, res) => {
       });
     }
     
-    // Hash password
+    // Hash password with bcrypt (additional server-side hashing)
+    // Note: The password is already hashed client-side with SHA-256
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     
@@ -178,12 +188,21 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, timestamp } = req.body;
     
     // Validate required fields
     if (!email || !password) {
       return res.status(400).json({ 
         message: 'Missing required fields: email and password are required' 
+      });
+    }
+    
+    // Validate timestamp to prevent replay attacks (within 5 minutes)
+    const currentTime = Date.now();
+    const requestTime = timestamp || currentTime;
+    if (Math.abs(currentTime - requestTime) > 5 * 60 * 1000) { // 5 minutes
+      return res.status(400).json({ 
+        message: 'Request expired, please try again' 
       });
     }
     
@@ -202,6 +221,7 @@ router.post('/login', async (req, res) => {
     const user = users[0];
     
     // Compare passwords
+    // Note: The password from client is already hashed with SHA-256
     const passwordMatch = await bcrypt.compare(password, user.password);
     
     if (!passwordMatch) {

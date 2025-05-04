@@ -4,6 +4,8 @@ import { useFonts } from "expo-font";
 import { Slot, SplashScreen } from "expo-router";
 import { useEffect, useState } from "react";
 import "react-native-reanimated";
+import { UserProvider } from "../context/UserContext";
+import RequireAuth from "../components/auth/RequireAuth";
 
 export {
 	// Catch any errors thrown by the Layout component.
@@ -59,8 +61,14 @@ export default function RootLayout() {
 function RootLayoutNav() {
 	return (
 		<ThemeProvider value={DefaultTheme}>
-			{/* Use Slot for better performance with less nesting */}
-			<Slot />
+			{/* Wrap the app with UserProvider to make user context available everywhere */}
+			<UserProvider>
+				{/* Add RequireAuth to protect routes */}
+				<RequireAuth>
+					{/* Use Slot for better performance with less nesting */}
+					<Slot />
+				</RequireAuth>
+			</UserProvider>
 		</ThemeProvider>
 	);
 }

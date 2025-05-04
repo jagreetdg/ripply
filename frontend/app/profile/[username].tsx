@@ -8,6 +8,7 @@ import { getVoiceBio } from "../../services/api/voiceBioService";
 import { UserNotFound } from "../../components/common/UserNotFound";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useUser } from "../../context/UserContext";
 
 interface UserProfile {
   id: string;
@@ -47,7 +48,6 @@ interface VoiceBio {
 }
 
 export default function ProfileByUsernameScreen() {
-  // ...existing code...
   const [refreshing, setRefreshing] = useState(false);
 
   // Handler for pull-to-refresh
@@ -63,6 +63,7 @@ export default function ProfileByUsernameScreen() {
   const params = useLocalSearchParams<{ username: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user: currentUser } = useUser(); // Get the current logged-in user
   
   const [username, setUsername] = useState<string>("");
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -71,6 +72,7 @@ export default function ProfileByUsernameScreen() {
   const [voiceBio, setVoiceBio] = useState<VoiceBio | null>(null);
   const [userNotFound, setUserNotFound] = useState(false);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  const [isOwnProfile, setIsOwnProfile] = useState(false); // Flag to check if viewing own profile
   const scrollY = useRef(new Animated.Value(0)).current;
   
   // Create animated values for smooth transitions
@@ -117,6 +119,15 @@ export default function ProfileByUsernameScreen() {
     }
   }, [username]);
 
+  // Check if this is the current user's profile
+  useEffect(() => {
+    if (currentUser && username) {
+      setIsOwnProfile(currentUser.username === username);
+    } else {
+      setIsOwnProfile(false);
+    }
+  }, [currentUser, username]);
+
   const fetchUserData = async () => {
     setLoading(true);
     try {
@@ -132,42 +143,29 @@ export default function ProfileByUsernameScreen() {
         return;
       }
       
-      // Ensure we have a valid user profile object
-      if (typeof profileData === 'object' && 'id' in profileData && 'username' in profileData) {
-        const typedProfile = profileData as UserProfile;
-        setUserProfile(typedProfile);
-        
-        // Fetch user voice notes using the user ID from the profile
-        const voiceNotesData = await getUserVoiceNotes(typedProfile.id);
-        
-        if (Array.isArray(voiceNotesData)) {
-          setVoiceNotes(voiceNotesData);
-        } else {
-          setVoiceNotes([]);
-        }
-        
-        // Fetch user voice bio if available
-        try {
-          const voiceBioData = await getVoiceBio(typedProfile.id);
-          if (voiceBioData) {
-            setVoiceBio(voiceBioData as VoiceBio);
-          }
-        } catch (bioError) {
-          // Voice bio not found or error fetching it - this is optional
-        }
-      } else {
-        setUserNotFound(true);
+      // Fix TypeScript error by properly typing the response
+      setUserProfile(profileData as UserProfile);
+      
+      // Fetch user's voice notes
+      const voiceNotesData = await getUserVoiceNotes((profileData as UserProfile).id);
+      setVoiceNotes(voiceNotesData || []);
+      
+      // Fetch user's voice bio if available
+      try {
+        const voiceBioData = await getVoiceBio((profileData as UserProfile).id);
+        setVoiceBio(voiceBioData as VoiceBio);
+      } catch (error) {
+        console.log('No voice bio found or error fetching voice bio');
+        setVoiceBio(null);
       }
-    } catch (error: any) {
-      // Check if this is a user not found error
-      if (error.name === 'UserNotFoundError') {
-        setUserNotFound(true);
-      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setUserNotFound(true);
     } finally {
       setLoading(false);
     }
   };
-
+  
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -175,41 +173,51 @@ export default function ProfileByUsernameScreen() {
       </View>
     );
   }
-
+  
   if (userNotFound) {
     return <UserNotFound username={username} />;
   }
-
+  
   if (!userProfile) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load profile data.</Text>
+        <Text style={styles.errorText}>Could not load user profile. Please try again.</Text>
       </View>
     );
   }
-
+  
   return (
-    <View style={[styles.container]}>      
-      {/* Status bar background to prevent content from showing behind it */}
+    <View style={styles.container}>
+      {/* Status bar background */}
       <View style={[styles.statusBarBackground, { height: insets.top }]} />
-      <Stack.Screen 
-        options={{
-          // Hide the default header when we're using our custom collapsible header
-          headerShown: false
-        }} 
-      />
-      {/* Always render the collapsed header as an overlay with animated opacity */}
+      
+      {/* Fixed header that appears when scrolled */}
       <Animated.View 
         style={[
-          styles.fixedHeader,
+          styles.fixedHeader, 
           { 
             opacity: collapsedHeaderOpacity,
-            top: 0, // Start from the very top of the screen
+            top: insets.top,
+            height: 60, // Fixed height for the collapsed header
           }
         ]}
       >
-        {/* Status bar spacer inside the header */}
-        <View style={{ height: insets.top }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: '100%' }}>
+          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+            <Feather name="arrow-left" size={24} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{userProfile.display_name}</Text>
+          
+          {/* Show edit profile button if this is the user's own profile */}
+          {isOwnProfile && (
+            <TouchableOpacity 
+              style={{ marginLeft: 'auto', padding: 8 }}
+              onPress={() => router.push('/profile/edit')}
+            >
+              <Feather name="edit" size={20} color="#6B2FBC" />
+            </TouchableOpacity>
+          )}
+        </View>
         <ProfileHeader
           userId={userProfile.username}
           displayName={userProfile.display_name}
@@ -219,6 +227,7 @@ export default function ProfileByUsernameScreen() {
           isVerified={userProfile.is_verified}
           isCollapsed={true}
           postCount={voiceNotes.length}
+          isOwnProfile={isOwnProfile}
         />
       </Animated.View>
       
@@ -251,6 +260,7 @@ export default function ProfileByUsernameScreen() {
             isVerified={userProfile.is_verified}
             isCollapsed={false}
             postCount={voiceNotes.length}
+            isOwnProfile={isOwnProfile}
           />
         </Animated.View>
       
@@ -279,6 +289,16 @@ export default function ProfileByUsernameScreen() {
           voiceNotes={voiceNotes}
         />
       </Animated.ScrollView>
+
+      {/* Add edit profile button if this is the user's own profile */}
+      {isOwnProfile && (
+        <TouchableOpacity 
+          style={[styles.editProfileButton, { bottom: insets.bottom + 16 }]}
+          onPress={() => router.push('/profile/edit')}
+        >
+          <Feather name="edit-2" size={24} color="white" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -364,5 +384,24 @@ const styles = StyleSheet.create({
     width: 1,
     height: 30,
     backgroundColor: "#eee",
-  }
+  },
+  editProfileButton: {
+    position: "absolute",
+    right: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#6B2FBC",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 8,
+    zIndex: 1000,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
 });

@@ -3,6 +3,7 @@
  */
 import { apiRequest } from './config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
 
 // Storage keys
 const TOKEN_KEY = '@ripply_auth_token';
@@ -10,13 +11,29 @@ const USER_KEY = '@ripply_user';
 
 // Auth endpoints
 const AUTH_ENDPOINTS = {
-  REGISTER: '/auth/register',
-  LOGIN: '/auth/login',
-  LOGOUT: '/auth/logout',
-  VERIFY_TOKEN: '/auth/verify-token',
-  CHECK_USERNAME: '/auth/check-username',
-  CHECK_EMAIL: '/auth/check-email',
+  REGISTER: '/api/auth/register',
+  LOGIN: '/api/auth/login',
+  LOGOUT: '/api/auth/logout',
+  VERIFY_TOKEN: '/api/auth/verify-token',
+  CHECK_USERNAME: '/api/auth/check-username',
+  CHECK_EMAIL: '/api/auth/check-email',
 };
+
+/**
+ * Hash a password client-side before sending to server
+ * This adds an extra layer of security during transmission
+ * @param {string} password - The plain text password
+ * @returns {Promise<string>} - The hashed password
+ */
+async function hashPasswordForTransport(password) {
+  // Create a SHA-256 hash of the password for transport security
+  // Note: This is in addition to the bcrypt hashing done on the server
+  const hashBuffer = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    password
+  );
+  return hashBuffer;
+}
 
 /**
  * Register a new user
@@ -29,9 +46,20 @@ const AUTH_ENDPOINTS = {
  */
 const registerUser = async (userData) => {
   try {
+    // Create a copy of userData to avoid modifying the original
+    const secureUserData = { ...userData };
+    
+    // Hash the password before sending
+    if (secureUserData.password) {
+      secureUserData.password = await hashPasswordForTransport(secureUserData.password);
+    }
+    
+    // Add a timestamp to prevent replay attacks
+    secureUserData.timestamp = Date.now();
+    
     const response = await apiRequest(AUTH_ENDPOINTS.REGISTER, {
       method: 'POST',
-      body: JSON.stringify(userData),
+      body: JSON.stringify(secureUserData),
       credentials: 'include', // Include cookies in the request
     });
     
@@ -57,16 +85,36 @@ const registerUser = async (userData) => {
  */
 const loginUser = async (credentials) => {
   try {
+    console.log('Login attempt with credentials:', { email: credentials.email, passwordLength: credentials.password?.length });
+    
+    // Create a copy of credentials to avoid modifying the original
+    const secureCredentials = { ...credentials };
+    
+    // Hash the password before sending
+    if (secureCredentials.password) {
+      secureCredentials.password = await hashPasswordForTransport(secureCredentials.password);
+      console.log('Password hashed for transport');
+    }
+    
+    // Add a timestamp to prevent replay attacks
+    secureCredentials.timestamp = Date.now();
+    
+    console.log('Sending login request to:', AUTH_ENDPOINTS.LOGIN);
     const response = await apiRequest(AUTH_ENDPOINTS.LOGIN, {
       method: 'POST',
-      body: JSON.stringify(credentials),
+      body: JSON.stringify(secureCredentials),
       credentials: 'include', // Include cookies in the request
     });
     
+    console.log('Login response received:', response ? 'success' : 'empty');
+    
     // Store token and user data in AsyncStorage
-    if (response.token) {
+    if (response && response.token) {
       await AsyncStorage.setItem(TOKEN_KEY, response.token);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.user));
+      console.log('User data stored in AsyncStorage');
+    } else {
+      console.warn('Login response missing token or user data');
     }
     
     return response;
