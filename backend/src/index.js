@@ -14,31 +14,35 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-	origin: process.env.NODE_ENV === 'production' 
-		? ['https://ripply-app.netlify.app', 'https://ripply.app'] 
-		: ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006', 'http://localhost:8081'],
-	credentials: true
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://ripply-app.netlify.app', 'https://ripply.app'] 
+    : ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006', 'http://localhost:8081'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 600 // Increase preflight cache to 10 minutes
 }));
 app.use(express.json());
 app.use(cookieParser());
 
 // Security headers middleware
 app.use((req, res, next) => {
-	// Set security headers
-	res.setHeader('X-Content-Type-Options', 'nosniff');
-	res.setHeader('X-Frame-Options', 'DENY');
-	res.setHeader('X-XSS-Protection', '1; mode=block');
-	res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-	
-	// In production, enforce Content-Security-Policy
-	if (process.env.NODE_ENV === 'production') {
-		res.setHeader(
-			'Content-Security-Policy',
-			"default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';"
-		);
-	}
-	
-	next();
+  // Set security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  
+  // In production, enforce Content-Security-Policy
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';"
+    );
+  }
+  
+  next();
 });
 
 // Routes
@@ -49,10 +53,10 @@ app.use("/api/voice-bios", voiceBioRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
-	res.status(200).json({ status: "ok", message: "Ripply API is running" });
+  res.status(200).json({ status: "ok", message: "Ripply API is running" });
 });
 
 // Start server
 app.listen(PORT, () => {
-	console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
