@@ -28,39 +28,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware
+// Set up basic CORS middleware with simple configuration
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, etc)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = process.env.NODE_ENV === 'production' 
-      ? ['https://ripply-app.netlify.app', 'https://ripply.app'] 
-      : ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006', 'http://localhost:8081'];
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log(`[CORS Debug] Origin ${origin} is allowed`);
-      callback(null, true);
-    } else {
-      console.log(`[CORS Debug] Origin ${origin} is not allowed`);
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
-    }
-  },
+  origin: ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006', 'http://localhost:8081', 'https://ripply-app.netlify.app', 'https://ripply.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 600 // Increase preflight cache to 10 minutes
 }));
+
 app.use(express.json());
 app.use(cookieParser());
 
 // Additional CORS header middleware to ensure Access-Control-Allow-Origin is set
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? ['https://ripply-app.netlify.app', 'https://ripply.app'] 
-    : ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006', 'http://localhost:8081'];
+  const allowedOrigins = ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006', 'http://localhost:8081', 'https://ripply-app.netlify.app', 'https://ripply.app'];
   
   if (origin && allowedOrigins.includes(origin)) {
     console.log(`[CORS Debug] Setting explicit Access-Control-Allow-Origin for ${origin}`);
@@ -74,9 +58,7 @@ app.options('*', (req, res) => {
   console.log('[CORS Debug] Handling OPTIONS request explicitly');
   
   const origin = req.headers.origin;
-  const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? ['https://ripply-app.netlify.app', 'https://ripply.app'] 
-    : ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006', 'http://localhost:8081'];
+  const allowedOrigins = ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006', 'http://localhost:8081', 'https://ripply-app.netlify.app', 'https://ripply.app'];
   
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
