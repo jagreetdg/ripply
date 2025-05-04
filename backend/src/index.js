@@ -12,6 +12,22 @@ const voiceBioRoutes = require("./routes/voiceBios");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Debug middleware for CORS requests
+app.use((req, res, next) => {
+  console.log(`[CORS Debug] ${req.method} ${req.path}`);
+  console.log(`[CORS Debug] Origin: ${req.headers.origin}`);
+  console.log(`[CORS Debug] Headers:`, req.headers);
+  
+  // Capture the response headers after they're set
+  const originalSetHeader = res.setHeader;
+  res.setHeader = function(name, value) {
+    console.log(`[CORS Debug] Response Header: ${name}: ${value}`);
+    return originalSetHeader.apply(this, arguments);
+  };
+  
+  next();
+});
+
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
@@ -25,6 +41,12 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Add explicit handling for OPTIONS requests
+app.options('*', (req, res) => {
+  console.log('[CORS Debug] Handling OPTIONS request explicitly');
+  res.status(204).end();
+});
 
 // Security headers middleware
 app.use((req, res, next) => {
