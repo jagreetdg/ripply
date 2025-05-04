@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet, View, Pressable, Text, Image } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import { StyleSheet, View, Pressable, Text } from 'react-native';
+import { FontAwesome, Feather } from '@expo/vector-icons';
 
 type SocialAuthButtonsProps = {
   onGoogleAuth: () => void;
@@ -29,10 +29,7 @@ export default function SocialAuthButtons({
           style={[styles.socialButton, styles.googleButton]}
           onPress={onGoogleAuth}
         >
-          <Image 
-            source={require('../../assets/images/google-logo.png')} 
-            style={styles.googleIcon}
-          />
+          <Feather name="chrome" size={20} color="#DB4437" style={styles.socialIcon} />
           <Text style={styles.socialButtonText}>Continue with Google</Text>
         </Pressable>
         
@@ -108,10 +105,5 @@ const styles = StyleSheet.create({
   socialIcon: {
     width: 20,
     height: 20,
-  },
-  googleIcon: {
-    width: 20,
-    height: 20,
-    resizeMode: 'contain',
-  },
+  }
 });
