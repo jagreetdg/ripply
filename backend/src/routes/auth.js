@@ -5,6 +5,8 @@ const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const rateLimiter = require('../middleware/rateLimiter');
+const { isAccountLocked, recordFailedAttempt, resetFailedAttempts, MAX_FAILED_ATTEMPTS, LOCKOUT_DURATION } = require('../middleware/accountLockout');
 
 // JWT Secret - in production, this would be an environment variable
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
@@ -31,12 +33,18 @@ const enforceHTTPS = (req, res, next) => {
 // Apply HTTPS enforcement to all auth routes
 router.use(enforceHTTPS);
 
+// Apply rate limiting to sensitive routes
+router.use('/login', rateLimiter(5, 15 * 60 * 1000, 'Too many login attempts, please try again later'));
+router.use('/register', rateLimiter(3, 60 * 60 * 1000, 'Too many registration attempts, please try again later'));
+
 // Generate JWT token
-const generateToken = (user) => {
+const generateToken = (user, rememberMe = false) => {
+  const expiresIn = rememberMe ? '30d' : '7d'; // 30 days if rememberMe is true, 7 days otherwise
+  
   return jwt.sign(
     { id: user.id, email: user.email, username: user.username },
     JWT_SECRET,
-    { expiresIn: TOKEN_EXPIRATION }
+    { expiresIn }
   );
 };
 
@@ -93,6 +101,32 @@ router.post('/register', async (req, res) => {
     if (!username || !email || !password) {
       return res.status(400).json({ 
         message: 'Missing required fields: username, email, and password are required' 
+      });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: 'Invalid email format',
+        field: 'email'
+      });
+    }
+    
+    // Validate username format (alphanumeric, underscore, period, 3-30 chars)
+    const usernameRegex = /^[a-zA-Z0-9_.]{3,30}$/;
+    if (!usernameRegex.test(username)) {
+      return res.status(400).json({
+        message: 'Username must be 3-30 characters and can only contain letters, numbers, underscores, and periods',
+        field: 'username'
+      });
+    }
+    
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters long',
+        field: 'password'
       });
     }
     
@@ -188,12 +222,29 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password, timestamp } = req.body;
+    const { email, password, timestamp, rememberMe } = req.body;
     
     // Validate required fields
     if (!email || !password) {
       return res.status(400).json({ 
         message: 'Missing required fields: email and password are required' 
+      });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: 'Invalid email format',
+        field: 'email'
+      });
+    }
+    
+    // Check if account is locked
+    const locked = await isAccountLocked(email);
+    if (locked) {
+      return res.status(429).json({ 
+        message: `Account temporarily locked due to too many failed login attempts. Please try again after ${LOCKOUT_DURATION} minutes.` 
       });
     }
     
@@ -215,6 +266,7 @@ router.post('/login', async (req, res) => {
     if (error) throw error;
     
     if (!users || users.length === 0) {
+      await recordFailedAttempt(email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
@@ -225,6 +277,7 @@ router.post('/login', async (req, res) => {
     const passwordMatch = await bcrypt.compare(password, user.password);
     
     if (!passwordMatch) {
+      await recordFailedAttempt(email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
@@ -232,7 +285,7 @@ router.post('/login', async (req, res) => {
     delete user.password;
     
     // Generate JWT token
-    const token = generateToken(user);
+    const token = generateToken(user, rememberMe);
     
     // Set secure cookie with token
     if (process.env.NODE_ENV === 'production') {
@@ -240,9 +293,12 @@ router.post('/login', async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000 // 30 days if rememberMe is true, 7 days otherwise
       });
     }
+    
+    // Reset failed attempts
+    await resetFailedAttempts(email);
     
     res.status(200).json({
       message: 'Login successful',

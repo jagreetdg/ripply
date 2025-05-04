@@ -8,6 +8,8 @@ const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
 const voiceNoteRoutes = require("./routes/voiceNotes");
 const voiceBioRoutes = require("./routes/voiceBios");
+const passwordResetRoutes = require("./routes/passwordReset");
+const verificationRoutes = require("./routes/verification");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -95,6 +97,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/voice-notes", voiceNoteRoutes);
 app.use("/api/voice-bios", voiceBioRoutes);
+app.use("/api/password-reset", passwordResetRoutes);
+app.use("/api/verification", verificationRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {

@@ -81,11 +81,12 @@ const registerUser = async (userData) => {
  * @param {Object} credentials - Login credentials
  * @param {string} credentials.email - Email
  * @param {string} credentials.password - Password
+ * @param {boolean} credentials.rememberMe - Whether to remember the user
  * @returns {Promise<Object>} - Logged in user data
  */
 const loginUser = async (credentials) => {
   try {
-    console.log('Login attempt with credentials:', { email: credentials.email, passwordLength: credentials.password?.length });
+    console.log('Login attempt with credentials:', { email: credentials.email, passwordLength: credentials.password?.length, rememberMe: credentials.rememberMe });
     
     // Create a copy of credentials to avoid modifying the original
     const secureCredentials = { ...credentials };

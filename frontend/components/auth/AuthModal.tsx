@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { loginUser, registerUser, checkUsernameAvailability, checkEmailAvailability } from '../../services/api/authService';
 import { useUser } from '../../context/UserContext';
+import SocialAuthButtons from './SocialAuthButtons';
 
 type AuthModalProps = {
   isVisible: boolean;
@@ -48,6 +49,8 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
+  const [rememberMe, setRememberMe] = useState(false);
   
   // Focus states for input fields
   const [usernameIsFocused, setUsernameIsFocused] = useState(false);
@@ -93,6 +96,39 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
     }
   };
 
+  // Validation functions
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const checkPasswordStrength = (password: string): 'weak' | 'medium' | 'strong' => {
+    // Password must be at least 8 characters
+    if (password.length < 8) return 'weak';
+    
+    // Check for complexity
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChars = /[!@#$%^&*()_+\-=\[\]{};':",.<>/?]/.test(password);
+    
+    const complexity = [hasUpperCase, hasLowerCase, hasNumbers, hasSpecialChars].filter(Boolean).length;
+    
+    if (complexity >= 3 && password.length >= 10) return 'strong';
+    if (complexity >= 2 && password.length >= 8) return 'medium';
+    return 'weak';
+  };
+
+  // Handle password change with strength check
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    if (value) {
+      setPasswordStrength(checkPasswordStrength(value));
+    } else {
+      setPasswordStrength(null);
+    }
+  };
+
   const handleAuth = async () => {
     if (type === 'login') {
       if (!email || !password) {
@@ -119,6 +155,16 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
         setError('Email is already registered');
         return;
       }
+      
+      if (!isValidEmail(email)) {
+        setError('Invalid email format');
+        return;
+      }
+      
+      if (passwordStrength === 'weak') {
+        setError('Password is too weak');
+        return;
+      }
     }
 
     setError('');
@@ -127,7 +173,7 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
     try {
       if (type === 'login') {
         // Call the login API
-        const response = await loginUser({ email, password }) as AuthResponse;
+        const response = await loginUser({ email, password, rememberMe }) as AuthResponse;
         
         // Check if login was successful
         if (response && response.token && response.user) {
@@ -228,6 +274,22 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
     onClose();
   };
 
+  // Social auth handlers
+  const handleGoogleAuth = () => {
+    console.log('Google auth initiated');
+    // TODO: Implement Google authentication
+  };
+
+  const handleAppleAuth = () => {
+    console.log('Apple auth initiated');
+    // TODO: Implement Apple authentication
+  };
+
+  const handleFacebookAuth = () => {
+    console.log('Facebook auth initiated');
+    // TODO: Implement Facebook authentication
+  };
+
   return (
     <Modal
       animationType="fade"
@@ -319,7 +381,7 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
                 placeholderTextColor="#999"
                 secureTextEntry={!showPassword}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={handlePasswordChange}
                 onFocus={() => setPasswordIsFocused(true)}
                 onBlur={() => setPasswordIsFocused(false)}
                 textContentType="password"
@@ -335,6 +397,13 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
                 />
               </Pressable>
             </View>
+            {passwordStrength === 'weak' ? (
+              <Text style={styles.unavailableText}>Password is too weak</Text>
+            ) : passwordStrength === 'medium' ? (
+              <Text style={styles.warningText}>Password is medium strength</Text>
+            ) : passwordStrength === 'strong' ? (
+              <Text style={styles.availableText}>Password is strong</Text>
+            ) : null}
           </View>
 
           {type === 'signup' && (
@@ -363,11 +432,26 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
             </Pressable>
           )}
 
-          {type === 'signup' && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Remember Me</Text>
+            <Pressable 
+              style={[styles.inputWrapper, rememberMe && styles.inputWrapperFocused]}
+              onPress={() => setRememberMe(!rememberMe)}
+            >
+              <Feather 
+                name={rememberMe ? "check-square" : "square"} 
+                size={20} 
+                color={rememberMe ? "#6B2FBC" : "#999"} 
+                style={styles.inputIcon} 
+              />
+            </Pressable>
+          </View>
+
+          <View style={styles.termsText}>
             <Text style={styles.termsText}>
               By signing up, you agree to our <Text style={styles.termsLink}>Terms of Service</Text> and <Text style={styles.termsLink}>Privacy Policy</Text>
             </Text>
-          )}
+          </View>
 
           <Pressable 
             style={[styles.authButton, isLoading && styles.authButtonDisabled]}
@@ -390,6 +474,12 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
             <Text style={styles.dividerText}>OR</Text>
             <View style={styles.dividerLine} />
           </View>
+
+          <SocialAuthButtons 
+            onGoogleAuth={handleGoogleAuth} 
+            onAppleAuth={handleAppleAuth} 
+            onFacebookAuth={handleFacebookAuth} 
+          />
 
           <View style={styles.switchContainer}>
             <Text style={styles.switchText}>
@@ -596,6 +686,16 @@ const styles = StyleSheet.create({
   unavailableText: {
     fontSize: 12,
     color: '#e74c3c',
+    marginTop: 4,
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#FFC107',
+    marginTop: 4,
+  },
+  availableText: {
+    fontSize: 12,
+    color: '#2ecc71',
     marginTop: 4,
   },
 });
