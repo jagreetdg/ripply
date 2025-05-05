@@ -367,24 +367,6 @@ export default function SignupScreen() {
               <Text style={styles.signupButtonText}>Create Account</Text>
             )}
           </Pressable>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <View style={styles.socialAuthContainer}>
-            <Pressable style={[styles.socialButton, styles.googleButton]}>
-              <Feather name="chrome" size={20} color="#EA4335" />
-              <Text style={styles.socialButtonText}>Continue with Google</Text>
-            </Pressable>
-            
-            <Pressable style={[styles.socialButton, styles.appleButton]}>
-              <Feather name="smartphone" size={20} color="#000" />
-              <Text style={styles.socialButtonText}>Continue with Apple</Text>
-            </Pressable>
-          </View>
         </View>
       </ScrollView>
       
@@ -512,46 +494,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E1E1E1',
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    color: '#999',
-    fontSize: 14,
-  },
-  socialAuthContainer: {
-    gap: 16,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
-  },
-  googleButton: {
-    borderColor: '#DADCE0',
-    backgroundColor: '#fff',
-  },
-  appleButton: {
-    borderColor: '#000',
-    backgroundColor: '#fff',
-  },
-  socialButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
   },
   footer: {
     flexDirection: 'row',

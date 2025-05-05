@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Modal, Pressable, Text, TextInput, Dimensions, Platform, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Modal, Pressable, Text, TextInput, Dimensions, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { loginUser, registerUser, checkUsernameAvailability, checkEmailAvailability } from '../../services/api/authService';
 import { useUser } from '../../context/UserContext';
-import SocialAuthButtons from './SocialAuthButtons';
 
 type AuthModalProps = {
   isVisible: boolean;
@@ -306,200 +305,196 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
             </Pressable>
           </View>
 
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Feather name="alert-circle" size={18} color="#e74c3c" />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Feather name="alert-circle" size={18} color="#e74c3c" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
-          {type === 'signup' && (
+            {type === 'signup' && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Username</Text>
+                <View style={[styles.inputWrapper, usernameIsFocused && styles.inputWrapperFocused]}>
+                  <Feather name="user" size={20} color={usernameIsFocused ? "#6B2FBC" : "#999"} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, webStyles]}
+                    placeholder="Choose a username"
+                    placeholderTextColor="#999"
+                    autoCapitalize="none"
+                    value={username}
+                    onChangeText={(text) => {
+                      setUsername(text);
+                      setUsernameAvailable(null);
+                    }}
+                    onFocus={() => setUsernameIsFocused(true)}
+                    onBlur={() => setUsernameIsFocused(false)}
+                    blurOnSubmit
+                    textContentType="username"
+                    onEndEditing={() => checkUsername(username)}
+                  />
+                </View>
+                {isCheckingUsername ? (
+                  <ActivityIndicator size="small" color="#6B2FBC" style={styles.checkingIndicator} />
+                ) : usernameAvailable === false ? (
+                  <Text style={styles.unavailableText}>Username is already taken</Text>
+                ) : null}
+              </View>
+            )}
+
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Username</Text>
-              <View style={[styles.inputWrapper, usernameIsFocused && styles.inputWrapperFocused]}>
-                <Feather name="user" size={20} color={usernameIsFocused ? "#6B2FBC" : "#999"} style={styles.inputIcon} />
+              <Text style={styles.inputLabel}>Email</Text>
+              <View style={[styles.inputWrapper, emailIsFocused && styles.inputWrapperFocused]}>
+                <Feather name="mail" size={20} color={emailIsFocused ? "#6B2FBC" : "#999"} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, webStyles]}
-                  placeholder="Choose a username"
+                  placeholder="Enter your email"
                   placeholderTextColor="#999"
+                  keyboardType="email-address"
                   autoCapitalize="none"
-                  value={username}
+                  value={email}
                   onChangeText={(text) => {
-                    setUsername(text);
-                    setUsernameAvailable(null);
+                    setEmail(text);
+                    setEmailAvailable(null);
                   }}
-                  onFocus={() => setUsernameIsFocused(true)}
-                  onBlur={() => setUsernameIsFocused(false)}
-                  blurOnSubmit
-                  textContentType="username"
-                  onEndEditing={() => checkUsername(username)}
+                  onFocus={() => setEmailIsFocused(true)}
+                  onBlur={() => setEmailIsFocused(false)}
+                  textContentType="emailAddress"
+                  onEndEditing={() => checkEmail(email)}
                 />
               </View>
-              {isCheckingUsername ? (
+              {isCheckingEmail ? (
                 <ActivityIndicator size="small" color="#6B2FBC" style={styles.checkingIndicator} />
-              ) : usernameAvailable === false ? (
-                <Text style={styles.unavailableText}>Username is already taken</Text>
+              ) : emailAvailable === false ? (
+                <Text style={styles.unavailableText}>Email is already registered</Text>
               ) : null}
             </View>
-          )}
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Email</Text>
-            <View style={[styles.inputWrapper, emailIsFocused && styles.inputWrapperFocused]}>
-              <Feather name="mail" size={20} color={emailIsFocused ? "#6B2FBC" : "#999"} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, webStyles]}
-                placeholder="Enter your email"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  setEmailAvailable(null);
-                }}
-                onFocus={() => setEmailIsFocused(true)}
-                onBlur={() => setEmailIsFocused(false)}
-                textContentType="emailAddress"
-                onEndEditing={() => checkEmail(email)}
-              />
-            </View>
-            {isCheckingEmail ? (
-              <ActivityIndicator size="small" color="#6B2FBC" style={styles.checkingIndicator} />
-            ) : emailAvailable === false ? (
-              <Text style={styles.unavailableText}>Email is already registered</Text>
-            ) : null}
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Password</Text>
-            <View style={[styles.inputWrapper, passwordIsFocused && styles.inputWrapperFocused]}>
-              <Feather name="lock" size={20} color={passwordIsFocused ? "#6B2FBC" : "#999"} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, webStyles]}
-                placeholder={type === 'login' ? "Enter your password" : "Create a password"}
-                placeholderTextColor="#999"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={handlePasswordChange}
-                onFocus={() => setPasswordIsFocused(true)}
-                onBlur={() => setPasswordIsFocused(false)}
-                textContentType="password"
-              />
-              <Pressable 
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.passwordToggle}
-              >
-                <Feather 
-                  name={showPassword ? "eye-off" : "eye"} 
-                  size={20} 
-                  color={passwordIsFocused ? "#6B2FBC" : "#999"} 
-                />
-              </Pressable>
-            </View>
-            {passwordStrength === 'weak' ? (
-              <Text style={styles.unavailableText}>Password is too weak</Text>
-            ) : passwordStrength === 'medium' ? (
-              <Text style={styles.warningText}>Password is medium strength</Text>
-            ) : passwordStrength === 'strong' ? (
-              <Text style={styles.availableText}>Password is strong</Text>
-            ) : null}
-          </View>
-
-          {type === 'signup' && (
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Confirm Password</Text>
-              <View style={[styles.inputWrapper, confirmPasswordIsFocused && styles.inputWrapperFocused]}>
-                <Feather name="lock" size={20} color={confirmPasswordIsFocused ? "#6B2FBC" : "#999"} style={styles.inputIcon} />
+              <Text style={styles.inputLabel}>Password</Text>
+              <View style={[styles.inputWrapper, passwordIsFocused && styles.inputWrapperFocused]}>
+                <Feather name="lock" size={20} color={passwordIsFocused ? "#6B2FBC" : "#999"} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, webStyles]}
-                  placeholder="Confirm your password"
+                  placeholder={type === 'login' ? "Enter your password" : "Create a password"}
                   placeholderTextColor="#999"
                   secureTextEntry={!showPassword}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  onFocus={() => setConfirmPasswordIsFocused(true)}
-                  onBlur={() => setConfirmPasswordIsFocused(false)}
+                  value={password}
+                  onChangeText={handlePasswordChange}
+                  onFocus={() => setPasswordIsFocused(true)}
+                  onBlur={() => setPasswordIsFocused(false)}
                   textContentType="password"
                 />
+                <Pressable 
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.passwordToggle}
+                >
+                  <Feather 
+                    name={showPassword ? "eye-off" : "eye"} 
+                    size={20} 
+                    color={passwordIsFocused ? "#6B2FBC" : "#999"} 
+                  />
+                </Pressable>
               </View>
+              {passwordStrength === 'weak' ? (
+                <Text style={styles.unavailableText}>Password is too weak</Text>
+              ) : passwordStrength === 'medium' ? (
+                <Text style={styles.warningText}>Password is medium strength</Text>
+              ) : passwordStrength === 'strong' ? (
+                <Text style={styles.availableText}>Password is strong</Text>
+              ) : null}
             </View>
-          )}
 
-          {type === 'login' && (
-            <Pressable style={styles.forgotPasswordButton}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </Pressable>
-          )}
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Remember Me</Text>
-            <Pressable 
-              style={[styles.inputWrapper, rememberMe && styles.inputWrapperFocused]}
-              onPress={() => setRememberMe(!rememberMe)}
-            >
-              <Feather 
-                name={rememberMe ? "check-square" : "square"} 
-                size={20} 
-                color={rememberMe ? "#6B2FBC" : "#999"} 
-                style={styles.inputIcon} 
-              />
-            </Pressable>
-          </View>
-
-          <View style={styles.termsText}>
-            <Text style={styles.termsText}>
-              By signing up, you agree to our <Text style={styles.termsLink}>Terms of Service</Text> and <Text style={styles.termsLink}>Privacy Policy</Text>
-            </Text>
-          </View>
-
-          <Pressable 
-            style={[styles.authButton, isLoading && styles.authButtonDisabled]}
-            onPress={handleAuth}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <Text style={styles.authButtonText}>
-                {type === 'login' ? 'Logging in...' : 'Creating account...'}
-              </Text>
-            ) : (
-              <Text style={styles.authButtonText}>
-                {type === 'login' ? 'Log In' : 'Create Account'}
-              </Text>
+            {type === 'signup' && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Confirm Password</Text>
+                <View style={[styles.inputWrapper, confirmPasswordIsFocused && styles.inputWrapperFocused]}>
+                  <Feather name="lock" size={20} color={confirmPasswordIsFocused ? "#6B2FBC" : "#999"} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, webStyles]}
+                    placeholder="Confirm your password"
+                    placeholderTextColor="#999"
+                    secureTextEntry={!showPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    onFocus={() => setConfirmPasswordIsFocused(true)}
+                    onBlur={() => setConfirmPasswordIsFocused(false)}
+                    textContentType="password"
+                  />
+                </View>
+              </View>
             )}
-          </Pressable>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
+            {type === 'login' && (
+              <Pressable style={styles.forgotPasswordButton}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </Pressable>
+            )}
 
-          <SocialAuthButtons 
-            onGoogleAuth={handleGoogleAuth} 
-            onAppleAuth={handleAppleAuth} 
-            onFacebookAuth={handleFacebookAuth} 
-          />
+            <View style={styles.inputContainer}>
+              <Pressable 
+                style={styles.rememberMeContainer}
+                onPress={() => setRememberMe(!rememberMe)}
+              >
+                <Feather 
+                  name={rememberMe ? "check-square" : "square"} 
+                  size={20} 
+                  color={rememberMe ? "#6B2FBC" : "#999"} 
+                  style={{marginRight: 8}} 
+                />
+                <Text style={styles.rememberMeText}>Remember Me</Text>
+              </Pressable>
+            </View>
 
-          <View style={styles.switchContainer}>
-            <Text style={styles.switchText}>
-              {type === 'login' ? "Don't have an account?" : "Already have an account?"}
-            </Text>
-            <Pressable onPress={() => {
-              resetForm();
-              onClose();
-              // Switch to the other modal
-              if (type === 'login' && onSwitchToSignup) {
-                onSwitchToSignup();
-              } else if (type === 'signup' && onSwitchToLogin) {
-                onSwitchToLogin();
-              }
-            }}>
-              <Text style={styles.switchLink}>
-                {type === 'login' ? 'Sign Up' : 'Log In'}
+            <View style={styles.termsText}>
+              <Text style={styles.termsText}>
+                By signing up, you agree to our <Text style={styles.termsLink}>Terms of Service</Text> and <Text style={styles.termsLink}>Privacy Policy</Text>
               </Text>
+            </View>
+
+            <Pressable 
+              style={[styles.authButton, isLoading && styles.authButtonDisabled]}
+              onPress={handleAuth}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Text style={styles.authButtonText}>
+                  {type === 'login' ? 'Logging in...' : 'Creating account...'}
+                </Text>
+              ) : (
+                <Text style={styles.authButtonText}>
+                  {type === 'login' ? 'Log In' : 'Create Account'}
+                </Text>
+              )}
             </Pressable>
-          </View>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <View style={styles.switchContainer}>
+              <Text style={styles.switchText}>
+                {type === 'login' ? "Don't have an account?" : "Already have an account?"}
+              </Text>
+              <Pressable onPress={() => {
+                resetForm();
+                onClose();
+                // Switch to the other modal
+                if (type === 'login' && onSwitchToSignup) {
+                  onSwitchToSignup();
+                } else if (type === 'signup' && onSwitchToLogin) {
+                  onSwitchToLogin();
+                }
+              }}>
+                <Text style={styles.switchLink}>
+                  {type === 'login' ? 'Sign Up' : 'Log In'}
+                </Text>
+              </Pressable>
+            </View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -528,6 +523,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: modalWidth,
+    maxHeight: '90%',
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
@@ -697,5 +693,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#2ecc71',
     marginTop: 4,
+  },
+  rememberMeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rememberMeText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    paddingVertical: 16,
   },
 });
