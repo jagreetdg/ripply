@@ -1,6 +1,14 @@
 import React from 'react';
-import { StyleSheet, View, Pressable, Text } from 'react-native';
+import { StyleSheet, View, Pressable, Text, Platform } from 'react-native';
 import { FontAwesome, Feather } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+
+// Register for the auth callback
+WebBrowser.maybeCompleteAuthSession();
+
+// API URL for authentication
+const API_URL = "https://ripply-backend.onrender.com";
 
 type SocialAuthButtonsProps = {
   onGoogleAuth: () => void;
@@ -16,6 +24,43 @@ export default function SocialAuthButtons({
   onAppleAuth, 
   onFacebookAuth 
 }: SocialAuthButtonsProps) {
+  // Handle Google authentication
+  const handleGoogleAuth = async () => {
+    try {
+      // Call the onGoogleAuth callback to show loading state
+      onGoogleAuth();
+      
+      // Open the Google auth URL in a web browser
+      const authUrl = `${API_URL}/api/auth/google`;
+      await WebBrowser.openAuthSessionAsync(authUrl);
+    } catch (error) {
+      console.error('Google auth error:', error);
+    }
+  };
+
+  // Handle Apple authentication
+  const handleAppleAuth = async () => {
+    try {
+      // Call the onAppleAuth callback to show loading state
+      onAppleAuth();
+      
+      // Open the Apple auth URL in a web browser
+      const authUrl = `${API_URL}/api/auth/apple`;
+      await WebBrowser.openAuthSessionAsync(authUrl);
+    } catch (error) {
+      console.error('Apple auth error:', error);
+    }
+  };
+
+  // Handle Facebook authentication (placeholder for future implementation)
+  const handleFacebookAuth = () => {
+    // Call the onFacebookAuth callback
+    onFacebookAuth();
+    
+    // Facebook auth is not implemented yet
+    alert('Facebook authentication is not implemented yet.');
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.dividerContainer}>
@@ -27,23 +72,26 @@ export default function SocialAuthButtons({
       <View style={styles.buttonsContainer}>
         <Pressable 
           style={[styles.socialButton, styles.googleButton]}
-          onPress={onGoogleAuth}
+          onPress={handleGoogleAuth}
         >
           <Feather name="chrome" size={20} color="#DB4437" style={styles.socialIcon} />
           <Text style={styles.socialButtonText}>Continue with Google</Text>
         </Pressable>
         
-        <Pressable 
-          style={[styles.socialButton, styles.appleButton]}
-          onPress={onAppleAuth}
-        >
-          <FontAwesome name="apple" size={20} color="#000" style={styles.socialIcon} />
-          <Text style={styles.socialButtonText}>Continue with Apple</Text>
-        </Pressable>
+        {/* Only show Apple login on iOS devices */}
+        {Platform.OS === 'ios' && (
+          <Pressable 
+            style={[styles.socialButton, styles.appleButton]}
+            onPress={handleAppleAuth}
+          >
+            <FontAwesome name="apple" size={20} color="#000" style={styles.socialIcon} />
+            <Text style={styles.socialButtonText}>Continue with Apple</Text>
+          </Pressable>
+        )}
         
         <Pressable 
           style={[styles.socialButton, styles.facebookButton]}
-          onPress={onFacebookAuth}
+          onPress={handleFacebookAuth}
         >
           <FontAwesome name="facebook" size={20} color="#1877F2" style={styles.socialIcon} />
           <Text style={styles.socialButtonText}>Continue with Facebook</Text>

@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const rateLimiter = require('../middleware/rateLimiter');
 const { isAccountLocked, recordFailedAttempt, resetFailedAttempts, MAX_FAILED_ATTEMPTS, LOCKOUT_DURATION } = require('../middleware/accountLockout');
+const passport = require('../config/passport');
 
 // JWT Secret - in production, this would be an environment variable
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
@@ -355,6 +356,62 @@ router.get('/verify-token', async (req, res) => {
   } catch (error) {
     console.error('Error verifying token:', error);
     res.status(401).json({ message: 'Invalid token' });
+  }
+});
+
+// Social Auth Routes
+// Google authentication route
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+// Google authentication callback
+router.get('/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
+  try {
+    // Generate JWT token
+    const token = generateToken(req.user);
+    
+    // Set secure cookie with token
+    if (process.env.NODE_ENV === 'production') {
+      res.cookie('auth_token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+    }
+    
+    // Redirect to frontend with token in query params
+    // In production, you would use a more secure method like state parameters
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/social-callback?token=${token}`);
+  } catch (error) {
+    console.error('Error in Google callback:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_failed`);
+  }
+});
+
+// Apple authentication route
+router.get('/apple', passport.authenticate('apple'));
+
+// Apple authentication callback
+router.get('/apple/callback', passport.authenticate('apple', { session: false }), (req, res) => {
+  try {
+    // Generate JWT token
+    const token = generateToken(req.user);
+    
+    // Set secure cookie with token
+    if (process.env.NODE_ENV === 'production') {
+      res.cookie('auth_token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+    }
+    
+    // Redirect to frontend with token in query params
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/social-callback?token=${token}`);
+  } catch (error) {
+    console.error('Error in Apple callback:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_failed`);
   }
 });
 

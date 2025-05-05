@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const passport = require('passport');
+const session = require('express-session');
 require("dotenv").config();
 
 // Import routes
@@ -32,7 +34,7 @@ app.use((req, res, next) => {
 
 // Set up basic CORS middleware with simple configuration
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:19000', 'http://localhost:19006', 'http://localhost:8081', 'https://ripply-app.netlify.app', 'https://ripply.app'],
+  origin: process.env.FRONTEND_URL || 'http://localhost:19006',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
@@ -42,6 +44,16 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Initialize Passport and session
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'ripply-session-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Additional CORS header middleware to ensure Access-Control-Allow-Origin is set
 app.use((req, res, next) => {

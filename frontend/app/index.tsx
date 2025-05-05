@@ -5,6 +5,9 @@ import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import * as WebBrowser from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUser } from '../context/UserContext';
 import AuthModal from '../components/auth/AuthModal';
 import AnimatedButton from '../components/landing/AnimatedButton';
 import SocialAuthButton from '../components/landing/SocialAuthButton';
@@ -15,10 +18,22 @@ import Section from '../components/landing/Section';
 import GoogleIcon from '../assets/icons/googleIcon';
 import AppleIcon from '../assets/icons/appleIcon';
 
+// Register for the auth callback
+WebBrowser.maybeCompleteAuthSession();
+
+// API URL for authentication
+const API_URL = "https://ripply-backend.onrender.com";
+
+// Token storage keys
+const TOKEN_KEY = '@ripply_auth_token';
+const USER_KEY = '@ripply_user';
+
 export default function LandingPage() {
   const router = useRouter();
+  const { setUser } = useUser();
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const [signupModalVisible, setSignupModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -80,14 +95,122 @@ export default function LandingPage() {
     setSignupModalVisible(true);
   };
 
-  const handleGoogleAuth = () => {
-    // Implement Google auth logic here
-    console.log('Google auth pressed');
+  const handleGoogleAuth = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Open the Google auth URL in a web browser
+      const authUrl = `${API_URL}/api/auth/google`;
+      const result = await WebBrowser.openAuthSessionAsync(authUrl);
+      
+      if (result.type === 'success') {
+        // Extract token from URL
+        const url = result.url;
+        const tokenMatch = url.match(/token=([^&]+)/);
+        
+        if (tokenMatch && tokenMatch[1]) {
+          const token = tokenMatch[1];
+          
+          // Store token in AsyncStorage
+          await AsyncStorage.setItem(TOKEN_KEY, token);
+          
+          // Fetch user data
+          const response = await fetch(`${API_URL}/api/auth/verify-token`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            
+            // Store user data
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData.user));
+            
+            // Update user context
+            setUser({
+              id: userData.user.id,
+              username: userData.user.username,
+              email: userData.user.email,
+              display_name: userData.user.display_name || userData.user.username,
+              avatar_url: userData.user.avatar_url || null,
+              bio: userData.user.bio || null,
+              is_verified: userData.user.is_verified || false,
+              created_at: userData.user.created_at,
+              updated_at: userData.user.updated_at
+            });
+            
+            // Navigate to home screen
+            router.replace('/(tabs)/home');
+          } else {
+            console.error('Failed to verify token');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Google auth error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleAppleAuth = () => {
-    // Implement Apple auth logic here
-    console.log('Apple auth pressed');
+  const handleAppleAuth = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Open the Apple auth URL in a web browser
+      const authUrl = `${API_URL}/api/auth/apple`;
+      const result = await WebBrowser.openAuthSessionAsync(authUrl);
+      
+      if (result.type === 'success') {
+        // Extract token from URL
+        const url = result.url;
+        const tokenMatch = url.match(/token=([^&]+)/);
+        
+        if (tokenMatch && tokenMatch[1]) {
+          const token = tokenMatch[1];
+          
+          // Store token in AsyncStorage
+          await AsyncStorage.setItem(TOKEN_KEY, token);
+          
+          // Fetch user data
+          const response = await fetch(`${API_URL}/api/auth/verify-token`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            
+            // Store user data
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData.user));
+            
+            // Update user context
+            setUser({
+              id: userData.user.id,
+              username: userData.user.username,
+              email: userData.user.email,
+              display_name: userData.user.display_name || userData.user.username,
+              avatar_url: userData.user.avatar_url || null,
+              bio: userData.user.bio || null,
+              is_verified: userData.user.is_verified || false,
+              created_at: userData.user.created_at,
+              updated_at: userData.user.updated_at
+            });
+            
+            // Navigate to home screen
+            router.replace('/(tabs)/home');
+          } else {
+            console.error('Failed to verify token');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Apple auth error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Features data
@@ -234,12 +357,14 @@ export default function LandingPage() {
 										onPress={handleGoogleAuth}
 										icon={<GoogleIcon size={24} />}
 										style={styles.iconButton}
+										isLoading={isLoading}
 									/>
 
 									<SocialAuthButton
 										onPress={handleAppleAuth}
 										icon={<AppleIcon size={24} />}
 										style={styles.iconButton}
+										isLoading={isLoading}
 									/>
 								</View>
 							</Animated.View>
