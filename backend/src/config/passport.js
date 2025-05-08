@@ -14,7 +14,7 @@ const initializePassport = () => {
         {
           clientID: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          callbackURL: `${process.env.BACKEND_URL || 'http://localhost:10000'}/api/auth/google/callback`,
+          callbackURL: 'https://ripply-backend.onrender.com/api/auth/google/callback',
           scope: ['profile', 'email']
         },
         async (accessToken, refreshToken, profile, done) => {
@@ -123,7 +123,7 @@ const initializePassport = () => {
           keyID: process.env.APPLE_KEY_ID,
           privateKeyLocation: privateKeyLocation,
           privateKey: privateKey,
-          callbackURL: `${process.env.BACKEND_URL || 'http://localhost:10000'}/api/auth/apple/callback`,
+          callbackURL: 'https://ripply-backend.onrender.com/api/auth/apple/callback',
           scope: ['name', 'email']
         },
         async (req, accessToken, refreshToken, idToken, profile, done) => {
