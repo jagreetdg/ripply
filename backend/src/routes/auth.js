@@ -360,59 +360,110 @@ router.get('/verify-token', async (req, res) => {
 });
 
 // Social Auth Routes
-// Google authentication route
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+// Check if Google strategy is configured
+const isGoogleConfigured = passport._strategies && passport._strategies.google;
 
-// Google authentication callback
-router.get('/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
-  try {
-    // Generate JWT token
-    const token = generateToken(req.user);
-    
-    // Set secure cookie with token
-    if (process.env.NODE_ENV === 'production') {
-      res.cookie('auth_token', token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-      });
-    }
-    
-    // Redirect to frontend with token in query params
-    // In production, you would use a more secure method like state parameters
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/social-callback?token=${token}`);
-  } catch (error) {
-    console.error('Error in Google callback:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_failed`);
+// Google authentication route
+router.get('/google', (req, res, next) => {
+  if (!isGoogleConfigured) {
+    console.error('Google authentication strategy not configured');
+    return res.status(501).json({ message: 'Google authentication is not configured on the server' });
   }
+  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
 });
 
-// Apple authentication route
-router.get('/apple', passport.authenticate('apple'));
-
-// Apple authentication callback
-router.get('/apple/callback', passport.authenticate('apple', { session: false }), (req, res) => {
-  try {
-    // Generate JWT token
-    const token = generateToken(req.user);
-    
-    // Set secure cookie with token
-    if (process.env.NODE_ENV === 'production') {
-      res.cookie('auth_token', token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-      });
+// Google authentication callback
+router.get('/google/callback', (req, res, next) => {
+  if (!isGoogleConfigured) {
+    console.error('Google authentication strategy not configured');
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_not_configured`);
+  }
+  
+  passport.authenticate('google', { session: false }, (err, user, info) => {
+    if (err) {
+      console.error('Error in Google authentication:', err);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_failed`);
     }
     
-    // Redirect to frontend with token in query params
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/social-callback?token=${token}`);
-  } catch (error) {
-    console.error('Error in Apple callback:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_failed`);
+    if (!user) {
+      console.error('No user returned from Google authentication');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_failed`);
+    }
+    
+    try {
+      // Generate JWT token
+      const token = generateToken(user);
+      
+      // Set secure cookie with token
+      if (process.env.NODE_ENV === 'production') {
+        res.cookie('auth_token', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+      }
+      
+      // Redirect to frontend with token in query params
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/social-callback?token=${token}`);
+    } catch (error) {
+      console.error('Error in Google callback:', error);
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_failed`);
+    }
+  })(req, res, next);
+});
+
+// Check if Apple strategy is configured
+const isAppleConfigured = passport._strategies && passport._strategies.apple;
+
+// Apple authentication route
+router.get('/apple', (req, res, next) => {
+  if (!isAppleConfigured) {
+    console.error('Apple authentication strategy not configured');
+    return res.status(501).json({ message: 'Apple authentication is not configured on the server' });
   }
+  passport.authenticate('apple')(req, res, next);
+});
+
+// Apple authentication callback
+router.get('/apple/callback', (req, res, next) => {
+  if (!isAppleConfigured) {
+    console.error('Apple authentication strategy not configured');
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_not_configured`);
+  }
+  
+  passport.authenticate('apple', { session: false }, (err, user, info) => {
+    if (err) {
+      console.error('Error in Apple authentication:', err);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_failed`);
+    }
+    
+    if (!user) {
+      console.error('No user returned from Apple authentication');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_failed`);
+    }
+    
+    try {
+      // Generate JWT token
+      const token = generateToken(user);
+      
+      // Set secure cookie with token
+      if (process.env.NODE_ENV === 'production') {
+        res.cookie('auth_token', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+      }
+      
+      // Redirect to frontend with token in query params
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/social-callback?token=${token}`);
+    } catch (error) {
+      console.error('Error in Apple callback:', error);
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:19006'}/auth/login?error=auth_failed`);
+    }
+  })(req, res, next);
 });
 
 module.exports = router;
