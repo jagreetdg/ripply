@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, View, Modal, Pressable, Text, TextInput, Dimensions, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -41,11 +41,13 @@ interface AuthResponse {
 export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, onSwitchToSignup }: AuthModalProps) {
   const router = useRouter();
   const { setUser } = useUser();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
@@ -63,9 +65,22 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
+  // Validate username format
+  const isValidUsername = (username: string): boolean => {
+    // Username must be at least 5 characters and only contain alphanumeric characters and underscores
+    const usernameRegex = /^[a-zA-Z0-9_]{5,}$/;
+    return usernameRegex.test(username);
+  };
+
   // Check username availability
   const checkUsername = async (value: string) => {
-    if (!value || value.length < 3) return;
+    if (!value) return;
+    
+    // First check if username format is valid
+    if (!isValidUsername(value)) {
+      setUsernameAvailable(false);
+      return;
+    }
     
     try {
       setIsCheckingUsername(true);
@@ -81,7 +96,13 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
 
   // Check email availability
   const checkEmail = async (value: string) => {
-    if (!value || !value.includes('@')) return;
+    if (!value) return;
+    
+    // First check if email format is valid
+    if (!isValidEmail(value)) {
+      setEmailAvailable(false);
+      return;
+    }
     
     try {
       setIsCheckingEmail(true);
@@ -121,10 +142,22 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
   // Handle password change with strength check
   const handlePasswordChange = (value: string) => {
     setPassword(value);
+    clearError();
+    
     if (value) {
-      setPasswordStrength(checkPasswordStrength(value));
+      // Only check password strength on signup screen
+      if (type === 'signup') {
+        setPasswordStrength(checkPasswordStrength(value));
+      }
     } else {
       setPasswordStrength(null);
+    }
+  };
+
+  // Function to scroll to top of modal
+  const scrollToTop = () => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: true });
     }
   };
 
@@ -132,36 +165,44 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
     if (type === 'login') {
       if (!email || !password) {
         setError('Please enter both email and password');
+        scrollToTop();
         return;
       }
+      // For login, we don't do any static checks - just attempt the login
     } else {
       if (!username || !email || !password || !confirmPassword) {
         setError('Please fill in all fields');
+        scrollToTop();
         return;
       }
 
       if (password !== confirmPassword) {
         setError('Passwords do not match');
+        scrollToTop();
         return;
       }
       
       if (usernameAvailable === false) {
         setError('Username is already taken');
+        scrollToTop();
         return;
       }
       
       if (emailAvailable === false) {
         setError('Email is already registered');
+        scrollToTop();
         return;
       }
       
       if (!isValidEmail(email)) {
         setError('Invalid email format');
+        scrollToTop();
         return;
       }
       
       if (passwordStrength === 'weak') {
         setError('Password is too weak');
+        scrollToTop();
         return;
       }
     }
@@ -266,11 +307,77 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
     setIsLoading(false);
     setUsernameAvailable(null);
     setEmailAvailable(null);
+    setPasswordStrength(null);
+  };
+
+  // Clear error when input changes
+  const clearError = () => {
+    if (error) {
+      setError('');
+    }
   };
 
   const handleClose = () => {
     resetForm();
     onClose();
+  };
+
+  // State for password match validation
+  const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null);
+
+  // Check password match whenever either password field changes
+  useEffect(() => {
+    if (type === 'signup' && password && confirmPassword) {
+      setPasswordsMatch(password === confirmPassword);
+    } else {
+      setPasswordsMatch(null);
+    }
+  }, [password, confirmPassword, type]);
+
+  // Memoized value for auth button disabled state
+  const [signupButtonDisabled, setSignupButtonDisabled] = useState(false);
+  const [loginButtonDisabled, setLoginButtonDisabled] = useState(false);
+
+  // Update auth buttons disabled state whenever relevant fields change
+  useEffect(() => {
+    // Handle signup button state
+    if (type === 'signup') {
+      const hasValidationErrors = 
+        usernameAvailable === false || 
+        emailAvailable === false || 
+        (!isValidEmail(email) && email.length > 0) || 
+        passwordsMatch === false || 
+        (passwordStrength === 'weak' && password.length >= 8) || 
+        (username.length > 0 && username.length < 5);
+
+      const hasEmptyRequiredFields = 
+        !username || !email || !password || !confirmPassword;
+
+      setSignupButtonDisabled(isLoading || hasValidationErrors || hasEmptyRequiredFields);
+    } else {
+      setSignupButtonDisabled(false);
+    }
+    
+    // Handle login button state
+    if (type === 'login') {
+      const hasValidationErrors = 
+        (!isValidEmail(email) && email.length > 0);
+
+      const hasEmptyRequiredFields = 
+        !email || !password;
+
+      setLoginButtonDisabled(isLoading || hasValidationErrors || hasEmptyRequiredFields);
+    } else {
+      setLoginButtonDisabled(false);
+    }
+  }, [
+    type, isLoading, usernameAvailable, emailAvailable, email, password, confirmPassword,
+    passwordsMatch, passwordStrength, username
+  ]);
+
+  // Check if auth button should be disabled
+  const isAuthButtonDisabled = () => {
+    return type === 'signup' ? signupButtonDisabled : loginButtonDisabled;
   };
 
   // Social auth handlers
@@ -305,7 +412,7 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
             </Pressable>
           </View>
 
-          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+          <ScrollView ref={scrollViewRef} style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
             {error ? (
               <View style={styles.errorContainer}>
                 <Feather name="alert-circle" size={18} color="#e74c3c" />
@@ -327,18 +434,36 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
                     onChangeText={(text) => {
                       setUsername(text);
                       setUsernameAvailable(null);
+                      clearError();
                     }}
                     onFocus={() => setUsernameIsFocused(true)}
-                    onBlur={() => setUsernameIsFocused(false)}
+                    onBlur={() => {
+                      setUsernameIsFocused(false);
+                      // Validate username on blur
+                      if (username.length > 0) {
+                        if (username.length < 5) {
+                          setUsernameAvailable(false);
+                        } else if (!isValidUsername(username)) {
+                          setUsernameAvailable(false);
+                        } else {
+                          checkUsername(username);
+                        }
+                      }
+                    }}
                     blurOnSubmit
                     textContentType="username"
-                    onEndEditing={() => checkUsername(username)}
                   />
                 </View>
                 {isCheckingUsername ? (
                   <ActivityIndicator size="small" color="#6B2FBC" style={styles.checkingIndicator} />
                 ) : usernameAvailable === false ? (
-                  <Text style={styles.unavailableText}>Username is already taken</Text>
+                  <Text style={styles.unavailableText}>
+                    {!isValidUsername(username) && username.length > 0 
+                      ? username.length < 5 
+                        ? 'Username must be at least 5 characters' 
+                        : 'Username can only contain letters, numbers, and underscores' 
+                      : 'Username is already taken'}
+                  </Text>
                 ) : null}
               </View>
             )}
@@ -357,17 +482,31 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
                   onChangeText={(text) => {
                     setEmail(text);
                     setEmailAvailable(null);
+                    clearError();
                   }}
                   onFocus={() => setEmailIsFocused(true)}
-                  onBlur={() => setEmailIsFocused(false)}
+                  onBlur={() => {
+                    setEmailIsFocused(false);
+                    // Validate email on blur
+                    if (email.length > 0) {
+                      if (!isValidEmail(email)) {
+                        setEmailAvailable(false);
+                      } else {
+                        checkEmail(email);
+                      }
+                    }
+                  }}
                   textContentType="emailAddress"
-                  onEndEditing={() => checkEmail(email)}
                 />
               </View>
               {isCheckingEmail ? (
                 <ActivityIndicator size="small" color="#6B2FBC" style={styles.checkingIndicator} />
               ) : emailAvailable === false ? (
-                <Text style={styles.unavailableText}>Email is already registered</Text>
+                <Text style={styles.unavailableText}>
+                  {!isValidEmail(email) && email.length > 0 
+                    ? 'Please enter a valid email address' 
+                    : 'Email is already registered'}
+                </Text>
               ) : null}
             </View>
 
@@ -397,13 +536,19 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
                   />
                 </Pressable>
               </View>
-              {passwordStrength === 'weak' ? (
-                <Text style={styles.unavailableText}>Password is too weak</Text>
-              ) : passwordStrength === 'medium' ? (
-                <Text style={styles.warningText}>Password is medium strength</Text>
-              ) : passwordStrength === 'strong' ? (
-                <Text style={styles.availableText}>Password is strong</Text>
-              ) : null}
+              {type === 'signup' && password.length > 0 && (
+                passwordStrength === 'weak' ? (
+                  <Text style={styles.unavailableText}>
+                    {password.length < 8 
+                      ? 'Password must be at least 8 characters' 
+                      : 'Password is too weak'}
+                  </Text>
+                ) : passwordStrength === 'medium' ? (
+                  <Text style={styles.warningText}>Password is medium strength</Text>
+                ) : passwordStrength === 'strong' ? (
+                  <Text style={styles.availableText}>Password is strong</Text>
+                ) : null
+              )}
             </View>
 
             {type === 'signup' && (
@@ -415,14 +560,30 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
                     style={[styles.input, webStyles]}
                     placeholder="Confirm your password"
                     placeholderTextColor="#999"
-                    secureTextEntry={!showPassword}
+                    secureTextEntry={!showConfirmPassword}
                     value={confirmPassword}
-                    onChangeText={setConfirmPassword}
+                    onChangeText={(text) => {
+                      setConfirmPassword(text);
+                      clearError();
+                    }}
                     onFocus={() => setConfirmPasswordIsFocused(true)}
                     onBlur={() => setConfirmPasswordIsFocused(false)}
                     textContentType="password"
                   />
+                  <Pressable 
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.passwordToggle}
+                  >
+                    <Feather 
+                      name={showConfirmPassword ? "eye-off" : "eye"} 
+                      size={20} 
+                      color={confirmPasswordIsFocused ? "#6B2FBC" : "#999"} 
+                    />
+                  </Pressable>
                 </View>
+                {confirmPassword.length > 0 && passwordsMatch === false && (
+                  <Text style={styles.unavailableText}>Passwords do not match</Text>
+                )}
               </View>
             )}
 
@@ -432,20 +593,22 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
               </Pressable>
             )}
 
-            <View style={styles.inputContainer}>
-              <Pressable 
-                style={styles.rememberMeContainer}
-                onPress={() => setRememberMe(!rememberMe)}
-              >
-                <Feather 
-                  name={rememberMe ? "check-square" : "square"} 
-                  size={20} 
-                  color={rememberMe ? "#6B2FBC" : "#999"} 
-                  style={{marginRight: 8}} 
-                />
-                <Text style={styles.rememberMeText}>Remember Me</Text>
-              </Pressable>
-            </View>
+            {type === 'login' && (
+              <View style={styles.inputContainer}>
+                <Pressable 
+                  style={styles.rememberMeContainer}
+                  onPress={() => setRememberMe(!rememberMe)}
+                >
+                  <Feather 
+                    name={rememberMe ? "check-square" : "square"} 
+                    size={20} 
+                    color={rememberMe ? "#6B2FBC" : "#999"} 
+                    style={{marginRight: 8}} 
+                  />
+                  <Text style={styles.rememberMeText}>Remember Me</Text>
+                </Pressable>
+              </View>
+            )}
 
             <View style={styles.termsText}>
               <Text style={styles.termsText}>
@@ -454,9 +617,12 @@ export default function AuthModal({ isVisible, onClose, type, onSwitchToLogin, o
             </View>
 
             <Pressable 
-              style={[styles.authButton, isLoading && styles.authButtonDisabled]}
+              style={[
+                styles.authButton, 
+                isAuthButtonDisabled() && styles.authButtonDisabled
+              ]}
               onPress={handleAuth}
-              disabled={isLoading}
+              disabled={isAuthButtonDisabled()}
             >
               {isLoading ? (
                 <Text style={styles.authButtonText}>
@@ -697,6 +863,7 @@ const styles = StyleSheet.create({
   rememberMeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'center', // Center align with the text below
   },
   rememberMeText: {
     fontSize: 14,
@@ -704,8 +871,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    paddingRight: 10, // Add padding to prevent scrollbar from overlapping content
   },
   scrollViewContent: {
     paddingVertical: 16,
+    paddingRight: 5, // Additional padding for content
   },
 });
