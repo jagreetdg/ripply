@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, TouchableOpacity, Text, RefreshControl, ScrollView } from "react-native";
+import {
+	StyleSheet,
+	View,
+	TouchableOpacity,
+	Text,
+	RefreshControl,
+	ScrollView,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "./VoiceNoteCard";
 import { Feather } from "@expo/vector-icons";
@@ -44,7 +51,7 @@ const EMPTY_VOICE_NOTES: VoiceNote[] = [];
 const formatTimeAgo = (date: Date): string => {
 	const now = new Date();
 	const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-	
+
 	if (diffInSeconds < 60) {
 		return `${diffInSeconds}s ago`;
 	} else if (diffInSeconds < 3600) {
@@ -60,35 +67,43 @@ const formatTimeAgo = (date: Date): string => {
 
 // Define response types for API calls
 interface PlayResponse {
-  data?: {
-    playCount: number;
-    voiceNoteId: string;
-  };
+	data?: {
+		playCount: number;
+		voiceNoteId: string;
+	};
 }
 
 interface ShareResponse {
-  data?: {
-    shareCount: number;
-    voiceNoteId: string;
-  };
+	data?: {
+		shareCount: number;
+		voiceNoteId: string;
+	};
 }
 
-export function VoiceNotesList({ userId, username, displayName, voiceNotes = [], onPlayVoiceNote, onRefresh }: VoiceNotesListProps) {
+export function VoiceNotesList({
+	userId,
+	username,
+	displayName,
+	voiceNotes = [],
+	onPlayVoiceNote,
+	onRefresh,
+}: VoiceNotesListProps) {
 	// Get router for navigation
 	const router = useRouter();
 	// State for refresh control
 	const [refreshing, setRefreshing] = useState(false);
 	// State for voice notes
-	const [localVoiceNotes, setLocalVoiceNotes] = useState<VoiceNote[]>(voiceNotes);
-	
+	const [localVoiceNotes, setLocalVoiceNotes] =
+		useState<VoiceNote[]>(voiceNotes);
+
 	// Use the provided displayName or default to "User"
 	const userDisplayName = displayName || "User";
-	
+
 	// Update local state when props change
 	useEffect(() => {
 		setLocalVoiceNotes(voiceNotes);
 	}, [voiceNotes]);
-	
+
 	// Handle refresh
 	const handleRefresh = () => {
 		if (onRefresh) {
@@ -97,33 +112,33 @@ export function VoiceNotesList({ userId, username, displayName, voiceNotes = [],
 			setRefreshing(false);
 		}
 	};
-	
+
 	// Handle play voice note
 	const handlePlayVoiceNote = (voiceNoteId: string) => {
 		// Call the provided callback if available
 		if (onPlayVoiceNote) {
 			onPlayVoiceNote(voiceNoteId);
 		}
-		
+
 		// Record the play in the backend
 		recordPlay(voiceNoteId, userId)
 			.then((response: PlayResponse) => {
 				// Update the local state with the new play count
 				if (response?.data?.playCount) {
-					setLocalVoiceNotes(prev => 
-						prev.map(vn => 
-							vn.id === voiceNoteId 
-								? { ...vn, plays: response.data!.playCount } 
+					setLocalVoiceNotes((prev) =>
+						prev.map((vn) =>
+							vn.id === voiceNoteId
+								? { ...vn, plays: response.data!.playCount }
 								: vn
 						)
 					);
 				}
 			})
-			.catch(error => {
-				console.error('Error recording play:', error);
+			.catch((error) => {
+				console.error("Error recording play:", error);
 			});
 	};
-	
+
 	// Handle share voice note
 	const handleShareVoiceNote = (voiceNoteId: string) => {
 		// Record the share in the backend
@@ -131,33 +146,36 @@ export function VoiceNotesList({ userId, username, displayName, voiceNotes = [],
 			.then((response: ShareResponse) => {
 				// Update the local state with the new share count
 				if (response?.data?.shareCount) {
-					setLocalVoiceNotes(prev => 
-						prev.map(vn => 
-							vn.id === voiceNoteId 
-								? { ...vn, shares: response.data!.shareCount } 
+					setLocalVoiceNotes((prev) =>
+						prev.map((vn) =>
+							vn.id === voiceNoteId
+								? { ...vn, shares: response.data!.shareCount }
 								: vn
 						)
 					);
 				}
 			})
-			.catch(error => {
-				console.error('Error recording share:', error);
+			.catch((error) => {
+				console.error("Error recording share:", error);
 			});
 	};
-	
+
 	// Handle playing a voice note
 	const handlePlay = (voiceNoteId: string) => {
 		if (onPlayVoiceNote) {
 			onPlayVoiceNote(voiceNoteId);
 		}
 	};
-	
+
 	// Use provided voice notes or empty array
-	const displayVoiceNotes = localVoiceNotes && localVoiceNotes.length > 0 ? localVoiceNotes : EMPTY_VOICE_NOTES;
-	
+	const displayVoiceNotes =
+		localVoiceNotes && localVoiceNotes.length > 0
+			? localVoiceNotes
+			: EMPTY_VOICE_NOTES;
+
 	// Debug voice notes data
-	console.log('VoiceNotesList received voice notes:', displayVoiceNotes);
-	
+	console.log("VoiceNotesList received voice notes:", displayVoiceNotes);
+
 	return (
 		<View style={styles.container}>
 			<View style={styles.separatorContainer}>
@@ -165,12 +183,14 @@ export function VoiceNotesList({ userId, username, displayName, voiceNotes = [],
 				<View style={styles.separatorDot} />
 				<View style={styles.separatorLine} />
 			</View>
-			
+
 			{displayVoiceNotes.length === 0 ? (
 				<View style={styles.emptyStateContainer}>
 					<Feather name="mic-off" size={48} color="#ccc" />
 					<Text style={styles.emptyStateText}>No voice notes yet</Text>
-					<Text style={styles.emptyStateSubtext}>Voice notes you create will appear here</Text>
+					<Text style={styles.emptyStateSubtext}>
+						Voice notes you create will appear here
+					</Text>
 				</View>
 			) : (
 				<ScrollView
@@ -191,44 +211,60 @@ export function VoiceNotesList({ userId, username, displayName, voiceNotes = [],
 								title: item.title,
 								duration: item.duration,
 								// Handle different formats of likes/comments/plays
-								likes: Array.isArray(item.likes) ? (item.likes[0]?.count || 0) : (typeof item.likes === 'number' ? item.likes : 0),
-								comments: Array.isArray(item.comments) ? (item.comments[0]?.count || 0) : (typeof item.comments === 'number' ? item.comments : 0),
-								plays: Array.isArray(item.plays) ? (item.plays[0]?.count || 0) : (typeof item.plays === 'number' ? item.plays : 0),
+								likes: Array.isArray(item.likes)
+									? item.likes[0]?.count || 0
+									: typeof item.likes === "number"
+									? item.likes
+									: 0,
+								comments: Array.isArray(item.comments)
+									? item.comments[0]?.count || 0
+									: typeof item.comments === "number"
+									? item.comments
+									: 0,
+								plays: Array.isArray(item.plays)
+									? item.plays[0]?.count || 0
+									: typeof item.plays === "number"
+									? item.plays
+									: 0,
 								shares: item.shares || 0,
-								backgroundImage: item.backgroundImage || item.background_image || null,
+								backgroundImage:
+									item.backgroundImage || item.background_image || null,
 								tags: item.tags || [],
 								// Add user avatar URL
 								userAvatarUrl: item.users?.avatar_url || null,
 								// Include the users object from the API response
-								users: item.users
+								users: item.users,
 							};
-							
+
 							// Format the post date
-							const timePosted = item.created_at ? formatTimeAgo(new Date(item.created_at)) : '';
-							
+							const timePosted = item.created_at
+								? formatTimeAgo(new Date(item.created_at))
+								: "";
+
 							// Get the correct user ID, username and display name for this specific voice note
 							const noteUserId = item.user_id || userId;
-							
+
 							// Extract username from the users object - this is critical for routing
 							// The API response has the username in item.users.username
-							const noteUsername = item.users?.username || username || 'user'; // Username for routing
-							const noteDisplayName = item.users?.display_name || userDisplayName; // Display name for showing
-							
+							const noteUsername = item.users?.username || username || "user"; // Username for routing
+							const noteDisplayName =
+								item.users?.display_name || userDisplayName; // Display name for showing
+
 							// Debug log to check the voice note data
-							console.log('Voice note data:', {
+							console.log("Voice note data:", {
 								itemId: item.id,
 								itemUserId: item.user_id,
 								itemUsers: item.users,
 								noteUserId,
 								noteUsername,
-								noteDisplayName
+								noteDisplayName,
 							});
-							
+
 							return (
 								<View key={item.id} style={styles.cardContainer}>
-									<VoiceNoteCard 
-										voiceNote={normalizedVoiceNote} 
-										userId={noteUserId} 
+									<VoiceNoteCard
+										voiceNote={normalizedVoiceNote}
+										userId={noteUserId}
 										displayName={noteDisplayName}
 										username={noteUsername}
 										userAvatarUrl={normalizedVoiceNote.userAvatarUrl}
@@ -238,8 +274,8 @@ export function VoiceNotesList({ userId, username, displayName, voiceNotes = [],
 										onProfilePress={() => {
 											// Use the voice note's username for navigation
 											router.push({
-												pathname: '/profile/[username]',
-												params: { username: noteUsername }
+												pathname: "/profile/[username]",
+												params: { username: noteUsername },
 											});
 										}}
 										currentUserId={userId}
@@ -286,21 +322,21 @@ const styles = StyleSheet.create({
 	},
 	emptyStateContainer: {
 		flex: 1,
-		alignItems: 'center',
-		justifyContent: 'center',
+		alignItems: "center",
+		justifyContent: "center",
 		paddingVertical: 60,
 	},
 	emptyStateText: {
 		fontSize: 18,
-		fontWeight: 'bold',
-		color: '#666',
+		fontWeight: "bold",
+		color: "#666",
 		marginTop: 16,
 	},
 	emptyStateSubtext: {
 		fontSize: 14,
-		color: '#999',
+		color: "#999",
 		marginTop: 8,
-		textAlign: 'center',
+		textAlign: "center",
 		paddingHorizontal: 32,
 	},
 });

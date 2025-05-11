@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { getColorFromUserId, getInitial } from "../../utils/defaultImages";
+import { View, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
 interface DefaultProfileImageProps {
 	userId: string;
@@ -10,32 +10,26 @@ interface DefaultProfileImageProps {
 }
 
 /**
- * Default profile image component that shows a colored circle with the user's initial
+ * Default profile image component that shows a gray person icon on a light purple background
  */
 export function DefaultProfileImage({
 	userId,
 	displayName,
 	size = 80,
+	style,
 }: DefaultProfileImageProps) {
-	const backgroundColor = getColorFromUserId(userId);
-	const initial = getInitial(displayName || userId);
-
 	const containerStyle = {
 		width: size,
 		height: size,
 		borderRadius: size / 2,
-		backgroundColor,
+		backgroundColor: "#F0E6FF", // Light purple background
 	};
 
-	const textStyle = {
-		fontSize: size / 2.5,
-		color: "#FFFFFF",
-		fontWeight: "600" as const,
-	};
+	const iconSize = size * 0.5; // Icon size proportional to the container
 
 	return (
-		<View style={[styles.container, containerStyle]}>
-			<Text style={[styles.text, textStyle]}>{initial}</Text>
+		<View style={[styles.container, containerStyle, style]}>
+			<Feather name="user" size={iconSize} color="#9E9E9E" />
 		</View>
 	);
 }
@@ -44,9 +38,6 @@ const styles = StyleSheet.create({
 	container: {
 		justifyContent: "center",
 		alignItems: "center",
-	},
-	text: {
-		color: "#FFFFFF",
-		fontWeight: "600",
+		overflow: "hidden",
 	},
 });

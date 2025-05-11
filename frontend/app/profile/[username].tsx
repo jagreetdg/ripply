@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import {
 	View,
 	StyleSheet,
@@ -41,9 +41,9 @@ interface VoiceNote {
 	id: string;
 	title: string;
 	duration: number;
-	likes: number;
-	comments: number;
-	plays: number;
+	likes: number | { count: number }[];
+	comments: number | { count: number }[];
+	plays: number | { count: number }[];
 	users?: {
 		id: string;
 		username: string;
@@ -64,10 +64,24 @@ interface VoiceBio {
 
 export default function ProfileByUsernameScreen() {
 	const [refreshing, setRefreshing] = useState(false);
+	const { user: currentUser } = useUser();
+	const [followerCount, setFollowerCount] = useState(0);
+	const [followingCount, setFollowingCount] = useState(0);
+	const [isOwnProfile, setIsOwnProfile] = useState(false);
+
+	// Handler for pull-to-refresh
+	const handleRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await fetchUserData();
+		} finally {
+			setRefreshing(false);
+		}
+	};
+	// Get username from URL params
 	const params = useLocalSearchParams<{ username: string }>();
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
-	const { user: currentUser } = useUser();
 
 	const [username, setUsername] = useState<string>("");
 	const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -76,13 +90,45 @@ export default function ProfileByUsernameScreen() {
 	const [voiceBio, setVoiceBio] = useState<VoiceBio | null>(null);
 	const [userNotFound, setUserNotFound] = useState(false);
 	const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
-	const [isOwnProfile, setIsOwnProfile] = useState(false);
-	const [followerCount, setFollowerCount] = useState(0);
-	const [followingCount, setFollowingCount] = useState(0);
 	const scrollY = useRef(new Animated.Value(0)).current;
 
+	// Create animated values for smooth transitions
+	const headerHeight = useRef(new Animated.Value(0)).current;
 	const headerOpacity = useRef(new Animated.Value(1)).current;
 	const collapsedHeaderOpacity = useRef(new Animated.Value(0)).current;
+
+	// Add a listener to scrollY to update header collapse state
+	useEffect(() => {
+		const listenerId = scrollY.addListener(({ value }) => {
+			// Calculate progress of collapse (0 to 1)
+			const COLLAPSE_THRESHOLD = 120;
+			const COLLAPSE_RANGE = 40;
+
+			// Calculate progress between 0 and 1 based on scroll position
+			const progress = Math.max(
+				0,
+				Math.min(
+					1,
+					(value - (COLLAPSE_THRESHOLD - COLLAPSE_RANGE)) / COLLAPSE_RANGE
+				)
+			);
+
+			// Update the animated values based on progress
+			headerOpacity.setValue(1 - progress);
+			collapsedHeaderOpacity.setValue(progress);
+
+			// Update the collapsed state for conditional logic
+			setIsHeaderCollapsed(progress > 0.5);
+		});
+
+		return () => {
+			scrollY.removeListener(listenerId);
+		};
+	}, [scrollY]);
+
+	const handleBackPress = () => {
+		router.back();
+	};
 
 	useEffect(() => {
 		if (params.username) {
@@ -97,75 +143,67 @@ export default function ProfileByUsernameScreen() {
 	}, [username]);
 
 	useEffect(() => {
-		if (currentUser && username) {
-			setIsOwnProfile(currentUser.username === username);
+		if (currentUser && userProfile) {
+			setIsOwnProfile(currentUser.username === userProfile.username);
 		}
-	}, [currentUser, username]);
-
-	useEffect(() => {
-		const listenerId = scrollY.addListener(({ value }) => {
-			const COLLAPSE_THRESHOLD = 120;
-			const COLLAPSE_RANGE = 40;
-			const progress = Math.max(
-				0,
-				Math.min(
-					1,
-					(value - (COLLAPSE_THRESHOLD - COLLAPSE_RANGE)) / COLLAPSE_RANGE
-				)
-			);
-
-			headerOpacity.setValue(1 - progress);
-			collapsedHeaderOpacity.setValue(progress);
-			setIsHeaderCollapsed(progress > 0.5);
-		});
-
-		return () => {
-			scrollY.removeListener(listenerId);
-		};
-	}, [scrollY]);
-
-	const handleRefresh = async () => {
-		setRefreshing(true);
-		try {
-			await fetchUserData();
-		} finally {
-			setRefreshing(false);
-		}
-	};
+	}, [currentUser, userProfile]);
 
 	const fetchUserData = async () => {
 		setLoading(true);
 		try {
+			// Reset user not found state
 			setUserNotFound(false);
-			const userData = (await getUserProfileByUsername(
-				username
-			)) as UserProfile;
 
-			if (!userData) {
+			// Fetch user profile by username
+			const profileData = await getUserProfileByUsername(username);
+
+			if (!profileData) {
 				setUserNotFound(true);
 				setLoading(false);
 				return;
 			}
 
-			setUserProfile(userData);
-			const voiceNotesData = await getUserVoiceNotes(userData.id);
-			setVoiceNotes(voiceNotesData);
+			// Ensure we have a valid user profile object
+			if (
+				typeof profileData === "object" &&
+				"id" in profileData &&
+				"username" in profileData
+			) {
+				const typedProfile = profileData as UserProfile;
+				setUserProfile(typedProfile);
 
-			const followers = await getFollowerCount(userData.id);
-			const following = await getFollowingCount(userData.id);
-			setFollowerCount(followers);
-			setFollowingCount(following);
+				// Fetch user voice notes using the user ID from the profile
+				const voiceNotesData = await getUserVoiceNotes(typedProfile.id);
 
-			try {
-				const voiceBioData = (await getVoiceBio(userData.id)) as VoiceBio;
-				if (voiceBioData) {
-					setVoiceBio(voiceBioData);
+				if (Array.isArray(voiceNotesData)) {
+					setVoiceNotes(voiceNotesData);
+				} else {
+					setVoiceNotes([]);
 				}
-			} catch (error) {
-				console.log("No voice bio found or error fetching voice bio");
+
+				// Fetch follower and following counts
+				const followers = await getFollowerCount(typedProfile.id);
+				const following = await getFollowingCount(typedProfile.id);
+				setFollowerCount(followers);
+				setFollowingCount(following);
+
+				// Fetch user voice bio if available
+				try {
+					const voiceBioData = await getVoiceBio(typedProfile.id);
+					if (voiceBioData) {
+						setVoiceBio(voiceBioData as VoiceBio);
+					}
+				} catch (bioError) {
+					// Voice bio not found or error fetching it - this is optional
+				}
+			} else {
+				setUserNotFound(true);
 			}
-		} catch (error) {
-			console.error("Error fetching user data:", error);
+		} catch (error: any) {
+			// Check if this is a user not found error
+			if (error.name === "UserNotFoundError") {
+				setUserNotFound(true);
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -186,47 +224,48 @@ export default function ProfileByUsernameScreen() {
 	if (!userProfile) {
 		return (
 			<View style={styles.errorContainer}>
-				<Text style={styles.errorText}>
-					Could not load user profile. Please try again.
-				</Text>
+				<Text style={styles.errorText}>Failed to load profile data.</Text>
 			</View>
 		);
 	}
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container]}>
+			{/* Status bar background to prevent content from showing behind it */}
 			<View style={[styles.statusBarBackground, { height: insets.top }]} />
-
+			<Stack.Screen
+				options={{
+					// Hide the default header when we're using our custom collapsible header
+					headerShown: false,
+				}}
+			/>
+			{/* Always render the collapsed header as an overlay with animated opacity */}
 			<Animated.View
 				style={[
 					styles.fixedHeader,
 					{
 						opacity: collapsedHeaderOpacity,
-						top: insets.top,
-						height: 60,
+						top: 0, // Start from the very top of the screen
 					},
 				]}
 			>
-				<View style={styles.headerContent}>
-					<TouchableOpacity
-						onPress={() => router.back()}
-						style={styles.backButton}
-					>
-						<Feather name="arrow-left" size={24} color="#333" />
-					</TouchableOpacity>
-					<Text style={styles.headerTitle}>{userProfile.display_name}</Text>
-					{isOwnProfile && (
-						<TouchableOpacity
-							style={styles.editButton}
-							onPress={() => router.push("/profile/edit")}
-						>
-							<Feather name="edit" size={20} color="#6B2FBC" />
-						</TouchableOpacity>
-					)}
-				</View>
+				{/* Status bar spacer inside the header */}
+				<View style={{ height: insets.top }} />
+				<ProfileHeader
+					userId={userProfile.id}
+					username={userProfile.username}
+					displayName={userProfile.display_name}
+					avatarUrl={userProfile.avatar_url}
+					coverPhotoUrl={userProfile.cover_photo_url}
+					bio={userProfile.bio || undefined}
+					isVerified={userProfile.is_verified}
+					isCollapsed={true}
+					postCount={voiceNotes.length}
+					isOwnProfile={isOwnProfile}
+				/>
 			</Animated.View>
 
-			<ScrollView
+			<Animated.ScrollView
 				style={styles.scrollView}
 				onScroll={Animated.event(
 					[{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -242,10 +281,13 @@ export default function ProfileByUsernameScreen() {
 					/>
 				}
 			>
+				{/* Always render the expanded header with animated opacity */}
 				<Animated.View style={{ opacity: headerOpacity }}>
+					{/* Add padding at the top to account for status bar */}
 					<View style={{ paddingTop: insets.top }} />
 					<ProfileHeader
-						userId={userProfile.username}
+						userId={userProfile.id}
+						username={userProfile.username}
 						displayName={userProfile.display_name}
 						avatarUrl={userProfile.avatar_url}
 						coverPhotoUrl={userProfile.cover_photo_url}
@@ -257,6 +299,7 @@ export default function ProfileByUsernameScreen() {
 					/>
 				</Animated.View>
 
+				{/* Stats bar */}
 				<View style={styles.statsContainer}>
 					<TouchableOpacity style={styles.statsItem}>
 						<Text style={styles.statsNumber}>{followingCount}</Text>
@@ -274,7 +317,16 @@ export default function ProfileByUsernameScreen() {
 					</TouchableOpacity>
 				</View>
 
-				{!isOwnProfile && (
+				{isOwnProfile ? (
+					<View style={styles.followButtonContainer}>
+						<TouchableOpacity
+							style={styles.editProfileButtonInline}
+							onPress={() => router.push("/profile/edit")}
+						>
+							<Text style={styles.buttonText}>Edit Profile</Text>
+						</TouchableOpacity>
+					</View>
+				) : (
 					<View style={styles.followButtonContainer}>
 						<FollowButton
 							userId={userProfile.id}
@@ -293,32 +345,27 @@ export default function ProfileByUsernameScreen() {
 					displayName={userProfile.display_name}
 					voiceNotes={voiceNotes}
 				/>
-			</ScrollView>
+			</Animated.ScrollView>
 
-			{isOwnProfile && (
-				<TouchableOpacity
-					style={[styles.editProfileButton, { bottom: insets.bottom + 16 }]}
-					onPress={() => router.push("/profile/edit")}
-				>
-					<Feather name="edit-2" size={24} color="white" />
-				</TouchableOpacity>
-			)}
+			{/* Floating action button for creating voice note */}
+			<TouchableOpacity
+				style={[styles.floatingActionButton, { bottom: insets.bottom + 16 }]}
+				onPress={() => router.push("/create")}
+			>
+				<Feather name="mic" size={24} color="white" />
+			</TouchableOpacity>
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: "#fff",
-	},
 	statusBarBackground: {
 		position: "absolute",
 		top: 0,
 		left: 0,
 		right: 0,
 		backgroundColor: "#FFFFFF",
-		zIndex: 101,
+		zIndex: 101, // Higher than the header
 	},
 	fixedHeader: {
 		position: "absolute",
@@ -332,26 +379,22 @@ const styles = StyleSheet.create({
 		shadowRadius: 2,
 		elevation: 3,
 	},
-	headerContent: {
-		flexDirection: "row",
-		alignItems: "center",
-		paddingHorizontal: 16,
-		height: "100%",
+	container: {
+		flex: 1,
+		backgroundColor: "#fff",
 	},
-	backButton: {
-		padding: 8,
+	scrollView: {
+		flex: 1,
+		// Remove any top padding from the scroll view itself
+		paddingTop: 0,
 	},
 	headerTitle: {
 		color: "#6B2FBC",
 		fontSize: 18,
 		fontWeight: "600",
 	},
-	editButton: {
-		marginLeft: "auto",
+	backButton: {
 		padding: 8,
-	},
-	scrollView: {
-		flex: 1,
 	},
 	loadingContainer: {
 		flex: 1,
@@ -402,7 +445,21 @@ const styles = StyleSheet.create({
 		paddingVertical: 12,
 		alignItems: "center",
 	},
-	editProfileButton: {
+	editProfileButtonInline: {
+		backgroundColor: "#6B2FBC",
+		paddingVertical: 8,
+		paddingHorizontal: 16,
+		borderRadius: 20,
+		justifyContent: "center",
+		alignItems: "center",
+		minWidth: 100,
+	},
+	buttonText: {
+		color: "white",
+		fontSize: 14,
+		fontWeight: "600",
+	},
+	floatingActionButton: {
 		position: "absolute",
 		right: 16,
 		width: 56,
