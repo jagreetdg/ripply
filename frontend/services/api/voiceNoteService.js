@@ -4,6 +4,45 @@
 import { ENDPOINTS, apiRequest } from './config';
 
 /**
+ * Get personalized feed (voice notes from users the current user follows)
+ * @param {string} userId - Current user ID
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Array>} - List of voice notes from followed users
+ */
+export const getPersonalizedFeed = async (userId, params = {}) => {
+  console.log('Fetching personalized feed for user:', userId);
+  const queryString = new URLSearchParams(params).toString();
+  const endpoint = queryString ? `${ENDPOINTS.VOICE_NOTES}/feed/${userId}?${queryString}` : `${ENDPOINTS.VOICE_NOTES}/feed/${userId}`;
+  const response = await apiRequest(endpoint);
+  
+  // Extract just the voice notes array from the response
+  const voiceNotes = response.data || [];
+  
+  // Log the data structure to help debug
+  console.log('Personalized feed data structure sample:', 
+    voiceNotes.length > 0 ? JSON.stringify(voiceNotes[0], null, 2) : 'No voice notes');
+  
+  // Ensure each voice note has proper user data
+  return voiceNotes.map(note => {
+    // If the note already has user data, use it
+    if (note.users && note.users.display_name) {
+      return note;
+    }
+    
+    // If not, add a placeholder
+    return {
+      ...note,
+      users: note.users || {
+        id: note.user_id,
+        username: 'user',
+        display_name: 'User',
+        avatar_url: null
+      }
+    };
+  });
+};
+
+/**
  * Get all voice notes (feed)
  * @param {Object} params - Query parameters
  * @returns {Promise<Array>} - List of voice notes

@@ -86,8 +86,9 @@ export const unfollowUser = (userId, followerId) => {
  * @param {string} userId - User ID
  * @returns {Promise<Array>} - List of followers
  */
-export const getUserFollowers = (userId) => {
-  return apiRequest(`${ENDPOINTS.USERS}/${userId}/followers`);
+export const getUserFollowers = async (userId) => {
+  const response = await apiRequest(`${ENDPOINTS.USERS}/${userId}/followers`);
+  return response.data || [];
 };
 
 /**
@@ -95,8 +96,45 @@ export const getUserFollowers = (userId) => {
  * @param {string} userId - User ID
  * @returns {Promise<Array>} - List of followed users
  */
-export const getUserFollowing = (userId) => {
-  return apiRequest(`${ENDPOINTS.USERS}/${userId}/following`);
+export const getUserFollowing = async (userId) => {
+  const response = await apiRequest(`${ENDPOINTS.USERS}/${userId}/following`);
+  return response.data || [];
+};
+
+/**
+ * Get follower count for a user
+ * @param {string} userId - User ID
+ * @returns {Promise<number>} - Number of followers
+ */
+export const getFollowerCount = async (userId) => {
+  const followers = await getUserFollowers(userId);
+  return followers.length;
+};
+
+/**
+ * Get following count for a user
+ * @param {string} userId - User ID
+ * @returns {Promise<number>} - Number of users being followed
+ */
+export const getFollowingCount = async (userId) => {
+  const following = await getUserFollowing(userId);
+  return following.length;
+};
+
+/**
+ * Check if a user is following another user
+ * @param {string} followerId - ID of the potential follower
+ * @param {string} userId - ID of the user to check if being followed
+ * @returns {Promise<boolean>} - Whether followerId is following userId
+ */
+export const isFollowing = async (followerId, userId) => {
+  try {
+    const following = await getUserFollowing(followerId);
+    return following.some(follow => follow.following_id === userId);
+  } catch (error) {
+    console.error('Error checking follow status:', error);
+    return false;
+  }
 };
 
 /**

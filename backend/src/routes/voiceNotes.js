@@ -3,6 +3,78 @@ const router = express.Router();
 const supabase = require('../config/supabase');
 const uuidv4 = require('uuid').v4;
 
+// Get personalized feed (voice notes from users the current user follows)
+router.get('/feed/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+    
+    // First get the list of users that the current user follows
+    const { data: followingData, error: followingError } = await supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', userId);
+    
+    if (followingError) throw followingError;
+    
+    // If the user doesn't follow anyone, return an empty array
+    if (!followingData || followingData.length === 0) {
+      return res.status(200).json({
+        data: [],
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: 0
+        }
+      });
+    }
+    
+    // Extract the IDs of users being followed
+    const followingIds = followingData.map(follow => follow.following_id);
+    
+    // Get voice notes from followed users
+    const { data, error, count } = await supabase
+      .from('voice_notes')
+      .select(`
+        *,
+        users:user_id (id, username, display_name, avatar_url),
+        likes:voice_note_likes (count),
+        comments:voice_note_comments (count),
+        plays:voice_note_plays (count),
+        tags:voice_note_tags (tag_name)
+      `, { count: 'exact' })
+      .in('user_id', followingIds)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + parseInt(limit) - 1);
+    
+    if (error) throw error;
+    
+    // Process the data to format tags
+    const processedData = data.map(note => {
+      // Extract tags from the nested structure
+      const tags = note.tags ? note.tags.map(tag => tag.tag_name) : [];
+      
+      return {
+        ...note,
+        tags
+      };
+    });
+    
+    res.status(200).json({
+      data: processedData,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: count
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching personalized feed:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get all voice notes (with pagination)
 router.get('/', async (req, res) => {
   try {

@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { useRouter, useLocalSearchParams } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "../../context/UserContext";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 // Token storage keys
 const TOKEN_KEY = "@ripply_auth_token";
@@ -11,7 +11,7 @@ const USER_KEY = "@ripply_user";
 // API URL for authentication
 const API_URL = "https://ripply-backend.onrender.com";
 
-export default function SocialCallback() {
+export default function AppleCallback() {
 	const router = useRouter();
 	const { token, error } = useLocalSearchParams();
 	const { setUser } = useUser();
@@ -19,10 +19,6 @@ export default function SocialCallback() {
 	useEffect(() => {
 		const handleCallback = async () => {
 			try {
-				console.log("[Auth Flow] Social callback received");
-				console.log("[Auth Flow] Token:", token ? "Present" : "Not present");
-				console.log("[Auth Flow] Error:", error ? "Present" : "Not present");
-
 				if (error) {
 					console.error("[Auth Flow] Error in callback:", error);
 					router.replace("/auth/login?error=auth_failed");
@@ -35,12 +31,8 @@ export default function SocialCallback() {
 					return;
 				}
 
-				// Store token in AsyncStorage
-				console.log("[Auth Flow] Storing token in AsyncStorage");
 				await AsyncStorage.setItem(TOKEN_KEY, token as string);
 
-				// Fetch user data
-				console.log("[Auth Flow] Fetching user data");
 				const response = await fetch(`${API_URL}/api/auth/verify-token`, {
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -48,15 +40,9 @@ export default function SocialCallback() {
 				});
 
 				if (response.ok) {
-					console.log("[Auth Flow] Token verification successful");
 					const userData = await response.json();
-
-					// Store user data
-					console.log("[Auth Flow] Storing user data");
 					await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData.user));
 
-					// Update user context
-					console.log("[Auth Flow] Updating user context");
 					setUser({
 						id: userData.user.id,
 						username: userData.user.username,
@@ -69,8 +55,6 @@ export default function SocialCallback() {
 						updated_at: userData.user.updated_at,
 					});
 
-					// Navigate to home screen
-					console.log("[Auth Flow] Navigating to home screen");
 					router.replace("/(tabs)/home");
 				} else {
 					console.error("[Auth Flow] Failed to verify token:", response.status);

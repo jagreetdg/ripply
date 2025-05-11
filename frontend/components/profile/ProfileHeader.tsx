@@ -20,103 +20,30 @@ import { useRouter } from "expo-router";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { getVoiceBio } from "../../services/api/voiceBioService";
+import { getDefaultCoverPhoto } from "../../utils/defaultImages";
+import { DefaultProfileImage } from "../common/DefaultProfileImage";
 
 interface ProfileHeaderProps {
-  userId: string;
-  isCollapsed?: boolean;
-  postCount?: number;
-  displayName: string;
-  avatarUrl?: string | null;
-  coverPhotoUrl?: string | null;
-  bio?: string;
-  isVerified?: boolean;
-  isOwnProfile?: boolean;
+	userId: string;
+	isCollapsed?: boolean;
+	postCount?: number;
+	displayName: string;
+	avatarUrl?: string | null;
+	coverPhotoUrl?: string | null;
+	bio?: string;
+	isVerified?: boolean;
+	isOwnProfile?: boolean;
 }
 
 interface VoiceBio {
-  id: string;
-  user_id: string;
-  duration: number;
-  audio_url: string;
-  transcript?: string;
-  created_at: string;
-  updated_at: string;
+	id: string;
+	user_id: string;
+	duration: number;
+	audio_url: string;
+	transcript?: string;
+	created_at: string;
+	updated_at: string;
 }
-
-interface Styles {
-	container: ViewStyle;
-	coverPhoto: ViewStyle;
-	topBar: ViewStyle;
-	iconButton: ViewStyle;
-	profileInfo: ViewStyle;
-	avatarContainer: ViewStyle;
-	avatar: ImageStyle;
-	defaultAvatar: ViewStyle;
-	defaultAvatarText: TextStyle;
-	nameContainer: ViewStyle;
-	nameGroup: ViewStyle;
-	nameRow: ViewStyle;
-	name: TextStyle;
-	username: TextStyle;
-	verifiedBadge: TextStyle;
-	biosContainer: ViewStyle;
-	bio: TextStyle;
-	voiceBioButton: ViewStyle;
-	voiceBioContent: ViewStyle;
-	iconWrapper: ViewStyle;
-	playIcon: TextStyle;
-	progressContainer: ViewStyle;
-	progressBackground: ViewStyle;
-	progressBar: ViewStyle;
-	collapseButton: ViewStyle;
-	stats: ViewStyle;
-	statItem: ViewStyle;
-	statNumber: TextStyle;
-	statLabel: TextStyle;
-	statDivider: ViewStyle;
-	collapsedContainer: ViewStyle;
-	collapsedContent: ViewStyle;
-	collapsedInfo: ViewStyle;
-	collapsedNameRow: ViewStyle;
-	collapsedName: TextStyle;
-	collapsedUsername: TextStyle;
-	collapsedPostCount: TextStyle;
-	voiceBioButtonPlaying: ViewStyle;
-	voiceBioContainer: ViewStyle;
-	voiceBioDuration: TextStyle;
-	modalOverlay: ViewStyle;
-	modalContent: ViewStyle;
-	fullscreenImage: ImageStyle;
-	actionButton: ViewStyle;
-	actionButtonText: TextStyle;
-	actionButtons: ViewStyle;
-	fullscreenImageContainer: ViewStyle;
-	profileImageContainer: ViewStyle;
-	modalContainer: ViewStyle;
-	noVoiceBioText: TextStyle;
-}
-
-const DefaultProfilePicture = ({ userId, size = 80 }: { userId: string, size?: number }) => {
-	const avatarStyle = {
-		...styles.defaultAvatar,
-		width: size,
-		height: size,
-		borderRadius: size / 2,
-	};
-
-	const textStyle = {
-		...styles.defaultAvatarText,
-		fontSize: size / 2.5,
-	};
-
-	return (
-		<View style={avatarStyle}>
-			<Text style={textStyle}>
-				{userId.charAt(0).toUpperCase()}
-			</Text>
-		</View>
-	);
-};
 
 const formatDuration = (seconds: number): string => {
 	const minutes = Math.floor(seconds / 60);
@@ -125,16 +52,19 @@ const formatDuration = (seconds: number): string => {
 };
 
 export function ProfileHeader({
-  userId,
-  isCollapsed = false,
-  postCount = 0,
-  displayName,
-  avatarUrl = null,
-  coverPhotoUrl = null,
-  bio = '',
-  isVerified = false,
-  isOwnProfile = false,
+	userId,
+	isCollapsed = false,
+	postCount = 0,
+	displayName,
+	avatarUrl = null,
+	coverPhotoUrl = null,
+	bio = "",
+	isVerified = false,
+	isOwnProfile = false,
 }: ProfileHeaderProps) {
+	// Use default cover photo if none is provided
+	const effectiveCoverPhotoUrl = coverPhotoUrl || getDefaultCoverPhoto();
+
 	const router = useRouter();
 	const [isVoiceBioPlaying, setIsVoiceBioPlaying] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
@@ -157,783 +87,463 @@ export function ProfileHeader({
 	// Fetch voice bio data
 	useEffect(() => {
 		const fetchVoiceBio = async () => {
-			if (!userId) return;
-			
 			try {
 				setLoadingVoiceBio(true);
 				const data = await getVoiceBio(userId);
-				setVoiceBio(data as VoiceBio | null);
+				setVoiceBio(data as VoiceBio);
 			} catch (error) {
-				console.error('Error fetching voice bio:', error);
+				console.log("No voice bio found or error fetching voice bio");
+				setVoiceBio(null);
 			} finally {
 				setLoadingVoiceBio(false);
 			}
 		};
-		
+
 		fetchVoiceBio();
 	}, [userId]);
 
-	const handleVoiceBioCollapse = () => {
+	// Handle collapsing the voice bio button
+	const handleVoiceBioCollapse = useCallback(() => {
 		setIsExpanded(false);
 		setIsVoiceBioPlaying(false);
 		setProgress(0);
-		if (progressInterval.current) {
-			clearInterval(progressInterval.current);
-			progressInterval.current = null;
-		}
-		
-		// Stop audio playback if it's playing
+
+		// Animate the button width back to its collapsed state
+		Animated.timing(buttonWidth, {
+			toValue: 32,
+			duration: 300,
+			useNativeDriver: false,
+		}).start();
+
+		// If there's an audio element, pause it and reset
 		if (audioRef.current) {
 			audioRef.current.pause();
 			audioRef.current.currentTime = 0;
 		}
-		
-		Animated.spring(buttonWidth, {
-			toValue: 32,
-			useNativeDriver: false,
-			friction: 8,
-		}).start();
-	};
+	}, [buttonWidth]);
 
-	useEffect(() => {
-		if (isVoiceBioPlaying && !isSeeking) {
-			// If we have an actual audio element, use it for progress
-			if (audioRef.current) {
-				progressInterval.current = setInterval(() => {
-					const currentTime = audioRef.current?.currentTime || 0;
-					const duration = audioRef.current?.duration || 1;
-					const newProgress = currentTime / duration;
-					
-					setProgress(newProgress);
-					
-					if (newProgress >= 0.999) {
-						handleVoiceBioCollapse();
-					}
-				}, 100);
-			} else {
-				// Fallback to simulated progress
-				progressInterval.current = setInterval(() => {
-					setProgress((currentProgress) => {
-						const newProgress = currentProgress + 0.01;
-						if (newProgress >= 1) {
-							handleVoiceBioCollapse();
-							return 0;
-						}
-						return newProgress;
-					});
-				}, 100);
-			}
-		} else if (!isVoiceBioPlaying && progressInterval.current) {
-			clearInterval(progressInterval.current);
-			progressInterval.current = null;
-		}
-
-		return () => {
-			if (progressInterval.current) {
-				clearInterval(progressInterval.current);
-				progressInterval.current = null;
-			}
-		};
-	}, [isVoiceBioPlaying, isSeeking]);
-
+	// Handle voice bio play/pause
 	const handleVoiceBioPlayPause = useCallback(() => {
 		if (!voiceBio && !loadingVoiceBio) {
-			console.log('No voice bio available');
+			console.log("No voice bio available");
 			return;
 		}
-		
+
 		setIsVoiceBioPlaying(!isVoiceBioPlaying);
-		
+
 		if (!isExpanded) {
 			setIsExpanded(true);
-			Animated.spring(buttonWidth, {
-				toValue: 220,
+
+			// Animate the button width to its expanded state
+			Animated.timing(buttonWidth, {
+				toValue: 240,
+				duration: 300,
 				useNativeDriver: false,
-				friction: 8,
 			}).start();
 		}
-		
-		// Handle actual audio playback if available
-		if (voiceBio?.audio_url) {
-			if (!audioRef.current) {
-				audioRef.current = new Audio(voiceBio.audio_url);
-				audioRef.current.addEventListener('ended', handleVoiceBioCollapse);
+
+		// If there's an audio element, play/pause it
+		if (audioRef.current) {
+			// Add ended event listener if not already added
+			if (!audioRef.current.onended) {
+				audioRef.current.addEventListener("ended", handleVoiceBioCollapse);
 			}
-			
+
 			if (isVoiceBioPlaying) {
 				audioRef.current.pause();
 			} else {
 				audioRef.current.play();
 			}
 		}
-	}, [voiceBio, isVoiceBioPlaying, isExpanded, loadingVoiceBio]);
+	}, [
+		voiceBio,
+		isVoiceBioPlaying,
+		isExpanded,
+		loadingVoiceBio,
+		handleVoiceBioCollapse,
+	]);
 
+	// Handle seeking start
 	const handleSeekStart = () => {
 		setIsSeeking(true);
-		if (audioRef.current) {
+		if (audioRef.current && isVoiceBioPlaying) {
 			audioRef.current.pause();
 		}
 	};
 
+	// Handle seeking end
 	const handleSeekEnd = () => {
 		setIsSeeking(false);
-		if (isVoiceBioPlaying && audioRef.current) {
+		if (audioRef.current && isVoiceBioPlaying) {
 			audioRef.current.play();
 		}
 	};
 
+	// Handle seeking
 	const handleSeek = (event: any) => {
-		if (!isSeeking) return;
+		if (!isSeeking || !voiceBio) return;
+
 		const { locationX } = event.nativeEvent;
-		const progressBarWidth = 100; // Width of progress bar
+		const progressBarWidth = 180; // Approximate width of the progress bar
 		const newProgress = Math.max(0, Math.min(1, locationX / progressBarWidth));
+
 		setProgress(newProgress);
-		
-		// Update audio position if available
-		if (audioRef.current && voiceBio) {
+		if (audioRef.current) {
 			audioRef.current.currentTime = newProgress * voiceBio.duration;
 		}
 	};
 
+	// Handle photo press (profile or cover)
 	const handlePhotoPress = (type: "profile" | "cover") => {
 		setActivePhoto(type);
 		setModalVisible(true);
 	};
 
+	// Handle edit photo
 	const handleEditPhoto = () => {
-		// TODO: Implement photo editing
+		// This would typically open a photo picker or camera
 		console.log(`Edit ${activePhoto} photo`);
-		setModalVisible(false);
 	};
 
+	// Handle remove photo
 	const handleRemovePhoto = () => {
-		// TODO: Implement photo removal
+		// This would typically remove the photo
 		console.log(`Remove ${activePhoto} photo`);
-		setModalVisible(false);
 	};
 
-	if (isCollapsed) {
-		return (
-			<View style={styles.collapsedContainer}>
-				<View style={styles.collapsedContent}>
-					<TouchableOpacity
-						onPress={() => router.back()}
-						style={styles.iconButton}
-					>
-						<Feather name="arrow-left" size={24} color="#666666" />
-					</TouchableOpacity>
-
-					<View style={styles.collapsedInfo}>
-						<View style={styles.collapsedNameRow}>
-							<Text style={styles.collapsedName}>{displayName}</Text>
-							<Text style={styles.collapsedUsername}>@{userId}</Text>
-						</View>
-						<Text style={styles.collapsedPostCount}>
-							{postCount} voice notes
-						</Text>
-					</View>
-
-					<TouchableOpacity style={styles.iconButton}>
-						<Feather name="more-vertical" size={24} color="#666666" />
-					</TouchableOpacity>
-				</View>
-			</View>
-		);
-	}
-
+	// Render the component
 	return (
 		<View style={styles.container}>
-			<TouchableOpacity 
-				style={styles.coverPhoto} 
-				onPress={() => handlePhotoPress("cover")}
-				disabled={!isOwnProfile && !coverPhotoUrl} // Only allow press if own profile or has cover photo
+			{/* Cover Photo */}
+			<ImageBackground
+				source={{ uri: effectiveCoverPhotoUrl }}
+				style={[styles.coverPhoto, isCollapsed && styles.collapsedCoverPhoto]}
+				resizeMode="cover"
 			>
-				{coverPhotoUrl ? (
-					<ImageBackground
-						source={{ uri: coverPhotoUrl }}
-						style={{ width: "100%", height: "100%" }}
-						resizeMode="cover"
+				{isOwnProfile && (
+					<TouchableOpacity
+						style={styles.editCoverButton}
+						onPress={() => handlePhotoPress("cover")}
 					>
-						{/* Edit button for cover photo if own profile */}
-						{isOwnProfile && (
-							<TouchableOpacity 
-								style={[styles.iconButton, { position: 'absolute', top: 10, right: 10 }]}
-								onPress={() => handlePhotoPress("cover")}
+						<Feather name="edit-2" size={16} color="#FFFFFF" />
+					</TouchableOpacity>
+				)}
+
+				{/* Profile Avatar */}
+				<View style={styles.avatarContainer}>
+					{avatarUrl ? (
+						<TouchableOpacity onPress={() => handlePhotoPress("profile")}>
+							<Image source={{ uri: avatarUrl }} style={styles.avatar} />
+						</TouchableOpacity>
+					) : (
+						<TouchableOpacity
+							onPress={() => isOwnProfile && handlePhotoPress("profile")}
+						>
+							<DefaultProfileImage
+								userId={userId}
+								size={96}
+								style={styles.avatar}
+							/>
+						</TouchableOpacity>
+					)}
+
+					{isOwnProfile && (
+						<TouchableOpacity
+							style={styles.editAvatarButton}
+							onPress={() => handlePhotoPress("profile")}
+						>
+							<Feather name="edit-2" size={14} color="#FFFFFF" />
+						</TouchableOpacity>
+					)}
+				</View>
+			</ImageBackground>
+
+			{/* Profile Info */}
+			<View style={styles.profileInfo}>
+				<View style={styles.nameContainer}>
+					<Text style={styles.displayName}>{displayName}</Text>
+					{isVerified && (
+						<MaterialIcons
+							name="verified"
+							size={20}
+							color="#6B2FBC"
+							style={styles.verifiedIcon}
+						/>
+					)}
+				</View>
+
+				{/* Bio */}
+				{bio && <Text style={styles.bio}>{bio}</Text>}
+
+				{/* Voice Bio Button */}
+				{!isCollapsed && (
+					<View style={styles.voiceBioContainer}>
+						<Animated.View
+							style={[styles.voiceBioButton, { width: buttonWidth }]}
+						>
+							<TouchableOpacity
+								style={styles.voiceBioPlayButton}
+								onPress={handleVoiceBioPlayPause}
+								disabled={!voiceBio && !loadingVoiceBio}
 							>
-								<Feather name="edit-2" size={18} color="#fff" />
+								{loadingVoiceBio ? (
+									<ActivityIndicator size="small" color="#FFFFFF" />
+								) : (
+									<Feather
+										name={isVoiceBioPlaying ? "pause" : "play"}
+										size={16}
+										color="#FFFFFF"
+									/>
+								)}
 							</TouchableOpacity>
-						)}
-					</ImageBackground>
-				) : (
-					<View style={{ width: "100%", height: "100%", backgroundColor: "#E1E1E1" }}>
-						{/* Add cover photo button if own profile */}
-						{isOwnProfile && (
-							<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-								<TouchableOpacity 
-									style={[styles.iconButton, { backgroundColor: 'rgba(107, 47, 188, 0.7)' }]}
-									onPress={() => handlePhotoPress("cover")}
-								>
-									<Feather name="image" size={18} color="#fff" />
-								</TouchableOpacity>
-								<Text style={{ color: '#666', marginTop: 8 }}>Add Cover Photo</Text>
-							</View>
-						)}
+
+							{isExpanded && voiceBio && (
+								<View style={styles.voiceBioExpandedContent}>
+									<View style={styles.progressBarContainer}>
+										<TouchableOpacity
+											style={styles.progressBar}
+											onPressIn={handleSeekStart}
+											onPressOut={handleSeekEnd}
+											onPress={handleSeek}
+										>
+											<View style={styles.progressBarBackground} />
+											<View
+												style={[
+													styles.progressBarFill,
+													{ width: `${progress * 100}%` },
+												]}
+											/>
+										</TouchableOpacity>
+									</View>
+									<Text style={styles.voiceBioDuration}>
+										{formatDuration(Math.floor(progress * voiceBio.duration))} /{" "}
+										{formatDuration(voiceBio.duration)}
+									</Text>
+								</View>
+							)}
+						</Animated.View>
 					</View>
 				)}
-			</TouchableOpacity>
-
-			<View style={styles.profileInfo}>
-				<View style={styles.avatarContainer}>
-					<TouchableOpacity 
-						onPress={() => handlePhotoPress("profile")}
-						disabled={!isOwnProfile && !avatarUrl} // Only allow press if own profile or has avatar
-					>
-						{avatarUrl ? (
-							<Image
-								source={{ uri: avatarUrl }}
-								style={styles.avatar}
-								resizeMode="cover"
-							/>
-						) : (
-							<DefaultProfilePicture userId={userId} size={80} />
-						)}
-						
-						{/* Edit button for profile photo if own profile */}
-						{isOwnProfile && (
-							<TouchableOpacity 
-								style={[styles.iconButton, { position: 'absolute', bottom: 0, right: 0, backgroundColor: 'rgba(107, 47, 188, 0.7)' }]}
-								onPress={() => handlePhotoPress("profile")}
-							>
-								<Feather name={avatarUrl ? "edit-2" : "plus"} size={16} color="#fff" />
-							</TouchableOpacity>
-						)}
-					</TouchableOpacity>
-				</View>
-
-				<View style={styles.nameContainer}>
-					<View style={styles.nameGroup}>
-						<View style={styles.nameRow}>
-							<Text style={styles.name}>{displayName}</Text>
-							{isVerified && (
-								<MaterialIcons
-									name="verified"
-									size={24}
-									color="#6B2FBC"
-									style={styles.verifiedBadge}
-								/>
-							)}
-						</View>
-						<Text style={styles.username}>@{userId}</Text>
-						<View style={styles.voiceBioContainer}>
-							{loadingVoiceBio ? (
-								<View style={styles.voiceBioButton}>
-									<ActivityIndicator size="small" color="#6B2FBC" />
-								</View>
-							) : voiceBio ? (
-								<TouchableOpacity
-									style={[
-										styles.voiceBioButton,
-										isVoiceBioPlaying && styles.voiceBioButtonPlaying,
-									]}
-									onPress={handleVoiceBioPlayPause}
-									accessibilityLabel={
-										isVoiceBioPlaying ? "Pause voice bio" : "Play voice bio"
-									}
-									accessibilityRole="button"
-								>
-									<Animated.View
-										style={[styles.voiceBioContent, { width: buttonWidth }]}
-									>
-										<View style={styles.iconWrapper}>
-											<Feather
-												name={isVoiceBioPlaying ? "pause" : "play"}
-												size={16}
-												color="#6B2FBC"
-												style={styles.playIcon}
-											/>
-										</View>
-										{!isExpanded && (
-											<Text style={styles.voiceBioDuration}>
-												{formatDuration(voiceBio.duration)}
-											</Text>
-										)}
-										{isExpanded && (
-											<>
-												<View
-													style={styles.progressContainer}
-													onTouchStart={handleSeekStart}
-													onTouchEnd={handleSeekEnd}
-													onTouchMove={handleSeek}
-												>
-													<View style={styles.progressBackground} />
-													<View
-														style={[
-															styles.progressBar,
-															{ width: `${progress * 100}%` },
-														]}
-													/>
-												</View>
-												<TouchableOpacity
-													onPress={handleVoiceBioCollapse}
-													style={styles.collapseButton}
-												>
-													<Feather name="x" size={14} color="#666666" />
-												</TouchableOpacity>
-											</>
-										)}
-									</Animated.View>
-								</TouchableOpacity>
-							) : null}
-						</View>
-					</View>
-				</View>
-
-				<View style={styles.biosContainer}>
-					<Text style={styles.bio}>
-						{bio || 'No bio available'}
-					</Text>
-				</View>
 			</View>
 
-			{/* Stats section removed - now handled in the profile screen */}
-
+			{/* Photo Edit Modal */}
 			<Modal
-				animationType="none"
+				animationType="slide"
 				transparent={true}
 				visible={modalVisible}
 				onRequestClose={() => setModalVisible(false)}
-				statusBarTranslucent={true}
 			>
-				<View style={{ flex: 1 }}>
-					<BlurView
-						intensity={Platform.OS === "ios" ? 25 : 40}
-						tint="dark"
-						style={StyleSheet.absoluteFillObject}
-					/>
-					<Pressable
-						style={[
-							StyleSheet.absoluteFill,
-							{
-								backgroundColor: "rgba(0, 0, 0, 0.3)",
-								justifyContent: "center",
-								alignItems: "center",
-							},
-						]}
-						onPress={() => setModalVisible(false)}
-					>
-						<View style={styles.modalContent}>
-							<Pressable
-								style={styles.fullscreenImageContainer}
-								onPress={(e) => e.stopPropagation()}
+				<Pressable
+					style={styles.modalOverlay}
+					onPress={() => setModalVisible(false)}
+				>
+					<BlurView intensity={10} style={styles.blurView}>
+						<Pressable style={styles.modalContent}>
+							<Text style={styles.modalTitle}>
+								{activePhoto === "profile" ? "Profile Photo" : "Cover Photo"}
+							</Text>
+							<TouchableOpacity
+								style={styles.modalOption}
+								onPress={handleEditPhoto}
 							>
-								{activePhoto === "cover" ? (
-									<Image
-										source={{
-											uri: coverPhotoUrl || "https://picsum.photos/seed/ripply/1200/400",
-										}}
-										style={[
-											styles.fullscreenImage,
-											{ aspectRatio: imageAspectRatio },
-										]}
-										onError={(e) => {
-											console.log('Cover photo load error:', e.nativeEvent.error);
-											// Fallback is handled by the || operator in the uri
-										}}
-										resizeMode="cover"
-										onLoad={(e) => {
-											try {
-												// Check if source exists and has width/height properties
-												if (
-													e.nativeEvent &&
-													e.nativeEvent.source &&
-													e.nativeEvent.source.width &&
-													e.nativeEvent.source.height
-												) {
-													const { width, height } = e.nativeEvent.source;
-													setImageAspectRatio(width / height);
-												} else {
-													// Default to 16:9 aspect ratio if dimensions are not available
-													setImageAspectRatio(16 / 9);
-												}
-											} catch (error) {
-												console.warn("Error getting image dimensions:", error);
-												// Use a default aspect ratio
-												setImageAspectRatio(16 / 9);
-											}
-										}}
-									/>
-								) : (
-									<View style={styles.profileImageContainer}>
-										{avatarUrl ? (
-											<Image 
-												source={{ uri: avatarUrl }} 
-												style={{
-													width: '100%',
-													height: '100%',
-													borderRadius: 12,
-												}} 
-												resizeMode="cover"
-												onError={(e) => {
-													console.log('Avatar load error:', e.nativeEvent.error);
-													// We'll handle fallback in the component
-												}}
-											/>
-										) : (
-											<View style={{width: 300, height: 300, borderRadius: 150, overflow: "hidden", backgroundColor: "#6B2FBC", justifyContent: "center", alignItems: "center"}}>
-										<Text style={{color: "white", fontSize: 150, fontWeight: "bold"}}>
-											{userId.charAt(0).toUpperCase()}
-										</Text>
-									</View>
-										)}
-									</View>
-								)}
-							</Pressable>
-							<Pressable
-								style={styles.actionButtons}
-								onPress={(e) => e.stopPropagation()}
+								<Feather name="edit" size={20} color="#333" />
+								<Text style={styles.modalOptionText}>Edit Photo</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={styles.modalOption}
+								onPress={handleRemovePhoto}
 							>
-								{isOwnProfile && (
-									<>
-										<TouchableOpacity
-											style={styles.actionButton}
-											onPress={handleEditPhoto}
-										>
-											<Feather name="edit-2" size={24} color="white" />
-										</TouchableOpacity>
-
-										{(activePhoto === "profile" && avatarUrl) ||
-										(activePhoto === "cover" && coverPhotoUrl) ? (
-											<TouchableOpacity
-												style={[styles.actionButton, { backgroundColor: "#e74c3c" }]}
-												onPress={handleRemovePhoto}
-											>
-												<Feather name="trash-2" size={24} color="white" />
-											</TouchableOpacity>
-										) : null}
-									</>
-								)}
-							</Pressable>
-						</View>
-					</Pressable>
-				</View>
+								<Feather name="trash-2" size={20} color="#FF3B30" />
+								<Text style={[styles.modalOptionText, { color: "#FF3B30" }]}>
+									Remove Photo
+								</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={styles.cancelButton}
+								onPress={() => setModalVisible(false)}
+							>
+								<Text style={styles.cancelButtonText}>Cancel</Text>
+							</TouchableOpacity>
+						</Pressable>
+					</BlurView>
+				</Pressable>
 			</Modal>
 		</View>
 	);
 }
 
-const styles = StyleSheet.create<Styles>({
+const styles = StyleSheet.create({
 	container: {
-		backgroundColor: "#FFFFFF",
+		width: "100%",
 	},
 	coverPhoto: {
-		height: 120,
-		justifyContent: "flex-start",
-	},
-	topBar: {
-		flexDirection: "row",
-		justifyContent: "space-between",
+		width: "100%",
+		height: 180,
+		justifyContent: "flex-end",
 		alignItems: "center",
-		paddingHorizontal: 16,
-		paddingTop: Platform.OS === 'ios' ? 12 : 12,
 	},
-	iconButton: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: "rgba(0, 0, 0, 0.3)",
+	collapsedCoverPhoto: {
+		height: 120,
+	},
+	avatarContainer: {
+		position: "relative",
+		marginBottom: -48,
+	},
+	avatar: {
+		width: 96,
+		height: 96,
+		borderRadius: 48,
+		borderWidth: 4,
+		borderColor: "#FFFFFF",
+	},
+	editAvatarButton: {
+		position: "absolute",
+		right: 0,
+		bottom: 0,
+		backgroundColor: "#6B2FBC",
+		width: 28,
+		height: 28,
+		borderRadius: 14,
+		justifyContent: "center",
+		alignItems: "center",
+		borderWidth: 2,
+		borderColor: "#FFFFFF",
+	},
+	editCoverButton: {
+		position: "absolute",
+		top: 16,
+		right: 16,
+		backgroundColor: "rgba(0, 0, 0, 0.5)",
+		width: 32,
+		height: 32,
+		borderRadius: 16,
 		justifyContent: "center",
 		alignItems: "center",
 	},
 	profileInfo: {
-		alignItems: "center",
+		paddingTop: 56,
 		paddingHorizontal: 16,
-		paddingBottom: 8,
-		marginTop: -40,
-	},
-	avatarContainer: {
-		padding: 3,
+		paddingBottom: 16,
 		backgroundColor: "#FFFFFF",
-		borderRadius: 54,
-		marginBottom: 4,
 	},
-	avatar: {
-		width: 100,
-		height: 100,
-		borderRadius: 50,
-		backgroundColor: "#E1E1E1",
-		overflow: "hidden", // Change from 'scroll' to 'hidden'
-		position: "relative",
+	nameContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		marginBottom: 8,
 	},
-	defaultAvatar: {
-		width: 80, // Default size, will be overridden by inline styles
-		height: 80, // Default size, will be overridden by inline styles
+	displayName: {
+		fontSize: 20,
+		fontWeight: "bold",
+		color: "#333333",
+	},
+	verifiedIcon: {
+		marginLeft: 4,
+	},
+	bio: {
+		fontSize: 14,
+		color: "#666666",
+		textAlign: "center",
+		marginBottom: 16,
+	},
+	voiceBioContainer: {
+		alignItems: "center",
+		marginTop: 8,
+	},
+	voiceBioButton: {
+		height: 32,
 		backgroundColor: "#6B2FBC",
+		borderRadius: 16,
+		flexDirection: "row",
+		alignItems: "center",
+		overflow: "hidden",
+	},
+	voiceBioPlayButton: {
+		width: 32,
+		height: 32,
+		borderRadius: 16,
 		justifyContent: "center",
 		alignItems: "center",
-		borderRadius: 40, // Default, will be overridden
-		alignSelf: "center", // Ensure it's centered within its container
-		overflow: "hidden", // Match the regular avatar overflow property
-		position: "absolute", // Position it absolutely to fill the container
+	},
+	voiceBioExpandedContent: {
+		flex: 1,
+		flexDirection: "row",
+		alignItems: "center",
+		paddingRight: 12,
+	},
+	progressBarContainer: {
+		flex: 1,
+		marginHorizontal: 8,
+	},
+	progressBar: {
+		height: 4,
+		borderRadius: 2,
+		backgroundColor: "rgba(255, 255, 255, 0.3)",
+		position: "relative",
+	},
+	progressBarBackground: {
+		position: "absolute",
 		top: 0,
 		left: 0,
 		right: 0,
 		bottom: 0,
-	},
-	defaultAvatarText: {
-		color: "white",
-		fontSize: 40, // Default size, will be overridden by inline styles
-		fontWeight: "bold",
-	},
-	nameContainer: {
-		alignItems: "center",
-		marginTop: 4,
-		marginBottom: 4,
-	},
-	nameGroup: {
-		alignItems: "center",
-		gap: 2,
-	},
-	nameRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		marginBottom: 0,
-	},
-	name: {
-		fontSize: 22,
-		fontWeight: "bold",
-		color: "#000000",
-	},
-	username: {
-		fontSize: 15,
-		color: "#666666",
-		lineHeight: 18,
-		textAlign: "center",
-		marginBottom: 2,
-	},
-	verifiedBadge: {
-		marginLeft: 6,
-		marginTop: 1,
-	},
-	biosContainer: {
-		alignItems: "center",
-		width: "100%",
-		marginBottom: 8,
-		paddingHorizontal: 12,
-	},
-	bio: {
-		color: "#666666",
-		fontSize: 14,
-		lineHeight: 18,
-		textAlign: "center",
-	},
-	voiceBioContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 8,
-		marginTop: 6,
-	},
-	voiceBioButton: {
-		backgroundColor: "rgba(107, 47, 188, 0.1)",
-		borderRadius: 16,
-		height: 32,
-		justifyContent: "center",
-		alignItems: "flex-start",
-		borderWidth: 1,
-		borderColor: "rgba(107, 47, 188, 0.2)",
-		padding: 0,
-		overflow: "hidden",
-		marginTop: 6,
-	},
-	voiceBioButtonPlaying: {
-		backgroundColor: "rgba(107, 47, 188, 0.15)",
-		borderColor: "rgba(107, 47, 188, 0.3)",
-	},
-	voiceBioContent: {
-		flexDirection: "row",
-		alignItems: "center",
-		height: "100%",
-		minWidth: 80,
-	},
-	iconWrapper: {
-		width: 32,
-		height: 32,
-		justifyContent: "center",
-		alignItems: "center",
-		position: "relative",
-	},
-	playIcon: {
-		marginLeft: 10,
-	},
-	progressContainer: {
-		flex: 1,
-		height: 4,
-		marginHorizontal: 12,
+		backgroundColor: "rgba(255, 255, 255, 0.3)",
 		borderRadius: 2,
-		overflow: "hidden",
-		backgroundColor: "rgba(107, 47, 188, 0.1)",
 	},
-	progressBackground: {
+	progressBarFill: {
 		position: "absolute",
-		width: "100%",
-		height: "100%",
-		backgroundColor: "rgba(107, 47, 188, 0.1)",
-	},
-	progressBar: {
-		height: "100%",
-		backgroundColor: "#6B2FBC",
-		borderRadius: 2,
-	},
-	collapseButton: {
-		width: 24,
-		height: 24,
-		justifyContent: "center",
-		alignItems: "center",
-		marginRight: 4,
-	},
-	stats: {
-		flexDirection: "row",
-		justifyContent: "space-evenly",
-		alignItems: "center",
-		paddingVertical: 12,
-		borderTopWidth: 1,
-		borderTopColor: "#E1E1E1",
-		paddingHorizontal: 16,
-	},
-	statItem: {
-		alignItems: "center",
-		width: "30%",
-	},
-	statNumber: {
-		fontSize: 18,
-		fontWeight: "bold",
-		marginBottom: 4,
-	},
-	statLabel: {
-		color: "#666666",
-	},
-	statDivider: {
-		width: 1,
-		height: 30,
-		backgroundColor: "#E1E1E1",
-		marginHorizontal: 8,
-	},
-	collapsedContainer: {
+		top: 0,
+		left: 0,
+		bottom: 0,
 		backgroundColor: "#FFFFFF",
-		height: 60,
-		justifyContent: "center",
-	},
-	collapsedContent: {
-		flexDirection: "row",
-		alignItems: "center",
-		paddingHorizontal: 16,
-		gap: 16,
-	},
-	collapsedInfo: {
-		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	collapsedNameRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 8,
-		marginBottom: 2,
-	},
-	collapsedName: {
-		fontSize: 16,
-		fontWeight: "bold",
-		color: "#000000",
-	},
-	collapsedUsername: {
-		fontSize: 14,
-		color: "#666666",
-	},
-	collapsedPostCount: {
-		fontSize: 12,
-		color: "#666666",
+		borderRadius: 2,
 	},
 	voiceBioDuration: {
-		fontSize: 15,
-		color: "#666666",
-		marginLeft: 2,
-		marginRight: 5,
-		marginBottom: 2,
-	},
-	modalContainer: {
-		flex: 1,
-		backgroundColor: "transparent",
+		fontSize: 10,
+		color: "#FFFFFF",
+		marginLeft: 4,
 	},
 	modalOverlay: {
 		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
+		justifyContent: "flex-end",
+	},
+	blurView: {
+		flex: 1,
+		justifyContent: "flex-end",
 	},
 	modalContent: {
-		width: "100%",
-		height: "100%",
-		justifyContent: "center",
-		alignItems: "center",
-		paddingHorizontal: 20,
-		backgroundColor: "rgba(0, 0, 0, 0.75)", // Darker background for better contrast
+		backgroundColor: "#FFFFFF",
+		borderTopLeftRadius: 20,
+		borderTopRightRadius: 20,
+		padding: 20,
 	},
-	fullscreenImageContainer: {
-		width: "80%", // Reduced from 100% to make it smaller
-		maxWidth: 500, // Maximum width to prevent it from being too large
-		backgroundColor: "transparent", // Changed from #E1E1E1 to transparent
-		borderRadius: 12,
-		overflow: "hidden",
+	modalTitle: {
+		fontSize: 18,
+		fontWeight: "bold",
+		marginBottom: 20,
+		textAlign: "center",
 	},
-	fullscreenImage: {
-		width: "100%",
-		height: undefined,
-		// No default aspectRatio - will be set dynamically
-	},
-	profileImageContainer: {
-		width: "70%", // Reduced from 100% to make it smaller
-		maxWidth: 300, // Maximum width for profile image
-		aspectRatio: 1,
-		backgroundColor: "transparent", // Changed from #E1E1E1 to transparent
-		borderRadius: 12,
-		overflow: "hidden",
-		alignSelf: "center",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	actionButtons: {
-		position: "absolute",
-		bottom: 50,
-		left: 0,
-		right: 0,
+	modalOption: {
 		flexDirection: "row",
-		justifyContent: "center",
-		gap: 16,
-		paddingHorizontal: 16,
-	},
-	actionButton: {
-		backgroundColor: "#6B2FBC",
-		width: 50,
-		height: 50,
-		borderRadius: 25,
-		justifyContent: "center",
 		alignItems: "center",
-		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.25,
-		shadowRadius: 3.84,
-		elevation: 5,
+		paddingVertical: 12,
+		borderBottomWidth: 1,
+		borderBottomColor: "#EEEEEE",
 	},
-	actionButtonText: {
-		color: "white",
+	modalOptionText: {
 		fontSize: 16,
-		fontWeight: "600",
+		marginLeft: 12,
 	},
-	noVoiceBioText: {
-		fontSize: 14,
-		color: "#666666",
-		marginTop: 6,
+	cancelButton: {
+		marginTop: 20,
+		paddingVertical: 12,
+		alignItems: "center",
+		backgroundColor: "#F2F2F2",
+		borderRadius: 8,
+	},
+	cancelButtonText: {
+		fontSize: 16,
+		fontWeight: "500",
+		color: "#333333",
 	},
 });
