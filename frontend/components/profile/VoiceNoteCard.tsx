@@ -18,9 +18,10 @@ import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { CommentPopup } from "../comments/CommentPopup";
 import { recordShare } from "../../services/api/voiceNoteService";
+import DefaultAvatar from "../DefaultAvatar";
 
 // Development mode flag
-const isDev = process.env.NODE_ENV === 'development' || __DEV__;
+const isDev = process.env.NODE_ENV === "development" || __DEV__;
 
 export interface VoiceNote {
 	id: string;
@@ -82,7 +83,7 @@ const DefaultProfilePicture = ({
 }) => {
 	// State to track if the avatar image failed to load
 	const [imageError, setImageError] = useState(false);
-	
+
 	// Only try to load the avatar if a URL is provided and there hasn't been an error
 	if (avatarUrl && !imageError) {
 		return (
@@ -94,32 +95,21 @@ const DefaultProfilePicture = ({
 					borderRadius: size / 2,
 				}}
 				onError={() => {
-					console.log('Error loading avatar in VoiceNoteCard');
+					console.log("Error loading avatar in VoiceNoteCard");
 					setImageError(true); // Mark this image as failed
 				}}
 				// Don't use local assets for default source
-				defaultSource={Platform.OS === 'ios' ? { uri: 'https://ui-avatars.com/api/?name=' + (userId || 'U') } : undefined}
+				defaultSource={
+					Platform.OS === "ios"
+						? { uri: "https://ui-avatars.com/api/?name=" + (userId || "U") }
+						: undefined
+				}
 			/>
 		);
 	}
-	
-	// Fallback to default avatar with first letter
-	return (
-		<View
-			style={[
-				styles.defaultAvatar,
-				{
-					width: size,
-					height: size,
-					borderRadius: size / 2,
-				},
-			]}
-		>
-			<Text style={[styles.defaultAvatarText, { fontSize: size * 0.4 }]}>
-				{userId ? userId.charAt(0).toUpperCase() : 'U'}
-			</Text>
-		</View>
-	);
+
+	// Fallback to our new DefaultAvatar
+	return <DefaultAvatar userId={userId} size={size} />;
 };
 
 export function VoiceNoteCard({
@@ -136,22 +126,37 @@ export function VoiceNoteCard({
 }: VoiceNoteCardProps) {
 	const router = useRouter();
 	const [isPlaying, setIsPlaying] = useState(false);
-	
+
 	// Debug log to check the username value
-	console.log('VoiceNoteCard received props:', { userId, displayName, username, userAvatarUrl, voiceNoteUsers: voiceNote.users });
-	
+	console.log("VoiceNoteCard received props:", {
+		userId,
+		displayName,
+		username,
+		userAvatarUrl,
+		voiceNoteUsers: voiceNote.users,
+	});
+
 	// Ensure we have a valid username for display and navigation
 	// If username is undefined, try to extract it from voiceNote.users
-	const effectiveUsername = username || voiceNote.users?.username || (displayName ? displayName.toLowerCase().replace(/\s+/g, '') : 'user');
-	console.log('Using effectiveUsername:', effectiveUsername);
+	const effectiveUsername =
+		username ||
+		voiceNote.users?.username ||
+		(displayName ? displayName.toLowerCase().replace(/\s+/g, "") : "user");
+	console.log("Using effectiveUsername:", effectiveUsername);
 	const [progress, setProgress] = useState(0);
 	const [isSeeking, setIsSeeking] = useState(false);
 	const [isLiked, setIsLiked] = useState(false);
-	const [likesCount, setLikesCount] = useState(typeof voiceNote.likes === 'number' ? voiceNote.likes : 0);
-	const [sharesCount, setSharesCount] = useState(typeof voiceNote.shares === 'number' ? voiceNote.shares : 0);
+	const [likesCount, setLikesCount] = useState(
+		typeof voiceNote.likes === "number" ? voiceNote.likes : 0
+	);
+	const [sharesCount, setSharesCount] = useState(
+		typeof voiceNote.shares === "number" ? voiceNote.shares : 0
+	);
 	const [isShared, setIsShared] = useState(false);
 	const [showCommentPopup, setShowCommentPopup] = useState(false);
-	const [commentsCount, setCommentsCount] = useState(typeof voiceNote.comments === 'number' ? voiceNote.comments : 0);
+	const [commentsCount, setCommentsCount] = useState(
+		typeof voiceNote.comments === "number" ? voiceNote.comments : 0
+	);
 	const progressContainerRef = useRef<View>(null);
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const shareScale = useRef(new Animated.Value(1)).current;
@@ -163,33 +168,35 @@ export function VoiceNoteCard({
 			onProfilePress();
 		} else if (effectiveUsername) {
 			// Navigate to the profile by username
-			console.log('Navigating to profile by username:', effectiveUsername);
+			console.log("Navigating to profile by username:", effectiveUsername);
 			// Use the href property instead of a template string to avoid parameter conflicts
 			router.push({
-				pathname: '/profile/[username]',
-				params: { username: effectiveUsername }
+				pathname: "/profile/[username]",
+				params: { username: effectiveUsername },
 			});
 		} else if (userId) {
 			// Fallback to userId if username is not available
-			console.log('Navigating to user profile with UUID:', userId);
+			console.log("Navigating to user profile with UUID:", userId);
 			router.push({
-				pathname: '/[userId]',
-				params: { userId }
+				pathname: "/[userId]",
+				params: { userId },
 			});
 		} else {
 			// If no userId or username is provided, navigate to a default profile
-			router.push('/profile/user');
+			router.push("/profile/user");
 		}
 	}, [router, userId, username, onProfilePress]);
 
 	// Handle like button press
 	const handleLikePress = useCallback(() => {
 		// Toggle like state
-		setIsLiked(prevState => {
+		setIsLiked((prevState) => {
 			const newLikeState = !prevState;
 
 			// Update likes count
-			setLikesCount(prevCount => newLikeState ? prevCount + 1 : prevCount - 1);
+			setLikesCount((prevCount) =>
+				newLikeState ? prevCount + 1 : prevCount - 1
+			);
 
 			// Animate the like button
 			Animated.sequence([
@@ -216,7 +223,7 @@ export function VoiceNoteCard({
 
 	// Handle comment added
 	const handleCommentAdded = useCallback(() => {
-		setCommentsCount(prevCount => prevCount + 1);
+		setCommentsCount((prevCount) => prevCount + 1);
 	}, []);
 
 	// Handle plays button press
@@ -229,11 +236,13 @@ export function VoiceNoteCard({
 	// Handle share button press (retweet-style)
 	const handleSharePress = useCallback(() => {
 		// Toggle shared state
-		setIsShared(prevState => {
+		setIsShared((prevState) => {
 			const newSharedState = !prevState;
 
 			// Update shares count locally
-			setSharesCount(prevCount => newSharedState ? prevCount + 1 : prevCount - 1);
+			setSharesCount((prevCount) =>
+				newSharedState ? prevCount + 1 : prevCount - 1
+			);
 
 			// Animate the share button
 			Animated.sequence([
@@ -253,13 +262,12 @@ export function VoiceNoteCard({
 			if (newSharedState && onShare) {
 				onShare(voiceNote.id);
 			} else if (newSharedState) {
-				recordShare(voiceNote.id, currentUserId)
-					.catch(error => {
-						console.error('Error recording share:', error);
-						// Revert the UI change if the API call fails
-						setIsShared(false);
-						setSharesCount(prevCount => prevCount - 1);
-					});
+				recordShare(voiceNote.id, currentUserId).catch((error) => {
+					console.error("Error recording share:", error);
+					// Revert the UI change if the API call fails
+					setIsShared(false);
+					setSharesCount((prevCount) => prevCount - 1);
+				});
 			}
 
 			return newSharedState;
@@ -281,20 +289,20 @@ export function VoiceNoteCard({
 					console.log(`Shared with ${result.activityType}`);
 				} else {
 					// Shared
-					console.log('Shared');
+					console.log("Shared");
 				}
 			} else if (result.action === Share.dismissedAction) {
 				// Dismissed
-				console.log('Share dismissed');
+				console.log("Share dismissed");
 			}
 		} catch (error) {
-			Alert.alert('Error', 'Something went wrong while sharing');
+			Alert.alert("Error", "Something went wrong while sharing");
 		}
 	}, [voiceNote.id, voiceNote.title]);
 
 	// Handle play/pause button press
 	const handlePlayPause = useCallback(() => {
-		setIsPlaying(prev => !prev);
+		setIsPlaying((prev) => !prev);
 		if (onPlay) {
 			onPlay();
 		}
@@ -303,26 +311,37 @@ export function VoiceNoteCard({
 	// Calculate progress based on touch position
 	const calculateProgress = useCallback((pageX: number) => {
 		if (progressContainerRef.current) {
-			progressContainerRef.current.measure((x, y, width, height, pageXOffset, pageYOffset) => {
-				const containerStart = pageXOffset;
-				const newProgress = Math.max(0, Math.min(1, (pageX - containerStart) / width));
-				setProgress(newProgress);
-			});
+			progressContainerRef.current.measure(
+				(x, y, width, height, pageXOffset, pageYOffset) => {
+					const containerStart = pageXOffset;
+					const newProgress = Math.max(
+						0,
+						Math.min(1, (pageX - containerStart) / width)
+					);
+					setProgress(newProgress);
+				}
+			);
 		}
 	}, []);
 
 	// Handle seek start
-	const handleSeekStart = useCallback((event: any) => {
-		setIsSeeking(true);
-		calculateProgress(event.nativeEvent.pageX);
-	}, [calculateProgress]);
+	const handleSeekStart = useCallback(
+		(event: any) => {
+			setIsSeeking(true);
+			calculateProgress(event.nativeEvent.pageX);
+		},
+		[calculateProgress]
+	);
 
 	// Handle seek move
-	const handleSeekMove = useCallback((event: any) => {
-		if (isSeeking) {
-			calculateProgress(event.nativeEvent.pageX);
-		}
-	}, [isSeeking, calculateProgress]);
+	const handleSeekMove = useCallback(
+		(event: any) => {
+			if (isSeeking) {
+				calculateProgress(event.nativeEvent.pageX);
+			}
+		},
+		[isSeeking, calculateProgress]
+	);
 
 	// Handle seek end
 	const handleSeekEnd = useCallback(() => {
@@ -330,21 +349,21 @@ export function VoiceNoteCard({
 	}, []);
 
 	// Render progress bar
-	const renderProgressBar = useCallback(() => (
-		<View
-			ref={progressContainerRef}
-			style={styles.progressContainer}
-		>
-			<View style={styles.progressBackground} />
-			<View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
-			<Pressable
-				style={styles.progressHitSlop}
-				onPressIn={handleSeekStart}
-				onTouchMove={handleSeekMove}
-				onPressOut={handleSeekEnd}
-			/>
-		</View>
-	), [progress, handleSeekStart, handleSeekMove, handleSeekEnd]);
+	const renderProgressBar = useCallback(
+		() => (
+			<View ref={progressContainerRef} style={styles.progressContainer}>
+				<View style={styles.progressBackground} />
+				<View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
+				<Pressable
+					style={styles.progressHitSlop}
+					onPressIn={handleSeekStart}
+					onTouchMove={handleSeekMove}
+					onPressOut={handleSeekEnd}
+				/>
+			</View>
+		),
+		[progress, handleSeekStart, handleSeekMove, handleSeekEnd]
+	);
 
 	// Render the card with or without background image
 	if (!voiceNote.backgroundImage) {
@@ -355,21 +374,37 @@ export function VoiceNoteCard({
 						{/* User info and options header */}
 						{(userId || displayName) && (
 							<View style={styles.cardHeader}>
-								<TouchableOpacity style={styles.userInfoContainer} onPress={handleProfilePress}>
-									<DefaultProfilePicture 
-										userId={userId || "user"} 
-										size={32} 
+								<TouchableOpacity
+									style={styles.userInfoContainer}
+									onPress={handleProfilePress}
+								>
+									<DefaultProfilePicture
+										userId={userId || "user"}
+										size={32}
 										avatarUrl={userAvatarUrl || voiceNote.userAvatarUrl || null}
 									/>
 									<View style={styles.userInfo}>
-										<Text style={styles.displayName}>{displayName || "User"}</Text>
+										<Text style={styles.displayName}>
+											{displayName || "User"}
+										</Text>
 										<Text style={styles.username}>@{effectiveUsername}</Text>
 									</View>
 								</TouchableOpacity>
 								<View style={styles.headerActions}>
-									{timePosted && <Text style={styles.timePosted}>{timePosted}</Text>}
+									{timePosted && (
+										<Text style={styles.timePosted}>{timePosted}</Text>
+									)}
 									<TouchableOpacity style={styles.optionsButton}>
-										<Feather name="more-horizontal" size={16} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<Feather
+											name="more-horizontal"
+											size={16}
+											color="#666666"
+											style={{
+												textShadowColor: "#FFFFFF",
+												textShadowOffset: { width: 0.5, height: 0.5 },
+												textShadowRadius: 1,
+											}}
+										/>
 									</TouchableOpacity>
 								</View>
 							</View>
@@ -389,7 +424,7 @@ export function VoiceNoteCard({
 									style={{
 										textShadowColor: "#000000",
 										textShadowOffset: { width: 0.5, height: 0.5 },
-										textShadowRadius: 1
+										textShadowRadius: 1,
 									}}
 								/>
 							</TouchableOpacity>
@@ -405,7 +440,11 @@ export function VoiceNoteCard({
 						{voiceNote.tags && voiceNote.tags.length > 0 && (
 							<View style={styles.tagsContainer}>
 								{voiceNote.tags.slice(0, 10).map((tag, index) => (
-									<TouchableOpacity key={index} style={styles.tagItem} activeOpacity={0.7}>
+									<TouchableOpacity
+										key={index}
+										style={styles.tagItem}
+										activeOpacity={0.7}
+									>
 										<Text style={styles.tagText}>#{tag}</Text>
 									</TouchableOpacity>
 								))}
@@ -420,13 +459,38 @@ export function VoiceNoteCard({
 							>
 								<View style={styles.interactionContent}>
 									{isLiked ? (
-										<Animated.View style={{ transform: [{ scale: likeScale }] }}>
-											<FontAwesome name="heart" size={18} color="#FF4D67" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<Animated.View
+											style={{ transform: [{ scale: likeScale }] }}
+										>
+											<FontAwesome
+												name="heart"
+												size={18}
+												color="#FF4D67"
+												style={{
+													textShadowColor: "#FFFFFF",
+													textShadowOffset: { width: 0.5, height: 0.5 },
+													textShadowRadius: 1,
+												}}
+											/>
 										</Animated.View>
 									) : (
-										<Feather name="heart" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<Feather
+											name="heart"
+											size={18}
+											color="#666666"
+											style={{
+												textShadowColor: "#FFFFFF",
+												textShadowOffset: { width: 0.5, height: 0.5 },
+												textShadowRadius: 1,
+											}}
+										/>
 									)}
-									<Text style={[styles.interactionText, isLiked && styles.likedText]}>
+									<Text
+										style={[
+											styles.interactionText,
+											isLiked && styles.likedText,
+										]}
+									>
 										{formatNumber(likesCount)}
 									</Text>
 								</View>
@@ -437,7 +501,16 @@ export function VoiceNoteCard({
 								onPress={handleCommentPress}
 							>
 								<View style={styles.interactionContent}>
-									<Feather name="message-circle" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									<Feather
+										name="message-circle"
+										size={18}
+										color="#666666"
+										style={{
+											textShadowColor: "#FFFFFF",
+											textShadowOffset: { width: 0.5, height: 0.5 },
+											textShadowRadius: 1,
+										}}
+									/>
 									<Text style={styles.interactionText}>
 										{formatNumber(commentsCount)}
 									</Text>
@@ -449,7 +522,16 @@ export function VoiceNoteCard({
 								onPress={handlePlaysPress}
 							>
 								<View style={styles.interactionContent}>
-									<Feather name="headphones" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									<Feather
+										name="headphones"
+										size={18}
+										color="#666666"
+										style={{
+											textShadowColor: "#FFFFFF",
+											textShadowOffset: { width: 0.5, height: 0.5 },
+											textShadowRadius: 1,
+										}}
+									/>
 									<Text style={styles.interactionText}>
 										{formatNumber(voiceNote.plays || 0)}
 									</Text>
@@ -462,13 +544,38 @@ export function VoiceNoteCard({
 							>
 								<View style={styles.interactionContent}>
 									{isShared ? (
-										<Animated.View style={{ transform: [{ scale: shareScale }] }}>
-											<Feather name="repeat" size={18} color="#4CAF50" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<Animated.View
+											style={{ transform: [{ scale: shareScale }] }}
+										>
+											<Feather
+												name="repeat"
+												size={18}
+												color="#4CAF50"
+												style={{
+													textShadowColor: "#FFFFFF",
+													textShadowOffset: { width: 0.5, height: 0.5 },
+													textShadowRadius: 1,
+												}}
+											/>
 										</Animated.View>
 									) : (
-										<Feather name="repeat" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<Feather
+											name="repeat"
+											size={18}
+											color="#666666"
+											style={{
+												textShadowColor: "#FFFFFF",
+												textShadowOffset: { width: 0.5, height: 0.5 },
+												textShadowRadius: 1,
+											}}
+										/>
 									)}
-									<Text style={[styles.interactionText, isShared && styles.sharedText]}>
+									<Text
+										style={[
+											styles.interactionText,
+											isShared && styles.sharedText,
+										]}
+									>
 										{formatNumber(sharesCount)}
 									</Text>
 								</View>
@@ -476,7 +583,7 @@ export function VoiceNoteCard({
 						</View>
 					</View>
 				</View>
-				
+
 				{/* Comment Popup */}
 				<CommentPopup
 					visible={showCommentPopup}
@@ -501,21 +608,37 @@ export function VoiceNoteCard({
 					{/* User info and options header */}
 					{(userId || displayName) && (
 						<View style={styles.cardHeader}>
-							<TouchableOpacity style={styles.userInfoContainer} onPress={handleProfilePress}>
-								<DefaultProfilePicture 
-									userId={userId || "@user"} 
-									size={32} 
+							<TouchableOpacity
+								style={styles.userInfoContainer}
+								onPress={handleProfilePress}
+							>
+								<DefaultProfilePicture
+									userId={userId || "@user"}
+									size={32}
 									avatarUrl={userAvatarUrl || voiceNote.userAvatarUrl || null}
 								/>
 								<View style={styles.userInfo}>
-									<Text style={styles.displayName}>{displayName || "User"}</Text>
+									<Text style={styles.displayName}>
+										{displayName || "User"}
+									</Text>
 									<Text style={styles.username}>@{username || "user"}</Text>
 								</View>
 							</TouchableOpacity>
 							<View style={styles.headerActions}>
-								{timePosted && <Text style={styles.timePosted}>{timePosted}</Text>}
+								{timePosted && (
+									<Text style={styles.timePosted}>{timePosted}</Text>
+								)}
 								<TouchableOpacity style={styles.optionsButton}>
-									<Feather name="more-horizontal" size={16} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									<Feather
+										name="more-horizontal"
+										size={16}
+										color="#666666"
+										style={{
+											textShadowColor: "#FFFFFF",
+											textShadowOffset: { width: 0.5, height: 0.5 },
+											textShadowRadius: 1,
+										}}
+									/>
 								</TouchableOpacity>
 							</View>
 						</View>
@@ -535,7 +658,7 @@ export function VoiceNoteCard({
 								style={{
 									textShadowColor: "#000000",
 									textShadowOffset: { width: 0.5, height: 0.5 },
-									textShadowRadius: 1
+									textShadowRadius: 1,
 								}}
 							/>
 						</TouchableOpacity>
@@ -551,7 +674,11 @@ export function VoiceNoteCard({
 					{voiceNote.tags && voiceNote.tags.length > 0 && (
 						<View style={styles.tagsContainer}>
 							{voiceNote.tags.slice(0, 10).map((tag, index) => (
-								<TouchableOpacity key={index} style={styles.tagItem} activeOpacity={0.7}>
+								<TouchableOpacity
+									key={index}
+									style={styles.tagItem}
+									activeOpacity={0.7}
+								>
 									<Text style={styles.tagText}>#{tag}</Text>
 								</TouchableOpacity>
 							))}
@@ -567,12 +694,32 @@ export function VoiceNoteCard({
 							<View style={styles.interactionContent}>
 								{isLiked ? (
 									<Animated.View style={{ transform: [{ scale: likeScale }] }}>
-										<FontAwesome name="heart" size={18} color="#FF4D67" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<FontAwesome
+											name="heart"
+											size={18}
+											color="#FF4D67"
+											style={{
+												textShadowColor: "#FFFFFF",
+												textShadowOffset: { width: 0.5, height: 0.5 },
+												textShadowRadius: 1,
+											}}
+										/>
 									</Animated.View>
 								) : (
-									<Feather name="heart" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									<Feather
+										name="heart"
+										size={18}
+										color="#666666"
+										style={{
+											textShadowColor: "#FFFFFF",
+											textShadowOffset: { width: 0.5, height: 0.5 },
+											textShadowRadius: 1,
+										}}
+									/>
 								)}
-								<Text style={[styles.interactionText, isLiked && styles.likedText]}>
+								<Text
+									style={[styles.interactionText, isLiked && styles.likedText]}
+								>
 									{formatNumber(likesCount)}
 								</Text>
 							</View>
@@ -583,7 +730,16 @@ export function VoiceNoteCard({
 							onPress={handleCommentPress}
 						>
 							<View style={styles.interactionContent}>
-								<Feather name="message-circle" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+								<Feather
+									name="message-circle"
+									size={18}
+									color="#666666"
+									style={{
+										textShadowColor: "#FFFFFF",
+										textShadowOffset: { width: 0.5, height: 0.5 },
+										textShadowRadius: 1,
+									}}
+								/>
 								<Text style={styles.interactionText}>
 									{formatNumber(commentsCount)}
 								</Text>
@@ -595,7 +751,16 @@ export function VoiceNoteCard({
 							onPress={handlePlaysPress}
 						>
 							<View style={styles.interactionContent}>
-								<Feather name="headphones" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+								<Feather
+									name="headphones"
+									size={18}
+									color="#666666"
+									style={{
+										textShadowColor: "#FFFFFF",
+										textShadowOffset: { width: 0.5, height: 0.5 },
+										textShadowRadius: 1,
+									}}
+								/>
 								<Text style={styles.interactionText}>
 									{formatNumber(voiceNote.plays || 0)}
 								</Text>
@@ -609,12 +774,35 @@ export function VoiceNoteCard({
 							<View style={styles.interactionContent}>
 								{isShared ? (
 									<Animated.View style={{ transform: [{ scale: shareScale }] }}>
-										<Feather name="repeat" size={18} color="#4CAF50" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+										<Feather
+											name="repeat"
+											size={18}
+											color="#4CAF50"
+											style={{
+												textShadowColor: "#FFFFFF",
+												textShadowOffset: { width: 0.5, height: 0.5 },
+												textShadowRadius: 1,
+											}}
+										/>
 									</Animated.View>
 								) : (
-									<Feather name="repeat" size={18} color="#666666" style={{textShadowColor: "#FFFFFF", textShadowOffset: {width: 0.5, height: 0.5}, textShadowRadius: 1}} />
+									<Feather
+										name="repeat"
+										size={18}
+										color="#666666"
+										style={{
+											textShadowColor: "#FFFFFF",
+											textShadowOffset: { width: 0.5, height: 0.5 },
+											textShadowRadius: 1,
+										}}
+									/>
 								)}
-								<Text style={[styles.interactionText, isShared && styles.sharedText]}>
+								<Text
+									style={[
+										styles.interactionText,
+										isShared && styles.sharedText,
+									]}
+								>
 									{formatNumber(sharesCount)}
 								</Text>
 							</View>
@@ -622,7 +810,7 @@ export function VoiceNoteCard({
 					</View>
 				</View>
 			</ImageBackground>
-			
+
 			{/* Comment Popup */}
 			<CommentPopup
 				visible={showCommentPopup}
@@ -821,19 +1009,5 @@ const styles = StyleSheet.create({
 	sharedText: {
 		color: "#4CAF50",
 		fontWeight: "600",
-	},
-	defaultAvatar: {
-		backgroundColor: "#6B2FBC",
-		justifyContent: "center",
-		alignItems: "center",
-		borderWidth: 2,
-		borderColor: "#fff",
-	},
-	defaultAvatarText: {
-		color: "white",
-		fontWeight: "bold",
-		textShadowColor: "#000000",
-		textShadowOffset: { width: 0.5, height: 0.5 },
-		textShadowRadius: 1,
 	},
 });

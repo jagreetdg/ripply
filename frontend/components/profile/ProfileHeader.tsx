@@ -20,6 +20,7 @@ import { useRouter } from "expo-router";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { getVoiceBio } from "../../services/api/voiceBioService";
+import DefaultAvatar from "../DefaultAvatar";
 
 interface ProfileHeaderProps {
 	userId: string;
@@ -96,32 +97,6 @@ interface Styles {
 	modalContainer: ViewStyle;
 	noVoiceBioText: TextStyle;
 }
-
-const DefaultProfilePicture = ({
-	userId,
-	size = 80,
-}: {
-	userId: string;
-	size?: number;
-}) => {
-	const avatarStyle = {
-		...styles.defaultAvatar,
-		width: size,
-		height: size,
-		borderRadius: size / 2,
-	};
-
-	const textStyle = {
-		...styles.defaultAvatarText,
-		fontSize: size / 2.5,
-	};
-
-	return (
-		<View style={avatarStyle}>
-			<Text style={textStyle}>{userId.charAt(0).toUpperCase()}</Text>
-		</View>
-	);
-};
 
 const formatDuration = (seconds: number): string => {
 	const minutes = Math.floor(seconds / 60);
@@ -445,7 +420,7 @@ export function ProfileHeader({
 							/>
 						) : (
 							<View style={{ width: "100%", height: "100%", borderRadius: 50 }}>
-								<DefaultProfilePicture userId={userId} size={100} />
+								<DefaultAvatar userId={userId} size={100} />
 							</View>
 						)}
 					</View>
@@ -626,26 +601,8 @@ export function ProfileHeader({
 												}}
 											/>
 										) : (
-											<View
-												style={{
-													width: 300,
-													height: 300,
-													borderRadius: 150,
-													overflow: "hidden",
-													backgroundColor: "#6B2FBC",
-													justifyContent: "center",
-													alignItems: "center",
-												}}
-											>
-												<Text
-													style={{
-														color: "white",
-														fontSize: 150,
-														fontWeight: "bold",
-													}}
-												>
-													{userId.charAt(0).toUpperCase()}
-												</Text>
+											<View style={{ width: 300, height: 300 }}>
+												<DefaultAvatar userId={userId} size={300} />
 											</View>
 										)}
 									</View>
