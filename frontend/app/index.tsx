@@ -64,55 +64,129 @@ export default function LandingPage() {
 	useEffect(() => {
 		const checkAuthStatus = async () => {
 			try {
-				const token = await AsyncStorage.getItem(TOKEN_KEY);
+				console.log("[DEBUG] Landing Page - checkAuthStatus started");
+				console.log(
+					"[DEBUG] Landing Page - Current URL:",
+					window.location.href
+				);
+
+				// First check if there's a token in the URL
+				const urlParams = new URLSearchParams(window.location.search);
+				const token = urlParams.get("token");
+				const error = urlParams.get("error");
+
+				console.log("[DEBUG] Landing Page - Token in URL:", !!token);
+				console.log("[DEBUG] Landing Page - Error in URL:", !!error);
+
 				if (token) {
+					console.log("[Auth Flow] Token found in URL");
+					// Store the token
+					await AsyncStorage.setItem(TOKEN_KEY, token);
+
+					// Clear the URL parameters to prevent redirect loops
+					console.log("[DEBUG] Landing Page - About to clear URL params");
+					if (
+						Platform.OS === "web" &&
+						window.history &&
+						window.history.replaceState
+					) {
+						const newUrl = window.location.pathname;
+						window.history.replaceState({}, document.title, newUrl);
+						console.log(
+							"[DEBUG] Landing Page - URL params cleared, new URL:",
+							window.location.href
+						);
+					} else {
+						console.log(
+							"[DEBUG] Landing Page - URL params NOT cleared (conditions not met)"
+						);
+					}
+
+					// Get user data with the token
+					console.log("[DEBUG] Landing Page - Getting user data with token");
 					const user = await getCurrentUser();
+					console.log("[DEBUG] Landing Page - User data retrieved:", !!user);
+
 					if (user) {
-						console.log("[Auth Flow] User already authenticated:", user);
+						console.log("[Auth Flow] User authenticated from URL token");
+						console.log("[DEBUG] Landing Page - Setting user and redirecting");
 						setUser(user);
+						console.log(
+							"[DEBUG] Landing Page - User set, about to navigate to home"
+						);
 						router.replace("/(tabs)/home");
+						console.log("[DEBUG] Landing Page - Navigation triggered");
 						return;
+					}
+				} else if (error) {
+					console.error("[Auth Flow] Auth error:", error);
+					alert("Authentication failed. Please try again.");
+					// Clear the URL parameters
+					if (
+						Platform.OS === "web" &&
+						window.history &&
+						window.history.replaceState
+					) {
+						const newUrl = window.location.pathname;
+						window.history.replaceState({}, document.title, newUrl);
+						console.log("[DEBUG] Landing Page - Error URL params cleared");
+					}
+				} else {
+					console.log(
+						"[DEBUG] Landing Page - No token in URL, checking stored token"
+					);
+					// Check for stored token if no URL token
+					const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+					console.log(
+						"[DEBUG] Landing Page - Stored token exists:",
+						!!storedToken
+					);
+
+					if (storedToken) {
+						console.log(
+							"[DEBUG] Landing Page - Getting user with stored token"
+						);
+						const user = await getCurrentUser();
+						console.log(
+							"[DEBUG] Landing Page - User from stored token:",
+							!!user
+						);
+
+						if (user) {
+							console.log("[Auth Flow] User authenticated from stored token");
+							setUser(user);
+							console.log(
+								"[DEBUG] Landing Page - Navigating with stored token auth"
+							);
+							router.replace("/(tabs)/home");
+							console.log(
+								"[DEBUG] Landing Page - Navigation with stored token triggered"
+							);
+							return;
+						} else {
+							console.log(
+								"[DEBUG] Landing Page - No user found with stored token"
+							);
+						}
 					}
 				}
 			} catch (err) {
 				console.error("[Auth Flow] Error checking auth status:", err);
 			} finally {
 				setIsLoading(false);
+				console.log("[DEBUG] Landing Page - checkAuthStatus completed");
 			}
 		};
 
+		console.log(
+			"[DEBUG] Landing Page - useEffect executed, calling checkAuthStatus"
+		);
 		checkAuthStatus();
-	}, []);
 
-	// Handle auth callback
-	useEffect(() => {
-		const handleAuthCallback = async () => {
-			const urlParams = new URLSearchParams(window.location.search);
-			const token = urlParams.get("token");
-			const error = urlParams.get("error");
-
-			if (error) {
-				console.error("[Auth Flow] Auth error:", error);
-				alert("Authentication failed. Please try again.");
-				return;
-			}
-
-			if (token) {
-				try {
-					await AsyncStorage.setItem(TOKEN_KEY, token);
-					const user = await getCurrentUser();
-					if (user) {
-						setUser(user);
-						router.replace("/(tabs)/home");
-					}
-				} catch (err) {
-					console.error("[Auth Flow] Error processing token:", err);
-					alert("Failed to complete authentication. Please try again.");
-				}
-			}
+		// Clean-up function to see if component is being unmounted during navigation
+		return () => {
+			console.log("[DEBUG] Landing Page - Component unmounting");
 		};
-
-		handleAuthCallback();
 	}, []);
 
 	useEffect(() => {
@@ -185,6 +259,20 @@ export default function LandingPage() {
 						const user = await getCurrentUser();
 						if (user) {
 							setUser(user);
+
+							// Clear URL parameters if present to prevent redirect loops
+							if (
+								Platform.OS === "web" &&
+								window.history &&
+								window.history.replaceState
+							) {
+								window.history.replaceState(
+									{},
+									document.title,
+									window.location.pathname
+								);
+							}
+
 							router.replace("/(tabs)/home");
 						}
 					}
@@ -214,6 +302,20 @@ export default function LandingPage() {
 						const user = await getCurrentUser();
 						if (user) {
 							setUser(user);
+
+							// Clear URL parameters if present to prevent redirect loops
+							if (
+								Platform.OS === "web" &&
+								window.history &&
+								window.history.replaceState
+							) {
+								window.history.replaceState(
+									{},
+									document.title,
+									window.location.pathname
+								);
+							}
+
 							router.replace("/(tabs)/home");
 						}
 					}

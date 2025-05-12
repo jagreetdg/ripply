@@ -21,15 +21,6 @@ export function HomeHeader() {
 		router.push("/notifications");
 	};
 
-	// Get the first letter of the display name or username for the avatar fallback
-	const getInitial = () => {
-		if (user) {
-			if (user.display_name) return user.display_name.charAt(0).toUpperCase();
-			if (user.username) return user.username.charAt(0).toUpperCase();
-		}
-		return "G"; // Guest
-	};
-
 	return (
 		<View style={styles.outerContainer}>
 			<View style={styles.container}>
