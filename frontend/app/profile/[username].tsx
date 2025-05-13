@@ -74,6 +74,17 @@ export default function ProfileByUsernameScreen() {
 		setRefreshing(true);
 		try {
 			await fetchUserData();
+
+			// Also explicitly refresh follower and following counts
+			if (userProfile) {
+				console.log("Explicitly refreshing follower and following counts");
+				const followers = await getFollowerCount(userProfile.id);
+				const following = await getFollowingCount(userProfile.id);
+				setFollowerCount(followers);
+				setFollowingCount(following);
+			}
+		} catch (error) {
+			console.error("Error refreshing data:", error);
 		} finally {
 			setRefreshing(false);
 		}
@@ -330,10 +341,20 @@ export default function ProfileByUsernameScreen() {
 					<View style={styles.followButtonContainer}>
 						<FollowButton
 							userId={userProfile.id}
-							onFollowChange={(isFollowing) => {
-								setFollowerCount((prev) =>
-									isFollowing ? prev + 1 : Math.max(0, prev - 1)
-								);
+							onFollowChange={(isFollowing, updatedCount) => {
+								// Use the accurate server count if available
+								if (typeof updatedCount === "number") {
+									console.log(
+										`Setting follower count to ${updatedCount} from server`
+									);
+									setFollowerCount(updatedCount);
+								} else {
+									// Fallback to the old increment/decrement method
+									console.log(`Using local calculation for follower count`);
+									setFollowerCount((prev) =>
+										isFollowing ? prev + 1 : Math.max(0, prev - 1)
+									);
+								}
 							}}
 						/>
 					</View>

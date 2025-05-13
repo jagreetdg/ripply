@@ -405,4 +405,56 @@ router.get("/:userId/is-following/:followerId", async (req, res) => {
 	}
 });
 
+// Get follower count for a user
+router.get("/:userId/follower-count", async (req, res) => {
+	try {
+		const { userId } = req.params;
+
+		console.log(`[DEBUG] Getting follower count for user: ${userId}`);
+
+		// Use a count query to get the number of followers
+		const { count, error } = await supabase
+			.from("follows")
+			.select("*", { count: "exact", head: true })
+			.eq("following_id", userId);
+
+		if (error) {
+			console.error("[ERROR] Error getting follower count:", error);
+			throw error;
+		}
+
+		console.log(`[DEBUG] Follower count for ${userId}: ${count}`);
+		res.status(200).json({ count });
+	} catch (error) {
+		console.error("Error getting follower count:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
+
+// Get following count for a user
+router.get("/:userId/following-count", async (req, res) => {
+	try {
+		const { userId } = req.params;
+
+		console.log(`[DEBUG] Getting following count for user: ${userId}`);
+
+		// Use a count query to get the number of users being followed
+		const { count, error } = await supabase
+			.from("follows")
+			.select("*", { count: "exact", head: true })
+			.eq("follower_id", userId);
+
+		if (error) {
+			console.error("[ERROR] Error getting following count:", error);
+			throw error;
+		}
+
+		console.log(`[DEBUG] Following count for ${userId}: ${count}`);
+		res.status(200).json({ count });
+	} catch (error) {
+		console.error("Error getting following count:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
+
 module.exports = router;

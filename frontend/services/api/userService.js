@@ -141,8 +141,23 @@ export const getUserFollowing = async (userId) => {
  * @returns {Promise<number>} - Number of followers
  */
 export const getFollowerCount = async (userId) => {
-	const followers = await getUserFollowers(userId);
-	return followers.length;
+	try {
+		console.log(`Getting follower count for user: ${userId}`);
+		const response = await apiRequest(
+			`${ENDPOINTS.USERS}/${userId}/follower-count`
+		);
+		console.log("Follower count response:", JSON.stringify(response));
+
+		// Return the count from the response
+		return response && typeof response.count === "number" ? response.count : 0;
+	} catch (error) {
+		console.error("Error getting follower count:", error);
+
+		// Fallback to the old method if the new endpoint fails
+		console.log("Falling back to counting followers array");
+		const followers = await getUserFollowers(userId);
+		return followers.length;
+	}
 };
 
 /**
@@ -151,8 +166,23 @@ export const getFollowerCount = async (userId) => {
  * @returns {Promise<number>} - Number of users being followed
  */
 export const getFollowingCount = async (userId) => {
-	const following = await getUserFollowing(userId);
-	return following.length;
+	try {
+		console.log(`Getting following count for user: ${userId}`);
+		const response = await apiRequest(
+			`${ENDPOINTS.USERS}/${userId}/following-count`
+		);
+		console.log("Following count response:", JSON.stringify(response));
+
+		// Return the count from the response
+		return response && typeof response.count === "number" ? response.count : 0;
+	} catch (error) {
+		console.error("Error getting following count:", error);
+
+		// Fallback to the old method if the new endpoint fails
+		console.log("Falling back to counting following array");
+		const following = await getUserFollowing(userId);
+		return following.length;
+	}
 };
 
 /**

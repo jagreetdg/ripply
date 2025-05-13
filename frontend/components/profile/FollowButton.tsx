@@ -10,11 +10,12 @@ import {
 	followUser,
 	unfollowUser,
 	isFollowing,
+	getFollowerCount,
 } from "../../services/api/userService";
 
 interface FollowButtonProps {
 	userId: string;
-	onFollowChange?: (isFollowing: boolean) => void;
+	onFollowChange?: (isFollowing: boolean, updatedCount: number) => void;
 	style?: any;
 }
 
@@ -59,16 +60,28 @@ export function FollowButton({
 
 		setLoading(true);
 		try {
+			let newFollowStatus: boolean;
+
 			if (following) {
 				await unfollowUser(userId, user.id);
-				setFollowing(false);
+				newFollowStatus = false;
 			} else {
 				await followUser(userId, user.id);
-				setFollowing(true);
+				newFollowStatus = true;
 			}
 
+			setFollowing(newFollowStatus);
+
+			// Get the updated follower count from the server
 			if (onFollowChange) {
-				onFollowChange(!following);
+				// Instead of just incrementing/decrementing locally,
+				// get the accurate count from the server
+				const updatedCount = await getFollowerCount(userId);
+				console.log(`Updated follower count from server: ${updatedCount}`);
+
+				// Pass true/false for whether the user is now following,
+				// and include the updated count as a second parameter
+				onFollowChange(newFollowStatus, updatedCount);
 			}
 
 			// Double-check the follow status after a short delay
