@@ -536,7 +536,7 @@ router.post("/:voiceNoteId/share", async (req, res) => {
 		// Check if voice note exists
 		const { data: voiceNoteData, error: voiceNoteError } = await supabase
 			.from("voice_notes")
-			.select("id, user_id")
+			.select("id, user_id, shares")
 			.eq("id", voiceNoteId)
 			.single();
 
@@ -563,90 +563,68 @@ router.post("/:voiceNoteId/share", async (req, res) => {
 			throw existingShareError;
 		}
 
-		let result;
+		let isShared = false;
+		let shareCount = voiceNoteData.shares || 0;
 
-		if (existingShare) {
-			// Instead of just updating timestamp, let's delete the share to implement toggle behavior
-			result = await supabase
-				.from("voice_note_shares")
-				.delete()
-				.eq("id", existingShare.id);
-
-			if (result.error) throw result.error;
-
-			// Get updated share count after deletion
-			const { data: sharesDataAfterDeletion, error: countErrorAfterDeletion } =
-				await supabase
+		try {
+			if (existingShare) {
+				// User is unsharing: delete the share and decrement the count
+				const { error: deleteError } = await supabase
 					.from("voice_note_shares")
-					.select("id")
-					.eq("voice_note_id", voiceNoteId);
+					.delete()
+					.eq("id", existingShare.id);
 
-			if (countErrorAfterDeletion) throw countErrorAfterDeletion;
+				if (deleteError) throw deleteError;
 
-			const shareCount = sharesDataAfterDeletion.length;
+				// Decrement the share count in the voice_notes table
+				const { error: updateError } = await supabase
+					.from("voice_notes")
+					.update({ shares: Math.max(0, shareCount - 1) })
+					.eq("id", voiceNoteId);
 
-			return res.status(200).json({
-				message: "Share removed successfully",
-				voiceNoteId,
-				userId: effectiveUserId,
-				shareCount,
-				isShared: false,
-			});
-		} else {
-			// Create a new share
-			result = await supabase
-				.from("voice_note_shares")
-				.insert({
-					id: uuidv4(),
-					voice_note_id: voiceNoteId,
-					user_id: effectiveUserId,
-					shared_at: new Date().toISOString(),
-					created_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-				})
-				.select();
-		}
+				if (updateError) throw updateError;
 
-		if (result.error) {
-			if (result.error.code === "42P01") {
-				// Table doesn't exist yet
-				return res.status(400).json({
-					message: "Voice note shares table does not exist",
-					note: "Please run the SQL script in the Supabase SQL Editor to create the necessary tables",
-				});
+				shareCount = Math.max(0, shareCount - 1);
+				isShared = false;
+			} else {
+				// User is sharing: create a new share and increment the count
+				const { error: insertError } = await supabase
+					.from("voice_note_shares")
+					.insert({
+						id: uuidv4(),
+						voice_note_id: voiceNoteId,
+						user_id: effectiveUserId,
+						shared_at: new Date().toISOString(),
+						created_at: new Date().toISOString(),
+						updated_at: new Date().toISOString(),
+					});
+
+				if (insertError) throw insertError;
+
+				// Increment the share count in the voice_notes table
+				const { error: updateError } = await supabase
+					.from("voice_notes")
+					.update({ shares: shareCount + 1 })
+					.eq("id", voiceNoteId);
+
+				if (updateError) throw updateError;
+
+				shareCount = shareCount + 1;
+				isShared = true;
 			}
-			throw result.error;
+		} catch (error) {
+			console.error("Error processing share operation:", error);
+			throw error;
 		}
-
-		// Get updated share count
-		const { data: sharesData, error: countError } = await supabase
-			.from("voice_note_shares")
-			.select("id")
-			.eq("voice_note_id", voiceNoteId);
-
-		if (countError) {
-			if (countError.code === "42P01") {
-				// Table doesn't exist yet
-				return res.status(200).json({
-					message: "Share recorded successfully",
-					voiceNoteId,
-					userId,
-					shareCount: 1,
-					isShared: true,
-					note: "Share count may not be accurate until you run the SQL script in the Supabase SQL Editor",
-				});
-			}
-			throw countError;
-		}
-
-		const shareCount = sharesData.length;
 
 		res.status(200).json({
-			message: "Share recorded successfully",
+			message: isShared
+				? "Share recorded successfully"
+				: "Share removed successfully",
 			voiceNoteId,
-			userId,
+			userId: effectiveUserId,
 			shareCount,
-			isShared: true,
+			isShared,
 		});
 	} catch (error) {
 		console.error("Error recording share:", error);
@@ -661,7 +639,7 @@ router.get("/:voiceNoteId/shares", async (req, res) => {
 
 		console.log(`[DEBUG] Fetching shares for voice note: ${voiceNoteId}`);
 
-		// Check if voice note exists
+		// Check if voice note exists and get the shares count
 		const { data: voiceNoteData, error: voiceNoteError } = await supabase
 			.from("voice_notes")
 			.select("id, shares")
@@ -673,30 +651,32 @@ router.get("/:voiceNoteId/shares", async (req, res) => {
 				// Not found
 				return res.status(404).json({ message: "Voice note not found" });
 			}
+
+			// If there's a column error, fall back to counting shares
+			if (voiceNoteError.code === "42703") {
+				console.error("Error fetching share count:", voiceNoteError);
+
+				// Fall back to counting from the shares table
+				const { data: sharesData, error: countError } = await supabase
+					.from("voice_note_shares")
+					.select("id", { count: "exact" })
+					.eq("voice_note_id", voiceNoteId);
+
+				if (countError) {
+					if (countError.code === "42P01") {
+						return res.status(200).json({ shareCount: 0 });
+					}
+					throw countError;
+				}
+
+				return res.status(200).json({ shareCount: sharesData.length });
+			}
+
 			throw voiceNoteError;
 		}
 
-		// Get share count from the voice_note_shares table
-		const { data: sharesData, error: countError } = await supabase
-			.from("voice_note_shares")
-			.select("id")
-			.eq("voice_note_id", voiceNoteId);
-
-		if (countError) {
-			if (countError.code === "42P01") {
-				// Table doesn't exist yet
-				console.log("[DEBUG] voice_note_shares table does not exist");
-				return res.status(200).json({
-					shareCount: 0,
-					message:
-						"Share count may not be accurate until you run the SQL script in the Supabase SQL Editor",
-				});
-			}
-			throw countError;
-		}
-
-		// Get the accurate share count
-		const shareCount = sharesData.length;
+		// Return the shares count from the voice_notes table
+		const shareCount = voiceNoteData.shares || 0;
 		console.log(`[DEBUG] Voice note ${voiceNoteId} has ${shareCount} shares`);
 
 		res.status(200).json({ shareCount });

@@ -1,83 +1,76 @@
 import React, { useState, useEffect } from "react";
-import {
-	StyleSheet,
-	View,
-	TouchableOpacity,
-	Text,
-	RefreshControl,
-	ScrollView,
-} from "react-native";
+import { View, Text, StyleSheet, RefreshControl, FlatList } from "react-native";
 import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "./VoiceNoteCard";
-import { Feather } from "@expo/vector-icons";
-import { recordShare, recordPlay } from "../../services/api/voiceNoteService";
+import { recordPlay, recordShare } from "../../services/api/voiceNoteService";
 
-// Define the VoiceNote interface to match both API and local formats
+// Local implementation of formatRelativeTime
+const formatRelativeTime = (date: Date): string => {
+	const now = new Date();
+	const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+	if (diffInSeconds < 60) {
+		return `${diffInSeconds}s ago`;
+	}
+
+	const diffInMinutes = Math.floor(diffInSeconds / 60);
+	if (diffInMinutes < 60) {
+		return `${diffInMinutes}m ago`;
+	}
+
+	const diffInHours = Math.floor(diffInMinutes / 60);
+	if (diffInHours < 24) {
+		return `${diffInHours}h ago`;
+	}
+
+	const diffInDays = Math.floor(diffInHours / 24);
+	if (diffInDays < 7) {
+		return `${diffInDays}d ago`;
+	}
+
+	return new Date(date).toLocaleDateString();
+};
+
+// Define the VoiceNote interface to match API format
 interface VoiceNote {
 	id: string;
 	title: string;
 	duration: number;
-	likes: number | { count: number }[];
-	comments: number | { count: number }[];
-	plays: number | { count: number }[];
-	shares?: number;
-	backgroundImage?: string | null;
-	background_image?: string | null;
+	audio_url: string;
+	created_at: string;
+	likes: number;
+	comments: number;
+	plays: number;
+	shares: number;
 	tags?: string[];
-	user_id?: string;
-	created_at?: string;
-	// User data that might be included in the API response
+	background_image?: string | null;
+	backgroundImage?: string | null; // Alternative name for compatibility
 	users?: {
 		id: string;
-		username: string; // Unique identifier for routing
-		display_name: string; // Human-readable name
+		username: string;
+		display_name: string;
+		avatar_url: string | null;
+	};
+	user_id?: string; // Sometimes included instead of users object
+	// Shared information
+	is_shared?: boolean;
+	shared_at?: string;
+	shared_by?: {
+		id: string;
+		username: string;
+		display_name: string;
 		avatar_url: string | null;
 	};
 }
 
 interface VoiceNotesListProps {
 	userId: string;
-	username?: string; // Username for routing
-	displayName?: string; // Display name for showing
-	voiceNotes?: VoiceNote[];
+	username?: string;
+	displayName?: string;
+	voiceNotes: VoiceNote[];
 	onPlayVoiceNote?: (voiceNoteId: string) => void;
 	onRefresh?: () => void;
-}
-
-// Empty array for when no voice notes are available
-const EMPTY_VOICE_NOTES: VoiceNote[] = [];
-
-// Helper function to format time ago
-const formatTimeAgo = (date: Date): string => {
-	const now = new Date();
-	const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-	if (diffInSeconds < 60) {
-		return `${diffInSeconds}s ago`;
-	} else if (diffInSeconds < 3600) {
-		return `${Math.floor(diffInSeconds / 60)}m ago`;
-	} else if (diffInSeconds < 86400) {
-		return `${Math.floor(diffInSeconds / 3600)}h ago`;
-	} else if (diffInSeconds < 604800) {
-		return `${Math.floor(diffInSeconds / 86400)}d ago`;
-	} else {
-		return date.toLocaleDateString();
-	}
-};
-
-// Define response types for API calls
-interface PlayResponse {
-	data?: {
-		playCount: number;
-		voiceNoteId: string;
-	};
-}
-
-interface ShareResponse {
-	data?: {
-		shareCount: number;
-		voiceNoteId: string;
-	};
+	isSharedList?: boolean;
 }
 
 export function VoiceNotesList({
@@ -87,8 +80,8 @@ export function VoiceNotesList({
 	voiceNotes = [],
 	onPlayVoiceNote,
 	onRefresh,
+	isSharedList = false,
 }: VoiceNotesListProps) {
-	// Get router for navigation
 	const router = useRouter();
 	// State for refresh control
 	const [refreshing, setRefreshing] = useState(false);
@@ -122,13 +115,13 @@ export function VoiceNotesList({
 
 		// Record the play in the backend
 		recordPlay(voiceNoteId, userId)
-			.then((response: PlayResponse) => {
+			.then((response: any) => {
 				// Update the local state with the new play count
 				if (response?.data?.playCount) {
 					setLocalVoiceNotes((prev) =>
 						prev.map((vn) =>
 							vn.id === voiceNoteId
-								? { ...vn, plays: response.data!.playCount }
+								? { ...vn, plays: response.data.playCount }
 								: vn
 						)
 					);
@@ -143,13 +136,13 @@ export function VoiceNotesList({
 	const handleShareVoiceNote = (voiceNoteId: string) => {
 		// Record the share in the backend
 		recordShare(voiceNoteId, userId)
-			.then((response: ShareResponse) => {
+			.then((response: any) => {
 				// Update the local state with the new share count
-				if (response?.data?.shareCount) {
+				if (typeof response.shareCount === "number") {
 					setLocalVoiceNotes((prev) =>
 						prev.map((vn) =>
 							vn.id === voiceNoteId
-								? { ...vn, shares: response.data!.shareCount }
+								? { ...vn, shares: response.shareCount }
 								: vn
 						)
 					);
@@ -160,131 +153,90 @@ export function VoiceNotesList({
 			});
 	};
 
-	// Handle playing a voice note
-	const handlePlay = (voiceNoteId: string) => {
-		if (onPlayVoiceNote) {
-			onPlayVoiceNote(voiceNoteId);
-		}
+	// Render a voice note card
+	const renderVoiceNoteCard = ({ item }: { item: VoiceNote }) => {
+		// Calculate time since posting
+		const timeAgo = formatRelativeTime(new Date(item.created_at));
+
+		// For shared items, we use the shared timestamp and show who shared it
+		const displayTimestamp =
+			item.is_shared && item.shared_at
+				? formatRelativeTime(new Date(item.shared_at))
+				: timeAgo;
+
+		// Get the creator info
+		const creatorId = item.users?.id || item.user_id || userId;
+		const creatorDisplayName = item.users?.display_name || userDisplayName;
+		const creatorUsername = item.users?.username || username || "user";
+		const creatorAvatarUrl = item.users?.avatar_url || null;
+
+		// Determine if we should show repost attribution
+		const isRepost = isSharedList && item.is_shared;
+
+		// Prepare the voice note with the right properties for VoiceNoteCard
+		const normalizedVoiceNote = {
+			...item,
+			backgroundImage: item.backgroundImage || item.background_image || null,
+		};
+
+		return (
+			<View style={styles.cardContainer}>
+				{/* Show repost attribution if needed */}
+				{isRepost && (
+					<View style={styles.repostAttribution}>
+						<Text style={styles.repostText}>
+							<Text style={styles.repostIcon}>↻</Text> Reposted by{" "}
+							<Text style={styles.repostUsername}>@{username}</Text>
+						</Text>
+					</View>
+				)}
+
+				<VoiceNoteCard
+					voiceNote={normalizedVoiceNote}
+					userId={creatorId}
+					displayName={creatorDisplayName}
+					username={creatorUsername}
+					userAvatarUrl={creatorAvatarUrl}
+					timePosted={displayTimestamp}
+					onPlay={() => handlePlayVoiceNote(item.id)}
+					onShare={() => handleShareVoiceNote(item.id)}
+					onProfilePress={() => {
+						// Use the voice note's username for navigation
+						router.push({
+							pathname: "/profile/[username]",
+							params: { username: creatorUsername },
+						});
+					}}
+					currentUserId={userId}
+				/>
+			</View>
+		);
 	};
-
-	// Use provided voice notes or empty array
-	const displayVoiceNotes =
-		localVoiceNotes && localVoiceNotes.length > 0
-			? localVoiceNotes
-			: EMPTY_VOICE_NOTES;
-
-	// Debug voice notes data
-	console.log("VoiceNotesList received voice notes:", displayVoiceNotes);
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.separatorContainer}>
-				<View style={styles.separatorLine} />
-				<View style={styles.separatorDot} />
-				<View style={styles.separatorLine} />
-			</View>
-
-			{displayVoiceNotes.length === 0 ? (
-				<View style={styles.emptyStateContainer}>
-					<Feather name="mic-off" size={48} color="#ccc" />
-					<Text style={styles.emptyStateText}>No voice notes yet</Text>
-					<Text style={styles.emptyStateSubtext}>
-						Voice notes you create will appear here
+			{localVoiceNotes.length === 0 ? (
+				<View style={styles.emptyState}>
+					<Text style={styles.emptyText}>
+						{isSharedList ? "No reposts yet." : "No voice notes yet."}
 					</Text>
 				</View>
 			) : (
-				<ScrollView
+				<FlatList
+					data={localVoiceNotes}
+					renderItem={renderVoiceNoteCard}
+					keyExtractor={(item) => item.id}
+					contentContainerStyle={styles.listContent}
+					showsVerticalScrollIndicator={false}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
 							onRefresh={handleRefresh}
-							tintColor="#6B2FBC"
 							colors={["#6B2FBC"]}
+							tintColor="#6B2FBC"
 						/>
 					}
-				>
-					<View style={styles.content}>
-						{displayVoiceNotes.map((item) => {
-							// Normalize the voice note to match the expected format
-							const normalizedVoiceNote = {
-								id: item.id,
-								title: item.title,
-								duration: item.duration,
-								// Handle different formats of likes/comments/plays
-								likes: Array.isArray(item.likes)
-									? item.likes[0]?.count || 0
-									: typeof item.likes === "number"
-									? item.likes
-									: 0,
-								comments: Array.isArray(item.comments)
-									? item.comments[0]?.count || 0
-									: typeof item.comments === "number"
-									? item.comments
-									: 0,
-								plays: Array.isArray(item.plays)
-									? item.plays[0]?.count || 0
-									: typeof item.plays === "number"
-									? item.plays
-									: 0,
-								shares: item.shares || 0,
-								backgroundImage:
-									item.backgroundImage || item.background_image || null,
-								tags: item.tags || [],
-								// Add user avatar URL
-								userAvatarUrl: item.users?.avatar_url || null,
-								// Include the users object from the API response
-								users: item.users,
-							};
-
-							// Format the post date
-							const timePosted = item.created_at
-								? formatTimeAgo(new Date(item.created_at))
-								: "";
-
-							// Get the correct user ID, username and display name for this specific voice note
-							const noteUserId = item.user_id || userId;
-
-							// Extract username from the users object - this is critical for routing
-							// The API response has the username in item.users.username
-							const noteUsername = item.users?.username || username || "user"; // Username for routing
-							const noteDisplayName =
-								item.users?.display_name || userDisplayName; // Display name for showing
-
-							// Debug log to check the voice note data
-							console.log("Voice note data:", {
-								itemId: item.id,
-								itemUserId: item.user_id,
-								itemUsers: item.users,
-								noteUserId,
-								noteUsername,
-								noteDisplayName,
-							});
-
-							return (
-								<View key={item.id} style={styles.cardContainer}>
-									<VoiceNoteCard
-										voiceNote={normalizedVoiceNote}
-										userId={noteUserId}
-										displayName={noteDisplayName}
-										username={noteUsername}
-										userAvatarUrl={normalizedVoiceNote.userAvatarUrl}
-										timePosted={timePosted}
-										onPlay={() => handlePlayVoiceNote(item.id)}
-										onShare={() => handleShareVoiceNote(item.id)}
-										onProfilePress={() => {
-											// Use the voice note's username for navigation
-											router.push({
-												pathname: "/profile/[username]",
-												params: { username: noteUsername },
-											});
-										}}
-										currentUserId={userId}
-									/>
-								</View>
-							);
-						})}
-					</View>
-				</ScrollView>
+				/>
 			)}
 		</View>
 	);
@@ -293,50 +245,39 @@ export function VoiceNotesList({
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#FFFFFF",
+		backgroundColor: "#F8F8F8",
 	},
-	separatorContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		paddingVertical: 16,
-		paddingHorizontal: 20,
-	},
-	separatorLine: {
-		flex: 1,
-		height: 1,
-		backgroundColor: "#EEEEEE",
-	},
-	separatorDot: {
-		width: 6,
-		height: 6,
-		borderRadius: 3,
-		backgroundColor: "#6B2FBC",
-		marginHorizontal: 8,
-	},
-	content: {
-		paddingHorizontal: 16,
+	listContent: {
 		paddingBottom: 20,
 	},
 	cardContainer: {
 		marginBottom: 16,
 	},
-	emptyStateContainer: {
+	emptyState: {
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
-		paddingVertical: 60,
+		padding: 50,
 	},
-	emptyStateText: {
-		fontSize: 18,
-		fontWeight: "bold",
+	emptyText: {
+		fontSize: 16,
+		color: "#888",
+	},
+	repostAttribution: {
+		paddingHorizontal: 16,
+		paddingVertical: 4,
+		marginBottom: 4,
+	},
+	repostText: {
+		fontSize: 13,
 		color: "#666",
-		marginTop: 16,
 	},
-	emptyStateSubtext: {
-		fontSize: 14,
-		color: "#999",
-		marginTop: 8,
-		textAlign: "center",
-		paddingHorizontal: 32,
+	repostIcon: {
+		fontWeight: "bold",
+		color: "#4CAF50",
+	},
+	repostUsername: {
+		fontWeight: "600",
+		color: "#666",
 	},
 });

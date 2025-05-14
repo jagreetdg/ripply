@@ -457,4 +457,110 @@ router.get("/:userId/following-count", async (req, res) => {
 	}
 });
 
+// Get shared voice notes by user (reposted content)
+router.get("/:userId/shared-voice-notes", async (req, res) => {
+	try {
+		const { userId } = req.params;
+		const { page = 1, limit = 10 } = req.query;
+		const offset = (page - 1) * limit;
+
+		// First get all the voice notes that the user has shared
+		const { data: sharedData, error: sharedError } = await supabase
+			.from("voice_note_shares")
+			.select("voice_note_id, shared_at")
+			.eq("user_id", userId)
+			.order("shared_at", { ascending: false })
+			.range(offset, offset + parseInt(limit) - 1);
+
+		if (sharedError) {
+			if (sharedError.code === "42P01") {
+				// Table doesn't exist yet
+				return res.status(200).json({
+					data: [],
+					pagination: {
+						page: parseInt(page),
+						limit: parseInt(limit),
+						total: 0,
+					},
+					message: "Shared voice notes table does not exist",
+				});
+			}
+			throw sharedError;
+		}
+
+		// If user hasn't shared any voice notes, return empty array
+		if (!sharedData || sharedData.length === 0) {
+			return res.status(200).json({
+				data: [],
+				pagination: {
+					page: parseInt(page),
+					limit: parseInt(limit),
+					total: 0,
+				},
+			});
+		}
+
+		// Get the IDs of the shared voice notes
+		const voiceNoteIds = sharedData.map((share) => share.voice_note_id);
+
+		// Get the actual voice note data for these IDs
+		const {
+			data: voiceNotesData,
+			error: voiceNotesError,
+			count,
+		} = await supabase
+			.from("voice_notes")
+			.select(
+				`
+        *,
+        users:user_id (id, username, display_name, avatar_url),
+        likes:voice_note_likes (count),
+        comments:voice_note_comments (count),
+        plays:voice_note_plays (count),
+        tags:voice_note_tags (tag_name)
+      `,
+				{ count: "exact" }
+			)
+			.in("id", voiceNoteIds);
+
+		if (voiceNotesError) throw voiceNotesError;
+
+		// Process the data to format tags and mark as shared
+		const processedData = voiceNotesData.map((note) => {
+			// Extract tags from the nested structure
+			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
+			// Find the shared_at date for this voice note
+			const shareInfo = sharedData.find(
+				(share) => share.voice_note_id === note.id
+			);
+
+			return {
+				...note,
+				tags,
+				is_shared: true,
+				shared_at: shareInfo ? shareInfo.shared_at : null,
+				shared_by: userId,
+			};
+		});
+
+		// Sort by shared_at time
+		processedData.sort((a, b) => {
+			return new Date(b.shared_at).getTime() - new Date(a.shared_at).getTime();
+		});
+
+		res.status(200).json({
+			data: processedData,
+			pagination: {
+				page: parseInt(page),
+				limit: parseInt(limit),
+				total: count,
+			},
+		});
+	} catch (error) {
+		console.error("Error fetching user shared voice notes:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
+
 module.exports = router;

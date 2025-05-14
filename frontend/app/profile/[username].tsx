@@ -15,6 +15,7 @@ import { VoiceNotesList } from "../../components/profile/VoiceNotesList";
 import {
 	getUserProfileByUsername,
 	getUserVoiceNotes,
+	getUserSharedVoiceNotes,
 	getFollowerCount,
 	getFollowingCount,
 } from "../../services/api/userService";
@@ -68,6 +69,9 @@ export default function ProfileByUsernameScreen() {
 	const [followerCount, setFollowerCount] = useState(0);
 	const [followingCount, setFollowingCount] = useState(0);
 	const [isOwnProfile, setIsOwnProfile] = useState(false);
+	const [activeTab, setActiveTab] = useState("voice-notes"); // "voice-notes" or "shared"
+	const [sharedVoiceNotes, setSharedVoiceNotes] = useState<VoiceNote[]>([]);
+	const [loadingShared, setLoadingShared] = useState(false);
 
 	// Handler for pull-to-refresh
 	const handleRefresh = async () => {
@@ -192,6 +196,24 @@ export default function ProfileByUsernameScreen() {
 					setVoiceNotes([]);
 				}
 
+				// Fetch shared voice notes
+				setLoadingShared(true);
+				try {
+					const sharedVoiceNotesData = await getUserSharedVoiceNotes(
+						typedProfile.id
+					);
+					if (Array.isArray(sharedVoiceNotesData)) {
+						setSharedVoiceNotes(sharedVoiceNotesData);
+					} else {
+						setSharedVoiceNotes([]);
+					}
+				} catch (sharedError) {
+					console.error("Error fetching shared voice notes:", sharedError);
+					setSharedVoiceNotes([]);
+				} finally {
+					setLoadingShared(false);
+				}
+
 				// Fetch follower and following counts
 				const followers = await getFollowerCount(typedProfile.id);
 				const following = await getFollowingCount(typedProfile.id);
@@ -310,62 +332,75 @@ export default function ProfileByUsernameScreen() {
 					/>
 				</Animated.View>
 
-				{/* Stats bar */}
-				<View style={styles.statsContainer}>
-					<TouchableOpacity style={styles.statsItem}>
-						<Text style={styles.statsNumber}>{followingCount}</Text>
-						<Text style={styles.statsLabel}>Following</Text>
+				{/* Tabs to switch between original voice notes and shared content */}
+				<View style={styles.tabContainer}>
+					<TouchableOpacity
+						style={[
+							styles.tabButton,
+							activeTab === "voice-notes" && styles.activeTabButton,
+						]}
+						onPress={() => setActiveTab("voice-notes")}
+					>
+						<Text
+							style={[
+								styles.tabText,
+								activeTab === "voice-notes" && styles.activeTabText,
+							]}
+						>
+							Voice Notes
+						</Text>
 					</TouchableOpacity>
-					<View style={styles.statsDivider} />
-					<TouchableOpacity style={styles.statsItem}>
-						<Text style={styles.statsNumber}>{voiceNotes.length}</Text>
-						<Text style={styles.statsLabel}>Notes</Text>
-					</TouchableOpacity>
-					<View style={styles.statsDivider} />
-					<TouchableOpacity style={styles.statsItem}>
-						<Text style={styles.statsNumber}>{followerCount}</Text>
-						<Text style={styles.statsLabel}>Followers</Text>
+					<TouchableOpacity
+						style={[
+							styles.tabButton,
+							activeTab === "shared" && styles.activeTabButton,
+						]}
+						onPress={() => setActiveTab("shared")}
+					>
+						<Text
+							style={[
+								styles.tabText,
+								activeTab === "shared" && styles.activeTabText,
+							]}
+						>
+							Reposts
+						</Text>
 					</TouchableOpacity>
 				</View>
 
-				{isOwnProfile ? (
-					<View style={styles.followButtonContainer}>
-						<TouchableOpacity
-							style={styles.editProfileButtonInline}
-							onPress={() => router.push("/profile/edit")}
-						>
-							<Text style={styles.buttonText}>Edit Profile</Text>
-						</TouchableOpacity>
+				{/* Voice Notes List */}
+				{activeTab === "voice-notes" ? (
+					voiceNotes.length === 0 ? (
+						<View style={styles.emptyState}>
+							<Text style={styles.emptyText}>No voice notes yet</Text>
+						</View>
+					) : (
+						<VoiceNotesList
+							userId={userProfile.id}
+							username={userProfile.username}
+							displayName={userProfile.display_name}
+							voiceNotes={voiceNotes}
+							onRefresh={handleRefresh}
+						/>
+					)
+				) : loadingShared ? (
+					<View style={styles.loadingContainer}>
+						<ActivityIndicator size="small" color="#6B2FBC" />
+					</View>
+				) : sharedVoiceNotes.length === 0 ? (
+					<View style={styles.emptyState}>
+						<Text style={styles.emptyText}>No reposts yet</Text>
 					</View>
 				) : (
-					<View style={styles.followButtonContainer}>
-						<FollowButton
-							userId={userProfile.id}
-							onFollowChange={(isFollowing, updatedCount) => {
-								// Use the accurate server count if available
-								if (typeof updatedCount === "number") {
-									console.log(
-										`Setting follower count to ${updatedCount} from server`
-									);
-									setFollowerCount(updatedCount);
-								} else {
-									// Fallback to the old increment/decrement method
-									console.log(`Using local calculation for follower count`);
-									setFollowerCount((prev) =>
-										isFollowing ? prev + 1 : Math.max(0, prev - 1)
-									);
-								}
-							}}
-						/>
-					</View>
+					<VoiceNotesList
+						userId={userProfile.id}
+						username={userProfile.username}
+						displayName={userProfile.display_name}
+						voiceNotes={sharedVoiceNotes}
+						onRefresh={handleRefresh}
+						isSharedList={true}
+					/>
 				)}
-
-				<VoiceNotesList
-					userId={userProfile.id}
-					username={userProfile.username}
-					displayName={userProfile.display_name}
-					voiceNotes={voiceNotes}
-				/>
 			</Animated.ScrollView>
 
 			{/* Floating action button for creating voice note */}
@@ -498,5 +533,39 @@ const styles = StyleSheet.create({
 		},
 		shadowOpacity: 0.3,
 		shadowRadius: 4.65,
+	},
+	tabContainer: {
+		flexDirection: "row",
+		borderBottomWidth: 1,
+		borderBottomColor: "#EFEFEF",
+		marginBottom: 8,
+	},
+	tabButton: {
+		flex: 1,
+		paddingVertical: 12,
+		alignItems: "center",
+		borderBottomWidth: 2,
+		borderBottomColor: "transparent",
+	},
+	activeTabButton: {
+		borderBottomColor: "#6B2FBC",
+	},
+	tabText: {
+		fontSize: 16,
+		fontWeight: "500",
+		color: "#888",
+	},
+	activeTabText: {
+		color: "#6B2FBC",
+		fontWeight: "600",
+	},
+	emptyState: {
+		alignItems: "center",
+		justifyContent: "center",
+		padding: 50,
+	},
+	emptyText: {
+		fontSize: 16,
+		color: "#888",
 	},
 });
