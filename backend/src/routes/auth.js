@@ -14,8 +14,6 @@ const {
 	LOCKOUT_DURATION,
 } = require("../middleware/accountLockout");
 const passport = require("../config/passport");
-const google = require("googleapis");
-const User = require("../models/user");
 
 // JWT Secret - in production, this would be an environment variable
 const JWT_SECRET =
@@ -398,66 +396,45 @@ router.get(
 );
 
 // Google callback route
-router.get("/google/callback", async (req, res) => {
-	try {
-		const { code } = req.query;
+router.get(
+	"/google/callback",
+	passport.authenticate("google", {
+		session: false,
+		failureRedirect: `${process.env.FRONTEND_URL}/auth/login?error=auth_failed`,
+	}),
+	async (req, res) => {
+		try {
+			if (!req.user) {
+				return res.redirect(
+					`${process.env.FRONTEND_URL}/auth/login?error=auth_failed`
+				);
+			}
 
-		if (!code) {
-			return res.redirect(
-				`${process.env.FRONTEND_URL}/auth/login?error=auth_failed`
+			// Generate JWT token
+			const token = jwt.sign({ id: req.user.id }, JWT_SECRET, {
+				expiresIn: TOKEN_EXPIRATION,
+			});
+
+			// Set secure cookie in production
+			if (process.env.NODE_ENV === "production") {
+				res.cookie("token", token, {
+					httpOnly: true,
+					secure: true,
+					sameSite: "none",
+					maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+				});
+			}
+
+			// Redirect to frontend with token
+			res.redirect(
+				`${process.env.FRONTEND_URL}/auth/google-callback?token=${token}`
 			);
+		} catch (error) {
+			console.error("[Auth Flow] Error in Google callback:", error);
+			res.redirect(`${process.env.FRONTEND_URL}/auth/login?error=auth_failed`);
 		}
-
-		// Exchange code for tokens
-		const { tokens } = await oauth2Client.getToken(code);
-
-		// Get user info from Google
-		oauth2Client.setCredentials(tokens);
-		const oauth2 = google.oauth2({
-			auth: oauth2Client,
-			version: "v2",
-		});
-
-		const { data } = await oauth2.userinfo.get();
-
-		// Check if user exists
-		let user = await User.findOne({ email: data.email });
-
-		if (!user) {
-			// Create new user
-			user = await User.create({
-				email: data.email,
-				username: data.email.split("@")[0],
-				display_name: data.name,
-				avatar_url: data.picture,
-				google_id: data.id,
-			});
-		}
-
-		// Generate JWT token
-		const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-			expiresIn: "7d",
-		});
-
-		// Set secure cookie in production
-		if (process.env.NODE_ENV === "production") {
-			res.cookie("token", token, {
-				httpOnly: true,
-				secure: true,
-				sameSite: "none",
-				maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-			});
-		}
-
-		// Redirect to frontend with token
-		res.redirect(
-			`${process.env.FRONTEND_URL}/auth/google-callback?token=${token}`
-		);
-	} catch (error) {
-		console.error("[Auth Flow] Error in Google callback:", error);
-		res.redirect(`${process.env.FRONTEND_URL}/auth/login?error=auth_failed`);
 	}
-});
+);
 
 // Check if Apple strategy is configured
 const isAppleConfigured = passport._strategies && passport._strategies.apple;
