@@ -17,11 +17,48 @@ import { Audio } from "expo-av";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { CommentPopup } from "../comments/CommentPopup";
-import { recordShare } from "../../services/api/voiceNoteService";
+import {
+	recordShare,
+	likeVoiceNote,
+	unlikeVoiceNote,
+	addComment,
+	getComments,
+	checkLikeStatus,
+	checkShareStatus,
+	getShareCount,
+} from "../../services/api/voiceNoteService";
 import DefaultAvatar from "../DefaultAvatar";
+import { useUser } from "../../context/UserContext";
 
 // Development mode flag
 const isDev = process.env.NODE_ENV === "development" || __DEV__;
+
+// Define API response types
+interface ShareResponse {
+	shareCount: number;
+	message?: string;
+	voiceNoteId?: string;
+	userId?: string;
+}
+
+interface CommentsResponse {
+	data: Comment[];
+}
+
+// Use the same Comment interface as in CommentPopup
+interface Comment {
+	id: string;
+	voice_note_id?: string;
+	content: string;
+	created_at: string;
+	user_id: string;
+	user?: {
+		id?: string;
+		username: string;
+		display_name: string;
+		avatar_url?: string | null;
+	};
+}
 
 export interface VoiceNote {
 	id: string;
@@ -122,10 +159,12 @@ export function VoiceNoteCard({
 	onPlay,
 	onProfilePress,
 	onShare,
-	currentUserId = "550e8400-e29b-41d4-a716-446655440000", // Default user ID
+	currentUserId,
 }: VoiceNoteCardProps) {
 	const router = useRouter();
+	const { user } = useUser(); // Get current logged-in user from context
 	const [isPlaying, setIsPlaying] = useState(false);
+	const loggedInUserId = user?.id || currentUserId; // Use user from context or fallback to prop
 
 	// Debug log to check the username value
 	console.log("VoiceNoteCard received props:", {
@@ -134,6 +173,7 @@ export function VoiceNoteCard({
 		username,
 		userAvatarUrl,
 		voiceNoteUsers: voiceNote.users,
+		loggedInUserId,
 	});
 
 	// Ensure we have a valid username for display and navigation
@@ -152,14 +192,51 @@ export function VoiceNoteCard({
 	const [sharesCount, setSharesCount] = useState(
 		typeof voiceNote.shares === "number" ? voiceNote.shares : 0
 	);
+	const [isLoadingShareCount, setIsLoadingShareCount] = useState(false);
 	const [isShared, setIsShared] = useState(false);
 	const [showCommentPopup, setShowCommentPopup] = useState(false);
 	const [commentsCount, setCommentsCount] = useState(
 		typeof voiceNote.comments === "number" ? voiceNote.comments : 0
 	);
+	const [comments, setComments] = useState<Comment[]>([]);
+	const [isLoadingComments, setIsLoadingComments] = useState(false);
 	const progressContainerRef = useRef<View>(null);
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const shareScale = useRef(new Animated.Value(1)).current;
+
+	// Fetch the actual share count
+	const fetchShareCount = useCallback(async () => {
+		if (!voiceNote.id) return;
+
+		try {
+			const count = await getShareCount(voiceNote.id);
+			// Make sure count is a number
+			setSharesCount(typeof count === "number" ? count : 0);
+		} catch (error) {
+			console.error("Error fetching share count:", error);
+			// Keep the initial value from the voiceNote object
+		}
+	}, [voiceNote.id]);
+
+	// Fetch comments when needed
+	const fetchComments = useCallback(async () => {
+		if (!voiceNote.id) return;
+
+		setIsLoadingComments(true);
+		try {
+			// Use type assertion with unknown as intermediate step
+			const response = (await getComments(
+				voiceNote.id
+			)) as unknown as CommentsResponse;
+			setComments(response.data || []);
+			// Update the comment count based on the actual data
+			setCommentsCount(response.data?.length || 0);
+		} catch (error) {
+			console.error("Error fetching comments:", error);
+		} finally {
+			setIsLoadingComments(false);
+		}
+	}, [voiceNote.id]);
 
 	// Handle navigation to user profile
 	const handleProfilePress = useCallback(() => {
@@ -189,14 +266,44 @@ export function VoiceNoteCard({
 
 	// Handle like button press
 	const handleLikePress = useCallback(() => {
+		if (!loggedInUserId) {
+			Alert.alert("Sign In Required", "Please sign in to like voice notes.");
+			return;
+		}
+
 		// Toggle like state
 		setIsLiked((prevState) => {
 			const newLikeState = !prevState;
 
-			// Update likes count
+			// Update likes count immediately for UI responsiveness
 			setLikesCount((prevCount) =>
-				newLikeState ? prevCount + 1 : prevCount - 1
+				newLikeState ? prevCount + 1 : Math.max(0, prevCount - 1)
 			);
+
+			// Call the API to like/unlike the voice note
+			if (newLikeState) {
+				likeVoiceNote(voiceNote.id, loggedInUserId)
+					.then((response) => {
+						console.log("Voice note liked successfully:", response);
+					})
+					.catch((error) => {
+						console.error("Error liking voice note:", error);
+						// Revert UI state on error
+						setIsLiked(false);
+						setLikesCount((prevCount) => Math.max(0, prevCount - 1));
+					});
+			} else {
+				unlikeVoiceNote(voiceNote.id, loggedInUserId)
+					.then((response) => {
+						console.log("Voice note unliked successfully:", response);
+					})
+					.catch((error) => {
+						console.error("Error unliking voice note:", error);
+						// Revert UI state on error
+						setIsLiked(true);
+						setLikesCount((prevCount) => prevCount + 1);
+					});
+			}
 
 			// Animate the like button
 			Animated.sequence([
@@ -214,17 +321,50 @@ export function VoiceNoteCard({
 
 			return newLikeState;
 		});
-	}, [likeScale]);
+	}, [likeScale, voiceNote.id, loggedInUserId]);
 
 	// Handle comment button press
 	const handleCommentPress = useCallback(() => {
+		if (!loggedInUserId) {
+			Alert.alert(
+				"Sign In Required",
+				"Please sign in to comment on voice notes."
+			);
+			return;
+		}
+
+		// Fetch comments before showing popup
+		fetchComments();
 		setShowCommentPopup(true);
-	}, []);
+	}, [fetchComments, loggedInUserId]);
 
 	// Handle comment added
-	const handleCommentAdded = useCallback(() => {
-		setCommentsCount((prevCount) => prevCount + 1);
-	}, []);
+	const handleCommentAdded = useCallback(
+		(newComment: Comment | string) => {
+			if (!loggedInUserId || !voiceNote.id) return;
+
+			// Add comment to the API
+			addComment(voiceNote.id, {
+				user_id: loggedInUserId,
+				content:
+					typeof newComment === "string" ? newComment : newComment.content,
+			})
+				.then((response) => {
+					console.log("Comment added successfully:", response);
+					// Update comments array and count
+					setComments((prevComments) => [
+						response as unknown as Comment,
+						...prevComments,
+					]);
+					setCommentsCount((prevCount) => prevCount + 1);
+				})
+				.catch((error) => {
+					console.error("Error adding comment:", error);
+					Alert.alert("Error", "Failed to add comment. Please try again.");
+				});
+		},
+		[voiceNote.id, loggedInUserId]
+	);
 
 	// Handle plays button press
 	const handlePlaysPress = useCallback(() => {
@@ -233,16 +373,41 @@ export function VoiceNoteCard({
 		// This might show who listened to the voice note
 	}, []);
 
-	// Handle share button press (retweet-style)
-	const handleSharePress = useCallback(() => {
+	// Handle repost (share) button press
+	const handleRepostPress = useCallback(() => {
+		if (!loggedInUserId) {
+			Alert.alert("Sign In Required", "Please sign in to repost voice notes.");
+			return;
+		}
+
+		// Prevent multiple rapid clicks
+		if (isLoadingShareCount) {
+			return;
+		}
+
+		setIsLoadingShareCount(true);
+
 		// Toggle shared state
 		setIsShared((prevState) => {
 			const newSharedState = !prevState;
 
-			// Update shares count locally
-			setSharesCount((prevCount) =>
-				newSharedState ? prevCount + 1 : prevCount - 1
-			);
+			// Call the API to record the share
+			recordShare(voiceNote.id, loggedInUserId)
+				.then((response) => {
+					console.log("Voice note shared successfully:", response);
+					// Update shares count with the accurate number from server
+					const shareResponse = response as unknown as ShareResponse;
+					if (shareResponse && typeof shareResponse.shareCount === "number") {
+						setSharesCount(shareResponse.shareCount);
+					}
+					setIsLoadingShareCount(false);
+				})
+				.catch((error) => {
+					console.error("Error sharing voice note:", error);
+					// Revert UI state on error
+					setIsShared(!newSharedState);
+					setIsLoadingShareCount(false);
+				});
 
 			// Animate the share button
 			Animated.sequence([
@@ -258,50 +423,62 @@ export function VoiceNoteCard({
 				}),
 			]).start();
 
-			// Record the share in the backend
-			if (newSharedState && onShare) {
+			// Notify parent component if callback provided
+			if (onShare) {
 				onShare(voiceNote.id);
-			} else if (newSharedState) {
-				recordShare(voiceNote.id, currentUserId).catch((error) => {
-					console.error("Error recording share:", error);
-					// Revert the UI change if the API call fails
-					setIsShared(false);
-					setSharesCount((prevCount) => prevCount - 1);
-				});
 			}
 
 			return newSharedState;
 		});
-	}, [shareScale, voiceNote.id, currentUserId, onShare]);
+	}, [shareScale, voiceNote.id, loggedInUserId, onShare, isLoadingShareCount]);
 
-	// Handle system share (native share sheet)
-	const handleSystemShare = useCallback(async () => {
+	// Handle native share
+	const handleNativeShare = useCallback(async () => {
+		if (isLoadingShareCount) {
+			return;
+		}
+
 		try {
+			setIsLoadingShareCount(true);
+
+			// Create a shareable link/message
+			const shareMessage = `Check out this voice note: ${voiceNote.title}\n\nhttps://ripply.app/voice-note/${voiceNote.id}`;
+
+			// Use native share API
 			const result = await Share.share({
-				message: `Check out this voice note: ${voiceNote.title}`,
-				url: `https://ripply.app/voice-notes/${voiceNote.id}`,
+				message: shareMessage,
 				title: voiceNote.title,
 			});
 
-			if (result.action === Share.sharedAction) {
-				if (result.activityType) {
-					// Shared with activity type of result.activityType
-					console.log(`Shared with ${result.activityType}`);
-				} else {
-					// Shared
-					console.log("Shared");
-				}
-			} else if (result.action === Share.dismissedAction) {
-				// Dismissed
-				console.log("Share dismissed");
+			// Record share if completed
+			if (result.action === Share.sharedAction && loggedInUserId) {
+				recordShare(voiceNote.id, loggedInUserId)
+					.then((response) => {
+						console.log("Voice note share recorded:", response);
+						// Update the share count
+						const shareResponse = response as unknown as ShareResponse;
+						if (shareResponse && typeof shareResponse.shareCount === "number") {
+							setSharesCount(shareResponse.shareCount);
+						}
+						setIsShared(true); // Set share state to true
+						setIsLoadingShareCount(false);
+					})
+					.catch((error) => {
+						console.error("Error recording share:", error);
+						setIsLoadingShareCount(false);
+					});
+			} else {
+				setIsLoadingShareCount(false);
 			}
 		} catch (error) {
-			Alert.alert("Error", "Something went wrong while sharing");
+			console.error("Error sharing:", error);
+			Alert.alert("Error", "Could not share this voice note");
+			setIsLoadingShareCount(false);
 		}
-	}, [voiceNote.id, voiceNote.title]);
+	}, [voiceNote, loggedInUserId, isLoadingShareCount]);
 
-	// Handle play/pause button press
-	const handlePlayPause = useCallback(() => {
+	// Handle play button press
+	const handlePlayPress = useCallback(() => {
 		setIsPlaying((prev) => !prev);
 		if (onPlay) {
 			onPlay();
@@ -365,6 +542,52 @@ export function VoiceNoteCard({
 		[progress, handleSeekStart, handleSeekMove, handleSeekEnd]
 	);
 
+	// Inside the VoiceNoteCard component, update the checkLikeStatus and checkShareStatus functions
+	const checkInitialLikeStatus = useCallback(async () => {
+		if (!voiceNote.id || !loggedInUserId) return;
+
+		try {
+			// Use the API function to check like status
+			const isUserLiked = await checkLikeStatus(voiceNote.id, loggedInUserId);
+			setIsLiked(isUserLiked);
+		} catch (error) {
+			console.error("Error checking like status:", error);
+			// Default to not liked if there's an error
+			setIsLiked(false);
+		}
+	}, [voiceNote.id, loggedInUserId]);
+
+	// Inside the VoiceNoteCard component, update the checkShareStatus function
+	const checkInitialShareStatus = useCallback(async () => {
+		if (!voiceNote.id || !loggedInUserId) return;
+
+		try {
+			// Use the API function to check share status
+			const isUserShared = await checkShareStatus(voiceNote.id, loggedInUserId);
+			setIsShared(isUserShared);
+
+			// Also fetch the actual share count
+			await fetchShareCount();
+		} catch (error) {
+			console.error("Error checking share status:", error);
+			// Default to not shared if there's an error
+			setIsShared(false);
+		}
+	}, [voiceNote.id, loggedInUserId, fetchShareCount]);
+
+	// Update the useEffect to use the renamed functions
+	useEffect(() => {
+		if (voiceNote.id && loggedInUserId) {
+			checkInitialLikeStatus();
+			checkInitialShareStatus();
+		}
+	}, [
+		voiceNote.id,
+		loggedInUserId,
+		checkInitialLikeStatus,
+		checkInitialShareStatus,
+	]);
+
 	// Render the card with or without background image
 	if (!voiceNote.backgroundImage) {
 		return (
@@ -413,7 +636,7 @@ export function VoiceNoteCard({
 
 						<View style={styles.playerContainer}>
 							<TouchableOpacity
-								onPress={handlePlayPause}
+								onPress={handlePlayPress}
 								style={styles.playButton}
 								activeOpacity={0.7}
 							>
@@ -458,37 +681,32 @@ export function VoiceNoteCard({
 								onPress={handleLikePress}
 							>
 								<View style={styles.interactionContent}>
-									{isLiked ? (
-										<Animated.View
-											style={{ transform: [{ scale: likeScale }] }}
-										>
-											<FontAwesome
-												name="heart"
-												size={18}
-												color="#FF4D67"
-												style={{
-													textShadowColor: "#FFFFFF",
-													textShadowOffset: { width: 0.5, height: 0.5 },
-													textShadowRadius: 1,
-												}}
-											/>
-										</Animated.View>
-									) : (
+									<Animated.View
+										style={[
+											styles.iconContainer,
+											{ transform: [{ scale: likeScale }] },
+										]}
+									>
 										<Feather
-											name="heart"
+											name={isLiked ? "heart" : "heart"}
 											size={18}
-											color="#666666"
+											color={isLiked ? "#E53935" : "#888"}
 											style={{
-												textShadowColor: "#FFFFFF",
-												textShadowOffset: { width: 0.5, height: 0.5 },
-												textShadowRadius: 1,
+												// Fill the heart if liked
+												...(isLiked && {
+													backgroundColor: "transparent",
+													// This creates a filled heart effect
+													textShadowColor: "#E53935",
+													textShadowOffset: { width: 0, height: 0 },
+													textShadowRadius: 1,
+												}),
 											}}
 										/>
-									)}
+									</Animated.View>
 									<Text
 										style={[
-											styles.interactionText,
-											isLiked && styles.likedText,
+											styles.interactionCount,
+											isLiked && { color: "#E53935" },
 										]}
 									>
 										{formatNumber(likesCount)}
@@ -540,44 +758,42 @@ export function VoiceNoteCard({
 							<TouchableOpacity
 								style={styles.interactionButton}
 								activeOpacity={0.7}
-								onPress={handleSharePress}
+								onPress={handleRepostPress}
+								disabled={isLoadingShareCount}
 							>
 								<View style={styles.interactionContent}>
-									{isShared ? (
-										<Animated.View
-											style={{ transform: [{ scale: shareScale }] }}
-										>
-											<Feather
-												name="repeat"
-												size={18}
-												color="#4CAF50"
-												style={{
-													textShadowColor: "#FFFFFF",
-													textShadowOffset: { width: 0.5, height: 0.5 },
-													textShadowRadius: 1,
-												}}
-											/>
-										</Animated.View>
-									) : (
+									<Animated.View
+										style={[
+											styles.iconContainer,
+											{ transform: [{ scale: shareScale }] },
+										]}
+									>
 										<Feather
 											name="repeat"
 											size={18}
-											color="#666666"
-											style={{
-												textShadowColor: "#FFFFFF",
-												textShadowOffset: { width: 0.5, height: 0.5 },
-												textShadowRadius: 1,
-											}}
+											color={isShared ? "#4CAF50" : "#888"}
 										/>
+									</Animated.View>
+									{isLoadingShareCount ? (
+										<Text
+											style={[
+												styles.interactionCount,
+												isShared && { color: "#4CAF50" },
+												{ opacity: 0.5 }, // Dim when loading
+											]}
+										>
+											{formatNumber(sharesCount)}
+										</Text>
+									) : (
+										<Text
+											style={[
+												styles.interactionCount,
+												isShared && { color: "#4CAF50" },
+											]}
+										>
+											{formatNumber(sharesCount)}
+										</Text>
 									)}
-									<Text
-										style={[
-											styles.interactionText,
-											isShared && styles.sharedText,
-										]}
-									>
-										{formatNumber(sharesCount)}
-									</Text>
 								</View>
 							</TouchableOpacity>
 						</View>
@@ -588,7 +804,7 @@ export function VoiceNoteCard({
 				<CommentPopup
 					visible={showCommentPopup}
 					voiceNoteId={voiceNote.id}
-					currentUserId={currentUserId}
+					currentUserId={loggedInUserId}
 					onClose={() => setShowCommentPopup(false)}
 					onCommentAdded={handleCommentAdded}
 				/>
@@ -647,7 +863,7 @@ export function VoiceNoteCard({
 
 					<View style={styles.playerContainer}>
 						<TouchableOpacity
-							onPress={handlePlayPause}
+							onPress={handlePlayPress}
 							style={styles.playButton}
 							activeOpacity={0.7}
 						>
@@ -692,33 +908,33 @@ export function VoiceNoteCard({
 							onPress={handleLikePress}
 						>
 							<View style={styles.interactionContent}>
-								{isLiked ? (
-									<Animated.View style={{ transform: [{ scale: likeScale }] }}>
-										<FontAwesome
-											name="heart"
-											size={18}
-											color="#FF4D67"
-											style={{
-												textShadowColor: "#FFFFFF",
-												textShadowOffset: { width: 0.5, height: 0.5 },
-												textShadowRadius: 1,
-											}}
-										/>
-									</Animated.View>
-								) : (
+								<Animated.View
+									style={[
+										styles.iconContainer,
+										{ transform: [{ scale: likeScale }] },
+									]}
+								>
 									<Feather
-										name="heart"
+										name={isLiked ? "heart" : "heart"}
 										size={18}
-										color="#666666"
+										color={isLiked ? "#E53935" : "#888"}
 										style={{
-											textShadowColor: "#FFFFFF",
-											textShadowOffset: { width: 0.5, height: 0.5 },
-											textShadowRadius: 1,
+											// Fill the heart if liked
+											...(isLiked && {
+												backgroundColor: "transparent",
+												// This creates a filled heart effect
+												textShadowColor: "#E53935",
+												textShadowOffset: { width: 0, height: 0 },
+												textShadowRadius: 1,
+											}),
 										}}
 									/>
-								)}
+								</Animated.View>
 								<Text
-									style={[styles.interactionText, isLiked && styles.likedText]}
+									style={[
+										styles.interactionCount,
+										isLiked && { color: "#E53935" },
+									]}
 								>
 									{formatNumber(likesCount)}
 								</Text>
@@ -769,42 +985,42 @@ export function VoiceNoteCard({
 						<TouchableOpacity
 							style={styles.interactionButton}
 							activeOpacity={0.7}
-							onPress={handleSharePress}
+							onPress={handleRepostPress}
+							disabled={isLoadingShareCount}
 						>
 							<View style={styles.interactionContent}>
-								{isShared ? (
-									<Animated.View style={{ transform: [{ scale: shareScale }] }}>
-										<Feather
-											name="repeat"
-											size={18}
-											color="#4CAF50"
-											style={{
-												textShadowColor: "#FFFFFF",
-												textShadowOffset: { width: 0.5, height: 0.5 },
-												textShadowRadius: 1,
-											}}
-										/>
-									</Animated.View>
-								) : (
+								<Animated.View
+									style={[
+										styles.iconContainer,
+										{ transform: [{ scale: shareScale }] },
+									]}
+								>
 									<Feather
 										name="repeat"
 										size={18}
-										color="#666666"
-										style={{
-											textShadowColor: "#FFFFFF",
-											textShadowOffset: { width: 0.5, height: 0.5 },
-											textShadowRadius: 1,
-										}}
+										color={isShared ? "#4CAF50" : "#888"}
 									/>
+								</Animated.View>
+								{isLoadingShareCount ? (
+									<Text
+										style={[
+											styles.interactionCount,
+											isShared && { color: "#4CAF50" },
+											{ opacity: 0.5 }, // Dim when loading
+										]}
+									>
+										{formatNumber(sharesCount)}
+									</Text>
+								) : (
+									<Text
+										style={[
+											styles.interactionCount,
+											isShared && { color: "#4CAF50" },
+										]}
+									>
+										{formatNumber(sharesCount)}
+									</Text>
 								)}
-								<Text
-									style={[
-										styles.interactionText,
-										isShared && styles.sharedText,
-									]}
-								>
-									{formatNumber(sharesCount)}
-								</Text>
 							</View>
 						</TouchableOpacity>
 					</View>
@@ -815,7 +1031,7 @@ export function VoiceNoteCard({
 			<CommentPopup
 				visible={showCommentPopup}
 				voiceNoteId={voiceNote.id}
-				currentUserId={currentUserId}
+				currentUserId={loggedInUserId}
 				onClose={() => setShowCommentPopup(false)}
 				onCommentAdded={handleCommentAdded}
 			/>
@@ -993,12 +1209,12 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
-		width: 60,
+		width: 72,
 	},
 	interactionText: {
 		fontSize: 14,
 		color: "#666666",
-		marginLeft: 6,
+		marginLeft: 8,
 		textShadowColor: "#FFFFFF",
 		textShadowOffset: { width: 0.5, height: 0.5 },
 		textShadowRadius: 1,
@@ -1009,5 +1225,18 @@ const styles = StyleSheet.create({
 	sharedText: {
 		color: "#4CAF50",
 		fontWeight: "600",
+	},
+	iconContainer: {
+		width: 24,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	interactionCount: {
+		fontSize: 14,
+		color: "#666666",
+		marginLeft: 8,
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
 	},
 });

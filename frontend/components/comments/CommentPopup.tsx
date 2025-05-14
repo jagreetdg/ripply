@@ -12,11 +12,13 @@ import {
 	Image,
 	Modal,
 	KeyboardAvoidingView,
+	Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { getComments, addComment } from "../../services/api/voiceNoteService";
 import { useRouter } from "expo-router";
 import DefaultAvatar from "../DefaultAvatar";
+import { useUser } from "../../context/UserContext";
 
 interface Comment {
 	id: string;
@@ -35,9 +37,9 @@ interface Comment {
 interface CommentPopupProps {
 	visible: boolean;
 	voiceNoteId: string;
-	currentUserId: string;
+	currentUserId?: string;
 	onClose: () => void;
-	onCommentAdded?: () => void;
+	onCommentAdded?: (comment: Comment) => void;
 }
 
 const formatDate = (dateString: string) => {
@@ -113,10 +115,20 @@ export function CommentPopup({
 	const [submitting, setSubmitting] = useState(false);
 	const inputRef = useRef<TextInput>(null);
 	const router = useRouter();
+	const { user } = useUser(); // Get current logged-in user
+
+	// Use user from context if available, otherwise use prop
+	const loggedInUserId = user?.id || currentUserId;
 
 	useEffect(() => {
 		if (visible) {
 			fetchComments();
+			// Focus the input when the popup opens
+			setTimeout(() => {
+				if (inputRef.current) {
+					inputRef.current.focus();
+				}
+			}, 300);
 		}
 	}, [visible, voiceNoteId]);
 
@@ -137,23 +149,47 @@ export function CommentPopup({
 	};
 
 	const handleSubmitComment = async () => {
-		if (!newComment.trim() || !currentUserId || !voiceNoteId) return;
+		if (!newComment.trim()) {
+			return; // Don't submit empty comments
+		}
+
+		if (!loggedInUserId) {
+			Alert.alert(
+				"Sign In Required",
+				"Please sign in to comment on voice notes."
+			);
+			return;
+		}
+
+		if (!voiceNoteId) {
+			console.error("No voice note ID provided");
+			return;
+		}
 
 		setSubmitting(true);
 		try {
 			const response = await addComment(voiceNoteId, {
-				user_id: currentUserId,
+				user_id: loggedInUserId,
 				content: newComment.trim(),
 			});
+
 			if (response) {
-				setComments((prevComments) => [response as Comment, ...prevComments]);
-				setNewComment("");
+				// Add the new comment to the top of the list
+				const newCommentData = response as Comment;
+				setComments((prevComments) => [newCommentData, ...prevComments]);
+				setNewComment(""); // Clear the input
+
+				// Call the callback with the new comment data
 				if (onCommentAdded) {
-					onCommentAdded();
+					onCommentAdded(newCommentData);
 				}
+
+				// Hide keyboard after submitting
+				Keyboard.dismiss();
 			}
 		} catch (error) {
 			console.error("Error adding comment:", error);
+			Alert.alert("Error", "Failed to post your comment. Please try again.");
 		} finally {
 			setSubmitting(false);
 		}
@@ -174,6 +210,9 @@ export function CommentPopup({
 				params: { userId },
 			});
 		}
+
+		// Close the comment popup
+		onClose();
 	};
 
 	const renderCommentItem = ({ item }: { item: Comment }) => (
@@ -209,83 +248,93 @@ export function CommentPopup({
 			animationType="slide"
 			onRequestClose={onClose}
 		>
-			<View style={styles.modalContainer}>
-				{/* Overlay - closes modal when tapped */}
-				<TouchableOpacity
-					style={styles.overlay}
-					activeOpacity={1}
-					onPress={onClose}
-				/>
+			<KeyboardAvoidingView
+				behavior={Platform.OS === "ios" ? "padding" : undefined}
+				style={styles.keyboardAvoidingView}
+			>
+				<View style={styles.modalContainer}>
+					{/* Overlay - closes modal when tapped */}
+					<TouchableOpacity
+						style={styles.overlay}
+						activeOpacity={1}
+						onPress={onClose}
+					/>
 
-				{/* Comment popup content */}
-				<View style={styles.popupContainer}>
-					<View style={styles.header}>
-						<Text style={styles.title}>Comments</Text>
-						<TouchableOpacity onPress={onClose} style={styles.closeButton}>
-							<Feather name="x" size={24} color="#333" />
-						</TouchableOpacity>
-					</View>
-
-					{loading ? (
-						<View style={styles.loadingContainer}>
-							<ActivityIndicator size="large" color="#6B2FBC" />
+					{/* Comment popup content */}
+					<View style={styles.popupContainer}>
+						<View style={styles.header}>
+							<Text style={styles.title}>Comments</Text>
+							<TouchableOpacity onPress={onClose} style={styles.closeButton}>
+								<Feather name="x" size={24} color="#333" />
+							</TouchableOpacity>
 						</View>
-					) : (
-						<FlatList
-							style={styles.flatList}
-							data={comments}
-							renderItem={renderCommentItem}
-							keyExtractor={(item) => item.id}
-							contentContainerStyle={styles.commentsList}
-							scrollEnabled={true}
-							scrollEventThrottle={16}
-							showsVerticalScrollIndicator={true}
-							bounces={true}
-							onScrollBeginDrag={() => Keyboard.dismiss()}
-							ListEmptyComponent={
-								<View style={styles.emptyContainer}>
-									<Text style={styles.emptyText}>
-										No comments yet. Be the first to comment!
-									</Text>
-								</View>
-							}
-						/>
-					)}
 
-					<KeyboardAvoidingView
-						behavior={Platform.OS === "ios" ? "padding" : "height"}
-						keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-					>
+						{loading ? (
+							<View style={styles.loadingContainer}>
+								<ActivityIndicator size="large" color="#6B2FBC" />
+							</View>
+						) : (
+							<FlatList
+								style={styles.flatList}
+								data={comments}
+								renderItem={renderCommentItem}
+								keyExtractor={(item) => item.id}
+								contentContainerStyle={styles.commentsList}
+								scrollEnabled={true}
+								scrollEventThrottle={16}
+								showsVerticalScrollIndicator={true}
+								bounces={true}
+								onScrollBeginDrag={() => Keyboard.dismiss()}
+								ListEmptyComponent={
+									<View style={styles.emptyContainer}>
+										<Text style={styles.emptyText}>
+											No comments yet. Be the first to comment!
+										</Text>
+									</View>
+								}
+							/>
+						)}
+
 						<View style={styles.inputContainer}>
+							{user && (
+								<DefaultProfilePicture
+									userId={loggedInUserId || ""}
+									size={36}
+									avatarUrl={user?.avatar_url || null}
+								/>
+							)}
 							<TextInput
 								ref={inputRef}
 								style={styles.input}
 								placeholder="Add a comment..."
+								placeholderTextColor="#999"
 								value={newComment}
 								onChangeText={setNewComment}
 								multiline
 								maxLength={500}
-								autoFocus={false}
+								returnKeyType="send"
+								onSubmitEditing={handleSubmitComment}
+								blurOnSubmit={true}
 							/>
 							<TouchableOpacity
+								onPress={handleSubmitComment}
 								style={[
 									styles.sendButton,
 									(!newComment.trim() || submitting) &&
 										styles.sendButtonDisabled,
 								]}
-								onPress={handleSubmitComment}
 								disabled={!newComment.trim() || submitting}
 							>
 								{submitting ? (
-									<ActivityIndicator size="small" color="#FFFFFF" />
+									<ActivityIndicator size="small" color="#ffffff" />
 								) : (
-									<Feather name="send" size={20} color="#FFFFFF" />
+									<Feather name="send" size={18} color="#ffffff" />
 								)}
 							</TouchableOpacity>
 						</View>
-					</KeyboardAvoidingView>
+					</View>
 				</View>
-			</View>
+			</KeyboardAvoidingView>
 		</Modal>
 	);
 }
@@ -403,5 +452,8 @@ const styles = StyleSheet.create({
 	emptyText: {
 		color: "#999999",
 		textAlign: "center",
+	},
+	keyboardAvoidingView: {
+		flex: 1,
 	},
 });
