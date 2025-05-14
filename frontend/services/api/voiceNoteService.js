@@ -286,11 +286,27 @@ export const recordShare = async (voiceNoteId, userId) => {
 			}
 		);
 
+		console.log(`Share toggle response:`, JSON.stringify(response));
+
 		// Make sure we have valid data in the response
-		const shareCount =
+		let shareCount =
 			typeof response.shareCount === "number" ? response.shareCount : 0;
 		const isShared =
 			typeof response.isShared === "boolean" ? response.isShared : false;
+
+		// Try to get a more accurate share count directly
+		try {
+			const accurateShareCount = await getShareCount(voiceNoteId, true);
+			if (typeof accurateShareCount === "number") {
+				console.log(
+					`Updating share count from ${shareCount} to more accurate ${accurateShareCount}`
+				);
+				shareCount = accurateShareCount;
+			}
+		} catch (error) {
+			console.error("Error getting accurate share count:", error);
+			// Keep the original share count if this fails
+		}
 
 		// Return the response with shareCount and isShared flag
 		return {
@@ -317,24 +333,49 @@ export const recordShare = async (voiceNoteId, userId) => {
 /**
  * Get share count for a voice note
  * @param {string} voiceNoteId - Voice note ID
+ * @param {boolean} includeResponseDebug - Whether to include the full response in debug logs
  * @returns {Promise<number>} - Share count
  */
-export const getShareCount = async (voiceNoteId) => {
+export const getShareCount = async (
+	voiceNoteId,
+	includeResponseDebug = false
+) => {
 	try {
 		console.log(`Fetching share count for voice note: ${voiceNoteId}`);
 		const response = await apiRequest(
 			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`
 		);
 
+		// Log the full response for debugging
+		if (includeResponseDebug) {
+			console.log(
+				`DEBUG - Full response for getShareCount(${voiceNoteId}):`,
+				JSON.stringify(response)
+			);
+		}
+
 		// Make sure we extract the share count correctly, prefer shareCount property
 		if (typeof response?.shareCount === "number") {
+			console.log(
+				`Share count from response.shareCount: ${response.shareCount}`
+			);
 			return response.shareCount;
 		} else if (typeof response?.data?.shareCount === "number") {
+			console.log(
+				`Share count from response.data.shareCount: ${response.data.shareCount}`
+			);
 			return response.data.shareCount;
+		} else if (response?.data && Array.isArray(response.data)) {
+			// Try to use the length of the shares array if available
+			console.log(
+				`Share count from response.data array length: ${response.data.length}`
+			);
+			return response.data.length;
 		} else {
 			// If we can't find a valid share count, use 0 as default
 			console.warn(
-				`No valid share count found for ${voiceNoteId}, defaulting to 0`
+				`No valid share count found for ${voiceNoteId}, response:`,
+				JSON.stringify(response, null, 2)
 			);
 			return 0;
 		}
@@ -413,10 +454,13 @@ export const getVoiceNoteStats = async (voiceNoteId) => {
 
 		// Try to get a more accurate share count if available
 		try {
-			const shareCount = await getShareCount(voiceNoteId);
+			// Pass true to enable full response debugging
+			const shareCount = await getShareCount(voiceNoteId, true);
 			if (typeof shareCount === "number") {
+				console.log(
+					`Previous share count: ${stats.shares}, updated from getShareCount: ${shareCount}`
+				);
 				stats.shares = shareCount;
-				console.log(`Updated share count from getShareCount: ${stats.shares}`);
 			}
 		} catch (shareError) {
 			console.error("Error getting share count:", shareError);

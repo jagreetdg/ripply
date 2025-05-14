@@ -657,6 +657,50 @@ export function VoiceNoteCard({
 		loadInitialData();
 	}, [voiceNote.id, loggedInUserId]);
 
+	// Add a debug function to check share count directly
+	const debugCheckShareCount = useCallback(async () => {
+		if (!voiceNote.id) return;
+
+		console.log(`[DEBUG] Checking share count for voice note: ${voiceNote.id}`);
+
+		try {
+			// Fetch the voice note data first
+			const noteData = await getVoiceNoteById(voiceNote.id);
+			console.log(`[DEBUG] Raw voice note data:`, JSON.stringify(noteData));
+
+			// Then get specific share count
+			const shareCount = await getShareCount(voiceNote.id, true);
+			console.log(`[DEBUG] Share count from getShareCount: ${shareCount}`);
+
+			// Get the complete stats
+			const stats = await getVoiceNoteStats(voiceNote.id);
+			console.log(`[DEBUG] Complete stats:`, stats);
+
+			// Safely access properties to avoid TypeScript errors
+			const rawShares =
+				noteData && typeof noteData === "object" && "shares" in noteData
+					? noteData.shares
+					: "N/A";
+
+			// Show alert with findings
+			Alert.alert(
+				"Share Count Debug",
+				`Raw count: ${rawShares}\nAPI count: ${shareCount}\nStats count: ${stats.shares}`
+			);
+		} catch (error) {
+			console.error("[DEBUG] Error checking share count:", error);
+			Alert.alert("Error", "Failed to debug share count");
+		}
+	}, [voiceNote.id]);
+
+	// In development mode only, long press on share count to check the API data
+	const handleShareCountLongPress = useCallback(() => {
+		// Only enable this in development mode
+		if (isDev) {
+			debugCheckShareCount();
+		}
+	}, [debugCheckShareCount, isDev]);
+
 	// Render the card with or without background image
 	if (!voiceNote.backgroundImage) {
 		return (
@@ -828,6 +872,7 @@ export function VoiceNoteCard({
 								style={styles.interactionButton}
 								activeOpacity={0.7}
 								onPress={handleRepostPress}
+								onLongPress={handleShareCountLongPress}
 								disabled={isLoadingShareCount}
 							>
 								<View style={styles.interactionContent}>
@@ -1055,6 +1100,7 @@ export function VoiceNoteCard({
 							style={styles.interactionButton}
 							activeOpacity={0.7}
 							onPress={handleRepostPress}
+							onLongPress={handleShareCountLongPress}
 							disabled={isLoadingShareCount}
 						>
 							<View style={styles.interactionContent}>

@@ -104,7 +104,7 @@ const normalizeCount = (value: any): number => {
 		if (typeof value.count === "number") {
 			return value.count;
 		}
-		
+
 		// Handle arrays of objects with count
 		if (Array.isArray(value) && value.length > 0) {
 			if (typeof value[0].count === "number") {
