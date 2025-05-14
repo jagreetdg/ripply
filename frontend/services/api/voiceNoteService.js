@@ -260,7 +260,7 @@ export const getUserVoiceNotes = (userId) => {
  * Record a share for a voice note (toggles share status)
  * @param {string} voiceNoteId - Voice note ID
  * @param {string} userId - ID of user sharing the voice note
- * @returns {Promise<Object>} - Share data with updated count and share status
+ * @returns {Promise<{shareCount: number, isShared: boolean, message?: string, voiceNoteId: string, userId: string, error?: string}>} - Share data with updated count and share status
  */
 export const recordShare = async (voiceNoteId, userId) => {
 	console.log(`Toggle share for voice note: ${voiceNoteId} by user: ${userId}`);
@@ -273,17 +273,31 @@ export const recordShare = async (voiceNoteId, userId) => {
 			}
 		);
 
+		// Make sure we have valid data in the response
+		const shareCount =
+			typeof response.shareCount === "number" ? response.shareCount : 0;
+		const isShared =
+			typeof response.isShared === "boolean" ? response.isShared : false;
+
 		// Return the response with shareCount and isShared flag
 		return {
-			shareCount: response.shareCount || 0,
-			isShared: response.isShared || false,
-			message: response.message,
+			shareCount: shareCount,
+			isShared: isShared,
+			message: response.message || "",
 			voiceNoteId,
 			userId,
 		};
 	} catch (error) {
 		console.error("Error toggling share:", error);
-		throw error;
+		// Return a default response instead of throwing to avoid UI freezing
+		return {
+			shareCount: 0,
+			isShared: false,
+			message: "Error toggling share",
+			voiceNoteId,
+			userId,
+			error: error.message,
+		};
 	}
 };
 
@@ -298,7 +312,19 @@ export const getShareCount = async (voiceNoteId) => {
 		const response = await apiRequest(
 			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`
 		);
-		return response?.shareCount || response?.data?.shareCount || 0;
+
+		// Make sure we extract the share count correctly, prefer shareCount property
+		if (typeof response?.shareCount === "number") {
+			return response.shareCount;
+		} else if (typeof response?.data?.shareCount === "number") {
+			return response.data.shareCount;
+		} else {
+			// If we can't find a valid share count, use 0 as default
+			console.warn(
+				`No valid share count found for ${voiceNoteId}, defaulting to 0`
+			);
+			return 0;
+		}
 	} catch (error) {
 		console.error("Error fetching share count:", error);
 		return 0; // Return 0 if there's an error

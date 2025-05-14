@@ -40,6 +40,7 @@ interface ShareResponse {
 	message?: string;
 	voiceNoteId?: string;
 	userId?: string;
+	error?: string;
 }
 
 interface CommentsResponse {
@@ -395,19 +396,23 @@ export function VoiceNoteCard({
 
 		// Call the API to toggle the share
 		recordShare(voiceNote.id, loggedInUserId)
-			.then((response) => {
+			.then((response: any) => {
 				console.log("Voice note share toggled:", response);
 
-				// Cast the response to ShareResponse type for TypeScript
-				const shareResponse = response as ShareResponse;
+				// Check if the response has an error property, which means something went wrong
+				if (response.error) {
+					console.error("Error in sharing response:", response.error);
+					// Don't update UI state if there was an error
+					return;
+				}
 
 				// Update the shared state based on the response
-				const newSharedState = shareResponse.isShared;
+				const newSharedState = response.isShared;
 				setIsShared(newSharedState);
 
 				// Update shares count with the accurate number from server
-				if (typeof shareResponse.shareCount === "number") {
-					setSharesCount(shareResponse.shareCount);
+				if (typeof response.shareCount === "number") {
+					setSharesCount(response.shareCount);
 				}
 
 				// Animate the share button
@@ -428,11 +433,12 @@ export function VoiceNoteCard({
 				if (onShare) {
 					onShare(voiceNote.id);
 				}
-
-				setIsLoadingShareCount(false);
 			})
 			.catch((error) => {
 				console.error("Error toggling voice note share:", error);
+				// We don't need to handle the error here since recordShare now returns a valid response even on error
+			})
+			.finally(() => {
 				setIsLoadingShareCount(false);
 			});
 	}, [shareScale, voiceNote.id, loggedInUserId, onShare, isLoadingShareCount]);
@@ -457,33 +463,31 @@ export function VoiceNoteCard({
 
 			// Record share if completed
 			if (result.action === Share.sharedAction && loggedInUserId) {
-				recordShare(voiceNote.id, loggedInUserId)
-					.then((response) => {
-						console.log("Voice note share recorded:", response);
+				try {
+					const response = await recordShare(voiceNote.id, loggedInUserId);
+					console.log("Voice note share recorded:", response);
 
-						// Cast the response to ShareResponse type for TypeScript
-						const shareResponse = response as ShareResponse;
+					// Check if there was an error
+					if (response.error) {
+						console.error("Error in sharing response:", response.error);
+						return;
+					}
 
-						// Update the shared state based on the response
-						setIsShared(shareResponse.isShared);
+					// Update the shared state based on the response
+					setIsShared(response.isShared);
 
-						// Update shares count with the accurate number from server
-						if (typeof shareResponse.shareCount === "number") {
-							setSharesCount(shareResponse.shareCount);
-						}
-
-						setIsLoadingShareCount(false);
-					})
-					.catch((error) => {
-						console.error("Error recording share:", error);
-						setIsLoadingShareCount(false);
-					});
-			} else {
-				setIsLoadingShareCount(false);
+					// Update shares count with the accurate number from server
+					if (typeof response.shareCount === "number") {
+						setSharesCount(response.shareCount);
+					}
+				} catch (shareError) {
+					console.error("Error recording share:", shareError);
+				}
 			}
 		} catch (error) {
 			console.error("Error sharing:", error);
 			Alert.alert("Error", "Could not share this voice note");
+		} finally {
 			setIsLoadingShareCount(false);
 		}
 	}, [voiceNote, loggedInUserId, isLoadingShareCount]);
@@ -553,58 +557,44 @@ export function VoiceNoteCard({
 		[progress, handleSeekStart, handleSeekMove, handleSeekEnd]
 	);
 
-	// Inside the VoiceNoteCard component, update the checkLikeStatus and checkShareStatus functions
-	const checkInitialLikeStatus = useCallback(async () => {
-		if (!voiceNote.id || !loggedInUserId) return;
-
-		try {
-			// Use the API function to check like status
-			const isUserLiked = await checkLikeStatus(voiceNote.id, loggedInUserId);
-			setIsLiked(isUserLiked);
-		} catch (error) {
-			console.error("Error checking like status:", error);
-			// Default to not liked if there's an error
-			setIsLiked(false);
-		}
-	}, [voiceNote.id, loggedInUserId]);
-
-	// Inside the VoiceNoteCard component, update the checkShareStatus function
-	const checkInitialShareStatus = useCallback(async () => {
-		if (!voiceNote.id || !loggedInUserId) return;
-
-		try {
-			// Use the API function to check share status
-			const isUserShared = await checkShareStatus(voiceNote.id, loggedInUserId);
-			setIsShared(isUserShared);
-
-			// Also fetch the actual share count
-			await fetchShareCount();
-		} catch (error) {
-			console.error("Error checking share status:", error);
-			// Default to not shared if there's an error
-			setIsShared(false);
-		}
-	}, [voiceNote.id, loggedInUserId, fetchShareCount]);
-
 	// Update the useEffect to use the renamed functions
 	useEffect(() => {
-		if (voiceNote.id) {
-			// Fetch the share count regardless of login status
-			fetchShareCount();
+		// Only proceed if voice note ID is available
+		if (!voiceNote.id) return;
 
-			// Check like and share status if logged in
-			if (loggedInUserId) {
-				checkInitialLikeStatus();
-				checkInitialShareStatus();
+		// Load current share count immediately
+		const loadInitialData = async () => {
+			try {
+				// Always fetch share count
+				const count = await getShareCount(voiceNote.id);
+				// Make sure count is a number
+				if (typeof count === "number") {
+					setSharesCount(count);
+				}
+
+				// Also check if logged-in user has shared this voice note
+				if (loggedInUserId) {
+					const isUserShared = await checkShareStatus(
+						voiceNote.id,
+						loggedInUserId
+					);
+					setIsShared(isUserShared);
+
+					// Also check like status
+					const isUserLiked = await checkLikeStatus(
+						voiceNote.id,
+						loggedInUserId
+					);
+					setIsLiked(isUserLiked);
+				}
+			} catch (error) {
+				console.error("Error loading initial voice note data:", error);
 			}
-		}
-	}, [
-		voiceNote.id,
-		loggedInUserId,
-		checkInitialLikeStatus,
-		checkInitialShareStatus,
-		fetchShareCount,
-	]);
+		};
+
+		// Call the function
+		loadInitialData();
+	}, [voiceNote.id, loggedInUserId]);
 
 	// Render the card with or without background image
 	if (!voiceNote.backgroundImage) {
