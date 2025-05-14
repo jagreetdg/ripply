@@ -26,6 +26,8 @@ import {
 	checkLikeStatus,
 	checkShareStatus,
 	getShareCount,
+	getVoiceNoteById,
+	getVoiceNoteStats,
 } from "../../services/api/voiceNoteService";
 import DefaultAvatar from "../DefaultAvatar";
 import { useUser } from "../../context/UserContext";
@@ -101,14 +103,41 @@ const formatDuration = (seconds: number): string => {
 	return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
 
-const formatNumber = (num: number): string => {
-	if (num >= 1000000) {
-		return (num / 1000000).toFixed(1) + "m";
+const formatNumber = (num: any): string => {
+	// Log unexpected values for debugging
+	if (num === null || num === undefined) {
+		console.log("formatNumber received null/undefined");
+		return "0";
 	}
-	if (num >= 1000) {
-		return (num / 1000).toFixed(1) + "k";
+
+	if (typeof num === "object") {
+		console.log(
+			"formatNumber received an object instead of a number:",
+			JSON.stringify(num)
+		);
+		// Try to extract count from object
+		if (num && typeof num.count === "number") {
+			return formatNumber(num.count);
+		}
+		return "0";
 	}
-	return num.toString();
+
+	// Convert to number to ensure consistent handling
+	const numValue = Number(num);
+
+	// Check if conversion resulted in a valid number
+	if (isNaN(numValue)) {
+		console.log(`formatNumber received non-numeric value: ${num}`);
+		return "0";
+	}
+
+	if (numValue >= 1000000) {
+		return (numValue / 1000000).toFixed(1) + "m";
+	}
+	if (numValue >= 1000) {
+		return (numValue / 1000).toFixed(1) + "k";
+	}
+	return numValue.toString();
 };
 
 const DefaultProfilePicture = ({
@@ -149,6 +178,31 @@ const DefaultProfilePicture = ({
 
 	// Fallback to our new DefaultAvatar
 	return <DefaultAvatar userId={userId} size={size} />;
+};
+
+// Function to safely extract plays count from various formats
+const normalizePlaysCount = (plays: any): number => {
+	if (typeof plays === "number") {
+		return plays;
+	}
+
+	if (plays && typeof plays === "object") {
+		// If it's an object with count property
+		if (typeof plays.count === "number") {
+			return plays.count;
+		}
+
+		// If it's an array of objects with count
+		if (
+			Array.isArray(plays) &&
+			plays.length > 0 &&
+			typeof plays[0].count === "number"
+		) {
+			return plays[0].count;
+		}
+	}
+
+	return 0; // Default to 0 if no valid format is found
 };
 
 export function VoiceNoteCard({
@@ -205,6 +259,9 @@ export function VoiceNoteCard({
 	const progressContainerRef = useRef<View>(null);
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const shareScale = useRef(new Animated.Value(1)).current;
+	const [playsCount, setPlaysCount] = useState(
+		normalizePlaysCount(voiceNote.plays || 0)
+	);
 
 	// Fetch the actual share count
 	const fetchShareCount = useCallback(async () => {
@@ -557,7 +614,7 @@ export function VoiceNoteCard({
 		[progress, handleSeekStart, handleSeekMove, handleSeekEnd]
 	);
 
-	// Update the useEffect to use the renamed functions
+	// Effect to load stats and check like/share status
 	useEffect(() => {
 		// Only proceed if voice note ID is available
 		if (!voiceNote.id) return;
@@ -565,14 +622,19 @@ export function VoiceNoteCard({
 		// Load current share count immediately
 		const loadInitialData = async () => {
 			try {
-				// Always fetch share count
-				const count = await getShareCount(voiceNote.id);
-				// Make sure count is a number
-				if (typeof count === "number") {
-					setSharesCount(count);
-				}
+				console.log(`Loading full data for voice note: ${voiceNote.id}`);
 
-				// Also check if logged-in user has shared this voice note
+				// Fetch the complete voice note stats
+				const stats = await getVoiceNoteStats(voiceNote.id);
+				console.log(`Received stats for ${voiceNote.id}:`, stats);
+
+				// Update the UI with the fetched stats
+				setLikesCount(stats.likes);
+				setCommentsCount(stats.comments);
+				setPlaysCount(stats.plays);
+				setSharesCount(stats.shares);
+
+				// Also check if logged-in user has liked/shared this voice note
 				if (loggedInUserId) {
 					const isUserShared = await checkShareStatus(
 						voiceNote.id,
@@ -580,7 +642,6 @@ export function VoiceNoteCard({
 					);
 					setIsShared(isUserShared);
 
-					// Also check like status
 					const isUserLiked = await checkLikeStatus(
 						voiceNote.id,
 						loggedInUserId
@@ -759,7 +820,7 @@ export function VoiceNoteCard({
 										}}
 									/>
 									<Text style={styles.interactionText}>
-										{formatNumber(voiceNote.plays || 0)}
+										{formatNumber(playsCount)}
 									</Text>
 								</View>
 							</TouchableOpacity>
@@ -986,7 +1047,7 @@ export function VoiceNoteCard({
 									}}
 								/>
 								<Text style={styles.interactionText}>
-									{formatNumber(voiceNote.plays || 0)}
+									{formatNumber(playsCount)}
 								</Text>
 							</View>
 						</TouchableOpacity>

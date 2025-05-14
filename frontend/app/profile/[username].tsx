@@ -20,6 +20,10 @@ import {
 	getFollowingCount,
 } from "../../services/api/userService";
 import { getVoiceBio } from "../../services/api/voiceBioService";
+import {
+	getVoiceNoteById,
+	getVoiceNoteStats,
+} from "../../services/api/voiceNoteService";
 import { UserNotFound } from "../../components/common/UserNotFound";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -63,32 +67,48 @@ interface VoiceBio {
 	updated_at: string;
 }
 
+// Function to safely extract plays count from various formats
+const normalizePlaysCount = (plays: any): number => {
+	if (typeof plays === "number") {
+		return plays;
+	}
+
+	if (plays && typeof plays === "object") {
+		// If it's an object with count property
+		if (typeof plays.count === "number") {
+			return plays.count;
+		}
+
+		// If it's an array of objects with count
+		if (
+			Array.isArray(plays) &&
+			plays.length > 0 &&
+			typeof plays[0].count === "number"
+		) {
+			return plays[0].count;
+		}
+	}
+
+	return 0; // Default to 0 if no valid format is found
+};
+
 export default function ProfileByUsernameScreen() {
 	const [refreshing, setRefreshing] = useState(false);
 	const { user: currentUser } = useUser();
 	const [followerCount, setFollowerCount] = useState(0);
 	const [followingCount, setFollowingCount] = useState(0);
 	const [isOwnProfile, setIsOwnProfile] = useState(false);
-	const [activeTab, setActiveTab] = useState("voice-notes"); // "voice-notes" or "shared"
 	const [sharedVoiceNotes, setSharedVoiceNotes] = useState<VoiceNote[]>([]);
 	const [loadingShared, setLoadingShared] = useState(false);
+	const [combinedVoiceNotes, setCombinedVoiceNotes] = useState<VoiceNote[]>([]);
 
 	// Handler for pull-to-refresh
 	const handleRefresh = async () => {
 		setRefreshing(true);
 		try {
 			await fetchUserData();
-
-			// Also explicitly refresh follower and following counts
-			if (userProfile) {
-				console.log("Explicitly refreshing follower and following counts");
-				const followers = await getFollowerCount(userProfile.id);
-				const following = await getFollowingCount(userProfile.id);
-				setFollowerCount(followers);
-				setFollowingCount(following);
-			}
 		} catch (error) {
-			console.error("Error refreshing data:", error);
+			console.error("Error refreshing profile data:", error);
 		} finally {
 			setRefreshing(false);
 		}
@@ -189,11 +209,50 @@ export default function ProfileByUsernameScreen() {
 
 				// Fetch user voice notes using the user ID from the profile
 				const voiceNotesData = await getUserVoiceNotes(typedProfile.id);
+				let processedVoiceNotes = [];
 
-				if (Array.isArray(voiceNotesData)) {
-					setVoiceNotes(voiceNotesData);
+				// Fetch complete data for each voice note to ensure we have all stats
+				if (Array.isArray(voiceNotesData) && voiceNotesData.length > 0) {
+					const fetchPromises = voiceNotesData.map(async (note) => {
+						try {
+							// Get the complete voice note stats
+							const stats = await getVoiceNoteStats(note.id);
+
+							// Get the basic note data
+							const completeData = await getVoiceNoteById(note.id);
+
+							// Create a complete note with accurate stats
+							return {
+								...note, // Base note data
+								...completeData, // Complete note data
+								likes: stats.likes, // Use the accurate stats
+								comments: stats.comments,
+								plays: stats.plays,
+								shares: stats.shares,
+								users: note.users, // Preserve user info
+							};
+						} catch (error) {
+							console.error(
+								`Error fetching complete data for note ${note.id}:`,
+								error
+							);
+							// Return normalized note as fallback
+							return {
+								...note,
+								likes: typeof note.likes === "number" ? note.likes : 0,
+								comments: typeof note.comments === "number" ? note.comments : 0,
+								plays: normalizePlaysCount(note.plays),
+								shares: typeof note.shares === "number" ? note.shares : 0,
+							};
+						}
+					});
+
+					// Wait for all notes to be fetched
+					processedVoiceNotes = await Promise.all(fetchPromises);
+					setVoiceNotes(processedVoiceNotes);
 				} else {
 					setVoiceNotes([]);
+					processedVoiceNotes = [];
 				}
 
 				// Fetch shared voice notes
@@ -202,14 +261,81 @@ export default function ProfileByUsernameScreen() {
 					const sharedVoiceNotesData = await getUserSharedVoiceNotes(
 						typedProfile.id
 					);
-					if (Array.isArray(sharedVoiceNotesData)) {
-						setSharedVoiceNotes(sharedVoiceNotesData);
+					let processedSharedNotes = [];
+
+					// Fetch complete data for each shared voice note
+					if (
+						Array.isArray(sharedVoiceNotesData) &&
+						sharedVoiceNotesData.length > 0
+					) {
+						const fetchSharedPromises = sharedVoiceNotesData.map(
+							async (note) => {
+								try {
+									// Get the complete voice note stats
+									const stats = await getVoiceNoteStats(note.id);
+
+									// Get the basic note data
+									const completeData = await getVoiceNoteById(note.id);
+
+									// Create a complete note with accurate stats
+									return {
+										...note, // Base note data
+										...completeData, // Complete note data
+										likes: stats.likes, // Use the accurate stats
+										comments: stats.comments,
+										plays: stats.plays,
+										shares: stats.shares,
+										users: note.users, // Preserve user info
+										is_shared: true,
+										shared_at: note.shared_at,
+										shared_by: note.shared_by,
+									};
+								} catch (error) {
+									console.error(
+										`Error fetching complete data for shared note ${note.id}:`,
+										error
+									);
+									// Return normalized note as fallback
+									return {
+										...note,
+										likes: typeof note.likes === "number" ? note.likes : 0,
+										comments:
+											typeof note.comments === "number" ? note.comments : 0,
+										plays: normalizePlaysCount(note.plays),
+										shares: typeof note.shares === "number" ? note.shares : 0,
+										is_shared: true,
+									};
+								}
+							}
+						);
+
+						// Wait for all shared notes to be fetched
+						processedSharedNotes = await Promise.all(fetchSharedPromises);
+						setSharedVoiceNotes(processedSharedNotes);
 					} else {
 						setSharedVoiceNotes([]);
+						processedSharedNotes = [];
 					}
+
+					// Combine and sort voice notes and shared posts by date
+					const combined = [...processedVoiceNotes, ...processedSharedNotes];
+
+					// Sort by creation/shared date (newest first)
+					combined.sort((a, b) => {
+						const dateA = a.shared_at
+							? new Date(a.shared_at).getTime()
+							: new Date(a.created_at).getTime();
+						const dateB = b.shared_at
+							? new Date(b.shared_at).getTime()
+							: new Date(b.created_at).getTime();
+						return dateB - dateA;
+					});
+
+					setCombinedVoiceNotes(combined);
 				} catch (sharedError) {
 					console.error("Error fetching shared voice notes:", sharedError);
 					setSharedVoiceNotes([]);
+					setCombinedVoiceNotes(processedVoiceNotes);
 				} finally {
 					setLoadingShared(false);
 				}
@@ -332,73 +458,76 @@ export default function ProfileByUsernameScreen() {
 					/>
 				</Animated.View>
 
-				{/* Tabs to switch between original voice notes and shared content */}
-				<View style={styles.tabContainer}>
-					<TouchableOpacity
-						style={[
-							styles.tabButton,
-							activeTab === "voice-notes" && styles.activeTabButton,
-						]}
-						onPress={() => setActiveTab("voice-notes")}
-					>
-						<Text
-							style={[
-								styles.tabText,
-								activeTab === "voice-notes" && styles.activeTabText,
-							]}
-						>
-							Voice Notes
+				{/* Stats bar */}
+				<View style={styles.statsContainer}>
+					<TouchableOpacity style={styles.statsItem}>
+						<Text style={styles.statsNumber}>{followingCount}</Text>
+						<Text style={styles.statsLabel}>Following</Text>
+					</TouchableOpacity>
+					<View style={styles.statsDivider} />
+					<TouchableOpacity style={styles.statsItem}>
+						<Text style={styles.statsNumber}>{voiceNotes.length}</Text>
+						<Text style={styles.statsLabel}>
+							{voiceNotes.length === 1 ? "Note" : "Notes"}
 						</Text>
 					</TouchableOpacity>
-					<TouchableOpacity
-						style={[
-							styles.tabButton,
-							activeTab === "shared" && styles.activeTabButton,
-						]}
-						onPress={() => setActiveTab("shared")}
-					>
-						<Text
-							style={[
-								styles.tabText,
-								activeTab === "shared" && styles.activeTabText,
-							]}
-						>
-							Reposts
+					<View style={styles.statsDivider} />
+					<TouchableOpacity style={styles.statsItem}>
+						<Text style={styles.statsNumber}>{followerCount}</Text>
+						<Text style={styles.statsLabel}>
+							{followerCount === 1 ? "Follower" : "Followers"}
 						</Text>
 					</TouchableOpacity>
 				</View>
 
-				{/* Voice Notes List */}
-				{activeTab === "voice-notes" ? (
-					voiceNotes.length === 0 ? (
-						<View style={styles.emptyState}>
-							<Text style={styles.emptyText}>No voice notes yet</Text>
-						</View>
-					) : (
-						<VoiceNotesList
+				{isOwnProfile ? (
+					<View style={styles.followButtonContainer}>
+						<TouchableOpacity
+							style={styles.editProfileButtonInline}
+							onPress={() => router.push("/profile/edit")}
+						>
+							<Text style={styles.buttonText}>Edit Profile</Text>
+						</TouchableOpacity>
+					</View>
+				) : (
+					<View style={styles.followButtonContainer}>
+						<FollowButton
 							userId={userProfile.id}
-							username={userProfile.username}
-							displayName={userProfile.display_name}
-							voiceNotes={voiceNotes}
-							onRefresh={handleRefresh}
+							onFollowChange={(isFollowing, updatedCount) => {
+								// Use the accurate server count if available
+								if (typeof updatedCount === "number") {
+									console.log(
+										`Setting follower count to ${updatedCount} from server`
+									);
+									setFollowerCount(updatedCount);
+								} else {
+									// Fallback to the old increment/decrement method
+									console.log(`Using local calculation for follower count`);
+									setFollowerCount((prev) =>
+										isFollowing ? prev + 1 : Math.max(0, prev - 1)
+									);
+								}
+							}}
 						/>
-					)
-				) : loadingShared ? (
+					</View>
+				)}
+
+				{loading || loadingShared ? (
 					<View style={styles.loadingContainer}>
 						<ActivityIndicator size="small" color="#6B2FBC" />
 					</View>
-				) : sharedVoiceNotes.length === 0 ? (
+				) : combinedVoiceNotes.length === 0 ? (
 					<View style={styles.emptyState}>
-						<Text style={styles.emptyText}>No reposts yet</Text>
+						<Text style={styles.emptyText}>No voice notes yet</Text>
 					</View>
 				) : (
 					<VoiceNotesList
 						userId={userProfile.id}
 						username={userProfile.username}
 						displayName={userProfile.display_name}
-						voiceNotes={sharedVoiceNotes}
+						voiceNotes={combinedVoiceNotes}
 						onRefresh={handleRefresh}
-						isSharedList={true}
+						showRepostAttribution={true}
 					/>
 				)}
 			</Animated.ScrollView>
@@ -533,31 +662,6 @@ const styles = StyleSheet.create({
 		},
 		shadowOpacity: 0.3,
 		shadowRadius: 4.65,
-	},
-	tabContainer: {
-		flexDirection: "row",
-		borderBottomWidth: 1,
-		borderBottomColor: "#EFEFEF",
-		marginBottom: 8,
-	},
-	tabButton: {
-		flex: 1,
-		paddingVertical: 12,
-		alignItems: "center",
-		borderBottomWidth: 2,
-		borderBottomColor: "transparent",
-	},
-	activeTabButton: {
-		borderBottomColor: "#6B2FBC",
-	},
-	tabText: {
-		fontSize: 16,
-		fontWeight: "500",
-		color: "#888",
-	},
-	activeTabText: {
-		color: "#6B2FBC",
-		fontWeight: "600",
 	},
 	emptyState: {
 		alignItems: "center",

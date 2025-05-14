@@ -98,8 +98,21 @@ export const getVoiceNotes = async (params = {}) => {
  * @param {string} voiceNoteId - Voice note ID
  * @returns {Promise<Object>} - Voice note data
  */
-export const getVoiceNoteById = (voiceNoteId) => {
-	return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`);
+export const getVoiceNoteById = async (voiceNoteId) => {
+	try {
+		console.log(`Fetching voice note by ID: ${voiceNoteId}`);
+		const response = await apiRequest(
+			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`
+		);
+		console.log(
+			`Response from getVoiceNoteById for ${voiceNoteId}:`,
+			JSON.stringify(response)
+		);
+		return response;
+	} catch (error) {
+		console.error(`Error fetching voice note ${voiceNoteId}:`, error);
+		throw error;
+	}
 };
 
 /**
@@ -328,5 +341,98 @@ export const getShareCount = async (voiceNoteId) => {
 	} catch (error) {
 		console.error("Error fetching share count:", error);
 		return 0; // Return 0 if there's an error
+	}
+};
+
+/**
+ * Get complete stats for a voice note (likes, comments, shares, plays)
+ * @param {string} voiceNoteId - Voice note ID
+ * @returns {Promise<{likes: number, comments: number, shares: number, plays: number}>} - Voice note stats
+ */
+export const getVoiceNoteStats = async (voiceNoteId) => {
+	try {
+		console.log(`Fetching complete stats for voice note: ${voiceNoteId}`);
+
+		// First try to get the complete voice note data
+		const voiceNoteData = await getVoiceNoteById(voiceNoteId);
+
+		// Helper function to normalize any count value
+		const normalizeCount = (value) => {
+			// If it's already a number, return it
+			if (typeof value === "number") {
+				return value;
+			}
+
+			// If it's an object with a count property
+			if (value && typeof value === "object") {
+				// Handle {count: number}
+				if (typeof value.count === "number") {
+					return value.count;
+				}
+
+				// Handle arrays of objects with count
+				if (Array.isArray(value) && value.length > 0) {
+					if (typeof value[0].count === "number") {
+						return value[0].count;
+					}
+					// Try to use the array length as a fallback
+					return value.length;
+				}
+			}
+
+			// Try to parse it as a number if it's a string
+			if (typeof value === "string") {
+				const parsed = parseInt(value, 10);
+				if (!isNaN(parsed)) {
+					return parsed;
+				}
+			}
+
+			// Fallback to 0 for undefined, null, or unparseable formats
+			return 0;
+		};
+
+		// Initialize with default values
+		let stats = {
+			likes: 0,
+			comments: 0,
+			shares: 0,
+			plays: 0,
+		};
+
+		// If we got valid data, extract stats
+		if (voiceNoteData) {
+			// Use our normalize function for each stat
+			stats.likes = normalizeCount(voiceNoteData.likes);
+			stats.comments = normalizeCount(voiceNoteData.comments);
+			stats.plays = normalizeCount(voiceNoteData.plays);
+			stats.shares = normalizeCount(voiceNoteData.shares);
+
+			console.log(`Normalized stats from API for ${voiceNoteId}:`, stats);
+		}
+
+		// Try to get a more accurate share count if available
+		try {
+			const shareCount = await getShareCount(voiceNoteId);
+			if (typeof shareCount === "number") {
+				stats.shares = shareCount;
+				console.log(`Updated share count from getShareCount: ${stats.shares}`);
+			}
+		} catch (shareError) {
+			console.error("Error getting share count:", shareError);
+			// Keep the existing share count
+		}
+
+		console.log(`Final stats for ${voiceNoteId}:`, stats);
+		return stats;
+	} catch (error) {
+		console.error(`Error getting voice note stats for ${voiceNoteId}:`, error);
+		// Return default values if something went wrong
+		return {
+			likes: 0,
+			comments: 0,
+			shares: 0,
+			plays: 0,
+		};
 	}
 };
