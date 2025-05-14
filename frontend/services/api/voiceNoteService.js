@@ -257,29 +257,50 @@ export const getUserVoiceNotes = (userId) => {
 };
 
 /**
- * Record a share for a voice note
+ * Record a share for a voice note (toggles share status)
  * @param {string} voiceNoteId - Voice note ID
  * @param {string} userId - ID of user sharing the voice note
- * @returns {Promise<Object>} - Share data with updated count
+ * @returns {Promise<Object>} - Share data with updated count and share status
  */
 export const recordShare = async (voiceNoteId, userId) => {
-	console.log(
-		`Recording share for voice note: ${voiceNoteId} by user: ${userId}`
-	);
-	return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`, {
-		method: "POST",
-		body: JSON.stringify({ userId: userId }),
-	});
+	console.log(`Toggle share for voice note: ${voiceNoteId} by user: ${userId}`);
+	try {
+		const response = await apiRequest(
+			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`,
+			{
+				method: "POST",
+				body: JSON.stringify({ userId: userId }),
+			}
+		);
+
+		// Return the response with shareCount and isShared flag
+		return {
+			shareCount: response.shareCount || 0,
+			isShared: response.isShared || false,
+			message: response.message,
+			voiceNoteId,
+			userId,
+		};
+	} catch (error) {
+		console.error("Error toggling share:", error);
+		throw error;
+	}
 };
 
 /**
  * Get share count for a voice note
  * @param {string} voiceNoteId - Voice note ID
- * @returns {Promise<Object>} - Share count data
+ * @returns {Promise<number>} - Share count
  */
 export const getShareCount = async (voiceNoteId) => {
-	const response = await apiRequest(
-		`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`
-	);
-	return response.data?.shareCount || 0;
+	try {
+		console.log(`Fetching share count for voice note: ${voiceNoteId}`);
+		const response = await apiRequest(
+			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`
+		);
+		return response?.shareCount || response?.data?.shareCount || 0;
+	} catch (error) {
+		console.error("Error fetching share count:", error);
+		return 0; // Return 0 if there's an error
+	}
 };

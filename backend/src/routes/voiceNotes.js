@@ -566,15 +566,32 @@ router.post("/:voiceNoteId/share", async (req, res) => {
 		let result;
 
 		if (existingShare) {
-			// Update the existing share timestamp
+			// Instead of just updating timestamp, let's delete the share to implement toggle behavior
 			result = await supabase
 				.from("voice_note_shares")
-				.update({
-					shared_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-				})
-				.eq("id", existingShare.id)
-				.select();
+				.delete()
+				.eq("id", existingShare.id);
+
+			if (result.error) throw result.error;
+
+			// Get updated share count after deletion
+			const { data: sharesDataAfterDeletion, error: countErrorAfterDeletion } =
+				await supabase
+					.from("voice_note_shares")
+					.select("id")
+					.eq("voice_note_id", voiceNoteId);
+
+			if (countErrorAfterDeletion) throw countErrorAfterDeletion;
+
+			const shareCount = sharesDataAfterDeletion.length;
+
+			return res.status(200).json({
+				message: "Share removed successfully",
+				voiceNoteId,
+				userId: effectiveUserId,
+				shareCount,
+				isShared: false,
+			});
 		} else {
 			// Create a new share
 			result = await supabase
@@ -615,6 +632,7 @@ router.post("/:voiceNoteId/share", async (req, res) => {
 					voiceNoteId,
 					userId,
 					shareCount: 1,
+					isShared: true,
 					note: "Share count may not be accurate until you run the SQL script in the Supabase SQL Editor",
 				});
 			}
@@ -628,6 +646,7 @@ router.post("/:voiceNoteId/share", async (req, res) => {
 			voiceNoteId,
 			userId,
 			shareCount,
+			isShared: true,
 		});
 	} catch (error) {
 		console.error("Error recording share:", error);
@@ -635,48 +654,54 @@ router.post("/:voiceNoteId/share", async (req, res) => {
 	}
 });
 
-// Get share count for a voice note
+// Get voice note shares
 router.get("/:voiceNoteId/shares", async (req, res) => {
 	try {
 		const { voiceNoteId } = req.params;
 
+		console.log(`[DEBUG] Fetching shares for voice note: ${voiceNoteId}`);
+
 		// Check if voice note exists
 		const { data: voiceNoteData, error: voiceNoteError } = await supabase
 			.from("voice_notes")
-			.select("id")
+			.select("id, shares")
 			.eq("id", voiceNoteId)
 			.single();
 
-		if (voiceNoteError || !voiceNoteData) {
-			return res.status(404).json({ message: "Voice note not found" });
+		if (voiceNoteError) {
+			if (voiceNoteError.code === "PGRST116") {
+				// Not found
+				return res.status(404).json({ message: "Voice note not found" });
+			}
+			throw voiceNoteError;
 		}
 
-		// Get shares from the voice_note_shares table
-		const { data, error } = await supabase
+		// Get share count from the voice_note_shares table
+		const { data: sharesData, error: countError } = await supabase
 			.from("voice_note_shares")
-			.select("*")
+			.select("id")
 			.eq("voice_note_id", voiceNoteId);
 
-		if (error) {
-			if (error.code === "42P01") {
+		if (countError) {
+			if (countError.code === "42P01") {
 				// Table doesn't exist yet
+				console.log("[DEBUG] voice_note_shares table does not exist");
 				return res.status(200).json({
-					voiceNoteId,
 					shareCount: 0,
-					shares: [],
-					note: "Voice note shares table does not exist. Please run the SQL script in the Supabase SQL Editor to create the necessary tables",
+					message:
+						"Share count may not be accurate until you run the SQL script in the Supabase SQL Editor",
 				});
 			}
-			throw error;
+			throw countError;
 		}
 
-		res.status(200).json({
-			voiceNoteId,
-			shareCount: data.length,
-			shares: data,
-		});
+		// Get the accurate share count
+		const shareCount = sharesData.length;
+		console.log(`[DEBUG] Voice note ${voiceNoteId} has ${shareCount} shares`);
+
+		res.status(200).json({ shareCount });
 	} catch (error) {
-		console.error("Error getting share count:", error);
+		console.error("Error fetching share count:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 });

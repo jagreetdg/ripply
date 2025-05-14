@@ -36,6 +36,7 @@ const isDev = process.env.NODE_ENV === "development" || __DEV__;
 // Define API response types
 interface ShareResponse {
 	shareCount: number;
+	isShared: boolean;
 	message?: string;
 	voiceNoteId?: string;
 	userId?: string;
@@ -209,12 +210,17 @@ export function VoiceNoteCard({
 		if (!voiceNote.id) return;
 
 		try {
+			setIsLoadingShareCount(true);
+			console.log("Fetching share count for voice note:", voiceNote.id);
 			const count = await getShareCount(voiceNote.id);
 			// Make sure count is a number
 			setSharesCount(typeof count === "number" ? count : 0);
+			console.log("Retrieved share count:", count);
 		} catch (error) {
 			console.error("Error fetching share count:", error);
 			// Keep the initial value from the voiceNote object
+		} finally {
+			setIsLoadingShareCount(false);
 		}
 	}, [voiceNote.id]);
 
@@ -387,49 +393,48 @@ export function VoiceNoteCard({
 
 		setIsLoadingShareCount(true);
 
-		// Toggle shared state
-		setIsShared((prevState) => {
-			const newSharedState = !prevState;
+		// Call the API to toggle the share
+		recordShare(voiceNote.id, loggedInUserId)
+			.then((response) => {
+				console.log("Voice note share toggled:", response);
 
-			// Call the API to record the share
-			recordShare(voiceNote.id, loggedInUserId)
-				.then((response) => {
-					console.log("Voice note shared successfully:", response);
-					// Update shares count with the accurate number from server
-					const shareResponse = response as unknown as ShareResponse;
-					if (shareResponse && typeof shareResponse.shareCount === "number") {
-						setSharesCount(shareResponse.shareCount);
-					}
-					setIsLoadingShareCount(false);
-				})
-				.catch((error) => {
-					console.error("Error sharing voice note:", error);
-					// Revert UI state on error
-					setIsShared(!newSharedState);
-					setIsLoadingShareCount(false);
-				});
+				// Cast the response to ShareResponse type for TypeScript
+				const shareResponse = response as ShareResponse;
 
-			// Animate the share button
-			Animated.sequence([
-				Animated.timing(shareScale, {
-					toValue: 1.2,
-					duration: 100,
-					useNativeDriver: true,
-				}),
-				Animated.timing(shareScale, {
-					toValue: 1,
-					duration: 100,
-					useNativeDriver: true,
-				}),
-			]).start();
+				// Update the shared state based on the response
+				const newSharedState = shareResponse.isShared;
+				setIsShared(newSharedState);
 
-			// Notify parent component if callback provided
-			if (onShare) {
-				onShare(voiceNote.id);
-			}
+				// Update shares count with the accurate number from server
+				if (typeof shareResponse.shareCount === "number") {
+					setSharesCount(shareResponse.shareCount);
+				}
 
-			return newSharedState;
-		});
+				// Animate the share button
+				Animated.sequence([
+					Animated.timing(shareScale, {
+						toValue: 1.2,
+						duration: 100,
+						useNativeDriver: true,
+					}),
+					Animated.timing(shareScale, {
+						toValue: 1,
+						duration: 100,
+						useNativeDriver: true,
+					}),
+				]).start();
+
+				// Notify parent component if callback provided
+				if (onShare) {
+					onShare(voiceNote.id);
+				}
+
+				setIsLoadingShareCount(false);
+			})
+			.catch((error) => {
+				console.error("Error toggling voice note share:", error);
+				setIsLoadingShareCount(false);
+			});
 	}, [shareScale, voiceNote.id, loggedInUserId, onShare, isLoadingShareCount]);
 
 	// Handle native share
@@ -455,12 +460,18 @@ export function VoiceNoteCard({
 				recordShare(voiceNote.id, loggedInUserId)
 					.then((response) => {
 						console.log("Voice note share recorded:", response);
-						// Update the share count
-						const shareResponse = response as unknown as ShareResponse;
-						if (shareResponse && typeof shareResponse.shareCount === "number") {
+
+						// Cast the response to ShareResponse type for TypeScript
+						const shareResponse = response as ShareResponse;
+
+						// Update the shared state based on the response
+						setIsShared(shareResponse.isShared);
+
+						// Update shares count with the accurate number from server
+						if (typeof shareResponse.shareCount === "number") {
 							setSharesCount(shareResponse.shareCount);
 						}
-						setIsShared(true); // Set share state to true
+
 						setIsLoadingShareCount(false);
 					})
 					.catch((error) => {
@@ -577,15 +588,22 @@ export function VoiceNoteCard({
 
 	// Update the useEffect to use the renamed functions
 	useEffect(() => {
-		if (voiceNote.id && loggedInUserId) {
-			checkInitialLikeStatus();
-			checkInitialShareStatus();
+		if (voiceNote.id) {
+			// Fetch the share count regardless of login status
+			fetchShareCount();
+
+			// Check like and share status if logged in
+			if (loggedInUserId) {
+				checkInitialLikeStatus();
+				checkInitialShareStatus();
+			}
 		}
 	}, [
 		voiceNote.id,
 		loggedInUserId,
 		checkInitialLikeStatus,
 		checkInitialShareStatus,
+		fetchShareCount,
 	]);
 
 	// Render the card with or without background image
