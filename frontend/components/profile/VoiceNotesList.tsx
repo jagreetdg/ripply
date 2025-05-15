@@ -404,12 +404,21 @@ export function VoiceNotesList({
 							const isRepost =
 								(isSharedList || showRepostAttribution) && item.is_shared;
 
-							// Get the username of who reposted this voice note - use a simple approach
-							// that falls back to the username prop if shared_by is missing or not an object
-							const repostedByUsername =
-								typeof item.shared_by === "object" && item.shared_by?.username
-									? item.shared_by.username
-									: username;
+							// Get the username of who reposted this voice note
+							// If we're viewing a specific profile's reposts, we know they're the one who reposted
+							// Otherwise, use the shared_by info from the voice note item
+							let repostedByUsername = username; // Default to current profile's username
+
+							// If this is a repost with shared_by data, use that information
+							if (
+								item.is_shared &&
+								item.shared_by &&
+								typeof item.shared_by === "object"
+							) {
+								if (item.shared_by.username) {
+									repostedByUsername = item.shared_by.username;
+								}
+							}
 
 							return (
 								<View key={item.id} style={styles.cardContainer}>

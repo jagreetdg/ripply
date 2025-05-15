@@ -3,7 +3,7 @@ const router = express.Router();
 const supabase = require("../config/supabase");
 const uuidv4 = require("uuid").v4;
 
-// Get personalized feed (voice notes from users the current user follows)
+// Get personalized feed for a user
 router.get("/feed/:userId", async (req, res) => {
 	try {
 		const { userId } = req.params;
@@ -34,7 +34,7 @@ router.get("/feed/:userId", async (req, res) => {
 		const followingIds = followingData.map((follow) => follow.following_id);
 
 		// Get voice notes from followed users
-		const { data, error, count } = await supabase
+		const { data: originalPosts, error: originalError } = await supabase
 			.from("voice_notes")
 			.select(
 				`
@@ -44,32 +44,110 @@ router.get("/feed/:userId", async (req, res) => {
         comments:voice_note_comments (count),
         plays:voice_note_plays (count),
         tags:voice_note_tags (tag_name)
-      `,
-				{ count: "exact" }
+      `
 			)
 			.in("user_id", followingIds)
-			.order("created_at", { ascending: false })
-			.range(offset, offset + parseInt(limit) - 1);
+			.order("created_at", { ascending: false });
 
-		if (error) throw error;
+		if (originalError) throw originalError;
 
-		// Process the data to format tags
-		const processedData = data.map((note) => {
+		// Get shared voice notes from followed users
+		const { data: sharedData, error: sharedError } = await supabase
+			.from("voice_note_shares")
+			.select(
+				`
+        id,
+        voice_note_id,
+        user_id,
+        shared_at,
+        sharer:user_id (id, username, display_name, avatar_url)
+      `
+			)
+			.in("user_id", followingIds)
+			.order("shared_at", { ascending: false });
+
+		if (sharedError && sharedError.code !== "42P01") throw sharedError;
+
+		let processedSharedPosts = [];
+
+		// If there are shared posts and the table exists
+		if (sharedData && sharedData.length > 0) {
+			// Get the voice note IDs from the shares
+			const sharedVoiceNoteIds = sharedData.map((share) => share.voice_note_id);
+
+			// Fetch the actual voice notes
+			const { data: sharedVoiceNotes, error: sharedVoiceNotesError } =
+				await supabase
+					.from("voice_notes")
+					.select(
+						`
+					*,
+					users:user_id (id, username, display_name, avatar_url),
+					likes:voice_note_likes (count),
+					comments:voice_note_comments (count),
+					plays:voice_note_plays (count),
+					tags:voice_note_tags (tag_name)
+				`
+					)
+					.in("id", sharedVoiceNoteIds);
+
+			if (sharedVoiceNotesError) throw sharedVoiceNotesError;
+
+			// Process each shared voice note to include sharer info
+			processedSharedPosts = sharedVoiceNotes.map((note) => {
+				// Find the corresponding share record
+				const shareRecord = sharedData.find(
+					(share) => share.voice_note_id === note.id
+				);
+
+				// Extract tags
+				const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
+				return {
+					...note,
+					tags,
+					is_shared: true,
+					shared_at: shareRecord?.shared_at || new Date().toISOString(),
+					shared_by: shareRecord?.sharer || null,
+				};
+			});
+		}
+
+		// Process original posts
+		const processedOriginalPosts = originalPosts.map((note) => {
 			// Extract tags from the nested structure
 			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
 			return {
 				...note,
 				tags,
+				is_shared: false,
 			};
 		});
 
+		// Combine both types of posts
+		const allPosts = [...processedOriginalPosts, ...processedSharedPosts];
+
+		// Sort by created_at or shared_at (newest first)
+		allPosts.sort((a, b) => {
+			const dateA = a.is_shared
+				? new Date(a.shared_at)
+				: new Date(a.created_at);
+			const dateB = b.is_shared
+				? new Date(b.shared_at)
+				: new Date(b.created_at);
+			return dateB - dateA;
+		});
+
+		// Apply pagination after sorting
+		const paginatedPosts = allPosts.slice(offset, offset + parseInt(limit));
+
 		res.status(200).json({
-			data: processedData,
+			data: paginatedPosts,
 			pagination: {
 				page: parseInt(page),
 				limit: parseInt(limit),
-				total: count,
+				total: allPosts.length,
 			},
 		});
 	} catch (error) {
