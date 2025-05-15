@@ -703,6 +703,15 @@ export function VoiceNoteCard({
 		}
 	}, [debugCheckShareCount, isDev]);
 
+	// Handle tag click to navigate to search
+	const handleTagPress = (tag: string) => {
+		console.log(`Tag pressed: ${tag}`);
+		router.push({
+			pathname: "/(tabs)/search",
+			params: { tag: tag, searchType: "tag" },
+		});
+	};
+
 	// Render the card with or without background image
 	if (!voiceNote.backgroundImage) {
 		return (
@@ -782,6 +791,7 @@ export function VoiceNoteCard({
 										key={index}
 										style={styles.tagItem}
 										activeOpacity={0.7}
+										onPress={() => handleTagPress(tag)}
 									>
 										<Text style={styles.tagText}>#{tag}</Text>
 									</TouchableOpacity>
@@ -1010,6 +1020,7 @@ export function VoiceNoteCard({
 									key={index}
 									style={styles.tagItem}
 									activeOpacity={0.7}
+									onPress={() => handleTagPress(tag)}
 								>
 									<Text style={styles.tagText}>#{tag}</Text>
 								</TouchableOpacity>
