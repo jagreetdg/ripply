@@ -52,41 +52,28 @@ export function HomeFeed() {
 				// Determine if this is a shared voice note
 				const isShared = note.is_shared || false;
 
-				// Get the correct user attribution - either the original creator or the sharer
-				let displayName, username, avatarUrl, userId;
-
+				// Process the shared_by information properly
+				let sharedByInfo = null;
 				if (isShared && note.shared_by) {
-					// This is a shared voice note - use the sharer's information for attribution
-					displayName = note.shared_by.display_name || "User";
-					username = note.shared_by.username || "";
-					avatarUrl = note.shared_by.avatar_url;
-					userId = note.shared_by.id;
-				} else {
-					// Regular voice note - use the creator's information
-					displayName = note.users?.display_name || "User";
-					username = note.users?.username || "";
-					avatarUrl = note.users?.avatar_url;
-					userId = note.user_id;
+					sharedByInfo = {
+						id: note.shared_by.id || "",
+						username: note.shared_by.username || "",
+						displayName: note.shared_by.display_name || "User",
+						avatarUrl: note.shared_by.avatar_url || null,
+					};
 				}
 
 				return {
 					id: note.id,
 					userId: note.user_id, // Original creator's ID
-					userName: note.users?.username || username,
+					userName: note.users?.username || "",
 					displayName: note.users?.display_name || "User",
 					userAvatar: note.users?.avatar_url,
 					timePosted: formatTimeAgo(
 						isShared ? note.shared_at : note.created_at
 					),
 					isShared: isShared,
-					sharedBy: isShared
-						? {
-								id: note.shared_by?.id || "",
-								username: note.shared_by?.username || "",
-								displayName: note.shared_by?.display_name || "User",
-								avatarUrl: note.shared_by?.avatar_url,
-						  }
-						: null,
+					sharedBy: sharedByInfo,
 					voiceNote: {
 						id: note.id,
 						duration: note.duration || 60,

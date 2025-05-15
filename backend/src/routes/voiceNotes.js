@@ -56,12 +56,12 @@ router.get("/feed/:userId", async (req, res) => {
 			.from("voice_note_shares")
 			.select(
 				`
-        id,
-        voice_note_id,
-        user_id,
-        shared_at,
-        sharer:user_id (id, username, display_name, avatar_url)
-      `
+	id,
+	voice_note_id,
+	user_id,
+	shared_at,
+	sharer:users!voice_note_shares_user_id_fkey (id, username, display_name, avatar_url)
+`
 			)
 			.in("user_id", followingIds)
 			.order("shared_at", { ascending: false });

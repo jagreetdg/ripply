@@ -467,7 +467,9 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 		// First get all the voice notes that the user has shared
 		const { data: sharedData, error: sharedError } = await supabase
 			.from("voice_note_shares")
-			.select("voice_note_id, shared_at, user_id") // Include user_id
+			.select(
+				"voice_note_id, shared_at, user_id, users!voice_note_shares_user_id_fkey (id, username, display_name, avatar_url)"
+			)
 			.eq("user_id", userId)
 			.order("shared_at", { ascending: false })
 			.range(offset, offset + parseInt(limit) - 1);
@@ -525,15 +527,6 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 
 		if (voiceNotesError) throw voiceNotesError;
 
-		// Get the user data for the sharer (userId)
-		const { data: sharerData, error: sharerError } = await supabase
-			.from("users")
-			.select("id, username, display_name, avatar_url")
-			.eq("id", userId)
-			.single();
-
-		if (sharerError) throw sharerError;
-
 		// Process the data to format tags and mark as shared
 		const processedData = voiceNotesData.map((note) => {
 			// Extract tags from the nested structure
@@ -544,17 +537,22 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 				(share) => share.voice_note_id === note.id
 			);
 
+			// Use the user data we already joined
+			const sharerData = shareInfo ? shareInfo.users : null;
+
 			return {
 				...note,
 				tags,
 				is_shared: true,
 				shared_at: shareInfo ? shareInfo.shared_at : null,
-				shared_by: {
-					id: sharerData.id,
-					username: sharerData.username,
-					display_name: sharerData.display_name,
-					avatar_url: sharerData.avatar_url,
-				},
+				shared_by: sharerData
+					? {
+							id: sharerData.id,
+							username: sharerData.username,
+							display_name: sharerData.display_name,
+							avatar_url: sharerData.avatar_url,
+					  }
+					: null,
 			};
 		});
 
