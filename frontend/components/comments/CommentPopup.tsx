@@ -432,6 +432,8 @@ const styles = StyleSheet.create({
 		paddingVertical: 10,
 		maxHeight: 100,
 		fontSize: 14,
+		marginLeft: 12,
+		textAlignVertical: "center",
 	},
 	sendButton: {
 		backgroundColor: "#6B2FBC",

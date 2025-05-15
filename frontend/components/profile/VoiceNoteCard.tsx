@@ -407,28 +407,30 @@ export function VoiceNoteCard({
 		(newComment: Comment | string) => {
 			if (!loggedInUserId || !voiceNote.id) return;
 
-			// Add comment to the API
-			addComment(voiceNote.id, {
-				user_id: loggedInUserId,
-				content:
-					typeof newComment === "string" ? newComment : newComment.content,
-			})
-				.then((response) => {
-					console.log("Comment added successfully:", response);
-					// Update comments array and count
-					setComments((prevComments) => [
-						response as unknown as Comment,
-						...prevComments,
-					]);
-					setCommentsCount((prevCount) => prevCount + 1);
-				})
-				.catch((error) => {
-					console.error("Error adding comment:", error);
-					Alert.alert("Error", "Failed to add comment. Please try again.");
-				});
+			// Update comments array and count
+			setComments((prevComments) => [newComment as Comment, ...prevComments]);
+			setCommentsCount((prevCount) => prevCount + 1);
 		},
 		[voiceNote.id, loggedInUserId]
 	);
+
+	// Handle close comment popup
+	const handleCloseCommentPopup = useCallback(() => {
+		setShowCommentPopup(false);
+
+		// Fetch the latest stats for this voice note
+		if (voiceNote.id) {
+			getVoiceNoteStats(voiceNote.id)
+				.then((stats) => {
+					if (stats && typeof stats.comments === "number") {
+						setCommentsCount(stats.comments);
+					}
+				})
+				.catch((error) => {
+					console.error("Error fetching voice note stats:", error);
+				});
+		}
+	}, [voiceNote.id]);
 
 	// Handle plays button press
 	const handlePlaysPress = useCallback(() => {
@@ -919,7 +921,7 @@ export function VoiceNoteCard({
 					visible={showCommentPopup}
 					voiceNoteId={voiceNote.id}
 					currentUserId={loggedInUserId}
-					onClose={() => setShowCommentPopup(false)}
+					onClose={handleCloseCommentPopup}
 					onCommentAdded={handleCommentAdded}
 				/>
 			</>
@@ -1147,7 +1149,7 @@ export function VoiceNoteCard({
 				visible={showCommentPopup}
 				voiceNoteId={voiceNote.id}
 				currentUserId={loggedInUserId}
-				onClose={() => setShowCommentPopup(false)}
+				onClose={handleCloseCommentPopup}
 				onCommentAdded={handleCommentAdded}
 			/>
 		</>

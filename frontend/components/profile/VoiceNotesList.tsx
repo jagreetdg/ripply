@@ -404,6 +404,9 @@ export function VoiceNotesList({
 							const isRepost =
 								(isSharedList || showRepostAttribution) && item.is_shared;
 
+							// Get the username of who reposted this voice note
+							const repostedByUsername = item.shared_by?.username || username;
+
 							return (
 								<View key={item.id} style={styles.cardContainer}>
 									{/* Show repost attribution if needed */}
@@ -411,7 +414,9 @@ export function VoiceNotesList({
 										<View style={styles.repostAttribution}>
 											<Text style={styles.repostText}>
 												<Text style={styles.repostIcon}>↻</Text> Reposted by{" "}
-												<Text style={styles.repostUsername}>@{username}</Text>
+												<Text style={styles.repostUsername}>
+													@{repostedByUsername}
+												</Text>
 											</Text>
 										</View>
 									)}
