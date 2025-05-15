@@ -9,6 +9,7 @@ import {
 	TouchableOpacity,
 	Animated,
 	RefreshControl,
+	TouchableWithoutFeedback,
 } from "react-native";
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
 import { VoiceNotesList } from "../../components/profile/VoiceNotesList";
@@ -29,6 +30,7 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUser } from "../../context/UserContext";
 import { FollowButton } from "../../components/profile/FollowButton";
+import { FollowersFollowingPopup } from "../../components/profile/FollowersFollowingPopup";
 
 interface UserProfile {
 	id: string;
@@ -101,6 +103,13 @@ export default function ProfileByUsernameScreen() {
 	const [sharedVoiceNotes, setSharedVoiceNotes] = useState<VoiceNote[]>([]);
 	const [loadingShared, setLoadingShared] = useState(false);
 	const [combinedVoiceNotes, setCombinedVoiceNotes] = useState<VoiceNote[]>([]);
+
+	// Replace the single popup state with separate states
+	const [showFollowersPopup, setShowFollowersPopup] = useState(false);
+	const [showFollowingPopup, setShowFollowingPopup] = useState(false);
+
+	// Add a ref for the ScrollView to enable scrolling to top programmatically
+	const scrollViewRef = useRef<Animated.ScrollView>(null);
 
 	// Handler for pull-to-refresh
 	const handleRefresh = async () => {
@@ -368,6 +377,23 @@ export default function ProfileByUsernameScreen() {
 		}
 	};
 
+	// Update handlers for showing followers and following popups
+	const handleFollowersPress = () => {
+		setShowFollowersPopup(true);
+	};
+
+	const handleFollowingPress = () => {
+		setShowFollowingPopup(true);
+	};
+
+	// Add a handler for the header click that scrolls to top
+	const handleHeaderPress = () => {
+		// Scroll to the top with animation
+		if (scrollViewRef.current) {
+			scrollViewRef.current.scrollTo({ y: 0, animated: true });
+		}
+	};
+
 	if (loading) {
 		return (
 			<View style={styles.loadingContainer}>
@@ -408,23 +434,33 @@ export default function ProfileByUsernameScreen() {
 					},
 				]}
 			>
-				{/* Status bar spacer inside the header */}
-				<View style={{ height: insets.top }} />
-				<ProfileHeader
-					userId={userProfile.id}
-					username={userProfile.username}
-					displayName={userProfile.display_name}
-					avatarUrl={userProfile.avatar_url}
-					coverPhotoUrl={userProfile.cover_photo_url}
-					bio={userProfile.bio || undefined}
-					isVerified={userProfile.is_verified}
-					isCollapsed={true}
-					postCount={voiceNotes.length}
-					isOwnProfile={isOwnProfile}
-				/>
+				{/* Add a touchable area over the header for scrolling to top */}
+				<TouchableOpacity
+					onPress={handleHeaderPress}
+					activeOpacity={0.7}
+					style={styles.headerTouchArea}
+				>
+					<View style={styles.headerContent}>
+						{/* Status bar spacer inside the header */}
+						<View style={{ height: insets.top }} />
+						<ProfileHeader
+							userId={userProfile.id}
+							username={userProfile.username}
+							displayName={userProfile.display_name}
+							avatarUrl={userProfile.avatar_url}
+							coverPhotoUrl={userProfile.cover_photo_url}
+							bio={userProfile.bio || undefined}
+							isVerified={userProfile.is_verified}
+							isCollapsed={true}
+							postCount={voiceNotes.length}
+							isOwnProfile={isOwnProfile}
+						/>
+					</View>
+				</TouchableOpacity>
 			</Animated.View>
 
 			<Animated.ScrollView
+				ref={scrollViewRef}
 				style={styles.scrollView}
 				onScroll={Animated.event(
 					[{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -460,7 +496,10 @@ export default function ProfileByUsernameScreen() {
 
 				{/* Stats bar */}
 				<View style={styles.statsContainer}>
-					<TouchableOpacity style={styles.statsItem}>
+					<TouchableOpacity
+						style={styles.statsItem}
+						onPress={handleFollowingPress}
+					>
 						<Text style={styles.statsNumber}>{followingCount}</Text>
 						<Text style={styles.statsLabel}>Following</Text>
 					</TouchableOpacity>
@@ -472,7 +511,10 @@ export default function ProfileByUsernameScreen() {
 						</Text>
 					</TouchableOpacity>
 					<View style={styles.statsDivider} />
-					<TouchableOpacity style={styles.statsItem}>
+					<TouchableOpacity
+						style={styles.statsItem}
+						onPress={handleFollowersPress}
+					>
 						<Text style={styles.statsNumber}>{followerCount}</Text>
 						<Text style={styles.statsLabel}>
 							{followerCount === 1 ? "Follower" : "Followers"}
@@ -539,6 +581,24 @@ export default function ProfileByUsernameScreen() {
 			>
 				<Feather name="mic" size={24} color="white" />
 			</TouchableOpacity>
+
+			{/* Add the followers/following popups */}
+			{userProfile && (
+				<>
+					<FollowersFollowingPopup
+						visible={showFollowersPopup}
+						userId={userProfile.id}
+						onClose={() => setShowFollowersPopup(false)}
+						initialTab="followers"
+					/>
+					<FollowersFollowingPopup
+						visible={showFollowingPopup}
+						userId={userProfile.id}
+						onClose={() => setShowFollowingPopup(false)}
+						initialTab="following"
+					/>
+				</>
+			)}
 		</View>
 	);
 }
@@ -671,5 +731,12 @@ const styles = StyleSheet.create({
 	emptyText: {
 		fontSize: 16,
 		color: "#888",
+	},
+	headerTouchArea: {
+		width: "100%",
+		cursor: "pointer", // Add cursor pointer for web
+	},
+	headerContent: {
+		position: "relative", // For positioning the indicator
 	},
 });

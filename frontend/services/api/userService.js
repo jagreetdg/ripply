@@ -109,8 +109,24 @@ export const unfollowUser = async (userId, followerId) => {
  * @returns {Promise<Array>} - List of followers
  */
 export const getUserFollowers = async (userId) => {
-	const response = await apiRequest(`${ENDPOINTS.USERS}/${userId}/followers`);
-	return response.data || [];
+	try {
+		console.log(`Fetching followers for user: ${userId}`);
+		const response = await apiRequest(`${ENDPOINTS.USERS}/${userId}/followers`);
+		console.log(`Followers API response:`, JSON.stringify(response));
+
+		// Make sure we always return an array
+		if (!response || (!response.data && !Array.isArray(response))) {
+			console.log("No followers data found, returning empty array");
+			return [];
+		}
+
+		const followers = response.data || response;
+		console.log(`Found ${followers.length} followers`);
+		return followers;
+	} catch (error) {
+		console.error("Error fetching followers:", error);
+		return [];
+	}
 };
 
 /**
@@ -120,15 +136,19 @@ export const getUserFollowers = async (userId) => {
  */
 export const getUserFollowing = async (userId) => {
 	try {
+		console.log(`Fetching following users for user: ${userId}`);
 		const response = await apiRequest(`${ENDPOINTS.USERS}/${userId}/following`);
 		console.log("getUserFollowing raw response:", JSON.stringify(response));
 
 		// Make sure we always return an array
-		return response && response.data
-			? response.data
-			: Array.isArray(response)
-			? response
-			: [];
+		if (!response || (!response.data && !Array.isArray(response))) {
+			console.log("No following data found, returning empty array");
+			return [];
+		}
+
+		const following = response.data || response;
+		console.log(`Found ${following.length} following users`);
+		return following;
 	} catch (error) {
 		console.error("Error fetching following:", error);
 		return [];
@@ -342,4 +362,93 @@ export const getUserSharedVoiceNotes = async (userId) => {
 		// Make sure shared_at exists
 		shared_at: note.shared_at || new Date().toISOString(),
 	}));
+};
+
+/**
+ * For development/debugging: Check the database schema for the follows table
+ * @param {string} userId - User ID to test with
+ * @returns {Promise<Object>} - Debug information
+ */
+export const debugFollowsSchema = async (userId) => {
+	try {
+		console.log(`DEBUG: Checking follows schema for user ${userId}`);
+
+		// Collect debug information
+		const debugInfo = {
+			user: userId,
+			followersData: null,
+			followingData: null,
+			followerCount: null,
+			followingCount: null,
+			errors: [],
+		};
+
+		// Test 1: Get followers
+		try {
+			const followers = await getUserFollowers(userId);
+			debugInfo.followersData = followers.slice(0, 2); // Just take first 2 to not clutter logs
+			debugInfo.followersCount = followers.length;
+
+			// Check the structure of the first follower
+			if (followers.length > 0) {
+				const firstFollower = followers[0];
+				debugInfo.followerStructure = {
+					has_follower_id: "follower_id" in firstFollower,
+					has_followee_id: "followee_id" in firstFollower,
+					has_following_id: "following_id" in firstFollower,
+					has_users: "users" in firstFollower,
+					user_data: firstFollower.users
+						? Object.keys(firstFollower.users)
+						: null,
+				};
+			}
+		} catch (error) {
+			console.error("DEBUG followers error:", error);
+			debugInfo.errors.push({ type: "followers", error: String(error) });
+		}
+
+		// Test 2: Get following
+		try {
+			const following = await getUserFollowing(userId);
+			debugInfo.followingData = following.slice(0, 2); // Just take first 2
+			debugInfo.followingCount = following.length;
+
+			// Check the structure of the first followed user
+			if (following.length > 0) {
+				const firstFollowing = following[0];
+				debugInfo.followingStructure = {
+					has_follower_id: "follower_id" in firstFollowing,
+					has_followee_id: "followee_id" in firstFollowing,
+					has_following_id: "following_id" in firstFollowing,
+					has_users: "users" in firstFollowing,
+					user_data: firstFollowing.users
+						? Object.keys(firstFollowing.users)
+						: null,
+				};
+			}
+		} catch (error) {
+			console.error("DEBUG following error:", error);
+			debugInfo.errors.push({ type: "following", error: String(error) });
+		}
+
+		// Test 3: Get counts directly
+		try {
+			const followerCount = await getFollowerCount(userId);
+			const followingCount = await getFollowingCount(userId);
+			debugInfo.followerCount = followerCount;
+			debugInfo.followingCount = followingCount;
+		} catch (error) {
+			console.error("DEBUG counts error:", error);
+			debugInfo.errors.push({ type: "counts", error: String(error) });
+		}
+
+		console.log(
+			"DEBUG follows schema results:",
+			JSON.stringify(debugInfo, null, 2)
+		);
+		return debugInfo;
+	} catch (error) {
+		console.error("DEBUG schema test error:", error);
+		return { error: String(error) };
+	}
 };

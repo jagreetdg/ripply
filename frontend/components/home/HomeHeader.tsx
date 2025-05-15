@@ -5,7 +5,11 @@ import { useRouter } from "expo-router";
 import { useUser } from "../../context/UserContext";
 import DefaultAvatar from "../../components/DefaultAvatar";
 
-export function HomeHeader() {
+interface HomeHeaderProps {
+	onLogoPress?: () => void;
+}
+
+export function HomeHeader({ onLogoPress }: HomeHeaderProps) {
 	const router = useRouter();
 	const { user, loading } = useUser();
 
@@ -43,9 +47,13 @@ export function HomeHeader() {
 					)}
 				</TouchableOpacity>
 
-				<View style={styles.logoContainer}>
+				<TouchableOpacity
+					style={styles.logoContainer}
+					onPress={onLogoPress}
+					activeOpacity={0.7}
+				>
 					<Text style={styles.logoText}>Ripply</Text>
-				</View>
+				</TouchableOpacity>
 
 				<TouchableOpacity
 					style={styles.notificationButton}

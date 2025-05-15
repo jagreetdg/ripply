@@ -47,6 +47,13 @@ export default function HomeScreen() {
 	console.log("[DEBUG] Home - Component rendering");
 	const scrollY = useRef(new Animated.Value(0)).current;
 	const [refreshing, setRefreshing] = useState(false);
+	// Add ScrollView reference
+	const scrollViewRef = useRef<Animated.ScrollView>(null);
+
+	// Scroll to top function to pass to the header
+	const scrollToTop = () => {
+		scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+	};
 
 	// Effect to track mounting/unmounting
 	useEffect(() => {
@@ -233,11 +240,12 @@ export default function HomeScreen() {
 			>
 				{/* Status bar spacer inside the header */}
 				{Platform.OS === "ios" && <View style={{ height: insets.top }} />}
-				<HomeHeader />
+				<HomeHeader onLogoPress={scrollToTop} />
 			</Animated.View>
 
 			{/* Scrollable content */}
 			<Animated.ScrollView
+				ref={scrollViewRef}
 				style={styles.scrollView}
 				contentContainerStyle={[
 					styles.scrollContent,
