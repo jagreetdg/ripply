@@ -334,26 +334,12 @@ export const getUserSharedVoiceNotes = async (userId) => {
 	// Extract just the voice notes array from the response
 	const voiceNotes = response.data || [];
 
-	// Get the user data to attach to each voice note
-	try {
-		const userData = await getUserProfile(userId);
-
-		// Return voice notes, preserving original creator info
-		return voiceNotes.map((note) => {
-			// Make sure note has the is_shared flag
-			return {
-				...note,
-				is_shared: true,
-				shared_by: {
-					id: userData.id,
-					username: userData.username,
-					display_name: userData.display_name,
-					avatar_url: userData.avatar_url,
-				},
-			};
-		});
-	} catch (error) {
-		console.error("Error enhancing shared voice notes with user data:", error);
-		return voiceNotes;
-	}
+	// The backend now provides complete shared_by objects, so we can just ensure
+	// all notes have the is_shared flag set to true and return them
+	return voiceNotes.map((note) => ({
+		...note,
+		is_shared: true,
+		// Make sure shared_at exists
+		shared_at: note.shared_at || new Date().toISOString(),
+	}));
 };

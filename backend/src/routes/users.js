@@ -4,154 +4,154 @@ const supabase = require("../config/supabase");
 
 // Get user profile
 router.get("/:userId", async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    // First check if the user exists without using .single()
-    const { data, error } = await supabase
+	try {
+		const { userId } = req.params;
+
+		// First check if the user exists without using .single()
+		const { data, error } = await supabase
 			.from("users")
 			.select("*")
 			.eq("id", userId);
-    
-    if (error) throw error;
-    
-    if (!data || data.length === 0) {
-      console.log(`User not found with ID: ${userId}`);
+
+		if (error) throw error;
+
+		if (!data || data.length === 0) {
+			console.log(`User not found with ID: ${userId}`);
 			return res.status(404).json({ message: "User not found" });
-    }
-    
-    // Return the first user found (should be only one)
-    res.status(200).json(data[0]);
-  } catch (error) {
+		}
+
+		// Return the first user found (should be only one)
+		res.status(200).json(data[0]);
+	} catch (error) {
 		console.error("Error fetching user:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-  }
+	}
 });
 
 // Update user profile
 router.put("/:userId", async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const updates = req.body;
-    
-    // Remove any sensitive fields that shouldn't be updated directly
-    delete updates.id;
-    delete updates.email;
-    delete updates.created_at;
-    
-    const { data, error } = await supabase
+	try {
+		const { userId } = req.params;
+		const updates = req.body;
+
+		// Remove any sensitive fields that shouldn't be updated directly
+		delete updates.id;
+		delete updates.email;
+		delete updates.created_at;
+
+		const { data, error } = await supabase
 			.from("users")
-      .update(updates)
+			.update(updates)
 			.eq("id", userId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    if (!data) {
+			.select()
+			.single();
+
+		if (error) throw error;
+
+		if (!data) {
 			return res.status(404).json({ message: "User not found" });
-    }
-    
-    res.status(200).json(data);
-  } catch (error) {
+		}
+
+		res.status(200).json(data);
+	} catch (error) {
 		console.error("Error updating user:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-  }
+	}
 });
 
 // Get user's followers
 router.get("/:userId/followers", async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    const { data, error } = await supabase
+	try {
+		const { userId } = req.params;
+
+		const { data, error } = await supabase
 			.from("follows")
 			.select("follower_id, users!follower_id(*)")
 			.eq("following_id", userId);
-    
-    if (error) throw error;
-    
-    res.status(200).json(data);
-  } catch (error) {
+
+		if (error) throw error;
+
+		res.status(200).json(data);
+	} catch (error) {
 		console.error("Error fetching followers:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-  }
+	}
 });
 
 // Get users that a user is following
 router.get("/:userId/following", async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    const { data, error } = await supabase
+	try {
+		const { userId } = req.params;
+
+		const { data, error } = await supabase
 			.from("follows")
 			.select("following_id, users!following_id(*)")
 			.eq("follower_id", userId);
-    
-    if (error) throw error;
-    
-    res.status(200).json(data);
-  } catch (error) {
+
+		if (error) throw error;
+
+		res.status(200).json(data);
+	} catch (error) {
 		console.error("Error fetching following:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-  }
+	}
 });
 
 // Follow a user
 router.post("/:userId/follow", async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { followerId } = req.body;
+	try {
+		const { userId } = req.params;
+		const { followerId } = req.body;
 
 		console.log(
 			`[DEBUG] Follow request: userId=${userId}, followerId=${followerId}`
 		);
-    
-    // Check if already following
-    const { data: existingFollow, error: checkError } = await supabase
+
+		// Check if already following
+		const { data: existingFollow, error: checkError } = await supabase
 			.from("follows")
 			.select("*")
 			.eq("follower_id", followerId)
 			.eq("following_id", userId)
-      .single();
-    
+			.single();
+
 		if (checkError && checkError.code !== "PGRST116") {
 			console.error("[ERROR] Error checking existing follow:", checkError);
 			throw checkError;
 		}
-    
-    if (existingFollow) {
+
+		if (existingFollow) {
 			console.log("[DEBUG] Already following this user");
 			return res.status(400).json({ message: "Already following this user" });
-    }
-    
-    // Create follow relationship
+		}
+
+		// Create follow relationship
 		console.log("[DEBUG] Creating new follow relationship");
-    const { data, error } = await supabase
+		const { data, error } = await supabase
 			.from("follows")
-      .insert([{ follower_id: followerId, following_id: userId }])
-      .select()
-      .single();
-    
+			.insert([{ follower_id: followerId, following_id: userId }])
+			.select()
+			.single();
+
 		if (error) {
 			console.error("[ERROR] Error inserting follow:", error);
 			throw error;
 		}
-    
+
 		console.log("[DEBUG] Follow relationship created successfully:", data);
-    res.status(201).json(data);
-  } catch (error) {
+		res.status(201).json(data);
+	} catch (error) {
 		console.error("Error following user:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-  }
+	}
 });
 
 // Unfollow a user
 router.post("/:userId/unfollow", async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { followerId } = req.body;
-    
+	try {
+		const { userId } = req.params;
+		const { followerId } = req.body;
+
 		console.log(
 			`[DEBUG] Unfollow request: userId=${userId}, followerId=${followerId}`
 		);
@@ -179,33 +179,33 @@ router.post("/:userId/unfollow", async (req, res) => {
 		}
 
 		console.log("[DEBUG] Deleting follow relationship");
-    const { error } = await supabase
+		const { error } = await supabase
 			.from("follows")
-      .delete()
+			.delete()
 			.eq("follower_id", followerId)
 			.eq("following_id", userId);
-    
+
 		if (error) {
 			console.error("[ERROR] Error deleting follow:", error);
 			throw error;
 		}
-    
+
 		console.log("[DEBUG] Follow relationship deleted successfully");
 		res.status(200).json({ message: "Unfollowed successfully" });
-  } catch (error) {
+	} catch (error) {
 		console.error("Error unfollowing user:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-  }
+	}
 });
 
 // Get voice notes by user
 router.get("/:userId/voice-notes", async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
-    const offset = (page - 1) * limit;
-    
-    const { data, error, count } = await supabase
+	try {
+		const { userId } = req.params;
+		const { page = 1, limit = 10 } = req.query;
+		const offset = (page - 1) * limit;
+
+		const { data, error, count } = await supabase
 			.from("voice_notes")
 			.select(
 				`
@@ -219,156 +219,156 @@ router.get("/:userId/voice-notes", async (req, res) => {
 			)
 			.eq("user_id", userId)
 			.order("created_at", { ascending: false })
-      .range(offset, offset + parseInt(limit) - 1);
-    
-    if (error) throw error;
-    
-    // Process the data to format tags
+			.range(offset, offset + parseInt(limit) - 1);
+
+		if (error) throw error;
+
+		// Process the data to format tags
 		const processedData = data.map((note) => {
-      // Extract tags from the nested structure
+			// Extract tags from the nested structure
 			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
-      
-      return {
-        ...note,
+
+			return {
+				...note,
 				tags,
-      };
-    });
-    
-    res.status(200).json({
-      data: processedData,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+			};
+		});
+
+		res.status(200).json({
+			data: processedData,
+			pagination: {
+				page: parseInt(page),
+				limit: parseInt(limit),
 				total: count,
 			},
-    });
-  } catch (error) {
+		});
+	} catch (error) {
 		console.error("Error fetching user voice notes:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-  }
+	}
 });
 
 // Get user by username
 router.get("/username/:username", async (req, res) => {
-  try {
-    const { username } = req.params;
-    
-    // First check if the user exists without using .single()
-    const { data, error } = await supabase
+	try {
+		const { username } = req.params;
+
+		// First check if the user exists without using .single()
+		const { data, error } = await supabase
 			.from("users")
 			.select("*")
 			.eq("username", username);
-    
-    if (error) throw error;
-    
-    if (!data || data.length === 0) {
-      console.log(`User not found with username: ${username}`);
+
+		if (error) throw error;
+
+		if (!data || data.length === 0) {
+			console.log(`User not found with username: ${username}`);
 			return res.status(404).json({ message: "User not found" });
-    }
-    
-    // Return the first user found (should be only one)
-    res.status(200).json(data[0]);
-  } catch (error) {
+		}
+
+		// Return the first user found (should be only one)
+		res.status(200).json(data[0]);
+	} catch (error) {
 		console.error("Error fetching user by username:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-  }
+	}
 });
 
 // Update user verification status
 router.patch("/:userId/verify", async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { isVerified } = req.body;
-    
-    if (isVerified === undefined) {
+	try {
+		const { userId } = req.params;
+		const { isVerified } = req.body;
+
+		if (isVerified === undefined) {
 			return res.status(400).json({ message: "isVerified field is required" });
-    }
-    
-    // Check if user exists
-    const { data: userData, error: userError } = await supabase
+		}
+
+		// Check if user exists
+		const { data: userData, error: userError } = await supabase
 			.from("users")
 			.select("id")
 			.eq("id", userId)
-      .single();
-    
-    if (userError || !userData) {
+			.single();
+
+		if (userError || !userData) {
 			return res.status(404).json({ message: "User not found" });
-    }
-    
-    // Update user verification status
-    const { data, error } = await supabase
+		}
+
+		// Update user verification status
+		const { data, error } = await supabase
 			.from("users")
-      .update({ 
-        is_verified: isVerified,
+			.update({
+				is_verified: isVerified,
 				updated_at: new Date().toISOString(),
-      })
+			})
 			.eq("id", userId)
-      .select()
-      .single();
-    
-    if (error) {
+			.select()
+			.single();
+
+		if (error) {
 			if (error.code === "42703") {
-        // Column doesn't exist yet
-        return res.status(400).json({ 
+				// Column doesn't exist yet
+				return res.status(400).json({
 					message: "is_verified column does not exist",
 					note: "Please run the SQL script in the Supabase SQL Editor to add the necessary columns",
-        });
-      }
-      throw error;
-    }
-    
-    res.status(200).json(data);
-  } catch (error) {
+				});
+			}
+			throw error;
+		}
+
+		res.status(200).json(data);
+	} catch (error) {
 		console.error("Error updating user verification status:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-  }
+	}
 });
 
 // Update user profile photos
 router.patch("/:userId/photos", async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { photos } = req.body;
-    
-    if (!photos || !Array.isArray(photos)) {
+	try {
+		const { userId } = req.params;
+		const { photos } = req.body;
+
+		if (!photos || !Array.isArray(photos)) {
 			return res.status(400).json({ message: "photos array is required" });
-    }
-    
-    // Check if user exists
-    const { data: userData, error: userError } = await supabase
+		}
+
+		// Check if user exists
+		const { data: userData, error: userError } = await supabase
 			.from("users")
 			.select("id")
 			.eq("id", userId)
-      .single();
-    
-    if (userError || !userData) {
+			.single();
+
+		if (userError || !userData) {
 			return res.status(404).json({ message: "User not found" });
-    }
-    
-    // Update user profile photos
-    const { data, error } = await supabase
+		}
+
+		// Update user profile photos
+		const { data, error } = await supabase
 			.from("users")
-      .update({ 
-        profile_photos: photos,
+			.update({
+				profile_photos: photos,
 				updated_at: new Date().toISOString(),
-      })
+			})
 			.eq("id", userId)
-      .select()
-      .single();
-    
-    if (error) {
+			.select()
+			.single();
+
+		if (error) {
 			if (error.code === "42703") {
-        // Column doesn't exist yet
-        return res.status(400).json({ 
+				// Column doesn't exist yet
+				return res.status(400).json({
 					message: "profile_photos column does not exist",
 					note: "Please run the SQL script in the Supabase SQL Editor to add the necessary columns",
-        });
-      }
-      throw error;
-    }
-    
-    res.status(200).json(data);
-  } catch (error) {
+				});
+			}
+			throw error;
+		}
+
+		res.status(200).json(data);
+	} catch (error) {
 		console.error("Error updating user profile photos:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
@@ -467,7 +467,7 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 		// First get all the voice notes that the user has shared
 		const { data: sharedData, error: sharedError } = await supabase
 			.from("voice_note_shares")
-			.select("voice_note_id, shared_at")
+			.select("voice_note_id, shared_at, user_id") // Include user_id
 			.eq("user_id", userId)
 			.order("shared_at", { ascending: false })
 			.range(offset, offset + parseInt(limit) - 1);
@@ -525,6 +525,15 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 
 		if (voiceNotesError) throw voiceNotesError;
 
+		// Get the user data for the sharer (userId)
+		const { data: sharerData, error: sharerError } = await supabase
+			.from("users")
+			.select("id, username, display_name, avatar_url")
+			.eq("id", userId)
+			.single();
+
+		if (sharerError) throw sharerError;
+
 		// Process the data to format tags and mark as shared
 		const processedData = voiceNotesData.map((note) => {
 			// Extract tags from the nested structure
@@ -540,7 +549,12 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 				tags,
 				is_shared: true,
 				shared_at: shareInfo ? shareInfo.shared_at : null,
-				shared_by: userId,
+				shared_by: {
+					id: sharerData.id,
+					username: sharerData.username,
+					display_name: sharerData.display_name,
+					avatar_url: sharerData.avatar_url,
+				},
 			};
 		});
 
@@ -560,7 +574,7 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 	} catch (error) {
 		console.error("Error fetching user shared voice notes:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-  }
+	}
 });
 
 module.exports = router;

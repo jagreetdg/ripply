@@ -404,8 +404,12 @@ export function VoiceNotesList({
 							const isRepost =
 								(isSharedList || showRepostAttribution) && item.is_shared;
 
-							// Get the username of who reposted this voice note
-							const repostedByUsername = item.shared_by?.username || username;
+							// Get the username of who reposted this voice note - use a simple approach
+							// that falls back to the username prop if shared_by is missing or not an object
+							const repostedByUsername =
+								typeof item.shared_by === "object" && item.shared_by?.username
+									? item.shared_by.username
+									: username;
 
 							return (
 								<View key={item.id} style={styles.cardContainer}>
