@@ -3,6 +3,101 @@ const router = express.Router();
 const supabase = require("../config/supabase");
 const uuidv4 = require("uuid").v4;
 
+// Search for voice notes by title or tags
+router.get("/search", async (req, res) => {
+	try {
+		const { term, searchType } = req.query;
+		const { page = 1, limit = 20 } = req.query;
+		const offset = (page - 1) * limit;
+
+		console.log(
+			`[DEBUG] Searching for voice notes with term: "${term}", searchType: ${
+				searchType || "all"
+			}`
+		);
+
+		if (!term || term.trim() === "") {
+			return res.status(200).json([]);
+		}
+
+		const searchTerm = `%${term.toLowerCase()}%`;
+		let query = supabase.from("voice_notes").select(
+			`
+			*,
+			users (id, username, display_name, avatar_url, is_verified),
+			likes:voice_note_likes (count),
+			comments:voice_note_comments (count),
+			plays:voice_note_plays (count),
+			tags:voice_note_tags (tag_name)
+		`,
+			{ count: "exact" }
+		);
+
+		// If searchType is 'tag', only search in tags
+		if (searchType === "tag") {
+			console.log(`[DEBUG] Searching only in tags for "${term}"`);
+
+			// First get voice notes IDs that have matching tags
+			const { data: tagMatches, error: tagError } = await supabase
+				.from("voice_note_tags")
+				.select("voice_note_id")
+				.ilike("tag_name", searchTerm);
+
+			if (tagError) {
+				console.error("[ERROR] Error searching tags:", tagError);
+				throw tagError;
+			}
+
+			if (!tagMatches || tagMatches.length === 0) {
+				console.log(`[DEBUG] No tags found matching "${term}"`);
+				return res.status(200).json([]);
+			}
+
+			console.log(
+				`[DEBUG] Found ${tagMatches.length} tag matches for "${term}"`
+			);
+
+			// Get the voice note IDs from the tag matches
+			const voiceNoteIds = tagMatches.map((match) => match.voice_note_id);
+
+			// Filter the voice notes by these IDs
+			query = query.in("id", voiceNoteIds);
+		} else {
+			// Search in title by default
+			query = query.ilike("title", searchTerm);
+		}
+
+		// Add pagination and execute the query
+		const { data, error, count } = await query
+			.order("created_at", { ascending: false })
+			.range(offset, offset + parseInt(limit) - 1);
+
+		if (error) {
+			console.error("[ERROR] Error searching voice notes:", error);
+			throw error;
+		}
+
+		// Process the data to format tags properly
+		const processedData = data.map((note) => {
+			// Extract tags from the nested structure
+			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
+			return {
+				...note,
+				tags,
+			};
+		});
+
+		console.log(
+			`[DEBUG] Found ${processedData.length} voice notes matching "${term}"`
+		);
+		res.status(200).json(processedData);
+	} catch (error) {
+		console.error("Error searching voice notes:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
+
 // Get personalized feed for a user
 router.get("/feed/:userId", async (req, res) => {
 	try {
@@ -853,101 +948,6 @@ router.get("/:id/shares/check", async (req, res) => {
 		res.status(200).json({ isShared });
 	} catch (error) {
 		console.error("Error checking share status:", error);
-		res.status(500).json({ message: "Server error", error: error.message });
-	}
-});
-
-// Search for voice notes by title or tags
-router.get("/search", async (req, res) => {
-	try {
-		const { term, searchType } = req.query;
-		const { page = 1, limit = 20 } = req.query;
-		const offset = (page - 1) * limit;
-
-		console.log(
-			`[DEBUG] Searching for voice notes with term: "${term}", searchType: ${
-				searchType || "all"
-			}`
-		);
-
-		if (!term || term.trim() === "") {
-			return res.status(200).json([]);
-		}
-
-		const searchTerm = `%${term.toLowerCase()}%`;
-		let query = supabase.from("voice_notes").select(
-			`
-			*,
-			users (id, username, display_name, avatar_url, is_verified),
-			likes:voice_note_likes (count),
-			comments:voice_note_comments (count),
-			plays:voice_note_plays (count),
-			tags:voice_note_tags (tag_name)
-		`,
-			{ count: "exact" }
-		);
-
-		// If searchType is 'tag', only search in tags
-		if (searchType === "tag") {
-			console.log(`[DEBUG] Searching only in tags for "${term}"`);
-
-			// First get voice notes IDs that have matching tags
-			const { data: tagMatches, error: tagError } = await supabase
-				.from("voice_note_tags")
-				.select("voice_note_id")
-				.ilike("tag_name", searchTerm);
-
-			if (tagError) {
-				console.error("[ERROR] Error searching tags:", tagError);
-				throw tagError;
-			}
-
-			if (!tagMatches || tagMatches.length === 0) {
-				console.log(`[DEBUG] No tags found matching "${term}"`);
-				return res.status(200).json([]);
-			}
-
-			console.log(
-				`[DEBUG] Found ${tagMatches.length} tag matches for "${term}"`
-			);
-
-			// Get the voice note IDs from the tag matches
-			const voiceNoteIds = tagMatches.map((match) => match.voice_note_id);
-
-			// Filter the voice notes by these IDs
-			query = query.in("id", voiceNoteIds);
-		} else {
-			// Search in title by default
-			query = query.ilike("title", searchTerm);
-		}
-
-		// Add pagination and execute the query
-		const { data, error, count } = await query
-			.order("created_at", { ascending: false })
-			.range(offset, offset + parseInt(limit) - 1);
-
-		if (error) {
-			console.error("[ERROR] Error searching voice notes:", error);
-			throw error;
-		}
-
-		// Process the data to format tags properly
-		const processedData = data.map((note) => {
-			// Extract tags from the nested structure
-			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
-
-			return {
-				...note,
-				tags,
-			};
-		});
-
-		console.log(
-			`[DEBUG] Found ${processedData.length} voice notes matching "${term}"`
-		);
-		res.status(200).json(processedData);
-	} catch (error) {
-		console.error("Error searching voice notes:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 });
