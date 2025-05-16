@@ -967,4 +967,239 @@ router.get("/:id/shares/check", async (req, res) => {
 	}
 });
 
+// DIAGNOSTIC: Check a user's follows data
+router.get("/diagnostic/follows/:userId", async (req, res) => {
+	try {
+		const { userId } = req.params;
+
+		console.log(`[DIAGNOSTIC] Checking follow data for user: ${userId}`);
+
+		// Get users that this user follows
+		const { data: followingData, error: followingError } = await supabase
+			.from("follows")
+			.select(
+				"following_id, following:following_id(id, username, display_name)"
+			)
+			.eq("follower_id", userId);
+
+		if (followingError) {
+			console.error(
+				"[DIAGNOSTIC] Error fetching following data:",
+				followingError
+			);
+			throw followingError;
+		}
+
+		// Get users that follow this user
+		const { data: followersData, error: followersError } = await supabase
+			.from("follows")
+			.select("follower_id, follower:follower_id(id, username, display_name)")
+			.eq("following_id", userId);
+
+		if (followersError) {
+			console.error(
+				"[DIAGNOSTIC] Error fetching followers data:",
+				followersError
+			);
+			throw followersError;
+		}
+
+		// Check if user exists
+		const { data: userData, error: userError } = await supabase
+			.from("users")
+			.select("id, username, display_name")
+			.eq("id", userId)
+			.single();
+
+		if (userError) {
+			console.error("[DIAGNOSTIC] Error fetching user data:", userError);
+			// Don't throw error, continue with diagnosis
+		}
+
+		// Format the following users
+		const following = followingData.map((follow) => ({
+			id: follow.following_id,
+			username: follow.following?.username || "unknown",
+			display_name: follow.following?.display_name || "Unknown User",
+		}));
+
+		// Format the followers
+		const followers = followersData.map((follow) => ({
+			id: follow.follower_id,
+			username: follow.follower?.username || "unknown",
+			display_name: follow.follower?.display_name || "Unknown User",
+		}));
+
+		// Return the diagnostic information
+		res.status(200).json({
+			userId,
+			userExists: !!userData,
+			userData: userData || null,
+			followsCount: following.length,
+			followersCount: followers.length,
+			follows: following,
+			followers: followers,
+		});
+	} catch (error) {
+		console.error("[DIAGNOSTIC] Error in diagnostic endpoint:", error);
+		res.status(500).json({
+			message: "Error running diagnostics",
+			error: error.message,
+			stack: error.stack,
+		});
+	}
+});
+
+// DIAGNOSTIC: Get trace of personalized feed
+router.get("/diagnostic/feed/:userId", async (req, res) => {
+	try {
+		const { userId } = req.params;
+		console.log(`[DIAGNOSTIC] Running feed trace for user: ${userId}`);
+
+		// Step 1: Get the users this person follows
+		const { data: followingData, error: followingError } = await supabase
+			.from("follows")
+			.select("following_id")
+			.eq("follower_id", userId);
+
+		if (followingError) {
+			console.error(
+				"[DIAGNOSTIC] Error fetching following data:",
+				followingError
+			);
+			return res.status(500).json({
+				message: "Error fetching following data",
+				error: followingError.message,
+			});
+		}
+
+		// Log users being followed
+		console.log(
+			`[DIAGNOSTIC] User ${userId} follows ${followingData?.length || 0} users`
+		);
+
+		// If not following anyone, return early
+		if (!followingData || followingData.length === 0) {
+			return res.status(200).json({
+				userId,
+				followsCount: 0,
+				message:
+					"User doesn't follow anyone, personalized feed should be empty",
+			});
+		}
+
+		// Extract user IDs being followed
+		const followingIds = followingData.map((follow) => follow.following_id);
+		console.log(`[DIAGNOSTIC] Following IDs: ${followingIds.join(", ")}`);
+
+		// Get all the posts - not filtered by following
+		const { data: allPosts, error: allPostsError } = await supabase
+			.from("voice_notes")
+			.select(
+				`
+				id, 
+				title, 
+				user_id,
+				users:user_id (id, username, display_name)
+			`
+			)
+			.order("created_at", { ascending: false })
+			.limit(50);
+
+		if (allPostsError) {
+			console.error("[DIAGNOSTIC] Error fetching all posts:", allPostsError);
+			return res.status(500).json({
+				message: "Error fetching all posts",
+				error: allPostsError.message,
+			});
+		}
+
+		console.log(
+			`[DIAGNOSTIC] Found ${allPosts?.length || 0} total posts in the database`
+		);
+
+		// Get the same posts but with following filter applied
+		const { data: filteredPosts, error: filteredError } = await supabase
+			.from("voice_notes")
+			.select(
+				`
+				id, 
+				title, 
+				user_id,
+				users:user_id (id, username, display_name)
+			`
+			)
+			.in("user_id", followingIds)
+			.order("created_at", { ascending: false })
+			.limit(50);
+
+		if (filteredError) {
+			console.error(
+				"[DIAGNOSTIC] Error fetching filtered posts:",
+				filteredError
+			);
+			return res.status(500).json({
+				message: "Error fetching filtered posts",
+				error: filteredError.message,
+			});
+		}
+
+		console.log(
+			`[DIAGNOSTIC] Found ${
+				filteredPosts?.length || 0
+			} posts from followed users`
+		);
+
+		// Get the post creator IDs for analysis
+		const allPostCreators = [...new Set(allPosts.map((post) => post.user_id))];
+		const followedPostCreators = [
+			...new Set(filteredPosts.map((post) => post.user_id)),
+		];
+
+		// Build diagnostics data
+		const diagnosticData = {
+			userId,
+			followsCount: followingIds.length,
+			totalPostsCount: allPosts.length,
+			filteredPostsCount: filteredPosts.length,
+			filteredPostCreators: followedPostCreators,
+			allPostsFromFollowedUsers: allPosts.filter((post) =>
+				followingIds.includes(post.user_id)
+			).length,
+			actualSQLResultsMatchingFilter: filteredPosts.length,
+			postsGroups: {
+				totalUniqueCreators: allPostCreators.length,
+				followedCreators: followedPostCreators.length,
+				unfollowedCreatorsWithPosts: allPostCreators.filter(
+					(id) => !followingIds.includes(id)
+				).length,
+			},
+			samplePosts: {
+				allPosts: allPosts.slice(0, 5).map((post) => ({
+					id: post.id,
+					title: post.title,
+					user_id: post.user_id,
+					username: post.users?.username,
+					isFromFollowed: followingIds.includes(post.user_id),
+				})),
+				filteredPosts: filteredPosts.slice(0, 5).map((post) => ({
+					id: post.id,
+					title: post.title,
+					user_id: post.user_id,
+					username: post.users?.username,
+					isFromFollowed: followingIds.includes(post.user_id),
+				})),
+			},
+		};
+
+		res.status(200).json(diagnosticData);
+	} catch (error) {
+		console.error("[DIAGNOSTIC] Error in feed trace endpoint:", error);
+		res.status(500).json({
+			message: "Error running feed trace",
+			error: error.message,
+		});
+	}
+});
+
 module.exports = router;

@@ -10,32 +10,67 @@ import { ENDPOINTS, apiRequest } from "./config";
  * @returns {Promise<Array>} - List of voice notes from followed users
  */
 export const getPersonalizedFeed = async (userId, params = {}) => {
-	console.log("Fetching personalized feed for user:", userId);
+	console.log("[DIAGNOSTIC] Starting getPersonalizedFeed for user:", userId);
 	const queryString = new URLSearchParams(params).toString();
 	const endpoint = queryString
 		? `${ENDPOINTS.VOICE_NOTES}/feed/${userId}?${queryString}`
 		: `${ENDPOINTS.VOICE_NOTES}/feed/${userId}`;
+	console.log("[DIAGNOSTIC] Endpoint being called:", endpoint);
 
 	try {
 		const response = await apiRequest(endpoint);
 
-		// Log the structure to debug
-		console.log("Response type:", typeof response, Array.isArray(response));
+		// Log the entire response structure for diagnosis
+		console.log("[DIAGNOSTIC] Response type:", typeof response);
+		console.log("[DIAGNOSTIC] Response is array:", Array.isArray(response));
+		console.log("[DIAGNOSTIC] Response keys:", Object.keys(response || {}));
+		if (response && response.data) {
+			console.log("[DIAGNOSTIC] Response.data type:", typeof response.data);
+			console.log(
+				"[DIAGNOSTIC] Response.data is array:",
+				Array.isArray(response.data)
+			);
+			console.log(
+				"[DIAGNOSTIC] Response.data length:",
+				Array.isArray(response.data) ? response.data.length : "N/A"
+			);
+		}
+
+		// If response contains data, log the first item to see structure
+		if (Array.isArray(response) && response.length > 0) {
+			console.log("[DIAGNOSTIC] First item user_id:", response[0].user_id);
+			// Extract unique user IDs to see which users' posts we're getting
+			const userIds = [...new Set(response.map((item) => item.user_id))];
+			console.log("[DIAGNOSTIC] Unique user IDs in feed:", userIds);
+		} else if (
+			response &&
+			Array.isArray(response.data) &&
+			response.data.length > 0
+		) {
+			console.log("[DIAGNOSTIC] First item user_id:", response.data[0].user_id);
+			// Extract unique user IDs to see which users' posts we're getting
+			const userIds = [...new Set(response.data.map((item) => item.user_id))];
+			console.log("[DIAGNOSTIC] Unique user IDs in feed:", userIds);
+		}
 
 		// The backend now returns a direct array of voice notes
 		if (Array.isArray(response)) {
+			console.log(`[DIAGNOSTIC] Returning array of ${response.length} items`);
 			return response;
 		} else if (response && Array.isArray(response.data)) {
+			console.log(
+				`[DIAGNOSTIC] Returning array of ${response.data.length} items from response.data`
+			);
 			return response.data;
 		} else {
 			console.log(
-				"Unexpected response format for personalized feed:",
+				"[DIAGNOSTIC] Unexpected response format for personalized feed:",
 				response
 			);
 			return [];
 		}
 	} catch (error) {
-		console.error("Error fetching personalized feed:", error);
+		console.error("[DIAGNOSTIC] Error in getPersonalizedFeed:", error);
 		return [];
 	}
 };

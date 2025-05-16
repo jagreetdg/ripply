@@ -22,6 +22,7 @@ import {
 	getPersonalizedFeed,
 	recordPlay,
 } from "../../services/api/voiceNoteService";
+import { ENDPOINTS, apiRequest } from "../../services/api/config";
 
 const HEADER_HEIGHT = 60; // Header height
 
@@ -57,6 +58,8 @@ export default function HomeScreen() {
 	// Add ScrollView reference with any type to allow scrollTo method
 	const scrollViewRef = useRef<any>(null);
 	const { user: currentUser } = useUser();
+	const [diagnosticData, setDiagnosticData] = useState<any>(null);
+	const [runningDiagnostics, setRunningDiagnostics] = useState(false);
 
 	// Scroll to top function to pass to the header
 	const scrollToTop = () => {
@@ -124,11 +127,122 @@ export default function HomeScreen() {
 		{ useNativeDriver: true }
 	);
 
+	// Diagnostic function to check follow data
+	const runFollowDiagnostics = async () => {
+		if (!currentUser?.id) {
+			console.log("[DIAGNOSTIC] Cannot run diagnostics, no user logged in");
+			return;
+		}
+
+		try {
+			setRunningDiagnostics(true);
+			console.log(
+				"[DIAGNOSTIC] Running follow diagnostics for user:",
+				currentUser.id
+			);
+
+			// Call the diagnostic endpoints
+			const followResponse = await apiRequest(
+				`${ENDPOINTS.VOICE_NOTES}/diagnostic/follows/${currentUser.id}`
+			);
+			const feedTraceResponse = await apiRequest(
+				`${ENDPOINTS.VOICE_NOTES}/diagnostic/feed/${currentUser.id}`
+			);
+
+			// Check if user is following anyone
+			const isFollowingAnyone = followResponse?.follows?.length > 0;
+			console.log(
+				`[DIAGNOSTIC] User is following anyone: ${isFollowingAnyone}`
+			);
+			console.log(
+				`[DIAGNOSTIC] User follows ${
+					followResponse?.follows?.length || 0
+				} users`
+			);
+
+			// Check if feed correctly filters by followed users
+			const totalPosts = feedTraceResponse?.totalPostsCount || 0;
+			const filteredPosts = feedTraceResponse?.filteredPostsCount || 0;
+			console.log(
+				`[DIAGNOSTIC] Total posts: ${totalPosts}, Filtered posts: ${filteredPosts}`
+			);
+
+			// Compile diagnostic data
+			const diagnoseResult = {
+				userCheck: {
+					userId: currentUser.id,
+					isLoggedIn: true,
+					username: currentUser.username,
+				},
+				followData: followResponse,
+				feedTrace: feedTraceResponse,
+				summary: {
+					isFollowingAnyone,
+					shouldHaveEmptyFeed: !isFollowingAnyone,
+					followingCount: followResponse?.follows?.length || 0,
+					postsAvailable: totalPosts,
+					postsFromFollowedUsers: filteredPosts,
+					potentialIssues: [] as string[],
+				},
+			};
+
+			// Identify potential issues
+			if (isFollowingAnyone && filteredPosts === 0) {
+				(diagnoseResult.summary.potentialIssues as string[]).push(
+					"User follows people but no posts from them are available"
+				);
+			}
+
+			if (!isFollowingAnyone && filteredPosts > 0) {
+				(diagnoseResult.summary.potentialIssues as string[]).push(
+					"User doesn't follow anyone but still gets filtered posts"
+				);
+			}
+
+			setDiagnosticData(diagnoseResult);
+			console.log(
+				"[DIAGNOSTIC] Completed diagnostics:",
+				JSON.stringify(diagnoseResult.summary)
+			);
+
+			return diagnoseResult;
+		} catch (error) {
+			console.error("[DIAGNOSTIC] Error running diagnostics:", error);
+		} finally {
+			setRunningDiagnostics(false);
+		}
+	};
+
+	// Add diagnostic trigger after component mounts
+	useEffect(() => {
+		// Wait a bit before running diagnostics
+		if (currentUser?.id) {
+			const timer = setTimeout(() => {
+				runFollowDiagnostics();
+			}, 2000);
+
+			return () => clearTimeout(timer);
+		}
+	}, [currentUser]);
+
 	// Fetch voice notes from the API
 	const fetchVoiceNotes = useCallback(async () => {
 		setLoading(true);
 		try {
 			let data;
+
+			// If diagnostics were run, log the findings
+			if (diagnosticData) {
+				console.log("[DIAGNOSTIC] Fetching with diagnostic data available");
+				console.log(
+					"[DIAGNOSTIC] Following count:",
+					diagnosticData.summary.followingCount
+				);
+				console.log(
+					"[DIAGNOSTIC] Should have empty feed:",
+					diagnosticData.summary.shouldHaveEmptyFeed
+				);
+			}
 
 			// Check if user is logged in
 			if (currentUser?.id) {
@@ -153,6 +267,30 @@ export default function HomeScreen() {
 				setFeedItems([]);
 				setError("Invalid data format received from server");
 				return;
+			}
+
+			// If we have diagnostic data, validate if the posts are from followed users
+			if (diagnosticData && currentUser?.id && data.length > 0) {
+				const followingIds =
+					diagnosticData.followData?.follows?.map(
+						(f: { id: string }) => f.id
+					) || [];
+
+				// Check if any posts are from users not followed
+				const unfollowedPosts = data.filter(
+					(item) => !followingIds.includes(item.user_id)
+				);
+
+				if (unfollowedPosts.length > 0) {
+					console.error(
+						"[DIAGNOSTIC] CRITICAL ERROR: Found posts from unfollowed users!",
+						unfollowedPosts.map((p) => ({ id: p.id, user_id: p.user_id }))
+					);
+				} else {
+					console.log(
+						"[DIAGNOSTIC] All posts are from followed users, as expected"
+					);
+				}
 			}
 
 			// Transform backend data format to match our frontend component expectations
@@ -187,7 +325,7 @@ export default function HomeScreen() {
 			setLoading(false);
 			setRefreshing(false);
 		}
-	}, [currentUser]);
+	}, [currentUser, diagnosticData]);
 
 	// Initial data fetch
 	useEffect(() => {
