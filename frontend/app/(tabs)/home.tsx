@@ -50,6 +50,9 @@ export default function HomeScreen() {
 	// Add ScrollView reference
 	const scrollViewRef = useRef<Animated.ScrollView>(null);
 
+	// Animation values for feed items
+	const fadeAnim = useRef(new Animated.Value(0)).current;
+
 	// Scroll to top function to pass to the header
 	const scrollToTop = () => {
 		scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -58,6 +61,13 @@ export default function HomeScreen() {
 	// Effect to track mounting/unmounting
 	useEffect(() => {
 		console.log("[DEBUG] Home - Component mounted");
+
+		// Fade in the content
+		Animated.timing(fadeAnim, {
+			toValue: 1,
+			duration: 500,
+			useNativeDriver: true,
+		}).start();
 
 		// Get current URL in web environment
 		if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -284,10 +294,39 @@ export default function HomeScreen() {
 						</TouchableOpacity>
 					</View>
 				) : (
-					<View style={styles.feedContent}>
+					<Animated.View style={[styles.feedContent, { opacity: fadeAnim }]}>
 						{feedItems.length > 0 ? (
-							feedItems.map((item) => (
-								<View key={item.id} style={styles.feedItem}>
+							feedItems.map((item, index) => (
+								<Animated.View
+									key={item.id}
+									style={[
+										styles.feedItem,
+										{
+											transform: [
+												{
+													translateY: fadeAnim.interpolate({
+														inputRange: [0, 1],
+														outputRange: [50, 0],
+													}),
+												},
+											],
+											opacity: fadeAnim,
+										},
+									]}
+									// Add staggered appearance for items
+									onLayout={() => {
+										if (index === 0) {
+											Animated.sequence([
+												Animated.delay(index * 100),
+												Animated.spring(fadeAnim, {
+													toValue: 1,
+													useNativeDriver: true,
+													friction: 8,
+												}),
+											]).start();
+										}
+									}}
+								>
 									<VoiceNoteCard
 										key={item.id}
 										voiceNote={item.voiceNote}
@@ -303,21 +342,22 @@ export default function HomeScreen() {
 											handleUserProfilePress(item.userId, item.username)
 										}
 									/>
-								</View>
+								</Animated.View>
 							))
 						) : (
 							<View style={styles.emptyContainer}>
 								<Text style={styles.emptyText}>No voice notes found</Text>
 							</View>
 						)}
-					</View>
+					</Animated.View>
 				)}
 			</Animated.ScrollView>
 
-			{/* Floating Action Button */}
+			{/* Floating Action Button - right side only */}
 			<TouchableOpacity
 				style={[styles.fab, { bottom: insets.bottom + 16 }]}
 				onPress={handleNewVoiceNote}
+				activeOpacity={0.9}
 			>
 				<Feather name="mic" size={24} color="white" />
 			</TouchableOpacity>
@@ -336,7 +376,7 @@ const styles = StyleSheet.create({
 	},
 	container: {
 		flex: 1,
-		backgroundColor: "#FFFFFF", // White background to match the screenshot
+		backgroundColor: "#F8F8F8", // Slightly lighter background for better contrast
 	},
 	loadingContainer: {
 		flex: 1,
@@ -366,6 +406,11 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 		paddingVertical: 10,
 		borderRadius: 20,
+		elevation: 2,
+		shadowColor: "#000",
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.1,
+		shadowRadius: 2,
 	},
 	retryButtonText: {
 		color: "white",
@@ -384,7 +429,7 @@ const styles = StyleSheet.create({
 	},
 	scrollView: {
 		flex: 1,
-		backgroundColor: "#FFFFFF", // White background to match the screenshot
+		backgroundColor: "#F8F8F8", // Match container background
 	},
 	scrollContent: {
 		flexGrow: 1,
@@ -467,10 +512,21 @@ const styles = StyleSheet.create({
 		backgroundColor: "#FFFFFF",
 		paddingHorizontal: 16,
 		paddingVertical: 12,
+		borderRadius: 12,
+		marginHorizontal: 12,
+		marginVertical: 8,
+		shadowColor: "#000",
+		shadowOffset: {
+			width: 0,
+			height: 2,
+		},
+		shadowOpacity: 0.1,
+		shadowRadius: 3,
+		elevation: 2,
 	},
 	fab: {
 		position: "absolute",
-		right: 16,
+		right: 16, // Ensure it's only on the right side
 		width: 56,
 		height: 56,
 		borderRadius: 28,
