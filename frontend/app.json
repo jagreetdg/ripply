@@ -34,15 +34,6 @@
 		"developmentClient": {
 			"silentLaunch": true,
 			"hideDevTools": true
-		},
-		"extra": {
-			"eas": {
-				"projectId": "your-project-id"
-			},
-			"devTools": {
-				"enabled": false,
-				"visible": false
-			}
 		}
 	}
 }

@@ -105,28 +105,30 @@ router.get("/feed/:userId", async (req, res) => {
 		const { page = 1, limit = 10 } = req.query;
 		const offset = (page - 1) * limit;
 
+		console.log(`[DEBUG] Fetching personalized feed for user: ${userId}`);
+
 		// First get the list of users that the current user follows
 		const { data: followingData, error: followingError } = await supabase
 			.from("follows")
 			.select("following_id")
 			.eq("follower_id", userId);
 
-		if (followingError) throw followingError;
+		if (followingError) {
+			console.error("[ERROR] Error fetching following data:", followingError);
+			throw followingError;
+		}
 
 		// If the user doesn't follow anyone, return an empty array
 		if (!followingData || followingData.length === 0) {
-			return res.status(200).json({
-				data: [],
-				pagination: {
-					page: parseInt(page),
-					limit: parseInt(limit),
-					total: 0,
-				},
-			});
+			console.log(
+				`[DEBUG] User ${userId} doesn't follow anyone, returning empty feed`
+			);
+			return res.status(200).json([]);
 		}
 
 		// Extract the IDs of users being followed
 		const followingIds = followingData.map((follow) => follow.following_id);
+		console.log(`[DEBUG] User ${userId} follows ${followingIds.length} users`);
 
 		// Get voice notes from followed users
 		const { data: originalPosts, error: originalError } = await supabase
@@ -144,7 +146,10 @@ router.get("/feed/:userId", async (req, res) => {
 			.in("user_id", followingIds)
 			.order("created_at", { ascending: false });
 
-		if (originalError) throw originalError;
+		if (originalError) {
+			console.error("[ERROR] Error fetching original posts:", originalError);
+			throw originalError;
+		}
 
 		// Get shared voice notes from followed users
 		const { data: sharedData, error: sharedError } = await supabase
@@ -161,7 +166,10 @@ router.get("/feed/:userId", async (req, res) => {
 			.in("user_id", followingIds)
 			.order("shared_at", { ascending: false });
 
-		if (sharedError && sharedError.code !== "42P01") throw sharedError;
+		if (sharedError && sharedError.code !== "42P01") {
+			console.error("[ERROR] Error fetching shared posts:", sharedError);
+			throw sharedError;
+		}
 
 		let processedSharedPosts = [];
 
@@ -186,7 +194,13 @@ router.get("/feed/:userId", async (req, res) => {
 					)
 					.in("id", sharedVoiceNoteIds);
 
-			if (sharedVoiceNotesError) throw sharedVoiceNotesError;
+			if (sharedVoiceNotesError) {
+				console.error(
+					"[ERROR] Error fetching shared voice notes:",
+					sharedVoiceNotesError
+				);
+				throw sharedVoiceNotesError;
+			}
 
 			// Process each shared voice note to include sharer info
 			processedSharedPosts = sharedVoiceNotes.map((note) => {
@@ -237,14 +251,12 @@ router.get("/feed/:userId", async (req, res) => {
 		// Apply pagination after sorting
 		const paginatedPosts = allPosts.slice(offset, offset + parseInt(limit));
 
-		res.status(200).json({
-			data: paginatedPosts,
-			pagination: {
-				page: parseInt(page),
-				limit: parseInt(limit),
-				total: allPosts.length,
-			},
-		});
+		console.log(
+			`[DEBUG] Returning ${paginatedPosts.length} personalized feed items for user ${userId}`
+		);
+
+		// Return in the same format as the regular voice notes endpoint
+		res.status(200).json(paginatedPosts);
 	} catch (error) {
 		console.error("Error fetching personalized feed:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
@@ -256,6 +268,10 @@ router.get("/", async (req, res) => {
 	try {
 		const { page = 1, limit = 10, userId } = req.query;
 		const offset = (page - 1) * limit;
+
+		console.log(
+			`[DEBUG] Fetching all voice notes page ${page}, limit ${limit}`
+		);
 
 		let query = supabase
 			.from("voice_notes")
@@ -280,7 +296,10 @@ router.get("/", async (req, res) => {
 
 		const { data, error, count } = await query;
 
-		if (error) throw error;
+		if (error) {
+			console.error("[ERROR] Error fetching all voice notes:", error);
+			throw error;
+		}
 
 		// Process the data to format tags
 		const processedData = data.map((note) => {
@@ -293,14 +312,10 @@ router.get("/", async (req, res) => {
 			};
 		});
 
-		res.status(200).json({
-			data: processedData,
-			pagination: {
-				page: parseInt(page),
-				limit: parseInt(limit),
-				total: count,
-			},
-		});
+		console.log(`[DEBUG] Returning ${processedData.length} voice notes`);
+
+		// Return just the array of voice notes for consistency with the feed endpoint
+		res.status(200).json(processedData);
 	} catch (error) {
 		console.error("Error fetching voice notes:", error);
 		res.status(500).json({ message: "Server error", error: error.message });

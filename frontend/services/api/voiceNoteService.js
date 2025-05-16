@@ -15,37 +15,29 @@ export const getPersonalizedFeed = async (userId, params = {}) => {
 	const endpoint = queryString
 		? `${ENDPOINTS.VOICE_NOTES}/feed/${userId}?${queryString}`
 		: `${ENDPOINTS.VOICE_NOTES}/feed/${userId}`;
-	const response = await apiRequest(endpoint);
 
-	// Extract just the voice notes array from the response
-	const voiceNotes = response.data || [];
+	try {
+		const response = await apiRequest(endpoint);
 
-	// Log the data structure to help debug
-	console.log(
-		"Personalized feed data structure sample:",
-		voiceNotes.length > 0
-			? JSON.stringify(voiceNotes[0], null, 2)
-			: "No voice notes"
-	);
+		// Log the structure to debug
+		console.log("Response type:", typeof response, Array.isArray(response));
 
-	// Ensure each voice note has proper user data
-	return voiceNotes.map((note) => {
-		// If the note already has user data, use it
-		if (note.users && note.users.display_name) {
-			return note;
+		// The backend now returns a direct array of voice notes
+		if (Array.isArray(response)) {
+			return response;
+		} else if (response && Array.isArray(response.data)) {
+			return response.data;
+		} else {
+			console.log(
+				"Unexpected response format for personalized feed:",
+				response
+			);
+			return [];
 		}
-
-		// If not, add a placeholder
-		return {
-			...note,
-			users: note.users || {
-				id: note.user_id,
-				username: "user",
-				display_name: "User",
-				avatar_url: null,
-			},
-		};
-	});
+	} catch (error) {
+		console.error("Error fetching personalized feed:", error);
+		return [];
+	}
 };
 
 /**
@@ -59,38 +51,26 @@ export const getVoiceNotes = async (params = {}) => {
 	const endpoint = queryString
 		? `${ENDPOINTS.VOICE_NOTES}?${queryString}`
 		: ENDPOINTS.VOICE_NOTES;
-	const response = await apiRequest(endpoint);
 
-	// The backend returns data in a nested structure with pagination
-	// Extract just the voice notes array from the response
-	const voiceNotes = response.data || [];
+	try {
+		const response = await apiRequest(endpoint);
 
-	// Log the data structure to help debug
-	console.log(
-		"Voice notes data structure sample:",
-		voiceNotes.length > 0
-			? JSON.stringify(voiceNotes[0], null, 2)
-			: "No voice notes"
-	);
+		// Log the structure to debug
+		console.log("Response type:", typeof response, Array.isArray(response));
 
-	// Ensure each voice note has proper user data
-	return voiceNotes.map((note) => {
-		// If the note already has user data, use it
-		if (note.users && note.users.display_name) {
-			return note;
+		// The backend now returns a direct array of voice notes
+		if (Array.isArray(response)) {
+			return response;
+		} else if (response && Array.isArray(response.data)) {
+			return response.data;
+		} else {
+			console.log("Unexpected response format for voice notes:", response);
+			return [];
 		}
-
-		// If not, add a placeholder
-		return {
-			...note,
-			users: note.users || {
-				id: note.user_id,
-				username: "user",
-				display_name: "User",
-				avatar_url: null,
-			},
-		};
-	});
+	} catch (error) {
+		console.error("Error fetching all voice notes:", error);
+		return [];
+	}
 };
 
 /**

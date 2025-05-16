@@ -8,13 +8,20 @@ import {
 	RefreshControl,
 	Text,
 	ActivityIndicator,
+	ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "../../components/profile/VoiceNoteCard";
-import { getVoiceNotes, recordPlay } from "../../services/api/voiceNoteService";
 import { HomeHeader } from "../../components/home/HomeHeader";
+import { useUser } from "../../context/UserContext";
+// Import all required functions from voiceNoteService
+import {
+	getVoiceNotes,
+	getPersonalizedFeed,
+	recordPlay,
+} from "../../services/api/voiceNoteService";
 
 const HEADER_HEIGHT = 60; // Header height
 
@@ -47,11 +54,9 @@ export default function HomeScreen() {
 	console.log("[DEBUG] Home - Component rendering");
 	const scrollY = useRef(new Animated.Value(0)).current;
 	const [refreshing, setRefreshing] = useState(false);
-	// Add ScrollView reference
-	const scrollViewRef = useRef<Animated.ScrollView>(null);
-
-	// Animation values for feed items
-	const fadeAnim = useRef(new Animated.Value(0)).current;
+	// Add ScrollView reference with any type to allow scrollTo method
+	const scrollViewRef = useRef<any>(null);
+	const { user: currentUser } = useUser();
 
 	// Scroll to top function to pass to the header
 	const scrollToTop = () => {
@@ -61,13 +66,6 @@ export default function HomeScreen() {
 	// Effect to track mounting/unmounting
 	useEffect(() => {
 		console.log("[DEBUG] Home - Component mounted");
-
-		// Fade in the content
-		Animated.timing(fadeAnim, {
-			toValue: 1,
-			duration: 500,
-			useNativeDriver: true,
-		}).start();
 
 		// Get current URL in web environment
 		if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -130,8 +128,32 @@ export default function HomeScreen() {
 	const fetchVoiceNotes = useCallback(async () => {
 		setLoading(true);
 		try {
-			const data = await getVoiceNotes();
-			console.log("Fetched voice notes:", data);
+			let data;
+
+			// Check if user is logged in
+			if (currentUser?.id) {
+				// Fetch personalized feed for logged in users
+				console.log("Fetching personalized feed for user:", currentUser.id);
+				data = await getPersonalizedFeed(currentUser.id);
+				console.log(
+					"Personalized feed data:",
+					Array.isArray(data) ? `Array with ${data.length} items` : typeof data,
+					data && data.length > 0
+						? `First item user_id: ${data[0].user_id}`
+						: "Empty array"
+				);
+			} else {
+				// Fallback to all voice notes if user is not logged in
+				console.log("No user logged in, fetching general feed");
+				data = await getVoiceNotes();
+			}
+
+			if (!Array.isArray(data)) {
+				console.error("Expected array of voice notes but got:", typeof data);
+				setFeedItems([]);
+				setError("Invalid data format received from server");
+				return;
+			}
 
 			// Transform backend data format to match our frontend component expectations
 			const transformedData = data.map((item) => ({
@@ -165,7 +187,7 @@ export default function HomeScreen() {
 			setLoading(false);
 			setRefreshing(false);
 		}
-	}, []);
+	}, [currentUser]);
 
 	// Initial data fetch
 	useEffect(() => {
@@ -221,7 +243,7 @@ export default function HomeScreen() {
 				console.error("Error recording play:", err);
 			}
 		},
-		[]
+		[recordPlay]
 	);
 
 	// Header shadow animation
@@ -294,39 +316,10 @@ export default function HomeScreen() {
 						</TouchableOpacity>
 					</View>
 				) : (
-					<Animated.View style={[styles.feedContent, { opacity: fadeAnim }]}>
+					<View style={styles.feedContent}>
 						{feedItems.length > 0 ? (
-							feedItems.map((item, index) => (
-								<Animated.View
-									key={item.id}
-									style={[
-										styles.feedItem,
-										{
-											transform: [
-												{
-													translateY: fadeAnim.interpolate({
-														inputRange: [0, 1],
-														outputRange: [50, 0],
-													}),
-												},
-											],
-											opacity: fadeAnim,
-										},
-									]}
-									// Add staggered appearance for items
-									onLayout={() => {
-										if (index === 0) {
-											Animated.sequence([
-												Animated.delay(index * 100),
-												Animated.spring(fadeAnim, {
-													toValue: 1,
-													useNativeDriver: true,
-													friction: 8,
-												}),
-											]).start();
-										}
-									}}
-								>
+							feedItems.map((item) => (
+								<View key={item.id} style={styles.feedItem}>
 									<VoiceNoteCard
 										key={item.id}
 										voiceNote={item.voiceNote}
@@ -342,22 +335,35 @@ export default function HomeScreen() {
 											handleUserProfilePress(item.userId, item.username)
 										}
 									/>
-								</Animated.View>
+								</View>
 							))
 						) : (
 							<View style={styles.emptyContainer}>
-								<Text style={styles.emptyText}>No voice notes found</Text>
+								<Text style={styles.emptyText}>
+									{currentUser?.id
+										? "No posts from users you follow yet. Try following more users!"
+										: "No voice notes found"}
+								</Text>
+								{currentUser?.id && (
+									<TouchableOpacity
+										style={styles.discoverButton}
+										onPress={() => router.push("/search")}
+									>
+										<Text style={styles.discoverButtonText}>
+											Discover Users
+										</Text>
+									</TouchableOpacity>
+								)}
 							</View>
 						)}
-					</Animated.View>
+					</View>
 				)}
 			</Animated.ScrollView>
 
-			{/* Floating Action Button - right side only */}
+			{/* Floating Action Button */}
 			<TouchableOpacity
 				style={[styles.fab, { bottom: insets.bottom + 16 }]}
 				onPress={handleNewVoiceNote}
-				activeOpacity={0.9}
 			>
 				<Feather name="mic" size={24} color="white" />
 			</TouchableOpacity>
@@ -376,7 +382,7 @@ const styles = StyleSheet.create({
 	},
 	container: {
 		flex: 1,
-		backgroundColor: "#F8F8F8", // Slightly lighter background for better contrast
+		backgroundColor: "#FFFFFF", // White background to match the screenshot
 	},
 	loadingContainer: {
 		flex: 1,
@@ -406,11 +412,6 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 		paddingVertical: 10,
 		borderRadius: 20,
-		elevation: 2,
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 2,
 	},
 	retryButtonText: {
 		color: "white",
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
 	},
 	scrollView: {
 		flex: 1,
-		backgroundColor: "#F8F8F8", // Match container background
+		backgroundColor: "#FFFFFF", // White background to match the screenshot
 	},
 	scrollContent: {
 		flexGrow: 1,
@@ -512,21 +513,10 @@ const styles = StyleSheet.create({
 		backgroundColor: "#FFFFFF",
 		paddingHorizontal: 16,
 		paddingVertical: 12,
-		borderRadius: 12,
-		marginHorizontal: 12,
-		marginVertical: 8,
-		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.1,
-		shadowRadius: 3,
-		elevation: 2,
 	},
 	fab: {
 		position: "absolute",
-		right: 16, // Ensure it's only on the right side
+		right: 16,
 		width: 56,
 		height: 56,
 		borderRadius: 28,
@@ -542,5 +532,16 @@ const styles = StyleSheet.create({
 		},
 		shadowOpacity: 0.3,
 		shadowRadius: 4.65,
+	},
+	discoverButton: {
+		backgroundColor: "#6B2FBC",
+		paddingHorizontal: 20,
+		paddingVertical: 10,
+		borderRadius: 20,
+		marginTop: 10,
+	},
+	discoverButtonText: {
+		color: "white",
+		fontWeight: "bold",
 	},
 });
