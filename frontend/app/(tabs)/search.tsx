@@ -120,13 +120,49 @@ export default function SearchScreen() {
 
 	// Effect to handle initial tag search from params
 	useEffect(() => {
+		console.log("Search params changed:", { initialTag, initialSearchType });
+
 		if (initialTag) {
-			debouncedSearch(
+			// Update the search query in the input field
+			setSearchQuery(`#${initialTag}`);
+
+			// Set active tab based on search type
+			if (initialSearchType === "tag") {
+				setActiveTab("posts");
+			}
+
+			// Perform the search
+			performSearch(
 				initialSearchType === "tag" ? "posts" : "all",
 				`#${initialTag}`
 			);
 		}
-	}, [initialTag, initialSearchType]);
+	}, [initialTag, initialSearchType, params]);
+
+	// Additional effect to detect navigation back to this screen
+	useEffect(() => {
+		// This is necessary to handle screen focus/refocus
+		const unsubscribe = router.addListener("focus", () => {
+			const currentParams = router
+				.getState()
+				.routes.find((r) => r.name === "/(tabs)/search")?.params;
+			const tag = currentParams?.tag;
+			const searchType = currentParams?.searchType;
+
+			console.log("Screen focused with params:", { tag, searchType });
+
+			if (tag && tag !== initialTag) {
+				// If we have new tag parameters, update search
+				setSearchQuery(`#${tag}`);
+				if (searchType === "tag") {
+					setActiveTab("posts");
+				}
+				performSearch(searchType === "tag" ? "posts" : "all", `#${tag}`);
+			}
+		});
+
+		return unsubscribe;
+	}, [router]);
 
 	// Toggle show all users
 	const toggleShowAllUsers = () => {

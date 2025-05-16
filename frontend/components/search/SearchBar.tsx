@@ -1,5 +1,11 @@
-import React, { useState } from "react";
-import { View, TextInput, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useState, useRef, useEffect } from "react";
+import {
+	View,
+	TextInput,
+	StyleSheet,
+	TouchableOpacity,
+	Platform,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 interface SearchBarProps {
@@ -18,14 +24,38 @@ export const SearchBar = ({
 	placeholder = "Search...",
 }: SearchBarProps) => {
 	const [isFocused, setIsFocused] = useState(false);
+	const inputRef = useRef<TextInput>(null);
+
+	// Update focus handling based on value changes from props
+	useEffect(() => {
+		// When a new search term is set via props, focus the input
+		if (value && value.length > 0 && !isFocused && inputRef.current) {
+			// Give time for the component to render with the new value
+			setTimeout(() => {
+				inputRef.current?.focus();
+			}, 100);
+		}
+	}, [value]);
+
+	const handleClear = () => {
+		if (onClear) {
+			onClear();
+		}
+		// After clearing, focus the input again
+		setTimeout(() => {
+			inputRef.current?.focus();
+		}, 50);
+	};
 
 	return (
 		<View style={styles.container}>
-			<View
+			<TouchableOpacity
+				activeOpacity={0.9}
 				style={[
 					styles.searchContainer,
 					isFocused && styles.searchContainerFocused,
 				]}
+				onPress={() => inputRef.current?.focus()}
 			>
 				<Feather
 					name="search"
@@ -34,6 +64,7 @@ export const SearchBar = ({
 					style={styles.searchIcon}
 				/>
 				<TextInput
+					ref={inputRef}
 					style={styles.input}
 					value={value}
 					onChangeText={onChangeText}
@@ -47,13 +78,16 @@ export const SearchBar = ({
 					onBlur={() => setIsFocused(false)}
 					underlineColorAndroid="transparent"
 					selectionColor="#6B2FBC"
+					spellCheck={false}
+					// Remove auto keyboard hiding on web
+					blurOnSubmit={Platform.OS !== "web"}
 				/>
 				{value.length > 0 && (
-					<TouchableOpacity onPress={onClear} style={styles.clearButton}>
+					<TouchableOpacity onPress={handleClear} style={styles.clearButton}>
 						<Feather name="x" size={18} color="#888" />
 					</TouchableOpacity>
 				)}
-			</View>
+			</TouchableOpacity>
 		</View>
 	);
 };
@@ -95,7 +129,15 @@ const styles = StyleSheet.create({
 		color: "#333",
 		height: "100%",
 		paddingLeft: 8,
-		outlineStyle: "none",
+		// Remove default styling
+		...(Platform.OS === "web"
+			? {
+					outlineStyle: "none",
+					outlineWidth: 0,
+					outlineColor: "transparent",
+					WebkitAppearance: "none",
+			  }
+			: {}),
 	},
 	clearButton: {
 		padding: 4,

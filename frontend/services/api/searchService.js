@@ -59,24 +59,30 @@ const normalizeVoiceNoteData = (note) => {
 export const searchUsers = async (term) => {
 	try {
 		if (!term || term.trim().length === 0) {
+			console.log("Empty search term, returning empty results");
 			return [];
 		}
 
 		// Replace # with empty string if search term starts with it
 		const searchTerm = term.startsWith("#") ? term.substring(1) : term;
+		console.log(`Searching users for: "${searchTerm}"`);
 
 		// API call to the backend
 		const response = await apiRequest(
 			`${ENDPOINTS.USERS}/search?term=${encodeURIComponent(searchTerm)}`
 		);
 
+		console.log("User search API response:", response);
+
 		// Check if we got a valid response
 		if (response && (response.data || Array.isArray(response))) {
 			const userData = response.data || response;
+			console.log(`Found ${userData.length} users for term "${searchTerm}"`);
 			// Normalize each user object
 			return userData.map((user) => normalizeUserData(user));
 		}
 
+		console.log(`No users found for "${searchTerm}"`);
 		return [];
 	} catch (error) {
 		console.error("Error searching users:", error);
@@ -93,6 +99,7 @@ export const searchUsers = async (term) => {
 export const searchVoiceNotes = async (term, tagOnly = false) => {
 	try {
 		if (!term || term.trim().length === 0) {
+			console.log("Empty search term, returning empty voice note results");
 			return [];
 		}
 
@@ -101,6 +108,9 @@ export const searchVoiceNotes = async (term, tagOnly = false) => {
 
 		// Remove # prefix if present for backend query
 		const searchTerm = isTagSearch ? term.substring(1) : term;
+		console.log(
+			`Searching voice notes for: "${searchTerm}", isTagSearch: ${isTagSearch}, tagOnly: ${tagOnly}`
+		);
 
 		// Construct query params
 		const params = new URLSearchParams();
@@ -116,13 +126,19 @@ export const searchVoiceNotes = async (term, tagOnly = false) => {
 			`${ENDPOINTS.VOICE_NOTES}/search?${params.toString()}`
 		);
 
+		console.log("Voice note search API response:", response);
+
 		// Check if we got a valid response
 		if (response && (response.data || Array.isArray(response))) {
 			const voiceNotes = response.data || response;
+			console.log(
+				`Found ${voiceNotes.length} voice notes for term "${searchTerm}"`
+			);
 			// Normalize each voice note
 			return voiceNotes.map((note) => normalizeVoiceNoteData(note));
 		}
 
+		console.log(`No voice notes found for "${searchTerm}"`);
 		return [];
 	} catch (error) {
 		console.error("Error searching voice notes:", error);
