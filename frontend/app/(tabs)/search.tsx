@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
 	StyleSheet,
 	View,
@@ -10,7 +10,8 @@ import {
 	RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSearchParams, useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { debounce } from "lodash";
 
 // Import components
 import { SearchBar } from "../../components/search/SearchBar";
@@ -29,7 +30,7 @@ type SearchTab = "users" | "posts";
 export default function SearchScreen() {
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
-	const params = useSearchParams();
+	const params = useLocalSearchParams();
 
 	// Get initial search tag from params if available
 	const initialTag = params?.tag as string;
@@ -46,32 +47,30 @@ export default function SearchScreen() {
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [userResults, setUserResults] = useState([]);
 	const [postResults, setPostResults] = useState([]);
+	const [showAllUsers, setShowAllUsers] = useState(false);
+	const [showAllPosts, setShowAllPosts] = useState(false);
 
-	// Effect to handle initial tag search from params
-	useEffect(() => {
-		if (initialTag) {
-			handleSearch(initialSearchType === "tag" ? "posts" : "users");
+	// Number of results to display in preview mode
+	const PREVIEW_COUNT = 5;
+
+	// Handle search
+	const performSearch = async (tab: SearchTab, query: string) => {
+		if (query.trim() === "") {
+			setUserResults([]);
+			setPostResults([]);
+			return;
 		}
-	}, [initialTag, initialSearchType]);
-
-	// Effect to handle tab change
-	useEffect(() => {
-		if (searchQuery.trim() !== "") {
-			handleSearch(activeTab);
-		}
-	}, [activeTab]);
-
-	const handleSearch = async (tab: SearchTab = activeTab) => {
-		if (searchQuery.trim() === "") return;
 
 		setIsLoading(true);
 
 		try {
-			if (tab === "users") {
-				const users = await searchUsers(searchQuery);
+			if (tab === "users" || tab === "all") {
+				const users = await searchUsers(query);
 				setUserResults(users);
-			} else {
-				const posts = await searchVoiceNotes(searchQuery);
+			}
+
+			if (tab === "posts" || tab === "all") {
+				const posts = await searchVoiceNotes(query);
 				setPostResults(posts);
 			}
 		} catch (error) {
@@ -82,33 +81,142 @@ export default function SearchScreen() {
 		}
 	};
 
-	const handleRefresh = () => {
-		setIsRefreshing(true);
-		handleSearch();
+	// Debounced search function to avoid too many API calls
+	const debouncedSearch = useCallback(
+		debounce((tab, query) => {
+			performSearch(tab, query);
+		}, 300),
+		[]
+	);
+
+	// Handle search query change
+	const handleSearchChange = (text: string) => {
+		setSearchQuery(text);
+
+		// Reset the show all flags when search query changes
+		setShowAllUsers(false);
+		setShowAllPosts(false);
+
+		// Only search if there's at least 1 character
+		if (text.trim().length >= 1) {
+			debouncedSearch(activeTab, text);
+		} else {
+			// Clear results if search is empty
+			setUserResults([]);
+			setPostResults([]);
+		}
 	};
 
+	// Handle tab change
+	const handleTabChange = (tab: SearchTab) => {
+		setActiveTab(tab);
+		setShowAllUsers(false);
+		setShowAllPosts(false);
+
+		if (searchQuery.trim().length > 0) {
+			performSearch(tab, searchQuery);
+		}
+	};
+
+	// Effect to handle initial tag search from params
+	useEffect(() => {
+		if (initialTag) {
+			debouncedSearch(
+				initialSearchType === "tag" ? "posts" : "all",
+				`#${initialTag}`
+			);
+		}
+	}, [initialTag, initialSearchType]);
+
+	// Toggle show all users
+	const toggleShowAllUsers = () => {
+		setShowAllUsers(!showAllUsers);
+	};
+
+	// Toggle show all posts
+	const toggleShowAllPosts = () => {
+		setShowAllPosts(!showAllPosts);
+	};
+
+	// Handle refresh
+	const handleRefresh = () => {
+		setIsRefreshing(true);
+		performSearch(activeTab, searchQuery);
+	};
+
+	// Handle clear search
 	const handleClearSearch = () => {
 		setSearchQuery("");
 		setUserResults([]);
 		setPostResults([]);
 	};
 
+	// Get filtered lists based on show all setting
+	const getFilteredUsers = () => {
+		return showAllUsers ? userResults : userResults.slice(0, PREVIEW_COUNT);
+	};
+
+	const getFilteredPosts = () => {
+		return showAllPosts ? postResults : postResults.slice(0, PREVIEW_COUNT);
+	};
+
+	// Render user item
 	const renderUserItem = ({ item }) => {
 		return <UserSearchResult user={item} />;
 	};
 
+	// Render post item
 	const renderPostItem = ({ item }) => {
+		// Extract user data with fallbacks
+		const userData = item.users || {};
+
+		// Create a voiceNote object with stable data
+		const voiceNoteData = {
+			...item,
+			// Ensure stats are proper numbers
+			likes: typeof item.likes === "number" ? item.likes : 0,
+			comments: typeof item.comments === "number" ? item.comments : 0,
+			plays: typeof item.plays === "number" ? item.plays : 0,
+			shares: typeof item.shares === "number" ? item.shares : 0,
+			// Ensure user data is properly structured
+			user_id: item.user_id || userData.id,
+			users: userData,
+		};
+
 		return (
-			<VoiceNoteCard
-				voiceNote={item}
-				userId={item.user_id || item.users?.id}
-				displayName={item.users?.display_name}
-				username={item.users?.username}
-				userAvatarUrl={item.users?.avatar_url}
-			/>
+			<View style={styles.postItemContainer}>
+				<VoiceNoteCard
+					key={`${item.id}-${searchQuery}`} // Force re-render on search query change
+					voiceNote={voiceNoteData}
+					userId={voiceNoteData.user_id}
+					displayName={userData.display_name}
+					username={userData.username}
+					userAvatarUrl={userData.avatar_url}
+				/>
+			</View>
 		);
 	};
 
+	// Render show more button
+	const renderShowMoreButton = (type: "users" | "posts") => {
+		const resultsCount =
+			type === "users" ? userResults.length : postResults.length;
+		const showAll = type === "users" ? showAllUsers : showAllPosts;
+		const toggleShowAll =
+			type === "users" ? toggleShowAllUsers : toggleShowAllPosts;
+
+		if (resultsCount <= PREVIEW_COUNT) return null;
+
+		return (
+			<TouchableOpacity style={styles.showMoreButton} onPress={toggleShowAll}>
+				<Text style={styles.showMoreText}>
+					{showAll ? "Show less" : `Show all ${resultsCount} results`}
+				</Text>
+			</TouchableOpacity>
+		);
+	};
+
+	// Render empty state
 	const renderEmptyState = () => {
 		if (isLoading) {
 			return (
@@ -126,21 +234,31 @@ export default function SearchScreen() {
 			);
 		}
 
-		return (
-			<View style={styles.emptyStateContainer}>
-				<Text style={styles.emptyStateText}>
-					No results found for "{searchQuery}"
-				</Text>
-			</View>
-		);
+		const hasUsers = userResults.length > 0;
+		const hasPosts = postResults.length > 0;
+
+		if (
+			(activeTab === "users" && !hasUsers) ||
+			(activeTab === "posts" && !hasPosts)
+		) {
+			return (
+				<View style={styles.emptyStateContainer}>
+					<Text style={styles.emptyStateText}>
+						No {activeTab} found for "{searchQuery}"
+					</Text>
+				</View>
+			);
+		}
+
+		return null;
 	};
 
 	return (
 		<SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
 			<SearchBar
 				value={searchQuery}
-				onChangeText={setSearchQuery}
-				onSubmit={() => handleSearch()}
+				onChangeText={handleSearchChange}
+				onSubmit={() => performSearch(activeTab, searchQuery)}
 				onClear={handleClearSearch}
 				placeholder="Search users or posts..."
 			/>
@@ -148,7 +266,7 @@ export default function SearchScreen() {
 			<View style={styles.tabsContainer}>
 				<TouchableOpacity
 					style={[styles.tab, activeTab === "users" && styles.activeTab]}
-					onPress={() => setActiveTab("users")}
+					onPress={() => handleTabChange("users")}
 				>
 					<Text
 						style={[
@@ -162,7 +280,7 @@ export default function SearchScreen() {
 
 				<TouchableOpacity
 					style={[styles.tab, activeTab === "posts" && styles.activeTab]}
-					onPress={() => setActiveTab("posts")}
+					onPress={() => handleTabChange("posts")}
 				>
 					<Text
 						style={[
@@ -176,37 +294,43 @@ export default function SearchScreen() {
 			</View>
 
 			{activeTab === "users" ? (
-				<FlatList
-					data={userResults}
-					renderItem={renderUserItem}
-					keyExtractor={(item) => item.id}
-					contentContainerStyle={styles.listContent}
-					ListEmptyComponent={renderEmptyState}
-					refreshControl={
-						<RefreshControl
-							refreshing={isRefreshing}
-							onRefresh={handleRefresh}
-							colors={["#6B2FBC"]}
-							tintColor="#6B2FBC"
-						/>
-					}
-				/>
+				<>
+					<FlatList
+						data={getFilteredUsers()}
+						renderItem={renderUserItem}
+						keyExtractor={(item) => item.id}
+						contentContainerStyle={styles.listContent}
+						ListEmptyComponent={renderEmptyState}
+						ListFooterComponent={() => renderShowMoreButton("users")}
+						refreshControl={
+							<RefreshControl
+								refreshing={isRefreshing}
+								onRefresh={handleRefresh}
+								colors={["#6B2FBC"]}
+								tintColor="#6B2FBC"
+							/>
+						}
+					/>
+				</>
 			) : (
-				<FlatList
-					data={postResults}
-					renderItem={renderPostItem}
-					keyExtractor={(item) => item.id}
-					contentContainerStyle={styles.listContent}
-					ListEmptyComponent={renderEmptyState}
-					refreshControl={
-						<RefreshControl
-							refreshing={isRefreshing}
-							onRefresh={handleRefresh}
-							colors={["#6B2FBC"]}
-							tintColor="#6B2FBC"
-						/>
-					}
-				/>
+				<>
+					<FlatList
+						data={getFilteredPosts()}
+						renderItem={renderPostItem}
+						keyExtractor={(item) => item.id}
+						contentContainerStyle={styles.listContent}
+						ListEmptyComponent={renderEmptyState}
+						ListFooterComponent={() => renderShowMoreButton("posts")}
+						refreshControl={
+							<RefreshControl
+								refreshing={isRefreshing}
+								onRefresh={handleRefresh}
+								colors={["#6B2FBC"]}
+								tintColor="#6B2FBC"
+							/>
+						}
+					/>
+				</>
 			)}
 		</SafeAreaView>
 	);
@@ -242,6 +366,21 @@ const styles = StyleSheet.create({
 	},
 	listContent: {
 		flexGrow: 1,
+		paddingBottom: 20,
+	},
+	postItemContainer: {
+		marginVertical: 8,
+		marginHorizontal: 12,
+		borderRadius: 16,
+		overflow: "hidden",
+		shadowColor: "#000",
+		shadowOffset: {
+			width: 0,
+			height: 2,
+		},
+		shadowOpacity: 0.1,
+		shadowRadius: 3.84,
+		elevation: 5,
 	},
 	emptyStateContainer: {
 		flex: 1,
@@ -254,5 +393,17 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		color: "#888888",
 		textAlign: "center",
+	},
+	showMoreButton: {
+		padding: 16,
+		alignItems: "center",
+		backgroundColor: "#FFFFFF",
+		borderTopWidth: 1,
+		borderTopColor: "#EEEEEE",
+	},
+	showMoreText: {
+		fontSize: 14,
+		fontWeight: "600",
+		color: "#6B2FBC",
 	},
 });

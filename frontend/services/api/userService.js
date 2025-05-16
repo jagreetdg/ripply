@@ -273,26 +273,6 @@ export const getUserProfileByUsername = async (username) => {
 			? username.substring(1)
 			: username;
 
-		// For debugging, use mock response for known test users
-		if (cleanUsername === "jamiejones" || cleanUsername === "blakeanderson") {
-			// Return mock data for testing
-			return {
-				id:
-					cleanUsername === "jamiejones"
-						? "d0c028e7-a33c-4d41-a779-5d1e497b12b3"
-						: "9435c23b-778f-4644-a8b4-a6b9dc9aef35",
-				username: cleanUsername,
-				display_name:
-					cleanUsername === "jamiejones" ? "Jamie Jones" : "Blake Anderson",
-				avatar_url: null,
-				cover_photo_url: null,
-				bio: "Test user bio",
-				is_verified: false,
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-			};
-		}
-
 		const response = await apiRequest(
 			`${ENDPOINTS.USERS}/username/${cleanUsername}`
 		);

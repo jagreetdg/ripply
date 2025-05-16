@@ -243,16 +243,22 @@ export function VoiceNoteCard({
 	const [isSeeking, setIsSeeking] = useState(false);
 	const [isLiked, setIsLiked] = useState(false);
 	const [likesCount, setLikesCount] = useState(
-		typeof voiceNote.likes === "number" ? voiceNote.likes : 0
+		typeof voiceNote.likes === "number" && voiceNote.likes > 0
+			? voiceNote.likes
+			: 0
 	);
 	const [sharesCount, setSharesCount] = useState(
-		typeof voiceNote.shares === "number" ? voiceNote.shares : 0
+		typeof voiceNote.shares === "number" && voiceNote.shares > 0
+			? voiceNote.shares
+			: 0
 	);
 	const [isLoadingShareCount, setIsLoadingShareCount] = useState(false);
 	const [isShared, setIsShared] = useState(false);
 	const [showCommentPopup, setShowCommentPopup] = useState(false);
 	const [commentsCount, setCommentsCount] = useState(
-		typeof voiceNote.comments === "number" ? voiceNote.comments : 0
+		typeof voiceNote.comments === "number" && voiceNote.comments > 0
+			? voiceNote.comments
+			: 0
 	);
 	const [comments, setComments] = useState<Comment[]>([]);
 	const [isLoadingComments, setIsLoadingComments] = useState(false);
@@ -262,6 +268,9 @@ export function VoiceNoteCard({
 	const [playsCount, setPlaysCount] = useState(
 		normalizePlaysCount(voiceNote.plays || 0)
 	);
+
+	// Keep track of stats loading
+	const [statsLoaded, setStatsLoaded] = useState(false);
 
 	// Fetch the actual share count
 	const fetchShareCount = useCallback(async () => {
@@ -630,11 +639,22 @@ export function VoiceNoteCard({
 				const stats = await getVoiceNoteStats(voiceNote.id);
 				console.log(`Received stats for ${voiceNote.id}:`, stats);
 
-				// Update the UI with the fetched stats
-				setLikesCount(stats.likes);
-				setCommentsCount(stats.comments);
-				setPlaysCount(stats.plays);
-				setSharesCount(stats.shares);
+				// Only update the UI with the fetched stats if they exist and are different from current values
+				if (stats) {
+					// Don't set lower values - that prevents flickering
+					if (typeof stats.likes === "number" && stats.likes > likesCount)
+						setLikesCount(stats.likes);
+					if (
+						typeof stats.comments === "number" &&
+						stats.comments > commentsCount
+					)
+						setCommentsCount(stats.comments);
+					if (typeof stats.plays === "number" && stats.plays > playsCount)
+						setPlaysCount(stats.plays);
+					if (typeof stats.shares === "number" && stats.shares > sharesCount)
+						setSharesCount(stats.shares);
+					setStatsLoaded(true);
+				}
 
 				// Also check if logged-in user has liked/shared this voice note
 				if (loggedInUserId) {
@@ -652,12 +672,24 @@ export function VoiceNoteCard({
 				}
 			} catch (error) {
 				console.error("Error loading initial voice note data:", error);
+				// Even if we catch an error, mark stats as loaded so we don't continually retry
+				setStatsLoaded(true);
 			}
 		};
 
-		// Call the function
-		loadInitialData();
-	}, [voiceNote.id, loggedInUserId]);
+		// Only load stats if they haven't been loaded yet
+		if (!statsLoaded) {
+			loadInitialData();
+		}
+	}, [
+		voiceNote.id,
+		loggedInUserId,
+		statsLoaded,
+		likesCount,
+		commentsCount,
+		playsCount,
+		sharesCount,
+	]);
 
 	// Add a debug function to check share count directly
 	const debugCheckShareCount = useCallback(async () => {

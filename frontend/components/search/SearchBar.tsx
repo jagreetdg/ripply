@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, TextInput, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
@@ -17,13 +17,20 @@ export const SearchBar = ({
 	onClear,
 	placeholder = "Search...",
 }: SearchBarProps) => {
+	const [isFocused, setIsFocused] = useState(false);
+
 	return (
 		<View style={styles.container}>
-			<View style={styles.searchContainer}>
+			<View
+				style={[
+					styles.searchContainer,
+					isFocused && styles.searchContainerFocused,
+				]}
+			>
 				<Feather
 					name="search"
 					size={20}
-					color="#888"
+					color={isFocused ? "#6B2FBC" : "#888"}
 					style={styles.searchIcon}
 				/>
 				<TextInput
@@ -36,6 +43,10 @@ export const SearchBar = ({
 					onSubmitEditing={onSubmit}
 					autoCapitalize="none"
 					autoCorrect={false}
+					onFocus={() => setIsFocused(true)}
+					onBlur={() => setIsFocused(false)}
+					underlineColorAndroid="transparent"
+					selectionColor="#6B2FBC"
 				/>
 				{value.length > 0 && (
 					<TouchableOpacity onPress={onClear} style={styles.clearButton}>
@@ -60,15 +71,31 @@ const styles = StyleSheet.create({
 		borderRadius: 10,
 		paddingHorizontal: 12,
 		height: 44,
+		borderWidth: 1,
+		borderColor: "transparent",
+	},
+	searchContainerFocused: {
+		borderColor: "#6B2FBC",
+		backgroundColor: "#fff",
+		shadowColor: "#6B2FBC",
+		shadowOffset: {
+			width: 0,
+			height: 0,
+		},
+		shadowOpacity: 0.1,
+		shadowRadius: 4,
+		elevation: 2,
 	},
 	searchIcon: {
-		marginRight: 8,
+		marginRight: 12,
 	},
 	input: {
 		flex: 1,
 		fontSize: 16,
 		color: "#333",
 		height: "100%",
+		paddingLeft: 8,
+		outlineStyle: "none",
 	},
 	clearButton: {
 		padding: 4,
