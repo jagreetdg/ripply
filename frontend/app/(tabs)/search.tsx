@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
 	StyleSheet,
 	View,
@@ -8,11 +8,14 @@ import {
 	TouchableOpacity,
 	ActivityIndicator,
 	RefreshControl,
+	Animated,
+	Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { debounce } from "lodash";
+import { Feather } from "@expo/vector-icons";
 
 // Import components
 import { SearchBar } from "../../components/search/SearchBar";
@@ -24,6 +27,7 @@ import {
 	searchUsers,
 	searchVoiceNotes,
 } from "../../services/api/searchService";
+import { useUser } from "../../context/UserContext";
 
 // Tab type definition
 type SearchTab = "users" | "posts";
@@ -32,6 +36,7 @@ export default function SearchScreen() {
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
 	const params = useLocalSearchParams();
+	const { user: currentUser } = useUser(); // Get current user from context
 
 	// Get initial search tag from params if available
 	const initialTag = params?.tag as string;
@@ -57,8 +62,52 @@ export default function SearchScreen() {
 		timestamp,
 	});
 
+	// Animations
+	const fadeAnim = useRef(new Animated.Value(1)).current;
+	const slideAnim = useRef(new Animated.Value(0)).current;
+	const tabIndicatorPosition = useRef(new Animated.Value(0)).current;
+	const windowWidth = Dimensions.get("window").width;
+
 	// Number of results to display in preview mode
 	const PREVIEW_COUNT = 5;
+
+	// Handle tab change with animation
+	const handleTabChange = (tab: SearchTab) => {
+		// Don't do anything if it's already the active tab
+		if (tab === activeTab) return;
+
+		// Start fade out animation
+		Animated.timing(fadeAnim, {
+			toValue: 0,
+			duration: 150,
+			useNativeDriver: true,
+		}).start(() => {
+			// Change tab after fade out
+			setActiveTab(tab);
+			setShowAllUsers(false);
+			setShowAllPosts(false);
+
+			// Animate the tab indicator
+			Animated.spring(tabIndicatorPosition, {
+				toValue: tab === "users" ? 0 : 1,
+				useNativeDriver: true,
+				speed: 12,
+				bounciness: 4,
+			}).start();
+
+			// If search query exists, perform search
+			if (searchQuery.trim().length > 0) {
+				performSearch(tab, searchQuery);
+			}
+
+			// Start fade in animation
+			Animated.timing(fadeAnim, {
+				toValue: 1,
+				duration: 150,
+				useNativeDriver: true,
+			}).start();
+		});
+	};
 
 	// Handle search
 	const performSearch = async (tab: SearchTab, query: string) => {
@@ -72,7 +121,7 @@ export default function SearchScreen() {
 
 		try {
 			if (tab === "users" || tab === "all") {
-				const users = await searchUsers(query);
+				const users = await searchUsers(query, currentUser?.id);
 				setUserResults(users);
 			}
 
@@ -114,17 +163,6 @@ export default function SearchScreen() {
 		}
 	};
 
-	// Handle tab change
-	const handleTabChange = (tab: SearchTab) => {
-		setActiveTab(tab);
-		setShowAllUsers(false);
-		setShowAllPosts(false);
-
-		if (searchQuery.trim().length > 0) {
-			performSearch(tab, searchQuery);
-		}
-	};
-
 	// Effect to handle initial tag search from params
 	useEffect(() => {
 		console.log("Search params changed:", {
@@ -140,6 +178,13 @@ export default function SearchScreen() {
 			// Set active tab based on search type
 			if (initialSearchType === "tag") {
 				setActiveTab("posts");
+				// Move tab indicator
+				Animated.spring(tabIndicatorPosition, {
+					toValue: 1,
+					useNativeDriver: true,
+					speed: 12,
+					bounciness: 4,
+				}).start();
 			}
 
 			// Perform the search
@@ -153,6 +198,20 @@ export default function SearchScreen() {
 	// Use useFocusEffect to detect when the screen is focused
 	useFocusEffect(
 		useCallback(() => {
+			// Animation when screen is focused
+			Animated.parallel([
+				Animated.timing(fadeAnim, {
+					toValue: 1,
+					duration: 300,
+					useNativeDriver: true,
+				}),
+				Animated.timing(slideAnim, {
+					toValue: 0,
+					duration: 300,
+					useNativeDriver: true,
+				}),
+			]).start();
+
 			// Get current params
 			const currentTag = params?.tag as string;
 			const currentSearchType = params?.searchType as string;
@@ -177,6 +236,13 @@ export default function SearchScreen() {
 				setSearchQuery(`#${currentTag}`);
 				if (currentSearchType === "tag") {
 					setActiveTab("posts");
+					// Move tab indicator
+					Animated.spring(tabIndicatorPosition, {
+						toValue: 1,
+						useNativeDriver: true,
+						speed: 12,
+						bounciness: 4,
+					}).start();
 				}
 				performSearch(
 					currentSearchType === "tag" ? "posts" : "all",
@@ -194,6 +260,19 @@ export default function SearchScreen() {
 			// Cleanup function
 			return () => {
 				console.log("Search screen losing focus");
+				// Animation when screen loses focus
+				Animated.parallel([
+					Animated.timing(fadeAnim, {
+						toValue: 0,
+						duration: 200,
+						useNativeDriver: true,
+					}),
+					Animated.timing(slideAnim, {
+						toValue: 10,
+						duration: 200,
+						useNativeDriver: true,
+					}),
+				]).start();
 			};
 		}, [params])
 	);
@@ -278,10 +357,20 @@ export default function SearchScreen() {
 		if (resultsCount <= PREVIEW_COUNT) return null;
 
 		return (
-			<TouchableOpacity style={styles.showMoreButton} onPress={toggleShowAll}>
+			<TouchableOpacity
+				style={styles.showMoreButton}
+				onPress={toggleShowAll}
+				activeOpacity={0.7}
+			>
 				<Text style={styles.showMoreText}>
 					{showAll ? "Show less" : `Show all ${resultsCount} results`}
 				</Text>
+				<Feather
+					name={showAll ? "chevron-up" : "chevron-down"}
+					size={18}
+					color="#6B2FBC"
+					style={styles.showMoreIcon}
+				/>
 			</TouchableOpacity>
 		);
 	};
@@ -299,7 +388,16 @@ export default function SearchScreen() {
 		if (searchQuery.trim() === "") {
 			return (
 				<View style={styles.emptyStateContainer}>
-					<Text style={styles.emptyStateText}>Search for users or posts</Text>
+					<Feather
+						name="search"
+						size={40}
+						color="#BBBBBB"
+						style={{ marginBottom: 16 }}
+					/>
+					<Text style={styles.emptyStateTitle}>Search Ripply</Text>
+					<Text style={styles.emptyStateText}>
+						Find users or posts by searching above
+					</Text>
 				</View>
 			);
 		}
@@ -313,6 +411,13 @@ export default function SearchScreen() {
 		) {
 			return (
 				<View style={styles.emptyStateContainer}>
+					<Feather
+						name="alert-circle"
+						size={40}
+						color="#BBBBBB"
+						style={{ marginBottom: 16 }}
+					/>
+					<Text style={styles.emptyStateTitle}>No results found</Text>
 					<Text style={styles.emptyStateText}>
 						No {activeTab} found for "{searchQuery}"
 					</Text>
@@ -322,6 +427,12 @@ export default function SearchScreen() {
 
 		return null;
 	};
+
+	// Tab indicator animated position
+	const tabIndicatorTranslateX = tabIndicatorPosition.interpolate({
+		inputRange: [0, 1],
+		outputRange: [0, windowWidth / 2],
+	});
 
 	return (
 		<SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
@@ -335,8 +446,9 @@ export default function SearchScreen() {
 
 			<View style={styles.tabsContainer}>
 				<TouchableOpacity
-					style={[styles.tab, activeTab === "users" && styles.activeTab]}
+					style={styles.tab}
 					onPress={() => handleTabChange("users")}
+					activeOpacity={0.7}
 				>
 					<Text
 						style={[
@@ -349,8 +461,9 @@ export default function SearchScreen() {
 				</TouchableOpacity>
 
 				<TouchableOpacity
-					style={[styles.tab, activeTab === "posts" && styles.activeTab]}
+					style={styles.tab}
 					onPress={() => handleTabChange("posts")}
+					activeOpacity={0.7}
 				>
 					<Text
 						style={[
@@ -361,10 +474,29 @@ export default function SearchScreen() {
 						Posts
 					</Text>
 				</TouchableOpacity>
+
+				{/* Animated tab indicator */}
+				<Animated.View
+					style={[
+						styles.tabIndicator,
+						{
+							transform: [{ translateX: tabIndicatorTranslateX }],
+							width: windowWidth / 2,
+						},
+					]}
+				/>
 			</View>
 
-			{activeTab === "users" ? (
-				<>
+			<Animated.View
+				style={[
+					styles.contentContainer,
+					{
+						opacity: fadeAnim,
+						transform: [{ translateY: slideAnim }],
+					},
+				]}
+			>
+				{activeTab === "users" ? (
 					<FlatList
 						data={getFilteredUsers()}
 						renderItem={renderUserItem}
@@ -381,9 +513,7 @@ export default function SearchScreen() {
 							/>
 						}
 					/>
-				</>
-			) : (
-				<>
+				) : (
 					<FlatList
 						data={getFilteredPosts()}
 						renderItem={renderPostItem}
@@ -400,8 +530,8 @@ export default function SearchScreen() {
 							/>
 						}
 					/>
-				</>
-			)}
+				)}
+			</Animated.View>
 		</SafeAreaView>
 	);
 }
@@ -409,33 +539,50 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#F5F5F5",
+		backgroundColor: "#F8F8F8",
+	},
+	contentContainer: {
+		flex: 1,
 	},
 	tabsContainer: {
 		flexDirection: "row",
 		backgroundColor: "#FFFFFF",
-		borderBottomWidth: 1,
-		borderBottomColor: "#EEEEEE",
+		height: 48,
+		position: "relative",
+		elevation: 2,
+		shadowColor: "#000",
+		shadowOffset: {
+			width: 0,
+			height: 1,
+		},
+		shadowOpacity: 0.05,
+		shadowRadius: 2,
 	},
 	tab: {
 		flex: 1,
-		paddingVertical: 12,
+		justifyContent: "center",
 		alignItems: "center",
-	},
-	activeTab: {
-		borderBottomWidth: 2,
-		borderBottomColor: "#6B2FBC",
 	},
 	tabText: {
 		fontSize: 16,
 		color: "#888888",
+		fontWeight: "500",
 	},
 	activeTabText: {
 		color: "#6B2FBC",
 		fontWeight: "600",
 	},
+	tabIndicator: {
+		position: "absolute",
+		bottom: 0,
+		height: 3,
+		backgroundColor: "#6B2FBC",
+		borderTopLeftRadius: 3,
+		borderTopRightRadius: 3,
+	},
 	listContent: {
 		flexGrow: 1,
+		paddingTop: 8,
 		paddingBottom: 20,
 	},
 	postItemContainer: {
@@ -443,6 +590,7 @@ const styles = StyleSheet.create({
 		marginHorizontal: 12,
 		borderRadius: 16,
 		overflow: "hidden",
+		backgroundColor: "#FFFFFF",
 		shadowColor: "#000",
 		shadowOffset: {
 			width: 0,
@@ -459,21 +607,42 @@ const styles = StyleSheet.create({
 		padding: 24,
 		minHeight: 300,
 	},
+	emptyStateTitle: {
+		fontSize: 18,
+		fontWeight: "600",
+		color: "#555555",
+		marginBottom: 8,
+	},
 	emptyStateText: {
-		fontSize: 16,
+		fontSize: 14,
 		color: "#888888",
 		textAlign: "center",
+		lineHeight: 20,
 	},
 	showMoreButton: {
 		padding: 16,
+		marginTop: 8,
+		marginHorizontal: 12,
 		alignItems: "center",
 		backgroundColor: "#FFFFFF",
-		borderTopWidth: 1,
-		borderTopColor: "#EEEEEE",
+		borderRadius: 12,
+		flexDirection: "row",
+		justifyContent: "center",
+		shadowColor: "#000",
+		shadowOffset: {
+			width: 0,
+			height: 1,
+		},
+		shadowOpacity: 0.05,
+		shadowRadius: 2,
+		elevation: 2,
 	},
 	showMoreText: {
 		fontSize: 14,
 		fontWeight: "600",
 		color: "#6B2FBC",
+	},
+	showMoreIcon: {
+		marginLeft: 4,
 	},
 });

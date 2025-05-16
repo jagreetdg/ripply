@@ -5,7 +5,7 @@ const supabase = require("../config/supabase");
 // Search for users based on username or display name
 router.get("/search", async (req, res) => {
 	try {
-		const { term } = req.query;
+		const { term, currentUserId } = req.query;
 		const { page = 1, limit = 20 } = req.query;
 		const offset = (page - 1) * limit;
 
@@ -17,14 +17,26 @@ router.get("/search", async (req, res) => {
 
 		const searchTerm = `%${term.toLowerCase()}%`;
 
-		// Search for users matching the term in username or display_name
-		const { data, error, count } = await supabase
+		// Build the query
+		let query = supabase
 			.from("users")
 			.select("*", { count: "exact" })
 			.or(`username.ilike.${searchTerm},display_name.ilike.${searchTerm}`)
 			.order("is_verified", { ascending: false })
-			.order("username")
-			.range(offset, offset + parseInt(limit) - 1);
+			.order("username");
+
+		// Exclude the current user if currentUserId is provided
+		if (currentUserId) {
+			console.log(
+				`[DEBUG] Excluding current user: ${currentUserId} from search results`
+			);
+			query = query.neq("id", currentUserId);
+		}
+
+		// Add pagination
+		query = query.range(offset, offset + parseInt(limit) - 1);
+
+		const { data, error, count } = await query;
 
 		if (error) {
 			console.error("[ERROR] Error searching users:", error);

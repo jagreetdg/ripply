@@ -54,9 +54,10 @@ const normalizeVoiceNoteData = (note) => {
 /**
  * Search for users by term
  * @param {string} term - Search term
+ * @param {string} currentUserId - Current user ID to exclude from results
  * @returns {Promise<Array>} - List of matching users
  */
-export const searchUsers = async (term) => {
+export const searchUsers = async (term, currentUserId) => {
 	try {
 		if (!term || term.trim().length === 0) {
 			console.log("Empty search term, returning empty results");
@@ -67,10 +68,16 @@ export const searchUsers = async (term) => {
 		const searchTerm = term.startsWith("#") ? term.substring(1) : term;
 		console.log(`Searching users for: "${searchTerm}"`);
 
+		// Build the API URL with currentUserId if available
+		let apiUrl = `${ENDPOINTS.USERS}/search?term=${encodeURIComponent(
+			searchTerm
+		)}`;
+		if (currentUserId) {
+			apiUrl += `&currentUserId=${encodeURIComponent(currentUserId)}`;
+		}
+
 		// API call to the backend
-		const response = await apiRequest(
-			`${ENDPOINTS.USERS}/search?term=${encodeURIComponent(searchTerm)}`
-		);
+		const response = await apiRequest(apiUrl);
 
 		console.log("User search API response:", response);
 
