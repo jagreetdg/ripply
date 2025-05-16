@@ -737,14 +737,23 @@ export function VoiceNoteCard({
 
 	// Handle tag click to navigate to search
 	const handleTagPress = (tag: string) => {
-		console.log(`Tag pressed: ${tag}`);
 		// Remove # if it's already in the tag
 		const cleanTag = tag.startsWith("#") ? tag.substring(1) : tag;
 
+		console.log(
+			`Tag pressed: ${tag}, navigating to search with tag=${cleanTag}`
+		);
+
 		// Force a reset of any existing search before navigation
+		const uniqueTimestamp = Date.now().toString();
+
 		router.push({
 			pathname: "/(tabs)/search",
-			params: { tag: cleanTag, searchType: "tag", timestamp: Date.now() },
+			params: {
+				tag: cleanTag,
+				searchType: "tag",
+				timestamp: uniqueTimestamp,
+			},
 		});
 	};
 

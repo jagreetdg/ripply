@@ -575,4 +575,42 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 	}
 });
 
+// Search for users based on username or display name
+router.get("/search", async (req, res) => {
+	try {
+		const { term } = req.query;
+		const { page = 1, limit = 20 } = req.query;
+		const offset = (page - 1) * limit;
+
+		console.log(`[DEBUG] Searching for users with term: "${term}"`);
+
+		if (!term || term.trim() === "") {
+			return res.status(200).json([]);
+		}
+
+		const searchTerm = `%${term.toLowerCase()}%`;
+
+		// Search for users matching the term in username or display_name
+		const { data, error, count } = await supabase
+			.from("users")
+			.select("*", { count: "exact" })
+			.or(`username.ilike.${searchTerm},display_name.ilike.${searchTerm}`)
+			.order("is_verified", { ascending: false })
+			.order("username")
+			.range(offset, offset + parseInt(limit) - 1);
+
+		if (error) {
+			console.error("[ERROR] Error searching users:", error);
+			throw error;
+		}
+
+		// Return the results
+		console.log(`[DEBUG] Found ${data.length} users matching "${term}"`);
+		res.status(200).json(data);
+	} catch (error) {
+		console.error("Error searching users:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
+
 module.exports = router;

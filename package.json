@@ -2,6 +2,7 @@
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
     "@react-native-community/netinfo": "^11.4.1",
+    "@react-navigation/native": "^7.1.9",
     "@supabase/supabase-js": "^2.49.4",
     "dotenv": "^16.5.0",
     "node-fetch": "^2.7.0"

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { debounce } from "lodash";
 
 // Import components
@@ -35,6 +36,7 @@ export default function SearchScreen() {
 	// Get initial search tag from params if available
 	const initialTag = params?.tag as string;
 	const initialSearchType = params?.searchType as string;
+	const timestamp = params?.timestamp as string;
 
 	// State
 	const [searchQuery, setSearchQuery] = useState(
@@ -49,6 +51,11 @@ export default function SearchScreen() {
 	const [postResults, setPostResults] = useState([]);
 	const [showAllUsers, setShowAllUsers] = useState(false);
 	const [showAllPosts, setShowAllPosts] = useState(false);
+	const [lastParams, setLastParams] = useState({
+		tag: initialTag,
+		searchType: initialSearchType,
+		timestamp,
+	});
 
 	// Number of results to display in preview mode
 	const PREVIEW_COUNT = 5;
@@ -120,7 +127,11 @@ export default function SearchScreen() {
 
 	// Effect to handle initial tag search from params
 	useEffect(() => {
-		console.log("Search params changed:", { initialTag, initialSearchType });
+		console.log("Search params changed:", {
+			initialTag,
+			initialSearchType,
+			timestamp,
+		});
 
 		if (initialTag) {
 			// Update the search query in the input field
@@ -137,32 +148,55 @@ export default function SearchScreen() {
 				`#${initialTag}`
 			);
 		}
-	}, [initialTag, initialSearchType, params]);
+	}, [initialTag, initialSearchType, timestamp]);
 
-	// Additional effect to detect navigation back to this screen
-	useEffect(() => {
-		// This is necessary to handle screen focus/refocus
-		const unsubscribe = router.addListener("focus", () => {
-			const currentParams = router
-				.getState()
-				.routes.find((r) => r.name === "/(tabs)/search")?.params;
-			const tag = currentParams?.tag;
-			const searchType = currentParams?.searchType;
+	// Use useFocusEffect to detect when the screen is focused
+	useFocusEffect(
+		useCallback(() => {
+			// Get current params
+			const currentTag = params?.tag as string;
+			const currentSearchType = params?.searchType as string;
+			const currentTimestamp = params?.timestamp as string;
 
-			console.log("Screen focused with params:", { tag, searchType });
+			console.log("Screen focused with params:", {
+				currentTag,
+				currentSearchType,
+				currentTimestamp,
+				lastParams,
+			});
 
-			if (tag && tag !== initialTag) {
-				// If we have new tag parameters, update search
-				setSearchQuery(`#${tag}`);
-				if (searchType === "tag") {
+			// Check if params have changed since last focus
+			const paramsChanged =
+				currentTag !== lastParams.tag ||
+				currentSearchType !== lastParams.searchType ||
+				currentTimestamp !== lastParams.timestamp;
+
+			if (currentTag && paramsChanged) {
+				console.log("Params changed, updating search");
+				// Update search query and perform search
+				setSearchQuery(`#${currentTag}`);
+				if (currentSearchType === "tag") {
 					setActiveTab("posts");
 				}
-				performSearch(searchType === "tag" ? "posts" : "all", `#${tag}`);
-			}
-		});
+				performSearch(
+					currentSearchType === "tag" ? "posts" : "all",
+					`#${currentTag}`
+				);
 
-		return unsubscribe;
-	}, [router]);
+				// Update last params
+				setLastParams({
+					tag: currentTag,
+					searchType: currentSearchType,
+					timestamp: currentTimestamp,
+				});
+			}
+
+			// Cleanup function
+			return () => {
+				console.log("Search screen losing focus");
+			};
+		}, [params])
+	);
 
 	// Toggle show all users
 	const toggleShowAllUsers = () => {
