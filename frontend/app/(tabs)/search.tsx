@@ -436,6 +436,9 @@ export default function SearchScreen() {
 
 	return (
 		<SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+			{/* Background blocker to prevent unwanted elements from showing through */}
+			<View style={styles.backgroundBlocker} />
+
 			<SearchBar
 				value={searchQuery}
 				onChangeText={handleSearchChange}
@@ -540,6 +543,16 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: "#F8F8F8",
+		position: "relative",
+	},
+	backgroundBlocker: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		backgroundColor: "#F8F8F8",
+		zIndex: -1,
 	},
 	contentContainer: {
 		flex: 1,
