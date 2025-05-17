@@ -7,6 +7,7 @@ import {
 	RefreshControl,
 	ScrollView,
 	FlatList,
+	ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "./VoiceNoteCard";
@@ -362,26 +363,23 @@ export function VoiceNotesList({
 				<View style={styles.separatorLine} />
 			</View>
 
-			{displayVoiceNotes.length === 0 ? (
-				<View style={styles.emptyStateContainer}>
-					<Feather name="mic-off" size={48} color="#ccc" />
-					<Text style={styles.emptyStateText}>No voice notes yet</Text>
-					<Text style={styles.emptyStateSubtext}>
-						Voice notes you create will appear here
-					</Text>
+			{loadingNotes ? (
+				<View style={styles.loadingContainer}>
+					<ActivityIndicator size="large" color="#6B2FBC" />
 				</View>
 			) : (
 				<ScrollView
+					style={styles.scrollView}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
 							onRefresh={handleRefresh}
-							tintColor="#6B2FBC"
 							colors={["#6B2FBC"]}
+							tintColor="#6B2FBC"
 						/>
 					}
 				>
-					<View style={styles.content}>
+					<View style={styles.cardsContainer}>
 						{displayVoiceNotes.map((item) => {
 							// Calculate time since posting
 							const timeAgo = formatRelativeTime(new Date(item.created_at));
@@ -401,38 +399,32 @@ export function VoiceNotesList({
 							const creatorAvatarUrl = item.users?.avatar_url || null;
 
 							// Determine if we should show repost attribution
-							const isRepost =
-								(isSharedList || showRepostAttribution) && item.is_shared;
+							const isRepost = item.is_shared;
+							let sharedByDataForCard = null; // Initialize to null
 
-							// Get the username of who reposted this voice note
-							// If we're viewing a specific profile's reposts, we know they're the one who reposted
-							// Otherwise, use the shared_by info from the voice note item
-							let repostedByUsername = username; // Default to current profile's username
-
-							// If this is a repost with shared_by data, use that information
-							if (
-								item.is_shared &&
-								item.shared_by &&
-								typeof item.shared_by === "object"
-							) {
-								if (item.shared_by.username) {
-									repostedByUsername = item.shared_by.username;
+							if (isRepost) {
+								// Only populate sharedByDataForCard if we have actual shared_by info
+								if (
+									item.shared_by &&
+									typeof item.shared_by === "object" &&
+									item.shared_by.id &&
+									item.shared_by.username
+								) {
+									sharedByDataForCard = {
+										id: item.shared_by.id,
+										username: item.shared_by.username,
+										displayName:
+											item.shared_by.display_name || item.shared_by.username, // Fallback for displayName
+										avatarUrl: item.shared_by.avatar_url || null,
+									};
 								}
+								// If item.is_shared is true, but item.shared_by is not valid,
+								// sharedByDataForCard will remain null.
+								// This means the VoiceNoteCard will not render the "Reposted by" text if data is incomplete.
 							}
 
 							return (
 								<View key={item.id} style={styles.cardContainer}>
-									{/* Show repost attribution if needed */}
-									{isRepost && (
-										<View style={styles.repostAttribution}>
-											<Text style={styles.repostText}>
-												<Text style={styles.repostIcon}>↻</Text> Reposted by{" "}
-												<Text style={styles.repostUsername}>
-													@{repostedByUsername}
-												</Text>
-											</Text>
-										</View>
-									)}
 									<VoiceNoteCard
 										voiceNote={{
 											...item,
@@ -444,7 +436,7 @@ export function VoiceNotesList({
 											plays: normalizeCount(item.plays),
 											shares: normalizeCount(item.shares),
 										}}
-										userId={creatorId}
+										userId={creatorId} // This is the original creator of the voice note
 										displayName={creatorDisplayName}
 										username={creatorUsername}
 										userAvatarUrl={creatorAvatarUrl}
@@ -458,7 +450,10 @@ export function VoiceNotesList({
 												params: { username: creatorUsername },
 											});
 										}}
-										currentUserId={userId}
+										currentUserId={userId} // Pass profile owner's ID as currentUserId for context in VoiceNoteCard
+										isShared={isRepost}
+										showRepostAttribution={showRepostAttribution} // Prop from parent (ProfileScreen)
+										sharedBy={sharedByDataForCard}
 									/>
 								</View>
 							);
@@ -535,5 +530,16 @@ const styles = StyleSheet.create({
 	repostUsername: {
 		fontWeight: "600",
 		color: "#666",
+	},
+	loadingContainer: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	scrollView: {
+		flex: 1,
+	},
+	cardsContainer: {
+		padding: 16,
 	},
 });

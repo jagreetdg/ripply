@@ -514,19 +514,29 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 		const { page = 1, limit = 10 } = req.query;
 		const offset = (page - 1) * limit;
 
-		// First get all the voice notes that the user has shared
-		const { data: sharedData, error: sharedError } = await supabase
+		console.log(
+			`[DEBUG] Fetching shared voice notes for user: ${userId}, page: ${page}, limit: ${limit}`
+		);
+
+		// First get all the voice note share records by the user, with sharer's details
+		const {
+			data: sharedEntries,
+			error: sharedError,
+			count: totalSharesCount,
+		} = await supabase
 			.from("voice_note_shares")
 			.select(
-				"voice_note_id, shared_at, user_id, users!voice_note_shares_user_id_fkey (id, username, display_name, avatar_url)"
+				"voice_note_id, created_at, user_id, sharer_details:users (id, username, display_name, avatar_url)", // users here refers to the user who made the share (the sharer)
+				{ count: "exact" } // For pagination of shares
 			)
-			.eq("user_id", userId)
-			.order("shared_at", { ascending: false })
+			.eq("user_id", userId) // Filter shares made by the profile user
+			.order("created_at", { ascending: false }) // Order by when the share happened
 			.range(offset, offset + parseInt(limit) - 1);
 
 		if (sharedError) {
 			if (sharedError.code === "42P01") {
-				// Table doesn't exist yet
+				// undefined_table
+				console.warn("[WARN] voice_note_shares table does not exist.");
 				return res.status(200).json({
 					data: [],
 					pagination: {
@@ -534,81 +544,77 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 						limit: parseInt(limit),
 						total: 0,
 					},
-					message: "Shared voice notes table does not exist",
+					message: "Shared voice notes feature not fully configured.",
 				});
 			}
+			console.error("[ERROR] Error fetching shared entries:", sharedError);
 			throw sharedError;
 		}
 
-		// If user hasn't shared any voice notes, return empty array
-		if (!sharedData || sharedData.length === 0) {
+		if (!sharedEntries || sharedEntries.length === 0) {
+			console.log(`[DEBUG] User ${userId} has not shared any voice notes.`);
 			return res.status(200).json({
 				data: [],
-				pagination: {
-					page: parseInt(page),
-					limit: parseInt(limit),
-					total: 0,
-				},
+				pagination: { page: parseInt(page), limit: parseInt(limit), total: 0 },
 			});
 		}
 
-		// Get the IDs of the shared voice notes
-		const voiceNoteIds = sharedData.map((share) => share.voice_note_id);
+		const voiceNoteIds = sharedEntries.map((entry) => entry.voice_note_id);
 
-		// Get the actual voice note data for these IDs
-		const {
-			data: voiceNotesData,
-			error: voiceNotesError,
-			count,
-		} = await supabase
+		// Get the actual voice note data for these IDs, including original creator's details
+		const { data: voiceNotesData, error: voiceNotesError } = await supabase
 			.from("voice_notes")
 			.select(
 				`
         *,
-        users:user_id (id, username, display_name, avatar_url),
+        users (id, username, display_name, avatar_url), 
         likes:voice_note_likes (count),
         comments:voice_note_comments (count),
         plays:voice_note_plays (count),
         tags:voice_note_tags (tag_name)
-      `,
-				{ count: "exact" }
+      `
 			)
 			.in("id", voiceNoteIds);
 
-		if (voiceNotesError) throw voiceNotesError;
+		if (voiceNotesError) {
+			console.error(
+				"[ERROR] Error fetching voice note details for shared items:",
+				voiceNotesError
+			);
+			throw voiceNotesError;
+		}
 
-		// Process the data to format tags and mark as shared
+		// Combine voice note data with share information
 		const processedData = voiceNotesData.map((note) => {
-			// Extract tags from the nested structure
-			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
-
-			// Find the shared_at date for this voice note
-			const shareInfo = sharedData.find(
-				(share) => share.voice_note_id === note.id
+			const tags = note.tags ? note.tags.map((tagObj) => tagObj.tag_name) : [];
+			const shareInfo = sharedEntries.find(
+				(entry) => entry.voice_note_id === note.id
 			);
 
-			// Use the user data we already joined
-			const sharerData = shareInfo ? shareInfo.users : null;
-
+			// note.users is the original creator of the voice note
+			// shareInfo.sharer_details is the user who shared this note (the profile owner, in this context)
 			return {
-				...note,
+				...note, // original voice note data, including original creator (note.users)
 				tags,
 				is_shared: true,
-				shared_at: shareInfo ? shareInfo.shared_at : null,
-				shared_by: sharerData
+				shared_at: shareInfo ? shareInfo.created_at : null, // Timestamp of the share
+				shared_by: shareInfo?.sharer_details
 					? {
-							id: sharerData.id,
-							username: sharerData.username,
-							display_name: sharerData.display_name,
-							avatar_url: sharerData.avatar_url,
+							id: shareInfo.sharer_details.id,
+							username: shareInfo.sharer_details.username,
+							display_name: shareInfo.sharer_details.display_name,
+							avatar_url: shareInfo.sharer_details.avatar_url,
 					  }
 					: null,
 			};
 		});
 
-		// Sort by shared_at time
+		// Re-sort based on the share time (created_at from voice_note_shares)
+		// because the voiceNotesData might not be in the same order as sharedEntries if some IDs were missing
 		processedData.sort((a, b) => {
-			return new Date(b.shared_at).getTime() - new Date(a.shared_at).getTime();
+			const dateA = a.shared_at ? new Date(a.shared_at).getTime() : 0;
+			const dateB = b.shared_at ? new Date(b.shared_at).getTime() : 0;
+			return dateB - dateA;
 		});
 
 		res.status(200).json({
@@ -616,7 +622,7 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 			pagination: {
 				page: parseInt(page),
 				limit: parseInt(limit),
-				total: count,
+				total: totalSharesCount, // Use the count from the shares query for accurate pagination of shares
 			},
 		});
 	} catch (error) {

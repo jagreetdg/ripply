@@ -11,6 +11,7 @@ import {
 	Platform,
 	Share,
 	Alert,
+	ScrollView,
 } from "react-native";
 import { Feather, MaterialIcons, FontAwesome } from "@expo/vector-icons";
 import { Audio } from "expo-av";
@@ -92,9 +93,26 @@ interface VoiceNoteCardProps {
 	userAvatarUrl?: string | null;
 	timePosted?: string;
 	onPlay?: () => void;
+	onPlayPress?: () => void; // Alternative name for onPlay
 	onProfilePress?: () => void;
+	onUserProfilePress?: () => void; // Alternative name for onProfilePress
 	onShare?: (voiceNoteId: string) => void;
 	currentUserId?: string;
+	isShared?: boolean; // Whether this post is a shared/reposted voice note
+	sharedBy?: {
+		// Info about who shared the voice note
+		id: string;
+		username: string;
+		displayName: string;
+		avatarUrl: string | null;
+	} | null;
+	showRepostAttribution?: boolean; // Whether to show repost attribution
+	voiceNoteUsers?: {
+		id: string;
+		username: string;
+		display_name: string;
+		avatar_url: string | null;
+	};
 }
 
 const formatDuration = (seconds: number): string => {
@@ -213,14 +231,39 @@ export function VoiceNoteCard({
 	userAvatarUrl,
 	timePosted,
 	onPlay,
+	onPlayPress,
 	onProfilePress,
+	onUserProfilePress,
 	onShare,
 	currentUserId,
+	isShared: isSharedProp,
+	sharedBy,
+	showRepostAttribution,
+	voiceNoteUsers,
 }: VoiceNoteCardProps) {
 	const router = useRouter();
 	const { user } = useUser(); // Get current logged-in user from context
 	const [isPlaying, setIsPlaying] = useState(false);
 	const loggedInUserId = user?.id || currentUserId; // Use user from context or fallback to prop
+	const progressContainerRef = useRef<View>(null);
+	const statusTimeout = useRef<any>(null);
+	const scrollViewRef = useRef<ScrollView>(null);
+
+	// Combine username sources with fallbacks
+	const effectiveUsername = username || voiceNoteUsers?.username || "user";
+	const effectiveDisplayName =
+		displayName || voiceNoteUsers?.display_name || "User";
+	const effectiveAvatarUrl =
+		userAvatarUrl || voiceNoteUsers?.avatar_url || null;
+
+	// Handle duplicate isShared identifier by using the prop value or defaulting to the state
+	const [isSharedState, setIsShared] = useState<boolean>(
+		isSharedProp !== undefined ? isSharedProp : false
+	);
+
+	// Use the prop if provided, otherwise use the state
+	const isSharedEffective =
+		isSharedProp !== undefined ? isSharedProp : isSharedState;
 
 	// Debug log to check the username value
 	console.log("VoiceNoteCard received props:", {
@@ -234,10 +277,6 @@ export function VoiceNoteCard({
 
 	// Ensure we have a valid username for display and navigation
 	// If username is undefined, try to extract it from voiceNote.users
-	const effectiveUsername =
-		username ||
-		voiceNote.users?.username ||
-		(displayName ? displayName.toLowerCase().replace(/\s+/g, "") : "user");
 	console.log("Using effectiveUsername:", effectiveUsername);
 	const [progress, setProgress] = useState(0);
 	const [isSeeking, setIsSeeking] = useState(false);
@@ -253,7 +292,6 @@ export function VoiceNoteCard({
 			: 0
 	);
 	const [isLoadingShareCount, setIsLoadingShareCount] = useState(false);
-	const [isShared, setIsShared] = useState(false);
 	const [showCommentPopup, setShowCommentPopup] = useState(false);
 	const [commentsCount, setCommentsCount] = useState(
 		typeof voiceNote.comments === "number" && voiceNote.comments > 0
@@ -262,7 +300,6 @@ export function VoiceNoteCard({
 	);
 	const [comments, setComments] = useState<Comment[]>([]);
 	const [isLoadingComments, setIsLoadingComments] = useState(false);
-	const progressContainerRef = useRef<View>(null);
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const shareScale = useRef(new Animated.Value(1)).current;
 	const [playsCount, setPlaysCount] = useState(
@@ -311,31 +348,20 @@ export function VoiceNoteCard({
 		}
 	}, [voiceNote.id]);
 
-	// Handle navigation to user profile
+	// Handle profile press
 	const handleProfilePress = useCallback(() => {
-		// Use the provided onProfilePress prop if available
-		if (onProfilePress) {
+		// Support both onProfilePress and onUserProfilePress props for backward compatibility
+		if (onUserProfilePress) {
+			onUserProfilePress();
+		} else if (onProfilePress) {
 			onProfilePress();
-		} else if (effectiveUsername) {
-			// Navigate to the profile by username
-			console.log("Navigating to profile by username:", effectiveUsername);
-			// Use the href property instead of a template string to avoid parameter conflicts
+		} else if (username) {
 			router.push({
 				pathname: "/profile/[username]",
-				params: { username: effectiveUsername },
+				params: { username },
 			});
-		} else if (userId) {
-			// Fallback to userId if username is not available
-			console.log("Navigating to user profile with UUID:", userId);
-			router.push({
-				pathname: "/[userId]",
-				params: { userId },
-			});
-		} else {
-			// If no userId or username is provided, navigate to a default profile
-			router.push("/profile/user");
 		}
-	}, [router, userId, username, onProfilePress]);
+	}, [router, username, onProfilePress, onUserProfilePress]);
 
 	// Handle like button press
 	const handleLikePress = useCallback(() => {
@@ -563,10 +589,13 @@ export function VoiceNoteCard({
 	// Handle play button press
 	const handlePlayPress = useCallback(() => {
 		setIsPlaying((prev) => !prev);
-		if (onPlay) {
+		// Support both onPlay and onPlayPress props for backward compatibility
+		if (onPlayPress) {
+			onPlayPress();
+		} else if (onPlay) {
 			onPlay();
 		}
-	}, [onPlay]);
+	}, [onPlay, onPlayPress]);
 
 	// Calculate progress based on touch position
 	const calculateProgress = useCallback((pageX: number) => {
@@ -762,6 +791,49 @@ export function VoiceNoteCard({
 		return (
 			<>
 				<View style={[styles.container, styles.plainContainer]}>
+					{/* Add repost attribution if needed */}
+					{showRepostAttribution && isSharedEffective && sharedBy && (
+						<View
+							style={{
+								flexDirection: "row",
+								alignItems: "center",
+								paddingHorizontal: 10,
+								paddingVertical: 5,
+								backgroundColor: "rgba(0,0,0,0.3)",
+								borderTopLeftRadius: 10,
+								borderTopRightRadius: 10,
+							}}
+						>
+							<Text
+								style={{
+									fontSize: 12,
+									color: "#fff",
+									fontWeight: "400",
+								}}
+							>
+								<Feather name="repeat" size={14} color="#fff" /> Reposted by{" "}
+								<TouchableOpacity
+									onPress={() => {
+										if (sharedBy.username) {
+											router.push({
+												pathname: "/profile/[username]",
+												params: { username: sharedBy.username },
+											});
+										}
+									}}
+								>
+									<Text
+										style={{
+											fontWeight: "600",
+											color: "#fff",
+										}}
+									>
+										@{sharedBy.username}
+									</Text>
+								</TouchableOpacity>
+							</Text>
+						</View>
+					)}
 					<View style={styles.content}>
 						{/* User info and options header */}
 						{(userId || displayName) && (
@@ -773,11 +845,11 @@ export function VoiceNoteCard({
 									<DefaultProfilePicture
 										userId={userId || "user"}
 										size={32}
-										avatarUrl={userAvatarUrl || voiceNote.userAvatarUrl || null}
+										avatarUrl={effectiveAvatarUrl}
 									/>
 									<View style={styles.userInfo}>
 										<Text style={styles.displayName}>
-											{displayName || "User"}
+											{effectiveDisplayName}
 										</Text>
 										<Text style={styles.username}>@{effectiveUsername}</Text>
 									</View>
@@ -942,14 +1014,14 @@ export function VoiceNoteCard({
 										<Feather
 											name="repeat"
 											size={18}
-											color={isShared ? "#4CAF50" : "#888"}
+											color={isSharedEffective ? "#4CAF50" : "#888"}
 										/>
 									</Animated.View>
 									{isLoadingShareCount ? (
 										<Text
 											style={[
 												styles.interactionCount,
-												isShared && { color: "#4CAF50" },
+												isSharedEffective && { color: "#4CAF50" },
 												{ opacity: 0.5 }, // Dim when loading
 											]}
 										>
@@ -959,7 +1031,7 @@ export function VoiceNoteCard({
 										<Text
 											style={[
 												styles.interactionCount,
-												isShared && { color: "#4CAF50" },
+												isSharedEffective && { color: "#4CAF50" },
 											]}
 										>
 											{formatNumber(sharesCount)}
@@ -991,6 +1063,49 @@ export function VoiceNoteCard({
 				imageStyle={{ opacity: 1 }}
 			>
 				<View style={styles.overlay} />
+				{/* Add repost attribution if needed */}
+				{showRepostAttribution && isSharedEffective && sharedBy && (
+					<View
+						style={{
+							flexDirection: "row",
+							alignItems: "center",
+							paddingHorizontal: 10,
+							paddingVertical: 5,
+							backgroundColor: "rgba(0,0,0,0.3)",
+							borderTopLeftRadius: 10,
+							borderTopRightRadius: 10,
+						}}
+					>
+						<Text
+							style={{
+								fontSize: 12,
+								color: "#fff",
+								fontWeight: "400",
+							}}
+						>
+							<Feather name="repeat" size={14} color="#fff" /> Reposted by{" "}
+							<TouchableOpacity
+								onPress={() => {
+									if (sharedBy.username) {
+										router.push({
+											pathname: "/profile/[username]",
+											params: { username: sharedBy.username },
+										});
+									}
+								}}
+							>
+								<Text
+									style={{
+										fontWeight: "600",
+										color: "#fff",
+									}}
+								>
+									@{sharedBy.username}
+								</Text>
+							</TouchableOpacity>
+						</Text>
+					</View>
+				)}
 				<View style={styles.content}>
 					{/* User info and options header */}
 					{(userId || displayName) && (
@@ -1002,13 +1117,11 @@ export function VoiceNoteCard({
 								<DefaultProfilePicture
 									userId={userId || "@user"}
 									size={32}
-									avatarUrl={userAvatarUrl || voiceNote.userAvatarUrl || null}
+									avatarUrl={effectiveAvatarUrl}
 								/>
 								<View style={styles.userInfo}>
-									<Text style={styles.displayName}>
-										{displayName || "User"}
-									</Text>
-									<Text style={styles.username}>@{username || "user"}</Text>
+									<Text style={styles.displayName}>{effectiveDisplayName}</Text>
+									<Text style={styles.username}>@{effectiveUsername}</Text>
 								</View>
 							</TouchableOpacity>
 							<View style={styles.headerActions}>
@@ -1171,14 +1284,14 @@ export function VoiceNoteCard({
 									<Feather
 										name="repeat"
 										size={18}
-										color={isShared ? "#4CAF50" : "#888"}
+										color={isSharedEffective ? "#4CAF50" : "#888"}
 									/>
 								</Animated.View>
 								{isLoadingShareCount ? (
 									<Text
 										style={[
 											styles.interactionCount,
-											isShared && { color: "#4CAF50" },
+											isSharedEffective && { color: "#4CAF50" },
 											{ opacity: 0.5 }, // Dim when loading
 										]}
 									>
@@ -1188,7 +1301,7 @@ export function VoiceNoteCard({
 									<Text
 										style={[
 											styles.interactionCount,
-											isShared && { color: "#4CAF50" },
+											isSharedEffective && { color: "#4CAF50" },
 										]}
 									>
 										{formatNumber(sharesCount)}

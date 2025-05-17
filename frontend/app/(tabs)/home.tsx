@@ -98,6 +98,13 @@ export default function HomeScreen() {
 		username: string;
 		userAvatar: string | null;
 		timePosted: string;
+		isShared: boolean;
+		sharedBy?: {
+			id: string;
+			username: string;
+			displayName: string;
+			avatarUrl: string | null;
+		} | null;
 		voiceNote: {
 			id: string;
 			duration: number;
@@ -277,14 +284,31 @@ export default function HomeScreen() {
 					) || [];
 
 				// Check if any posts are from users not followed
-				const unfollowedPosts = data.filter(
-					(item) => !followingIds.includes(item.user_id)
-				);
+				const unfollowedPosts = data.filter((item) => {
+					// For regular posts, check if the creator is followed
+					if (!item.is_shared) {
+						return !followingIds.includes(item.user_id);
+					}
+
+					// For shared posts, check if the sharer is followed
+					// If shared_by exists and has an id field, use that to check
+					if (item.shared_by && item.shared_by.id) {
+						return !followingIds.includes(item.shared_by.id);
+					}
+
+					// If we can't determine the sharer, treat as unfollowed
+					return true;
+				});
 
 				if (unfollowedPosts.length > 0) {
 					console.error(
 						"[DIAGNOSTIC] CRITICAL ERROR: Found posts from unfollowed users!",
-						unfollowedPosts.map((p) => ({ id: p.id, user_id: p.user_id }))
+						unfollowedPosts.map((p) => ({
+							id: p.id,
+							user_id: p.user_id,
+							is_shared: p.is_shared,
+							shared_by_id: p.shared_by?.id,
+						}))
 					);
 				} else {
 					console.log(
@@ -294,27 +318,48 @@ export default function HomeScreen() {
 			}
 
 			// Transform backend data format to match our frontend component expectations
-			const transformedData = data.map((item) => ({
-				id: item.id,
-				userId: item.user_id,
-				displayName: item.users?.display_name || "User",
-				username: item.users?.username || "",
-				userAvatar: item.users?.avatar_url,
-				timePosted: new Date(item.created_at).toLocaleDateString(),
-				voiceNote: {
+			const transformedData = data.map((item) => {
+				// Determine if this is a shared voice note (repost)
+				const isShared = !!item.is_shared;
+
+				// Get sharer info if available
+				const sharerInfo =
+					isShared && item.shared_by
+						? {
+								id: item.shared_by.id,
+								username: item.shared_by.username || "",
+								displayName: item.shared_by.display_name || "User",
+								avatarUrl: item.shared_by.avatar_url,
+						  }
+						: null;
+
+				return {
 					id: item.id,
-					duration: item.duration,
-					title: item.title,
-					likes: item.likes?.[0]?.count || 0,
-					comments: item.comments?.[0]?.count || 0,
-					plays: item.plays?.[0]?.count || 0,
-					shares: 0,
-					backgroundImage: item.background_image,
-					tags: item.tags || [],
-					// Include the users object from the API response
-					users: item.users,
-				},
-			}));
+					userId: item.user_id,
+					displayName: item.users?.display_name || "User",
+					username: item.users?.username || "",
+					userAvatar: item.users?.avatar_url,
+					timePosted:
+						isShared && item.shared_at
+							? new Date(item.shared_at).toLocaleDateString()
+							: new Date(item.created_at).toLocaleDateString(),
+					isShared,
+					sharedBy: sharerInfo,
+					voiceNote: {
+						id: item.id,
+						duration: item.duration,
+						title: item.title,
+						likes: item.likes?.[0]?.count || 0,
+						comments: item.comments?.[0]?.count || 0,
+						plays: item.plays?.[0]?.count || 0,
+						shares: item.shares || 0,
+						backgroundImage: item.background_image,
+						tags: item.tags || [],
+						// Include the users object from the API response
+						users: item.users,
+					},
+				};
+			});
 
 			setFeedItems(transformedData);
 			setError(null);
@@ -466,11 +511,18 @@ export default function HomeScreen() {
 										username={item.username}
 										userAvatarUrl={item.userAvatar}
 										timePosted={item.timePosted}
-										onPlay={() =>
-											handlePlayVoiceNote(item.voiceNote.id, item.userId)
-										}
-										onProfilePress={() =>
+										voiceNoteUsers={item.voiceNote.users}
+										isShared={item.isShared}
+										sharedBy={item.sharedBy}
+										showRepostAttribution={true}
+										onUserProfilePress={() =>
 											handleUserProfilePress(item.userId, item.username)
+										}
+										onPlayPress={() =>
+											handlePlayVoiceNote(
+												item.voiceNote.id,
+												currentUser?.id || ""
+											)
 										}
 									/>
 								</View>

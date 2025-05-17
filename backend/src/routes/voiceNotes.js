@@ -709,167 +709,191 @@ router.get("/tags/:tagName", async (req, res) => {
 router.post("/:voiceNoteId/share", async (req, res) => {
 	try {
 		const { voiceNoteId } = req.params;
-		// Support both userId and followerId in the request body for consistency
-		const { userId, followerId } = req.body;
-		const effectiveUserId = userId || followerId;
+		const { userId } = req.body; // Expecting userId from frontend
 
-		if (!effectiveUserId) {
+		if (!userId) {
 			return res.status(400).json({ message: "User ID is required" });
+		}
+		if (!voiceNoteId) {
+			return res.status(400).json({ message: "Voice note ID is required" });
 		}
 
 		console.log(
-			`[DEBUG] Share request: voiceNoteId=${voiceNoteId}, userId=${effectiveUserId}`
+			`[DEBUG] Share/Unshare request: voiceNoteId=${voiceNoteId}, userId=${userId}`
 		);
 
-		// Check if voice note exists
-		const { data: voiceNoteData, error: voiceNoteError } = await supabase
+		// 1. Check if the voice note exists to ensure we're acting on a valid entity
+		const { data: voiceNote, error: voiceNoteError } = await supabase
 			.from("voice_notes")
-			.select("id, user_id, shares")
+			.select("id")
 			.eq("id", voiceNoteId)
 			.single();
 
-		if (voiceNoteError || !voiceNoteData) {
+		if (voiceNoteError || !voiceNote) {
+			console.error(
+				`[ERROR] Voice note not found for ID: ${voiceNoteId}`,
+				voiceNoteError
+			);
 			return res.status(404).json({ message: "Voice note not found" });
 		}
 
-		// Check if user has already shared this voice note
-		const { data: existingShare, error: existingShareError } = await supabase
+		// 2. Check if the user has already shared this voice note
+		const { data: existingShare, error: selectError } = await supabase
 			.from("voice_note_shares")
 			.select("id")
 			.eq("voice_note_id", voiceNoteId)
-			.eq("user_id", effectiveUserId)
-			.single();
+			.eq("user_id", userId)
+			.maybeSingle(); // Use maybeSingle to return null if not found, instead of error
 
-		if (existingShareError && existingShareError.code !== "PGRST116") {
-			if (existingShareError.code === "42P01") {
-				// Table doesn't exist yet
-				return res.status(400).json({
-					message: "Voice note shares table does not exist",
-					note: "Please run the SQL script in the Supabase SQL Editor to create the necessary tables",
+		if (selectError) {
+			// An actual error, not just "not found"
+			console.error("[ERROR] Error checking for existing share:", selectError);
+			return res
+				.status(500)
+				.json({
+					message: "Error checking share status",
+					error: selectError.message,
 				});
-			}
-			throw existingShareError;
 		}
 
-		let isShared = false;
-		let shareCount = voiceNoteData.shares || 0;
+		let isNowShared = false;
 
-		try {
-			if (existingShare) {
-				// User is unsharing: delete the share and decrement the count
-				const { error: deleteError } = await supabase
-					.from("voice_note_shares")
-					.delete()
-					.eq("id", existingShare.id);
+		if (existingShare) {
+			// User has already shared it, so unshare (delete the record)
+			const { error: deleteError } = await supabase
+				.from("voice_note_shares")
+				.delete()
+				.eq("id", existingShare.id);
 
-				if (deleteError) throw deleteError;
-
-				// Decrement the share count in the voice_notes table
-				const { error: updateError } = await supabase
-					.from("voice_notes")
-					.update({ shares: Math.max(0, shareCount - 1) })
-					.eq("id", voiceNoteId);
-
-				if (updateError) throw updateError;
-
-				shareCount = Math.max(0, shareCount - 1);
-				isShared = false;
-			} else {
-				// User is sharing: create a new share and increment the count
-				const { error: insertError } = await supabase
-					.from("voice_note_shares")
-					.insert({
-						id: uuidv4(),
-						voice_note_id: voiceNoteId,
-						user_id: effectiveUserId,
-						shared_at: new Date().toISOString(),
-						created_at: new Date().toISOString(),
-						updated_at: new Date().toISOString(),
+			if (deleteError) {
+				console.error("[ERROR] Error deleting share:", deleteError);
+				return res
+					.status(500)
+					.json({
+						message: "Error unsharing voice note",
+						error: deleteError.message,
 					});
-
-				if (insertError) throw insertError;
-
-				// Increment the share count in the voice_notes table
-				const { error: updateError } = await supabase
-					.from("voice_notes")
-					.update({ shares: shareCount + 1 })
-					.eq("id", voiceNoteId);
-
-				if (updateError) throw updateError;
-
-				shareCount = shareCount + 1;
-				isShared = true;
 			}
-		} catch (error) {
-			console.error("Error processing share operation:", error);
-			throw error;
+			isNowShared = false;
+			console.log(`[DEBUG] User ${userId} unshared voice note ${voiceNoteId}`);
+		} else {
+			// User has not shared it, so share (insert a new record)
+			// created_at is handled by defaultValue in DB schema
+			const { error: insertError } = await supabase
+				.from("voice_note_shares")
+				.insert({
+					voice_note_id: voiceNoteId,
+					user_id: userId,
+				});
+
+			if (insertError) {
+				console.error("[ERROR] Error inserting share:", insertError);
+				return res
+					.status(500)
+					.json({
+						message: "Error sharing voice note",
+						error: insertError.message,
+					});
+			}
+			isNowShared = true;
+			console.log(`[DEBUG] User ${userId} shared voice note ${voiceNoteId}`);
+		}
+
+		// 3. Get the new total share count for the voice note from voice_note_shares
+		const { count: currentShareCount, error: countError } = await supabase
+			.from("voice_note_shares")
+			.select("*", { count: "exact", head: true })
+			.eq("voice_note_id", voiceNoteId);
+
+		if (countError) {
+			console.error("[ERROR] Error getting updated share count:", countError);
+			// Non-fatal for the share action itself, but client might get stale count
 		}
 
 		res.status(200).json({
-			message: isShared
+			message: isNowShared
 				? "Share recorded successfully"
 				: "Share removed successfully",
 			voiceNoteId,
-			userId: effectiveUserId,
-			shareCount,
-			isShared,
+			userId,
+			shareCount: currentShareCount || 0,
+			isShared: isNowShared,
 		});
 	} catch (error) {
-		console.error("Error recording share:", error);
+		console.error("[ERROR] Unexpected error in /share route:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 });
 
-// Get voice note shares
+// Get voice note shares count (this route might be GET /:voiceNoteId/shares/count or similar)
+// The existing GET /:voiceNoteId/shares seems to fetch the count. Let's update it.
 router.get("/:voiceNoteId/shares", async (req, res) => {
 	try {
 		const { voiceNoteId } = req.params;
 
-		console.log(`[DEBUG] Fetching shares for voice note: ${voiceNoteId}`);
-
-		// Check if voice note exists and get the shares count
-		const { data: voiceNoteData, error: voiceNoteError } = await supabase
-			.from("voice_notes")
-			.select("id, shares")
-			.eq("id", voiceNoteId)
-			.single();
-
-		if (voiceNoteError) {
-			if (voiceNoteError.code === "PGRST116") {
-				// Not found
-				return res.status(404).json({ message: "Voice note not found" });
-			}
-
-			// If there's a column error, fall back to counting shares
-			if (voiceNoteError.code === "42703") {
-				console.error("Error fetching share count:", voiceNoteError);
-
-				// Fall back to counting from the shares table
-				const { data: sharesData, error: countError } = await supabase
-					.from("voice_note_shares")
-					.select("id", { count: "exact" })
-					.eq("voice_note_id", voiceNoteId);
-
-				if (countError) {
-					if (countError.code === "42P01") {
-						return res.status(200).json({ shareCount: 0 });
-					}
-					throw countError;
-				}
-
-				return res.status(200).json({ shareCount: sharesData.length });
-			}
-
-			throw voiceNoteError;
+		if (!voiceNoteId) {
+			return res.status(400).json({ message: "Voice note ID is required" });
 		}
 
-		// Return the shares count from the voice_notes table
-		const shareCount = voiceNoteData.shares || 0;
-		console.log(`[DEBUG] Voice note ${voiceNoteId} has ${shareCount} shares`);
+		console.log(`[DEBUG] Fetching share count for voice note: ${voiceNoteId}`);
 
-		res.status(200).json({ shareCount });
+		// 1. Check if voice note exists (optional, but good practice)
+		const { data: voiceNote, error: voiceNoteError } = await supabase
+			.from("voice_notes")
+			.select("id")
+			.eq("id", voiceNoteId)
+			.maybeSingle();
+
+		if (voiceNoteError) {
+			console.error(
+				`[ERROR] Error checking voice note ${voiceNoteId} existence:`,
+				voiceNoteError
+			);
+			// Don't fail yet, proceed to count shares. If VN doesn't exist, count will be 0.
+		}
+		if (!voiceNote && !voiceNoteError) {
+			// No error, but voiceNote is null
+			console.log(
+				`[INFO] Voice note ${voiceNoteId} not found while getting share count.`
+			);
+			// Depending on requirements, you could 404 here or return 0 count.
+			// For simplicity, we'll let it proceed and likely return 0 if no shares exist for a non-existent VN.
+		}
+
+		// 2. Get the total share count for the voice note from voice_note_shares
+		const { count, error: countError } = await supabase
+			.from("voice_note_shares")
+			.select("*", { count: "exact", head: true })
+			.eq("voice_note_id", voiceNoteId);
+
+		if (countError) {
+			console.error("[ERROR] Error fetching share count:", countError);
+			// Check if the table voice_note_shares doesn't exist (e.g., after a DB reset but before migration)
+			if (countError.code === "42P01") {
+				// undefined_table
+				return res
+					.status(500)
+					.json({
+						message:
+							"Shares table not found. Please ensure database migrations are complete.",
+						shareCount: 0,
+					});
+			}
+			return res
+				.status(500)
+				.json({
+					message: "Error fetching share count",
+					error: countError.message,
+				});
+		}
+
+		console.log(`[DEBUG] Voice note ${voiceNoteId} has ${count || 0} shares`);
+		res.status(200).json({ shareCount: count || 0 });
 	} catch (error) {
-		console.error("Error fetching share count:", error);
+		console.error(
+			"[ERROR] Unexpected error in GET /:voiceNoteId/shares:",
+			error
+		);
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 });
