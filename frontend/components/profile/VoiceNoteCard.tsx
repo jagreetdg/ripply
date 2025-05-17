@@ -799,7 +799,9 @@ export function VoiceNoteCard({
 								alignItems: "center",
 								paddingHorizontal: 10,
 								paddingVertical: 5,
-								backgroundColor: "rgba(0,0,0,0.3)",
+								backgroundColor: voiceNote.backgroundImage
+									? "rgba(255, 255, 255, 0.1)"
+									: "rgba(0,0,0,0.7)",
 								borderTopLeftRadius: 10,
 								borderTopRightRadius: 10,
 							}}
@@ -1071,7 +1073,9 @@ export function VoiceNoteCard({
 							alignItems: "center",
 							paddingHorizontal: 10,
 							paddingVertical: 5,
-							backgroundColor: "rgba(0,0,0,0.3)",
+							backgroundColor: voiceNote.backgroundImage
+								? "rgba(0,0,0,0.15)"
+								: "rgba(0,0,0,0.3)",
 							borderTopLeftRadius: 10,
 							borderTopRightRadius: 10,
 						}}
