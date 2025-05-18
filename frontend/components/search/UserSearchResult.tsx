@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import DefaultAvatar from "../DefaultAvatar";
 import { FollowButton } from "../profile/FollowButton";
 import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
 
 interface UserType {
 	id: string;
@@ -29,6 +30,7 @@ interface UserSearchResultProps {
 export const UserSearchResult = ({ user, onPress }: UserSearchResultProps) => {
 	const router = useRouter();
 	const { user: currentUser } = useUser();
+	const { colors, isDarkMode } = useTheme();
 	const [imageError, setImageError] = useState(false);
 	const [scaleAnim] = useState(new Animated.Value(1));
 
@@ -68,7 +70,14 @@ export const UserSearchResult = ({ user, onPress }: UserSearchResultProps) => {
 	return (
 		<Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
 			<TouchableOpacity
-				style={styles.container}
+				style={[
+					styles.container,
+					{
+						backgroundColor: colors.card,
+						borderBottomColor: colors.border,
+						shadowColor: isDarkMode ? colors.shadow : "#000",
+					},
+				]}
 				onPress={handlePress}
 				activeOpacity={0.9}
 			>
@@ -76,7 +85,7 @@ export const UserSearchResult = ({ user, onPress }: UserSearchResultProps) => {
 					{user.avatar_url && !imageError ? (
 						<Image
 							source={{ uri: user.avatar_url }}
-							style={styles.avatar}
+							style={[styles.avatar, { borderColor: colors.background }]}
 							onError={() => setImageError(true)}
 						/>
 					) : (
@@ -86,7 +95,7 @@ export const UserSearchResult = ({ user, onPress }: UserSearchResultProps) => {
 					<View style={styles.textContainer}>
 						<View style={styles.nameContainer}>
 							<Text
-								style={styles.displayName}
+								style={[styles.displayName, { color: colors.text }]}
 								numberOfLines={1}
 								ellipsizeMode="tail"
 							>
@@ -96,13 +105,13 @@ export const UserSearchResult = ({ user, onPress }: UserSearchResultProps) => {
 								<Feather
 									name="check-circle"
 									size={14}
-									color="#6B2FBC"
+									color={colors.tint}
 									style={styles.verifiedIcon}
 								/>
 							)}
 						</View>
 						<Text
-							style={styles.username}
+							style={[styles.username, { color: colors.textSecondary }]}
 							numberOfLines={1}
 							ellipsizeMode="tail"
 						>
@@ -130,12 +139,9 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		padding: 16,
 		borderBottomWidth: 1,
-		borderBottomColor: "#EEEEEE",
-		backgroundColor: "#FFFFFF",
 		borderRadius: 12,
 		marginHorizontal: 12,
 		marginVertical: 6,
-		shadowColor: "#000",
 		shadowOffset: {
 			width: 0,
 			height: 2,
@@ -153,9 +159,7 @@ const styles = StyleSheet.create({
 		width: 48,
 		height: 48,
 		borderRadius: 24,
-		backgroundColor: "#f0f0f0",
 		borderWidth: 2,
-		borderColor: "#f5f5f5",
 	},
 	textContainer: {
 		marginLeft: 12,
@@ -168,7 +172,6 @@ const styles = StyleSheet.create({
 	displayName: {
 		fontSize: 16,
 		fontWeight: "600",
-		color: "#333",
 		maxWidth: "90%",
 	},
 	verifiedIcon: {
@@ -176,7 +179,6 @@ const styles = StyleSheet.create({
 	},
 	username: {
 		fontSize: 14,
-		color: "#888",
 		marginTop: 2,
 	},
 	followButton: {

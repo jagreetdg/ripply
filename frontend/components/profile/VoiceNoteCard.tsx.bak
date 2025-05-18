@@ -1075,34 +1075,32 @@ export function VoiceNoteCard({
 										avatarUrl={effectiveAvatarUrl}
 									/>
 									<View style={styles.userInfo}>
-										<Text style={styles.displayNameOnImage}>
+										<Text style={styles.displayName}>
 											{effectiveDisplayName}
 										</Text>
-										<Text style={styles.usernameOnImage}>
-											@{effectiveUsername}
-										</Text>
+										<Text style={styles.username}>@{effectiveUsername}</Text>
 									</View>
 								</TouchableOpacity>
 								<View style={styles.headerActions}>
 									{timePosted && (
-										<Text style={styles.timePostedOnImage}>{timePosted}</Text>
+										<Text style={styles.timePosted}>{timePosted}</Text>
 									)}
 									<TouchableOpacity style={styles.optionsButton}>
 										<Feather
 											name="more-horizontal"
 											size={16}
-											color={colors.card}
+											color={colors.tabIconDefault}
 										/>
 									</TouchableOpacity>
 								</View>
 							</View>
 						)}
-						<Text style={styles.titleOnImage}>{voiceNote.title}</Text>
+						<Text style={styles.title}>{voiceNote.title}</Text>
 
 						<View style={styles.playerContainer}>
 							<TouchableOpacity
 								onPress={handlePlayPress}
-								style={[styles.playButton, styles.playButtonOnImage]}
+								style={styles.playButton}
 								activeOpacity={0.7}
 							>
 								<MaterialIcons
@@ -1114,143 +1112,148 @@ export function VoiceNoteCard({
 
 							{renderProgressBar()}
 
-							<Text style={styles.durationOnImage}>
+							<Text style={styles.duration}>
 								{formatDuration(voiceNote.duration)}
 							</Text>
 						</View>
 
-						{/* Tags section */}
-						{voiceNote.tags && voiceNote.tags.length > 0 && (
-							<View style={styles.tagsContainer}>
-								{voiceNote.tags.slice(0, 10).map((tag, index) => (
-									<TouchableOpacity
-										key={index}
-										style={[styles.tagItem, styles.tagItemOnImage]}
-										activeOpacity={0.7}
-										onPress={() => handleTagPress(tag)}
-									>
-										<Text style={[styles.tagText, styles.tagTextOnImage]}>
-											#{tag}
-										</Text>
-									</TouchableOpacity>
-								))}
-							</View>
-						)}
+							{/* Tags section */}
+							{voiceNote.tags && voiceNote.tags.length > 0 && (
+								<View style={styles.tagsContainer}>
+									{voiceNote.tags.slice(0, 10).map((tag, index) => (
+										<TouchableOpacity
+											key={index}
+											style={styles.tagItem}
+											activeOpacity={0.7}
+											onPress={() => handleTagPress(tag)}
+										>
+											<Text style={styles.tagText}>#{tag}</Text>
+										</TouchableOpacity>
+									))}
+								</View>
+							)}
 
-						<View style={[styles.interactions, styles.interactionsOnImage]}>
-							<TouchableOpacity
-								style={styles.interactionButton}
-								activeOpacity={0.7}
-								onPress={handleLikePress}
-							>
-								<View style={styles.interactionContent}>
-									<Animated.View
-										style={[{ transform: [{ scale: likeScale }] }]}
-									>
-										<Feather
-											name={"heart"}
-											size={18}
-											color={isLiked ? colors.liked : colors.card}
-											style={
-												isLiked
-													? [styles.likedIcon, styles.likedIconOnImage]
-													: {}
-											}
-										/>
-									</Animated.View>
-									<Text
-										style={[
-											styles.interactionCount,
-											{
-												color: isLiked ? colors.liked : colors.card,
-											},
-										]}
-									>
-										{formatNumber(likesCount)}
-									</Text>
-								</View>
-							</TouchableOpacity>
-							<TouchableOpacity
-								style={styles.interactionButton}
-								activeOpacity={0.7}
-								onPress={handleCommentPress}
-							>
-								<View style={styles.interactionContent}>
-									<Feather
-										name="message-circle"
-										size={18}
-										color={colors.card}
-									/>
-									<Text
-										style={[styles.interactionText, { color: colors.card }]}
-									>
-										{formatNumber(commentsCount)}
-									</Text>
-								</View>
-							</TouchableOpacity>
-							<TouchableOpacity
-								style={styles.interactionButton}
-								activeOpacity={0.7}
-								onPress={handlePlaysPress}
-							>
-								<View style={styles.interactionContent}>
-									<Feather name="headphones" size={18} color={colors.card} />
-									<Text
-										style={[styles.interactionText, { color: colors.card }]}
-									>
-										{formatNumber(playsCount)}
-									</Text>
-								</View>
-							</TouchableOpacity>
-							<TouchableOpacity
-								style={styles.interactionButton}
-								activeOpacity={0.7}
-								onPress={handleRepostPress}
-								onLongPress={handleShareCountLongPress}
-								disabled={isLoadingShareCount}
-							>
-								<View style={styles.interactionContent}>
-									<Animated.View
-										style={[{ transform: [{ scale: shareScale }] }]}
-									>
-										<Feather
-											name="repeat"
-											size={18}
-											color={
-												isSharedEffective ? colors.repostedOnImage : colors.card
-											}
-										/>
-									</Animated.View>
-									{isLoadingShareCount ? (
+							<View style={styles.interactions}>
+								<TouchableOpacity
+									style={styles.interactionButton}
+									activeOpacity={0.7}
+									onPress={handleLikePress}
+								>
+									<View style={styles.interactionContent}>
+										<Animated.View
+											style={[{ transform: [{ scale: likeScale }] }]}
+										>
+											<Feather
+												name={"heart"}
+												size={18}
+												color={isLiked ? colors.liked : colors.tabIconDefault}
+												style={isLiked ? styles.likedIcon : {}}
+											/>
+										</Animated.View>
 										<Text
 											style={[
 												styles.interactionCount,
-												{
-													color: isSharedEffective
-														? colors.repostedOnImage
-														: colors.card,
-													opacity: 0.5,
-												},
+												{ color: isLiked ? colors.liked : colors.tabIconDefault },
 											]}
 										>
-											{formatNumber(sharesCount)}
+											{formatNumber(likesCount)}
 										</Text>
-									) : (
+									</View>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={styles.interactionButton}
+									activeOpacity={0.7}
+									onPress={handleCommentPress}
+								>
+									<View style={styles.interactionContent}>
+										<Feather
+											name="message-circle"
+											size={18}
+											color={colors.tabIconDefault}
+										/>
 										<Text
 											style={[
-												styles.interactionCount,
-												{
-													color: isSharedEffective
-														? colors.repostedOnImage
-														: colors.card,
-												},
+												styles.interactionText,
+												{ color: colors.tabIconDefault },
 											]}
 										>
-											{formatNumber(sharesCount)}
+											{formatNumber(commentsCount)}
 										</Text>
-									)}
-								</View>
-							</TouchableOpacity>
+									</View>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={styles.interactionButton}
+									activeOpacity={0.7}
+									onPress={handlePlaysPress}
+								>
+									<View style={styles.interactionContent}>
+										<Feather
+											name="headphones"
+											size={18}
+											color={colors.tabIconDefault}
+										/>
+										<Text
+											style={[
+												styles.interactionText,
+												{ color: colors.tabIconDefault },
+											]}
+										>
+											{formatNumber(playsCount)}
+										</Text>
+									</View>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={styles.interactionButton}
+									activeOpacity={0.7}
+									onPress={handleRepostPress}
+									onLongPress={handleShareCountLongPress}
+									disabled={isLoadingShareCount}
+								>
+									<View style={styles.interactionContent}>
+										<Animated.View
+											style={[{ transform: [{ scale: shareScale }] }]}
+										>
+											<Feather
+												name="repeat"
+												size={18}
+												color={
+													isSharedEffective
+														? colors.reposted
+														: colors.tabIconDefault
+												}
+											/>
+										</Animated.View>
+										{isLoadingShareCount ? (
+											<Text
+												style={[
+													styles.interactionCount,
+													{
+														color: isSharedEffective
+															? colors.reposted
+															: colors.tabIconDefault,
+														opacity: 0.5,
+													},
+												]}
+											>
+												{formatNumber(sharesCount)}
+											</Text>
+										) : (
+											<Text
+												style={[
+													styles.interactionCount,
+													{
+														color: isSharedEffective
+															? colors.reposted
+															: colors.tabIconDefault,
+													},
+												]}
+											>
+												{formatNumber(sharesCount)}
+											</Text>
+										)}
+									</View>
+								</TouchableOpacity>
+							</View>
 						</View>
 					</View>
 				</ImageBackground>

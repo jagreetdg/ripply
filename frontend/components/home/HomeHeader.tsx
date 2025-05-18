@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useUser } from "../../context/UserContext";
 import DefaultAvatar from "../../components/DefaultAvatar";
+import { useTheme } from "../../context/ThemeContext";
 
 interface HomeHeaderProps {
 	onLogoPress?: () => void;
@@ -12,6 +13,7 @@ interface HomeHeaderProps {
 export function HomeHeader({ onLogoPress }: HomeHeaderProps) {
 	const router = useRouter();
 	const { user, loading } = useUser();
+	const { colors, isDarkMode } = useTheme();
 
 	const handleProfilePress = () => {
 		if (user && user.username) {
@@ -26,8 +28,8 @@ export function HomeHeader({ onLogoPress }: HomeHeaderProps) {
 	};
 
 	return (
-		<View style={styles.outerContainer}>
-			<View style={styles.container}>
+		<View style={[styles.outerContainer, { backgroundColor: colors.card }]}>
+			<View style={[styles.container, { backgroundColor: colors.card }]}>
 				<TouchableOpacity
 					onPress={handleProfilePress}
 					style={styles.profileButton}
@@ -52,20 +54,25 @@ export function HomeHeader({ onLogoPress }: HomeHeaderProps) {
 					onPress={onLogoPress}
 					activeOpacity={0.7}
 				>
-					<Text style={styles.logoText}>Ripply</Text>
+					<Text style={[styles.logoText, { color: colors.tint }]}>Ripply</Text>
 				</TouchableOpacity>
 
 				<TouchableOpacity
 					style={styles.notificationButton}
 					onPress={handleNotificationsPress}
 				>
-					<Feather name="bell" size={22} color="#333" />
+					<Feather name="bell" size={22} color={colors.text} />
 				</TouchableOpacity>
 			</View>
 
 			{/* Simple bottom separator */}
 			<View style={styles.separatorContainer}>
-				<View style={styles.separatorLine} />
+				<View
+					style={[
+						styles.separatorLine,
+						{ backgroundColor: colors.tint, opacity: 0.2 },
+					]}
+				/>
 			</View>
 		</View>
 	);
@@ -74,7 +81,6 @@ export function HomeHeader({ onLogoPress }: HomeHeaderProps) {
 const styles = StyleSheet.create({
 	outerContainer: {
 		width: "100%",
-		backgroundColor: "#FFFFFF",
 	},
 	container: {
 		flexDirection: "row",
@@ -82,7 +88,6 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		paddingHorizontal: 16,
 		height: "100%",
-		backgroundColor: "#FFFFFF",
 	},
 	separatorContainer: {
 		flexDirection: "row",
@@ -93,8 +98,6 @@ const styles = StyleSheet.create({
 	separatorLine: {
 		flex: 1,
 		height: 1.5,
-		backgroundColor: "#6B2FBC",
-		opacity: 0.2,
 		marginBottom: 4,
 	},
 	profileButton: {
@@ -119,7 +122,6 @@ const styles = StyleSheet.create({
 	logoText: {
 		fontSize: 20,
 		fontWeight: "bold",
-		color: "#6B2FBC",
 	},
 	notificationButton: {
 		padding: 4,

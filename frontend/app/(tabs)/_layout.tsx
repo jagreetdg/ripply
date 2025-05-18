@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { Pressable } from "react-native";
 
 import Colors from "@/constants/Colors";
+import { useTheme } from "@/context/ThemeContext";
 
 import { View, Platform, StyleSheet } from "react-native";
 
@@ -20,19 +21,26 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
 	const router = useRouter();
+	const { colors } = useTheme(); // Get current theme colors
 
 	return (
 		// Wrap the Tabs with a container View to ensure clean background
-		<View style={styles.container}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			{/* This View blocks any background elements from showing through */}
-			<View style={styles.backgroundBlocker} />
+			<View
+				style={[
+					styles.backgroundBlocker,
+					{ backgroundColor: colors.background },
+				]}
+			/>
 
 			<Tabs
 				screenOptions={{
-					tabBarActiveTintColor: "#6B2FBC",
-					tabBarInactiveTintColor: "#666666",
+					tabBarActiveTintColor: colors.tint,
+					tabBarInactiveTintColor: colors.tabIconDefault,
 					tabBarStyle: {
-						borderTopColor: "#E1E1E1",
+						borderTopColor: colors.border,
+						backgroundColor: colors.card,
 						...Platform.select({
 							ios: { paddingBottom: 0 },
 							android: { paddingBottom: 0 },
@@ -88,7 +96,7 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		bottom: 0,
-		backgroundColor: "#FFF", // White background
+		// backgroundColor: "#FFF", // Removing this hardcoded color
 		zIndex: -1, // Place behind content but above any unwanted background elements
 	},
 });

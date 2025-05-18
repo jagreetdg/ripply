@@ -20,11 +20,13 @@ import * as ImagePicker from "expo-image-picker";
 import { updateUserProfile } from "../../services/api/userService";
 import { checkUsernameAvailability } from "../../services/api/authService";
 import DefaultAvatar from "../../components/DefaultAvatar";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function EditProfileScreen() {
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const { user, refreshUser } = useUser();
+	const { colors, isDarkMode } = useTheme();
 
 	const [displayName, setDisplayName] = useState("");
 	const [bio, setBio] = useState("");
@@ -204,7 +206,7 @@ export default function EditProfileScreen() {
 
 	return (
 		<KeyboardAvoidingView
-			style={styles.container}
+			style={[styles.container, { backgroundColor: colors.background }]}
 			behavior={Platform.OS === "ios" ? "padding" : "height"}
 		>
 			<View style={[styles.header, { paddingTop: insets.top }]}>
@@ -218,13 +220,19 @@ export default function EditProfileScreen() {
 					<Text style={styles.headerTitle}>Edit Profile</Text>
 					<TouchableOpacity
 						onPress={handleSave}
-						style={[styles.saveButton, isSaveDisabled && styles.disabledButton]}
+						style={[
+							styles.saveButton,
+							{ backgroundColor: colors.tint },
+							isSaveDisabled && styles.disabledButton,
+						]}
 						disabled={isSaveDisabled}
 					>
 						{isLoading ? (
 							<ActivityIndicator size="small" color="#fff" />
 						) : (
-							<Text style={styles.saveButtonText}>Save</Text>
+							<Text style={{ color: colors.card, fontWeight: "bold" }}>
+								Save
+							</Text>
 						)}
 					</TouchableOpacity>
 				</View>
@@ -247,6 +255,11 @@ export default function EditProfileScreen() {
 							style={[
 								styles.editOverlay,
 								Platform.OS === "web" && { opacity: isImageHovered ? 1 : 0 },
+								{
+									backgroundColor: isDarkMode
+										? "rgba(0, 0, 0, 0.7)"
+										: "rgba(0, 0, 0, 0.5)",
+								},
 							]}
 						>
 							<Feather name="edit-2" size={20} color="#fff" />
@@ -258,7 +271,7 @@ export default function EditProfileScreen() {
 					<View style={styles.inputContainer}>
 						<Text style={styles.inputLabel}>Display Name</Text>
 						<TextInput
-							style={styles.input}
+							style={[styles.input, { borderColor: colors.border }]}
 							value={displayName}
 							onChangeText={setDisplayName}
 							placeholder="Your display name"
@@ -270,7 +283,7 @@ export default function EditProfileScreen() {
 						<Text style={styles.inputLabel}>Username</Text>
 						<View style={styles.usernameInputContainer}>
 							<TextInput
-								style={styles.input}
+								style={[styles.input, { borderColor: colors.border }]}
 								value={username}
 								onChangeText={setUsername}
 								placeholder={originalUsername}
@@ -278,28 +291,44 @@ export default function EditProfileScreen() {
 							/>
 							{isCheckingUsername && (
 								<ActivityIndicator
-									style={styles.usernameIndicator}
+									style={[
+										styles.usernameIndicator,
+										{ borderColor: colors.tint },
+									]}
 									size="small"
-									color="#6B2FBC"
+									color={colors.tint}
 								/>
 							)}
 							{isUsernameEdited && isUsernameValid && !isCheckingUsername && (
-								<View style={styles.validIndicator}>
-									<Feather name="check" size={16} color="#34C759" />
+								<View
+									style={[
+										styles.validIndicator,
+										{ backgroundColor: colors.success },
+									]}
+								>
+									<Feather name="check" size={16} color={colors.success} />
 								</View>
 							)}
 						</View>
 						{usernameError ? (
-							<Text style={styles.errorText}>{usernameError}</Text>
+							<Text style={[styles.errorText, { color: colors.error }]}>
+								{usernameError}
+							</Text>
 						) : (
-							<Text style={styles.helperText}>Choose a unique username</Text>
+							<Text style={[styles.helperText, { color: colors.helper }]}>
+								Choose a unique username
+							</Text>
 						)}
 					</View>
 
 					<View style={styles.inputContainer}>
 						<Text style={styles.inputLabel}>Bio</Text>
 						<TextInput
-							style={[styles.input, styles.bioInput]}
+							style={[
+								styles.input,
+								styles.bioInput,
+								{ borderColor: colors.border },
+							]}
 							value={bio}
 							onChangeText={setBio}
 							placeholder="Tell us about yourself"
@@ -307,7 +336,9 @@ export default function EditProfileScreen() {
 							multiline
 							maxLength={160}
 						/>
-						<Text style={styles.charCount}>{bio.length}/160</Text>
+						<Text style={[styles.charCount, { color: colors.helper }]}>
+							{bio.length}/160
+						</Text>
 					</View>
 				</View>
 			</ScrollView>
@@ -318,7 +349,6 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#fff",
 	},
 	header: {
 		borderBottomWidth: 1,
@@ -340,17 +370,13 @@ const styles = StyleSheet.create({
 		color: "#333",
 	},
 	saveButton: {
-		backgroundColor: "#6B2FBC",
-		paddingHorizontal: 16,
-		paddingVertical: 8,
-		borderRadius: 20,
+		paddingVertical: 12,
+		borderRadius: 8,
+		alignItems: "center",
+		marginTop: 24,
 	},
 	disabledButton: {
 		backgroundColor: "#A990D1",
-	},
-	saveButtonText: {
-		color: "#fff",
-		fontWeight: "600",
 	},
 	content: {
 		flex: 1,
@@ -387,6 +413,7 @@ const styles = StyleSheet.create({
 	},
 	inputContainer: {
 		marginBottom: 20,
+		borderRadius: 8,
 	},
 	usernameInputContainer: {
 		flexDirection: "row",
@@ -415,7 +442,6 @@ const styles = StyleSheet.create({
 		paddingVertical: 12,
 		fontSize: 16,
 		color: "#333",
-		backgroundColor: "#f9f9f9",
 	},
 	disabledInput: {
 		backgroundColor: "#f0f0f0",
@@ -440,6 +466,17 @@ const styles = StyleSheet.create({
 		color: "#999",
 		textAlign: "right",
 		marginTop: 4,
+	},
+	overlay: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		backgroundColor: "rgba(0, 0, 0, 0.5)",
+		justifyContent: "center",
+		alignItems: "center",
+		opacity: Platform.OS === "web" ? 0 : 1, // Only hidden on web by default
 	},
 });
 

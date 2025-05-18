@@ -28,6 +28,7 @@ import {
 	searchVoiceNotes,
 } from "../../services/api/searchService";
 import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
 
 // Tab type definition
 type SearchTab = "users" | "posts";
@@ -37,6 +38,7 @@ export default function SearchScreen() {
 	const router = useRouter();
 	const params = useLocalSearchParams();
 	const { user: currentUser } = useUser(); // Get current user from context
+	const { colors, isDarkMode } = useTheme();
 
 	// Get initial search tag from params if available
 	const initialTag = params?.tag as string;
@@ -368,7 +370,7 @@ export default function SearchScreen() {
 				<Feather
 					name={showAll ? "chevron-up" : "chevron-down"}
 					size={18}
-					color="#6B2FBC"
+					color={colors.tint}
 					style={styles.showMoreIcon}
 				/>
 			</TouchableOpacity>
@@ -380,7 +382,7 @@ export default function SearchScreen() {
 		if (isLoading) {
 			return (
 				<View style={styles.emptyStateContainer}>
-					<ActivityIndicator size="large" color="#6B2FBC" />
+					<ActivityIndicator size="large" color={colors.tint} />
 				</View>
 			);
 		}
@@ -391,11 +393,15 @@ export default function SearchScreen() {
 					<Feather
 						name="search"
 						size={40}
-						color="#BBBBBB"
+						color={colors.textSecondary}
 						style={{ marginBottom: 16 }}
 					/>
-					<Text style={styles.emptyStateTitle}>Search Ripply</Text>
-					<Text style={styles.emptyStateText}>
+					<Text style={[styles.emptyStateTitle, { color: colors.text }]}>
+						Search Ripply
+					</Text>
+					<Text
+						style={[styles.emptyStateText, { color: colors.textSecondary }]}
+					>
 						Find users or posts by searching above
 					</Text>
 				</View>
@@ -414,11 +420,15 @@ export default function SearchScreen() {
 					<Feather
 						name="alert-circle"
 						size={40}
-						color="#BBBBBB"
+						color={colors.textSecondary}
 						style={{ marginBottom: 16 }}
 					/>
-					<Text style={styles.emptyStateTitle}>No results found</Text>
-					<Text style={styles.emptyStateText}>
+					<Text style={[styles.emptyStateTitle, { color: colors.text }]}>
+						No results found
+					</Text>
+					<Text
+						style={[styles.emptyStateText, { color: colors.textSecondary }]}
+					>
 						No {activeTab} found for "{searchQuery}"
 					</Text>
 				</View>
@@ -435,9 +445,19 @@ export default function SearchScreen() {
 	});
 
 	return (
-		<SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+		<SafeAreaView
+			style={[
+				styles.container,
+				{ paddingTop: insets.top, backgroundColor: colors.background },
+			]}
+		>
 			{/* Background blocker to prevent unwanted elements from showing through */}
-			<View style={styles.backgroundBlocker} />
+			<View
+				style={[
+					styles.backgroundBlocker,
+					{ backgroundColor: colors.background },
+				]}
+			/>
 
 			<SearchBar
 				value={searchQuery}
@@ -447,7 +467,15 @@ export default function SearchScreen() {
 				placeholder="Search users or posts..."
 			/>
 
-			<View style={styles.tabsContainer}>
+			<View
+				style={[
+					styles.tabsContainer,
+					{
+						backgroundColor: colors.card,
+						shadowColor: isDarkMode ? colors.shadow : "#000",
+					},
+				]}
+			>
 				<TouchableOpacity
 					style={styles.tab}
 					onPress={() => handleTabChange("users")}
@@ -456,7 +484,14 @@ export default function SearchScreen() {
 					<Text
 						style={[
 							styles.tabText,
-							activeTab === "users" && styles.activeTabText,
+							activeTab === "users" && [
+								styles.activeTabText,
+								{ color: colors.tint },
+							],
+							{
+								color:
+									activeTab !== "users" ? colors.textSecondary : colors.tint,
+							},
 						]}
 					>
 						Users
@@ -471,7 +506,14 @@ export default function SearchScreen() {
 					<Text
 						style={[
 							styles.tabText,
-							activeTab === "posts" && styles.activeTabText,
+							activeTab === "posts" && [
+								styles.activeTabText,
+								{ color: colors.tint },
+							],
+							{
+								color:
+									activeTab !== "posts" ? colors.textSecondary : colors.tint,
+							},
 						]}
 					>
 						Posts
@@ -485,6 +527,7 @@ export default function SearchScreen() {
 						{
 							transform: [{ translateX: tabIndicatorTranslateX }],
 							width: windowWidth / 2,
+							backgroundColor: colors.tint,
 						},
 					]}
 				/>
@@ -496,6 +539,7 @@ export default function SearchScreen() {
 					{
 						opacity: fadeAnim,
 						transform: [{ translateY: slideAnim }],
+						backgroundColor: colors.background,
 					},
 				]}
 			>
@@ -511,8 +555,8 @@ export default function SearchScreen() {
 							<RefreshControl
 								refreshing={isRefreshing}
 								onRefresh={handleRefresh}
-								colors={["#6B2FBC"]}
-								tintColor="#6B2FBC"
+								colors={[colors.tint]}
+								tintColor={colors.tint}
 							/>
 						}
 					/>
@@ -528,8 +572,8 @@ export default function SearchScreen() {
 							<RefreshControl
 								refreshing={isRefreshing}
 								onRefresh={handleRefresh}
-								colors={["#6B2FBC"]}
-								tintColor="#6B2FBC"
+								colors={[colors.tint]}
+								tintColor={colors.tint}
 							/>
 						}
 					/>
@@ -542,7 +586,6 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#F8F8F8",
 		position: "relative",
 	},
 	backgroundBlocker: {
@@ -551,7 +594,6 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		bottom: 0,
-		backgroundColor: "#F8F8F8",
 		zIndex: -1,
 	},
 	contentContainer: {
@@ -559,11 +601,9 @@ const styles = StyleSheet.create({
 	},
 	tabsContainer: {
 		flexDirection: "row",
-		backgroundColor: "#FFFFFF",
 		height: 48,
 		position: "relative",
 		elevation: 2,
-		shadowColor: "#000",
 		shadowOffset: {
 			width: 0,
 			height: 1,
@@ -578,18 +618,15 @@ const styles = StyleSheet.create({
 	},
 	tabText: {
 		fontSize: 16,
-		color: "#888888",
 		fontWeight: "500",
 	},
 	activeTabText: {
-		color: "#6B2FBC",
 		fontWeight: "600",
 	},
 	tabIndicator: {
 		position: "absolute",
 		bottom: 0,
 		height: 3,
-		backgroundColor: "#6B2FBC",
 		borderTopLeftRadius: 3,
 		borderTopRightRadius: 3,
 	},
@@ -601,17 +638,6 @@ const styles = StyleSheet.create({
 	postItemContainer: {
 		marginVertical: 8,
 		marginHorizontal: 12,
-		borderRadius: 16,
-		overflow: "hidden",
-		backgroundColor: "#FFFFFF",
-		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.1,
-		shadowRadius: 3.84,
-		elevation: 5,
 	},
 	emptyStateContainer: {
 		flex: 1,
@@ -623,12 +649,10 @@ const styles = StyleSheet.create({
 	emptyStateTitle: {
 		fontSize: 18,
 		fontWeight: "600",
-		color: "#555555",
 		marginBottom: 8,
 	},
 	emptyStateText: {
 		fontSize: 14,
-		color: "#888888",
 		textAlign: "center",
 		lineHeight: 20,
 	},
@@ -637,11 +661,9 @@ const styles = StyleSheet.create({
 		marginTop: 8,
 		marginHorizontal: 12,
 		alignItems: "center",
-		backgroundColor: "#FFFFFF",
 		borderRadius: 12,
 		flexDirection: "row",
 		justifyContent: "center",
-		shadowColor: "#000",
 		shadowOffset: {
 			width: 0,
 			height: 1,
@@ -653,7 +675,6 @@ const styles = StyleSheet.create({
 	showMoreText: {
 		fontSize: 14,
 		fontWeight: "600",
-		color: "#6B2FBC",
 	},
 	showMoreIcon: {
 		marginLeft: 4,

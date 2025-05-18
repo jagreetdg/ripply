@@ -31,6 +31,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUser } from "../../context/UserContext";
 import { FollowButton } from "../../components/profile/FollowButton";
 import { FollowersFollowingPopup } from "../../components/profile/FollowersFollowingPopup";
+import { useTheme } from "../../context/ThemeContext";
 
 interface UserProfile {
 	id: string;
@@ -103,6 +104,7 @@ export default function ProfileByUsernameScreen() {
 	const [sharedVoiceNotes, setSharedVoiceNotes] = useState<VoiceNote[]>([]);
 	const [loadingShared, setLoadingShared] = useState(false);
 	const [combinedVoiceNotes, setCombinedVoiceNotes] = useState<VoiceNote[]>([]);
+	const { colors, isDarkMode } = useTheme();
 
 	// Replace the single popup state with separate states
 	const [showFollowersPopup, setShowFollowersPopup] = useState(false);
@@ -396,8 +398,13 @@ export default function ProfileByUsernameScreen() {
 
 	if (loading) {
 		return (
-			<View style={styles.loadingContainer}>
-				<ActivityIndicator size="large" color="#6B2FBC" />
+			<View
+				style={[
+					styles.loadingContainer,
+					{ backgroundColor: colors.background },
+				]}
+			>
+				<ActivityIndicator size="large" color={colors.tint} />
 			</View>
 		);
 	}
@@ -408,16 +415,25 @@ export default function ProfileByUsernameScreen() {
 
 	if (!userProfile) {
 		return (
-			<View style={styles.errorContainer}>
-				<Text style={styles.errorText}>Failed to load profile data.</Text>
+			<View
+				style={[styles.errorContainer, { backgroundColor: colors.background }]}
+			>
+				<Text style={[styles.errorText, { color: colors.error }]}>
+					Failed to load profile data.
+				</Text>
 			</View>
 		);
 	}
 
 	return (
-		<View style={[styles.container]}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			{/* Status bar background to prevent content from showing behind it */}
-			<View style={[styles.statusBarBackground, { height: insets.top }]} />
+			<View
+				style={[
+					styles.statusBarBackground,
+					{ height: insets.top, backgroundColor: colors.background },
+				]}
+			/>
 			<Stack.Screen
 				options={{
 					// Hide the default header when we're using our custom collapsible header
@@ -431,6 +447,8 @@ export default function ProfileByUsernameScreen() {
 					{
 						opacity: collapsedHeaderOpacity,
 						top: 0, // Start from the very top of the screen
+						backgroundColor: colors.card,
+						shadowColor: isDarkMode ? "#000" : "#000",
 					},
 				]}
 			>
@@ -461,7 +479,7 @@ export default function ProfileByUsernameScreen() {
 
 			<Animated.ScrollView
 				ref={scrollViewRef}
-				style={styles.scrollView}
+				style={[styles.scrollView, { backgroundColor: colors.background }]}
 				onScroll={Animated.event(
 					[{ nativeEvent: { contentOffset: { y: scrollY } } }],
 					{ useNativeDriver: false }
@@ -471,8 +489,9 @@ export default function ProfileByUsernameScreen() {
 					<RefreshControl
 						refreshing={refreshing}
 						onRefresh={handleRefresh}
-						tintColor="#6B2FBC"
-						colors={["#6B2FBC"]}
+						tintColor={colors.tint}
+						colors={[colors.tint]}
+						progressBackgroundColor={colors.background}
 					/>
 				}
 			>
@@ -495,28 +514,40 @@ export default function ProfileByUsernameScreen() {
 				</Animated.View>
 
 				{/* Stats bar */}
-				<View style={styles.statsContainer}>
+				<View style={[styles.statsContainer, { backgroundColor: colors.card }]}>
 					<TouchableOpacity
 						style={styles.statsItem}
 						onPress={handleFollowingPress}
 					>
-						<Text style={styles.statsNumber}>{followingCount}</Text>
-						<Text style={styles.statsLabel}>Following</Text>
+						<Text style={[styles.statsNumber, { color: colors.text }]}>
+							{followingCount}
+						</Text>
+						<Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
+							Following
+						</Text>
 					</TouchableOpacity>
-					<View style={styles.statsDivider} />
+					<View
+						style={[styles.statsDivider, { backgroundColor: colors.border }]}
+					/>
 					<TouchableOpacity style={styles.statsItem}>
-						<Text style={styles.statsNumber}>{voiceNotes.length}</Text>
-						<Text style={styles.statsLabel}>
+						<Text style={[styles.statsNumber, { color: colors.text }]}>
+							{voiceNotes.length}
+						</Text>
+						<Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
 							{voiceNotes.length === 1 ? "Note" : "Notes"}
 						</Text>
 					</TouchableOpacity>
-					<View style={styles.statsDivider} />
+					<View
+						style={[styles.statsDivider, { backgroundColor: colors.border }]}
+					/>
 					<TouchableOpacity
 						style={styles.statsItem}
 						onPress={handleFollowersPress}
 					>
-						<Text style={styles.statsNumber}>{followerCount}</Text>
-						<Text style={styles.statsLabel}>
+						<Text style={[styles.statsNumber, { color: colors.text }]}>
+							{followerCount}
+						</Text>
+						<Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
 							{followerCount === 1 ? "Follower" : "Followers"}
 						</Text>
 					</TouchableOpacity>
@@ -525,10 +556,15 @@ export default function ProfileByUsernameScreen() {
 				{isOwnProfile ? (
 					<View style={styles.followButtonContainer}>
 						<TouchableOpacity
-							style={styles.editProfileButtonInline}
+							style={[
+								styles.editProfileButtonInline,
+								{ backgroundColor: colors.tint },
+							]}
 							onPress={() => router.push("/profile/edit")}
 						>
-							<Text style={styles.buttonText}>Edit Profile</Text>
+							<Text style={[styles.buttonText, { color: colors.card }]}>
+								Edit Profile
+							</Text>
 						</TouchableOpacity>
 					</View>
 				) : (
@@ -555,12 +591,21 @@ export default function ProfileByUsernameScreen() {
 				)}
 
 				{loading || loadingShared ? (
-					<View style={styles.loadingContainer}>
-						<ActivityIndicator size="small" color="#6B2FBC" />
+					<View
+						style={[
+							styles.loadingContainer,
+							{ backgroundColor: colors.background },
+						]}
+					>
+						<ActivityIndicator size="small" color={colors.tint} />
 					</View>
 				) : combinedVoiceNotes.length === 0 ? (
-					<View style={styles.emptyState}>
-						<Text style={styles.emptyText}>No voice notes yet</Text>
+					<View
+						style={[styles.emptyState, { backgroundColor: colors.background }]}
+					>
+						<Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+							No voice notes yet
+						</Text>
 					</View>
 				) : (
 					<VoiceNotesList
@@ -576,10 +621,16 @@ export default function ProfileByUsernameScreen() {
 
 			{/* Floating action button for creating voice note */}
 			<TouchableOpacity
-				style={[styles.floatingActionButton, { bottom: insets.bottom + 16 }]}
+				style={[
+					styles.floatingActionButton,
+					{
+						bottom: insets.bottom + 16,
+						backgroundColor: colors.tint,
+					},
+				]}
 				onPress={() => router.push("/create")}
 			>
-				<Feather name="mic" size={24} color="white" />
+				<Feather name="mic" size={24} color={colors.card} />
 			</TouchableOpacity>
 
 			{/* Add the followers/following popups */}
@@ -609,7 +660,6 @@ const styles = StyleSheet.create({
 		top: 0,
 		left: 0,
 		right: 0,
-		backgroundColor: "#FFFFFF",
 		zIndex: 101, // Higher than the header
 	},
 	fixedHeader: {
@@ -617,8 +667,6 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		zIndex: 100,
-		backgroundColor: "#FFFFFF",
-		shadowColor: "#000",
 		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.1,
 		shadowRadius: 2,
@@ -626,7 +674,6 @@ const styles = StyleSheet.create({
 	},
 	container: {
 		flex: 1,
-		backgroundColor: "#fff",
 	},
 	scrollView: {
 		flex: 1,
@@ -634,7 +681,6 @@ const styles = StyleSheet.create({
 		paddingTop: 0,
 	},
 	headerTitle: {
-		color: "#6B2FBC",
 		fontSize: 18,
 		fontWeight: "600",
 	},
@@ -645,18 +691,15 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
-		backgroundColor: "#fff",
 	},
 	errorContainer: {
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
-		backgroundColor: "#fff",
 		padding: 20,
 	},
 	errorText: {
 		fontSize: 16,
-		color: "#e74c3c",
 		textAlign: "center",
 	},
 	statsContainer: {
@@ -664,7 +707,6 @@ const styles = StyleSheet.create({
 		justifyContent: "space-evenly",
 		alignItems: "center",
 		paddingVertical: 16,
-		backgroundColor: "#fff",
 	},
 	statsItem: {
 		alignItems: "center",
@@ -674,16 +716,13 @@ const styles = StyleSheet.create({
 		fontSize: 18,
 		fontWeight: "bold",
 		marginBottom: 4,
-		color: "#333",
 	},
 	statsLabel: {
 		fontSize: 14,
-		color: "#666",
 	},
 	statsDivider: {
 		width: 1,
 		height: 30,
-		backgroundColor: "#eee",
 	},
 	followButtonContainer: {
 		paddingHorizontal: 16,
@@ -691,7 +730,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 	},
 	editProfileButtonInline: {
-		backgroundColor: "#6B2FBC",
 		paddingVertical: 8,
 		paddingHorizontal: 16,
 		borderRadius: 20,
@@ -700,7 +738,6 @@ const styles = StyleSheet.create({
 		minWidth: 100,
 	},
 	buttonText: {
-		color: "white",
 		fontSize: 14,
 		fontWeight: "600",
 	},
@@ -710,7 +747,6 @@ const styles = StyleSheet.create({
 		width: 56,
 		height: 56,
 		borderRadius: 28,
-		backgroundColor: "#6B2FBC",
 		justifyContent: "center",
 		alignItems: "center",
 		elevation: 8,
@@ -730,7 +766,6 @@ const styles = StyleSheet.create({
 	},
 	emptyText: {
 		fontSize: 16,
-		color: "#888",
 	},
 	headerTouchArea: {
 		width: "100%",

@@ -1,11 +1,12 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { ThemeProvider, DefaultTheme } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Slot, SplashScreen } from "expo-router";
 import { useEffect, useState } from "react";
 import "react-native-reanimated";
 import { UserProvider } from "../context/UserContext";
+import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import RequireAuth from "../components/auth/RequireAuth";
+import { View } from "react-native";
 
 export {
 	// Catch any errors thrown by the Layout component.
@@ -23,7 +24,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
 	// Use state to track font loading instead of directly using the hook result
 	const [appIsReady, setAppIsReady] = useState(false);
-	
+
 	// Load fonts
 	const [fontsLoaded, fontError] = useFonts({
 		SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -42,7 +43,7 @@ export default function RootLayout() {
 					setAppIsReady(true);
 				}
 			} catch (e) {
-				console.warn('Error in prepare:', e);
+				console.warn("Error in prepare:", e);
 			}
 		}
 
@@ -60,15 +61,23 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
 	return (
-		<ThemeProvider value={DefaultTheme}>
-			{/* Wrap the app with UserProvider to make user context available everywhere */}
-			<UserProvider>
-				{/* Add RequireAuth to protect routes */}
-				<RequireAuth>
-					{/* Use Slot for better performance with less nesting */}
-					<Slot />
-				</RequireAuth>
-			</UserProvider>
+		<ThemeProvider>
+			<ThemedRoot>
+				<UserProvider>
+					<RequireAuth>
+						<Slot />
+					</RequireAuth>
+				</UserProvider>
+			</ThemedRoot>
 		</ThemeProvider>
+	);
+}
+
+function ThemedRoot({ children }: { children: React.ReactNode }) {
+	const { colors } = useTheme();
+	return (
+		<View style={{ flex: 1, backgroundColor: colors.background }}>
+			{children}
+		</View>
 	);
 }

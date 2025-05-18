@@ -7,6 +7,7 @@ import {
 	Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTheme } from "../../context/ThemeContext";
 
 interface SearchBarProps {
 	value: string;
@@ -25,6 +26,7 @@ export const SearchBar = ({
 }: SearchBarProps) => {
 	const [isFocused, setIsFocused] = useState(false);
 	const inputRef = useRef<TextInput>(null);
+	const { colors, isDarkMode } = useTheme();
 
 	// Update focus handling based on value changes from props
 	useEffect(() => {
@@ -48,28 +50,39 @@ export const SearchBar = ({
 	};
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { backgroundColor: colors.card }]}>
 			<TouchableOpacity
 				activeOpacity={0.9}
 				style={[
 					styles.searchContainer,
-					isFocused && styles.searchContainerFocused,
+					{
+						backgroundColor: isFocused ? colors.background : colors.card,
+						borderColor: isFocused ? colors.tint : colors.border,
+					},
+					isFocused && [
+						styles.searchContainerFocused,
+						{
+							borderColor: colors.tint,
+							backgroundColor: colors.background,
+							shadowColor: colors.tint,
+						},
+					],
 				]}
 				onPress={() => inputRef.current?.focus()}
 			>
 				<Feather
 					name="search"
 					size={20}
-					color={isFocused ? "#6B2FBC" : "#888"}
+					color={isFocused ? colors.tint : colors.textSecondary}
 					style={styles.searchIcon}
 				/>
 				<TextInput
 					ref={inputRef}
-					style={styles.input}
+					style={[styles.input, { color: colors.text }]}
 					value={value}
 					onChangeText={onChangeText}
 					placeholder={placeholder}
-					placeholderTextColor="#888"
+					placeholderTextColor={colors.textSecondary}
 					returnKeyType="search"
 					onSubmitEditing={onSubmit}
 					autoCapitalize="none"
@@ -77,14 +90,14 @@ export const SearchBar = ({
 					onFocus={() => setIsFocused(true)}
 					onBlur={() => setIsFocused(false)}
 					underlineColorAndroid="transparent"
-					selectionColor="#6B2FBC"
+					selectionColor={colors.tint}
 					spellCheck={false}
 					// Remove auto keyboard hiding on web
 					blurOnSubmit={Platform.OS !== "web"}
 				/>
 				{value.length > 0 && (
 					<TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-						<Feather name="x" size={18} color="#888" />
+						<Feather name="x" size={18} color={colors.textSecondary} />
 					</TouchableOpacity>
 				)}
 			</TouchableOpacity>
@@ -96,22 +109,22 @@ const styles = StyleSheet.create({
 	container: {
 		width: "100%",
 		padding: 12,
-		backgroundColor: "#fff",
+		// backgroundColor: "#fff", // Theme color applied inline
 	},
 	searchContainer: {
 		flexDirection: "row",
 		alignItems: "center",
-		backgroundColor: "#f2f2f2",
+		// backgroundColor: "#f2f2f2", // Theme color applied inline
 		borderRadius: 10,
 		paddingHorizontal: 12,
 		height: 44,
 		borderWidth: 1,
-		borderColor: "transparent",
+		// borderColor: "transparent", // Theme color applied inline
 	},
 	searchContainerFocused: {
-		borderColor: "#6B2FBC",
-		backgroundColor: "#fff",
-		shadowColor: "#6B2FBC",
+		// borderColor: "#6B2FBC", // Theme color applied inline
+		// backgroundColor: "#fff", // Theme color applied inline
+		// shadowColor: "#6B2FBC", // Theme color applied inline
 		shadowOffset: {
 			width: 0,
 			height: 0,
@@ -126,7 +139,7 @@ const styles = StyleSheet.create({
 	input: {
 		flex: 1,
 		fontSize: 16,
-		color: "#333",
+		// color: "#333", // Theme color applied inline
 		height: "100%",
 		paddingLeft: 8,
 		// Remove default styling

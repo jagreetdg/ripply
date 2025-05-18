@@ -52,7 +52,7 @@ interface Styles {
 	iconButton: ViewStyle;
 	profileInfo: ViewStyle;
 	avatarContainer: ViewStyle;
-	avatar: ViewStyle;
+	avatar: ImageStyle;
 	defaultAvatar: ViewStyle;
 	defaultAvatarText: TextStyle;
 	nameContainer: ViewStyle;
@@ -96,6 +96,7 @@ interface Styles {
 	profileImageContainer: ViewStyle;
 	modalContainer: ViewStyle;
 	noVoiceBioText: TextStyle;
+	wave: ViewStyle;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -326,309 +327,300 @@ export function ProfileHeader({
 
 	return (
 		<View style={styles.container}>
-			<TouchableOpacity
-				activeOpacity={0.9}
-				onPress={() => handlePhotoPress("cover")}
-			>
+			{/* Cover Photo */}
+			{!isCollapsed && coverPhotoUrl && (
 				<ImageBackground
-					source={{
-						uri: coverPhotoUrl || "https://picsum.photos/seed/ripply/1200/400",
-					}}
+					source={{ uri: coverPhotoUrl }}
 					style={styles.coverPhoto}
-					onError={(e) => {
-						console.log("Cover photo load error:", e.nativeEvent.error);
-						// Fallback is handled by the || operator in the uri
-					}}
 					resizeMode="cover"
-					onLoad={(e) => {
-						try {
-							// Check if source exists and has width/height properties
-							if (
-								e.nativeEvent &&
-								e.nativeEvent.source &&
-								e.nativeEvent.source.width &&
-								e.nativeEvent.source.height
-							) {
-								const { width, height } = e.nativeEvent.source;
-								setImageAspectRatio(width / height);
-							} else {
-								// Default to 16:9 aspect ratio if dimensions are not available
-								setImageAspectRatio(16 / 9);
-							}
-						} catch (error) {
-							console.warn("Error getting image dimensions:", error);
-							// Use a default aspect ratio
-							setImageAspectRatio(16 / 9);
-						}
-					}}
 				>
+					<BlurView
+						intensity={50}
+						tint="light"
+						style={StyleSheet.absoluteFill}
+					/>
 					<View style={styles.topBar}>
 						<TouchableOpacity
-							onPress={() => router.back()}
 							style={styles.iconButton}
+							onPress={() => router.back()}
 						>
-							<Feather name="arrow-left" size={24} color="white" />
+							<Feather name="arrow-left" size={24} color="#FFFFFF" />
 						</TouchableOpacity>
 						<TouchableOpacity style={styles.iconButton}>
-							<Feather name="more-vertical" size={24} color="white" />
+							<Feather name="more-vertical" size={24} color="#FFFFFF" />
 						</TouchableOpacity>
 					</View>
 				</ImageBackground>
-			</TouchableOpacity>
+			)}
 
+			{/* Profile Information */}
 			<View style={styles.profileInfo}>
+				{/* Avatar */}
 				<TouchableOpacity
-					activeOpacity={0.9}
+					style={[
+						styles.avatarContainer,
+						isCollapsed && { marginRight: 12, marginBottom: 0 },
+					]}
 					onPress={() => handlePhotoPress("profile")}
-					style={styles.avatarContainer}
 				>
-					<View style={styles.avatar}>
-						{avatarUrl ? (
-							<Image
-								source={{ uri: avatarUrl }}
-								style={{
-									width: "100%",
-									height: "100%",
-									borderRadius: 50,
-								}}
-								onError={(e) => {
-									console.log("Avatar load error:", e.nativeEvent.error);
-									// We'll handle fallback in the component
-								}}
-								resizeMode="cover"
-								onLoad={(e) => {
-									try {
-										// Check if source exists and has width/height properties
-										if (
-											e.nativeEvent &&
-											e.nativeEvent.source &&
-											e.nativeEvent.source.width &&
-											e.nativeEvent.source.height
-										) {
-											const { width, height } = e.nativeEvent.source;
-											setImageAspectRatio(width / height);
-										} else {
-											// Default to 1:1 aspect ratio if dimensions are not available
-											setImageAspectRatio(1);
-										}
-									} catch (error) {
-										console.warn("Error getting image dimensions:", error);
-										// Use a default aspect ratio
-										setImageAspectRatio(1);
-									}
-								}}
-							/>
-						) : (
-							<View style={{ width: "100%", height: "100%", borderRadius: 50 }}>
-								<DefaultAvatar userId={userId} size={100} />
-							</View>
-						)}
-					</View>
+					{avatarUrl ? (
+						<Image
+							source={{ uri: avatarUrl }}
+							style={[styles.avatar, isCollapsed && { width: 32, height: 32 }]}
+						/>
+					) : (
+						<DefaultAvatar
+							size={isCollapsed ? 32 : 80}
+							userId={userId || displayName}
+						/>
+					)}
 				</TouchableOpacity>
 
-				<View style={styles.nameContainer}>
-					<View style={styles.nameGroup}>
+				{/* Name, Username & Bio */}
+				<View
+					style={[
+						isCollapsed ? styles.collapsedInfo : styles.nameContainer,
+						{ flexDirection: isCollapsed ? "row" : "column" },
+					]}
+				>
+					<View
+						style={isCollapsed ? styles.collapsedNameRow : styles.nameGroup}
+					>
 						<View style={styles.nameRow}>
-							<Text style={styles.name}>{displayName}</Text>
+							<Text
+								style={isCollapsed ? styles.collapsedName : styles.name}
+								numberOfLines={1}
+							>
+								{displayName}
+							</Text>
 							{isVerified && (
 								<MaterialIcons
 									name="verified"
-									size={24}
+									size={isCollapsed ? 14 : 18}
 									color="#6B2FBC"
-									style={styles.verifiedBadge}
+									style={[styles.verifiedBadge, { marginLeft: 4 }]}
 								/>
 							)}
 						</View>
-						<Text style={styles.username}>@{username || userId}</Text>
-						<View style={styles.voiceBioContainer}>
-							{loadingVoiceBio ? (
-								<View style={styles.voiceBioButton}>
-									<ActivityIndicator size="small" color="#6B2FBC" />
-								</View>
-							) : voiceBio ? (
-								<TouchableOpacity
-									style={[
-										styles.voiceBioButton,
-										isVoiceBioPlaying && styles.voiceBioButtonPlaying,
-									]}
-									onPress={handleVoiceBioPlayPause}
-									accessibilityLabel={
-										isVoiceBioPlaying ? "Pause voice bio" : "Play voice bio"
-									}
-									accessibilityRole="button"
-								>
-									<Animated.View
-										style={[styles.voiceBioContent, { width: buttonWidth }]}
-									>
-										<View style={styles.iconWrapper}>
-											<Feather
-												name={isVoiceBioPlaying ? "pause" : "play"}
-												size={16}
-												color="#6B2FBC"
-												style={styles.playIcon}
-											/>
-										</View>
-										{!isExpanded && (
-											<Text style={styles.voiceBioDuration}>
-												{formatDuration(voiceBio.duration)}
-											</Text>
-										)}
-										{isExpanded && (
-											<>
-												<View
-													style={styles.progressContainer}
-													onTouchStart={handleSeekStart}
-													onTouchEnd={handleSeekEnd}
-													onTouchMove={handleSeek}
-												>
-													<View style={styles.progressBackground} />
-													<View
-														style={[
-															styles.progressBar,
-															{ width: `${progress * 100}%` },
-														]}
-													/>
-												</View>
-												<TouchableOpacity
-													onPress={handleVoiceBioCollapse}
-													style={styles.collapseButton}
-												>
-													<Feather name="x" size={14} color="#666666" />
-												</TouchableOpacity>
-											</>
-										)}
-									</Animated.View>
-								</TouchableOpacity>
-							) : null}
-						</View>
+						<Text
+							style={isCollapsed ? styles.collapsedUsername : styles.username}
+							numberOfLines={1}
+						>
+							@{username}
+						</Text>
 					</View>
+					{isCollapsed && (
+						<View style={{ marginLeft: "auto" }}>
+							<Text style={styles.collapsedPostCount} numberOfLines={1}>
+								{postCount} {postCount === 1 ? "post" : "posts"}
+							</Text>
+						</View>
+					)}
 				</View>
 
-				<View style={styles.biosContainer}>
-					<Text style={styles.bio}>{bio || "No bio available"}</Text>
-				</View>
-			</View>
+				{/* Bio & Voice Bio Button only in expanded view */}
+				{!isCollapsed && bio && (
+					<View style={styles.biosContainer}>
+						<Text style={styles.bio}>{bio}</Text>
+					</View>
+				)}
 
-			{/* Stats section removed - now handled in the profile screen */}
-
-			<Modal
-				animationType="none"
-				transparent={true}
-				visible={modalVisible}
-				onRequestClose={() => setModalVisible(false)}
-				statusBarTranslucent={true}
-			>
-				<View style={{ flex: 1 }}>
-					<BlurView
-						intensity={Platform.OS === "ios" ? 25 : 40}
-						tint="dark"
-						style={StyleSheet.absoluteFillObject}
-					/>
-					<Pressable
+				{/* Voice Bio Button (only in expanded view) */}
+				{!isCollapsed && voiceBio && (
+					<View
 						style={[
-							StyleSheet.absoluteFill,
-							{
-								backgroundColor: "rgba(0, 0, 0, 0.3)",
-								justifyContent: "center",
-								alignItems: "center",
+							styles.voiceBioContainer,
+							isExpanded && {
+								marginVertical: 12,
+								marginHorizontal: 16,
+								height: isExpanded ? 60 : 40,
 							},
 						]}
+					>
+						<TouchableOpacity
+							style={[
+								isVoiceBioPlaying
+									? styles.voiceBioButtonPlaying
+									: styles.voiceBioButton,
+								isExpanded && { width: "100%", height: 60 },
+							]}
+							onPress={handleVoiceBioPlayPause}
+						>
+							<View style={styles.voiceBioContent}>
+								<View style={styles.iconWrapper}>
+									{!isVoiceBioPlaying && (
+										<Feather name="play" size={16} color="#6B2FBC" />
+									)}
+									{isVoiceBioPlaying && (
+										<View
+											style={{ flexDirection: "row", alignItems: "center" }}
+										>
+											{/* Voice Bio Waves Animation */}
+											<Animated.View
+												style={[
+													styles.wave,
+													{
+														height: wave1.interpolate({
+															inputRange: [0, 0.5, 1],
+															outputRange: [3, 12, 3],
+														}),
+													},
+												]}
+											/>
+											<Animated.View
+												style={[
+													styles.wave,
+													{
+														height: wave2.interpolate({
+															inputRange: [0, 0.5, 1],
+															outputRange: [3, 20, 3],
+														}),
+														marginHorizontal: 3,
+													},
+												]}
+											/>
+											<Animated.View
+												style={[
+													styles.wave,
+													{
+														height: wave3.interpolate({
+															inputRange: [0, 0.5, 1],
+															outputRange: [3, 15, 3],
+														}),
+													},
+												]}
+											/>
+										</View>
+									)}
+								</View>
+								<Text
+									style={[
+										styles.voiceBioDuration,
+										{
+											color: isVoiceBioPlaying ? "#FFFFFF" : "#6B2FBC",
+											marginLeft: 6,
+										},
+									]}
+								>
+									Voice Bio{" "}
+									{voiceBio && voiceBio.duration
+										? formatDuration(voiceBio.duration)
+										: ""}
+								</Text>
+							</View>
+
+							{/* Progress bar for voice bio playback */}
+							{isExpanded && (
+								<View style={styles.progressContainer}>
+									<Pressable
+										style={styles.progressBackground}
+										onPress={handleSeek}
+									>
+										<Animated.View
+											style={[
+												styles.progressBar,
+												{
+													width: `${progress * 100}%`,
+												},
+											]}
+										/>
+									</Pressable>
+								</View>
+							)}
+						</TouchableOpacity>
+					</View>
+				)}
+
+				{!isCollapsed && loadingVoiceBio && (
+					<View style={styles.voiceBioContainer}>
+						<ActivityIndicator size="small" color="#6B2FBC" />
+					</View>
+				)}
+
+				{!isCollapsed && !voiceBio && !loadingVoiceBio && isOwnProfile && (
+					<View style={styles.voiceBioContainer}>
+						<Text style={styles.noVoiceBioText}>
+							Add a voice bio to your profile
+						</Text>
+						<TouchableOpacity
+							style={styles.voiceBioButton}
+							onPress={() => router.push("/profile/voice-bio")}
+						>
+							<View style={styles.voiceBioContent}>
+								<View style={styles.iconWrapper}>
+									<Feather name="mic" size={16} color="#6B2FBC" />
+								</View>
+								<Text style={styles.voiceBioDuration}>Record Voice Bio</Text>
+							</View>
+						</TouchableOpacity>
+					</View>
+				)}
+			</View>
+
+			{/* Full Screen Photo Modal */}
+			<Modal
+				visible={modalVisible}
+				transparent={true}
+				animationType="fade"
+				onRequestClose={() => setModalVisible(false)}
+			>
+				<View style={styles.modalContainer}>
+					<Pressable
+						style={styles.modalOverlay}
 						onPress={() => setModalVisible(false)}
 					>
-						<View style={styles.modalContent}>
-							<Pressable
-								style={styles.fullscreenImageContainer}
-								onPress={(e) => e.stopPropagation()}
-							>
-								{activePhoto === "cover" ? (
-									<Image
-										source={{
-											uri:
-												coverPhotoUrl ||
-												"https://picsum.photos/seed/ripply/1200/400",
-										}}
-										style={[
-											styles.fullscreenImage,
-											{ aspectRatio: imageAspectRatio },
-										]}
-										onError={(e) => {
-											console.log(
-												"Cover photo load error:",
-												e.nativeEvent.error
-											);
-											// Fallback is handled by the || operator in the uri
-										}}
-										resizeMode="cover"
-										onLoad={(e) => {
-											try {
-												// Check if source exists and has width/height properties
-												if (
-													e.nativeEvent &&
-													e.nativeEvent.source &&
-													e.nativeEvent.source.width &&
-													e.nativeEvent.source.height
-												) {
-													const { width, height } = e.nativeEvent.source;
-													setImageAspectRatio(width / height);
-												} else {
-													// Default to 16:9 aspect ratio if dimensions are not available
-													setImageAspectRatio(16 / 9);
-												}
-											} catch (error) {
-												console.warn("Error getting image dimensions:", error);
-												// Use a default aspect ratio
-												setImageAspectRatio(16 / 9);
-											}
-										}}
-									/>
-								) : (
-									<View style={styles.profileImageContainer}>
-										{avatarUrl ? (
-											<Image
-												source={{ uri: avatarUrl }}
-												style={{
-													width: "100%",
-													height: "100%",
-													borderRadius: 12,
-												}}
-												resizeMode="cover"
-												onError={(e) => {
-													console.log(
-														"Avatar load error:",
-														e.nativeEvent.error
-													);
-													// We'll handle fallback in the component
-												}}
-											/>
-										) : (
-											<View style={{ width: 300, height: 300 }}>
-												<DefaultAvatar userId={userId} size={300} />
-											</View>
-										)}
-									</View>
-								)}
-							</Pressable>
-							<Pressable
-								style={styles.actionButtons}
-								onPress={(e) => e.stopPropagation()}
-							>
+						<View style={styles.fullscreenImageContainer}>
+							{activePhoto === "profile" && avatarUrl ? (
+								<Image
+									source={{ uri: avatarUrl }}
+									style={[
+										styles.fullscreenImage,
+										{ aspectRatio: imageAspectRatio },
+									]}
+									resizeMode="contain"
+								/>
+							) : activePhoto === "cover" && coverPhotoUrl ? (
+								<Image
+									source={{ uri: coverPhotoUrl }}
+									style={[
+										styles.fullscreenImage,
+										{ aspectRatio: imageAspectRatio },
+									]}
+									resizeMode="contain"
+								/>
+							) : null}
+						</View>
+
+						{/* Action buttons if viewing own profile */}
+						{isOwnProfile && (
+							<View style={styles.actionButtons}>
 								<TouchableOpacity
 									style={styles.actionButton}
 									onPress={handleEditPhoto}
 								>
-									<Feather name="edit-2" size={24} color="white" />
+									<Feather name="edit-2" size={24} color="#FFFFFF" />
 								</TouchableOpacity>
 								<TouchableOpacity
 									style={[styles.actionButton, { backgroundColor: "#FF3B30" }]}
 									onPress={handleRemovePhoto}
 								>
-									<Feather name="trash-2" size={24} color="white" />
+									<Feather name="trash-2" size={24} color="#FFFFFF" />
 								</TouchableOpacity>
-							</Pressable>
-						</View>
+							</View>
+						)}
 					</Pressable>
 				</View>
 			</Modal>
+
+			{/* Load audio element on web */}
+			{Platform.OS === "web" && voiceBio && voiceBio.audio_url && (
+				<audio
+					ref={audioRef}
+					src={voiceBio.audio_url}
+					preload="auto"
+					style={{ display: "none" }}
+				/>
+			)}
 		</View>
 	);
 }
@@ -673,9 +665,7 @@ const styles = StyleSheet.create<Styles>({
 		height: 100,
 		borderRadius: 50,
 		backgroundColor: "#E1E1E1",
-		overflow: "hidden",
-		position: "relative",
-	},
+	} as ImageStyle,
 	defaultAvatar: {
 		width: 80, // Default size, will be overridden by inline styles
 		height: 80, // Default size, will be overridden by inline styles
@@ -758,8 +748,16 @@ const styles = StyleSheet.create<Styles>({
 		marginTop: 6,
 	},
 	voiceBioButtonPlaying: {
-		backgroundColor: "rgba(107, 47, 188, 0.15)",
+		backgroundColor: "#6B2FBC",
+		borderRadius: 16,
+		height: 32,
+		justifyContent: "center",
+		alignItems: "flex-start",
+		borderWidth: 1,
 		borderColor: "rgba(107, 47, 188, 0.3)",
+		padding: 0,
+		overflow: "hidden",
+		marginTop: 6,
 	},
 	voiceBioContent: {
 		flexDirection: "row",
@@ -793,7 +791,7 @@ const styles = StyleSheet.create<Styles>({
 	},
 	progressBar: {
 		height: "100%",
-		backgroundColor: "#6B2FBC",
+		backgroundColor: "#FFFFFF",
 		borderRadius: 2,
 	},
 	collapseButton: {
@@ -867,14 +865,14 @@ const styles = StyleSheet.create<Styles>({
 	},
 	voiceBioDuration: {
 		fontSize: 15,
-		color: "#666666",
+		color: "#6B2FBC",
 		marginLeft: 2,
 		marginRight: 5,
 		marginBottom: 2,
 	},
 	modalContainer: {
 		flex: 1,
-		backgroundColor: "transparent",
+		backgroundColor: "rgba(0, 0, 0, 0.9)",
 	},
 	modalOverlay: {
 		flex: 1,
@@ -947,5 +945,12 @@ const styles = StyleSheet.create<Styles>({
 		fontSize: 14,
 		color: "#666666",
 		marginTop: 6,
+	},
+	wave: {
+		width: 10,
+		height: 10,
+		borderRadius: 5,
+		backgroundColor: "#FFFFFF",
+		marginHorizontal: 2,
 	},
 });

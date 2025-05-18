@@ -12,10 +12,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, usePathname } from "expo-router";
 import { VoiceNoteCard } from "../../components/profile/VoiceNoteCard";
 import { HomeHeader } from "../../components/home/HomeHeader";
 import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
 // Import all required functions from voiceNoteService
 import {
 	getVoiceNotes,
@@ -60,6 +61,11 @@ export default function HomeScreen() {
 	const { user: currentUser } = useUser();
 	const [diagnosticData, setDiagnosticData] = useState<any>(null);
 	const [runningDiagnostics, setRunningDiagnostics] = useState(false);
+	const { colors, isDarkMode } = useTheme();
+	const pathname = usePathname();
+
+	// Only show FAB in home tab
+	const showFAB = pathname === "/home";
 
 	// Scroll to top function to pass to the header
 	const scrollToTop = () => {
@@ -437,9 +443,17 @@ export default function HomeScreen() {
 	});
 
 	return (
-		<View style={[styles.container, { backgroundColor: "#FFFFFF" }]}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			{/* Status bar background to prevent content from showing behind it */}
-			<View style={[styles.statusBarBackground, { height: insets.top }]} />
+			<View
+				style={[
+					styles.statusBarBackground,
+					{
+						height: insets.top,
+						backgroundColor: colors.background,
+					},
+				]}
+			/>
 			{/* Fixed Header */}
 			<Animated.View
 				style={[
@@ -450,6 +464,9 @@ export default function HomeScreen() {
 						shadowOpacity: headerShadowOpacity,
 						// Position header at the very top of the screen
 						top: 0,
+						backgroundColor: colors.card,
+						borderBottomColor: colors.border,
+						shadowColor: colors.text,
 					},
 				]}
 			>
@@ -461,12 +478,12 @@ export default function HomeScreen() {
 			{/* Scrollable content */}
 			<Animated.ScrollView
 				ref={scrollViewRef}
-				style={styles.scrollView}
+				style={[styles.scrollView, { backgroundColor: colors.background }]}
 				contentContainerStyle={[
 					styles.scrollContent,
 					{
-						paddingTop:
-							HEADER_HEIGHT + (Platform.OS === "ios" ? insets.top : 0),
+						paddingTop: HEADER_HEIGHT + insets.top + 10,
+						paddingBottom: 10 + insets.bottom,
 					},
 				]}
 				onScroll={handleScroll}
@@ -475,9 +492,9 @@ export default function HomeScreen() {
 					<RefreshControl
 						refreshing={refreshing}
 						onRefresh={handleRefresh}
-						tintColor="#6B2FBC"
-						colors={["#6B2FBC"]}
-						progressBackgroundColor="#FFFFFF"
+						tintColor={colors.tint}
+						colors={[colors.tint]}
+						progressBackgroundColor={colors.card}
 					/>
 				}
 			>
@@ -485,24 +502,38 @@ export default function HomeScreen() {
 
 				{loading && !refreshing ? (
 					<View style={styles.loadingContainer}>
-						<ActivityIndicator size="large" color="#6B2FBC" />
-						<Text style={styles.loadingText}>Loading voice notes...</Text>
+						<ActivityIndicator size="large" color={colors.tint} />
+						<Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+							Loading voice notes...
+						</Text>
 					</View>
 				) : error ? (
 					<View style={styles.errorContainer}>
-						<Text style={styles.errorText}>{error}</Text>
+						<Text style={[styles.errorText, { color: colors.text }]}>
+							{error || "An error occurred while loading the feed"}
+						</Text>
 						<TouchableOpacity
-							style={styles.retryButton}
-							onPress={fetchVoiceNotes}
+							style={[styles.retryButton, { backgroundColor: colors.tint }]}
+							onPress={handleRefresh}
 						>
-							<Text style={styles.retryButtonText}>Retry</Text>
+							<Text style={[styles.retryButtonText, { color: colors.card }]}>
+								Try Again
+							</Text>
 						</TouchableOpacity>
 					</View>
 				) : (
-					<View style={styles.feedContent}>
+					<View
+						style={[styles.feedContent, { backgroundColor: colors.background }]}
+					>
 						{feedItems.length > 0 ? (
 							feedItems.map((item) => (
-								<View key={item.id} style={styles.feedItem}>
+								<View
+									key={item.id}
+									style={[
+										styles.feedItem,
+										{ backgroundColor: colors.background },
+									]}
+								>
 									<VoiceNoteCard
 										key={item.id}
 										voiceNote={item.voiceNote}
@@ -528,18 +559,33 @@ export default function HomeScreen() {
 								</View>
 							))
 						) : (
-							<View style={styles.emptyContainer}>
-								<Text style={styles.emptyText}>
+							<View
+								style={[
+									styles.emptyContainer,
+									{ backgroundColor: colors.background },
+								]}
+							>
+								<Text
+									style={[styles.emptyText, { color: colors.textSecondary }]}
+								>
 									{currentUser?.id
 										? "No posts from users you follow yet. Try following more users!"
 										: "No voice notes found"}
 								</Text>
 								{currentUser?.id && (
 									<TouchableOpacity
-										style={styles.discoverButton}
+										style={[
+											styles.discoverButton,
+											{ backgroundColor: colors.tint },
+										]}
 										onPress={() => router.push("/search")}
 									>
-										<Text style={styles.discoverButtonText}>
+										<Text
+											style={[
+												styles.discoverButtonText,
+												{ color: colors.card },
+											]}
+										>
 											Discover Users
 										</Text>
 									</TouchableOpacity>
@@ -551,90 +597,42 @@ export default function HomeScreen() {
 			</Animated.ScrollView>
 
 			{/* Floating Action Button */}
-			<TouchableOpacity
-				style={[styles.fab, { bottom: insets.bottom + 16 }]}
-				onPress={handleNewVoiceNote}
-			>
-				<Feather name="mic" size={24} color="white" />
-			</TouchableOpacity>
+			{showFAB && (
+				<TouchableOpacity
+					style={[
+						styles.fab,
+						{
+							bottom: insets.bottom + 16,
+							backgroundColor: colors.tint,
+							shadowColor: colors.text,
+						},
+					]}
+					onPress={handleNewVoiceNote}
+				>
+					<Feather name="plus" size={24} color={colors.card} />
+				</TouchableOpacity>
+			)}
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
 	statusBarBackground: {
 		position: "absolute",
 		top: 0,
 		left: 0,
 		right: 0,
-		backgroundColor: "#fff",
-		zIndex: 101, // Higher than the header
-	},
-	container: {
-		flex: 1,
-		backgroundColor: "#FFFFFF", // White background to match the screenshot
-	},
-	loadingContainer: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		padding: 20,
-	},
-	loadingText: {
-		marginTop: 10,
-		fontSize: 16,
-		color: "#666",
-	},
-	errorContainer: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		padding: 20,
-	},
-	errorText: {
-		fontSize: 16,
-		color: "#ff3b30",
-		textAlign: "center",
-		marginBottom: 16,
-	},
-	retryButton: {
-		backgroundColor: "#6B2FBC",
-		paddingHorizontal: 20,
-		paddingVertical: 10,
-		borderRadius: 20,
-	},
-	retryButtonText: {
-		color: "white",
-		fontWeight: "bold",
-	},
-	emptyContainer: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		padding: 40,
-	},
-	emptyText: {
-		fontSize: 16,
-		color: "#666",
-		textAlign: "center",
-	},
-	scrollView: {
-		flex: 1,
-		backgroundColor: "#FFFFFF", // White background to match the screenshot
-	},
-	scrollContent: {
-		flexGrow: 1,
-		// Base padding is handled inline to account for dynamic insets
+		zIndex: 1,
 	},
 	header: {
 		position: "absolute",
 		left: 0,
 		right: 0,
-		backgroundColor: "#fff",
 		zIndex: 100,
 		borderBottomWidth: 1,
-		borderBottomColor: "#E1E1E1",
-		// Only show shadow at the bottom
 		shadowColor: "#000",
 		shadowOffset: { width: 0, height: 2 },
 		shadowRadius: 4,
@@ -681,26 +679,22 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 16,
 		paddingVertical: 12,
 		alignItems: "center",
-		backgroundColor: "#FFFFFF",
 		flexDirection: "column",
 	},
 	feedTitle: {
 		fontSize: 16,
 		fontWeight: "bold",
-		color: "#333333",
 	},
 	underline: {
 		marginTop: 8,
 		width: 40,
 		height: 3,
-		backgroundColor: "#6B2FBC",
 		borderRadius: 1.5,
 	},
 	feedContent: {
 		padding: 0,
 	},
 	feedItem: {
-		backgroundColor: "#FFFFFF",
 		paddingHorizontal: 16,
 		paddingVertical: 12,
 	},
@@ -710,28 +704,82 @@ const styles = StyleSheet.create({
 		width: 56,
 		height: 56,
 		borderRadius: 28,
-		backgroundColor: "#6B2FBC",
 		justifyContent: "center",
 		alignItems: "center",
-		elevation: 8,
-		zIndex: 1000,
+		elevation: 5,
 		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 4,
-		},
+		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.3,
-		shadowRadius: 4.65,
+		shadowRadius: 3,
 	},
 	discoverButton: {
-		backgroundColor: "#6B2FBC",
 		paddingHorizontal: 20,
 		paddingVertical: 10,
 		borderRadius: 20,
 		marginTop: 10,
 	},
 	discoverButtonText: {
-		color: "white",
 		fontWeight: "bold",
+	},
+	loadingContainer: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	loadingText: {
+		marginTop: 10,
+		fontSize: 16,
+	},
+	errorContainer: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+		padding: 20,
+	},
+	errorText: {
+		fontSize: 16,
+		textAlign: "center",
+		marginBottom: 16,
+	},
+	retryButton: {
+		paddingHorizontal: 20,
+		paddingVertical: 10,
+		borderRadius: 20,
+	},
+	retryButtonText: {
+		fontWeight: "bold",
+	},
+	emptyContainer: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+		padding: 40,
+	},
+	emptyText: {
+		fontSize: 16,
+		textAlign: "center",
+	},
+	scrollView: {
+		flex: 1,
+	},
+	scrollContent: {
+		flexGrow: 1,
+	},
+	headerContainer: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		zIndex: 1,
+	},
+	createButtonContainer: {
+		position: "absolute",
+		bottom: 20,
+		right: 20,
+		width: 60,
+		height: 60,
+		borderRadius: 30,
+		justifyContent: "center",
+		alignItems: "center",
 	},
 });

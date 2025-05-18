@@ -18,6 +18,7 @@ import {
 	getVoiceNoteById,
 	getVoiceNoteStats,
 } from "../../services/api/voiceNoteService";
+import { useTheme } from "../../context/ThemeContext";
 
 // Local implementation of formatRelativeTime
 const formatRelativeTime = (date: Date): string => {
@@ -144,6 +145,7 @@ export function VoiceNotesList({
 	showRepostAttribution = false,
 }: VoiceNotesListProps) {
 	const router = useRouter();
+	const { colors, isDarkMode } = useTheme();
 	// State for refresh control
 	const [refreshing, setRefreshing] = useState(false);
 	// State for voice notes
@@ -349,6 +351,16 @@ export function VoiceNotesList({
 			});
 	};
 
+	// Handle navigation to user profile
+	const handleUserProfilePress = (profileUsername?: string) => {
+		if (profileUsername) {
+			router.push({
+				pathname: "/profile/[username]",
+				params: { username: profileUsername },
+			});
+		}
+	};
+
 	// Use provided voice notes or empty array
 	const displayVoiceNotes =
 		localVoiceNotes && localVoiceNotes.length > 0
@@ -356,7 +368,7 @@ export function VoiceNotesList({
 			: EMPTY_VOICE_NOTES;
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<View style={styles.separatorContainer}>
 				<View style={styles.separatorLine} />
 				<View style={styles.separatorDot} />
@@ -365,101 +377,87 @@ export function VoiceNotesList({
 
 			{loadingNotes ? (
 				<View style={styles.loadingContainer}>
-					<ActivityIndicator size="large" color="#6B2FBC" />
+					<ActivityIndicator size="small" color={colors.tint} />
 				</View>
 			) : (
-				<ScrollView
-					style={styles.scrollView}
+				<FlatList
+					style={[styles.list, { backgroundColor: colors.background }]}
+					contentContainerStyle={styles.listContent}
+					data={localVoiceNotes}
+					renderItem={({ item }) => {
+						// Transform shared_by to the format expected by VoiceNoteCard
+						const sharedBy = item.shared_by
+							? {
+									id: item.shared_by.id,
+									username: item.shared_by.username,
+									displayName:
+										item.shared_by.display_name || item.shared_by.username,
+									avatarUrl: item.shared_by.avatar_url,
+							  }
+							: null;
+
+						return (
+							<VoiceNoteCard
+								key={item.id}
+								voiceNote={{
+									id: item.id,
+									title: item.title,
+									duration: item.duration,
+									likes: normalizeCount(item.likes),
+									comments: normalizeCount(item.comments),
+									plays: normalizePlaysCount(item.plays),
+									shares: normalizeCount(item.shares),
+									// Use backgroundImage if available, otherwise fall back to background_image
+									backgroundImage:
+										item.backgroundImage || item.background_image || null,
+									tags: item.tags || [],
+								}}
+								userId={item.users?.id || item.user_id || userId}
+								displayName={item.users?.display_name || userDisplayName}
+								username={item.users?.username || username || ""}
+								userAvatarUrl={item.users?.avatar_url || null}
+								onUserProfilePress={() =>
+									handleUserProfilePress(item.users?.username)
+								}
+								timePosted={formatRelativeTime(
+									new Date(
+										item.is_shared && item.shared_at
+											? item.shared_at
+											: item.created_at
+									)
+								)}
+								onPlayPress={() => handlePlayVoiceNote(item.id)}
+								onShare={() => handleShareVoiceNote(item.id)}
+								voiceNoteUsers={item.users}
+								isShared={!!item.is_shared}
+								sharedBy={sharedBy}
+								showRepostAttribution={showRepostAttribution}
+							/>
+						);
+					}}
+					keyExtractor={(item) =>
+						// Create a unique key for each list item
+						`${item.id}-${item.is_shared ? "shared" : "original"}-${
+							item.shared_at || ""
+						}`
+					}
+					ListEmptyComponent={
+						<View style={styles.emptyContainer}>
+							<Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+								No voice notes yet
+							</Text>
+						</View>
+					}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
 							onRefresh={handleRefresh}
-							colors={["#6B2FBC"]}
-							tintColor="#6B2FBC"
+							tintColor={colors.tint}
+							colors={[colors.tint]}
+							progressBackgroundColor={colors.background}
 						/>
 					}
-				>
-					<View style={styles.cardsContainer}>
-						{displayVoiceNotes.map((item) => {
-							// Calculate time since posting
-							const timeAgo = formatRelativeTime(new Date(item.created_at));
-
-							// For shared items, use the shared timestamp
-							const displayTimestamp =
-								item.is_shared && item.shared_at
-									? formatRelativeTime(new Date(item.shared_at))
-									: timeAgo;
-
-							// Get the creator info
-							const creatorId = item.users?.id || item.user_id || userId;
-							const creatorDisplayName =
-								item.users?.display_name || userDisplayName;
-							const creatorUsername =
-								item.users?.username || username || "user";
-							const creatorAvatarUrl = item.users?.avatar_url || null;
-
-							// Determine if we should show repost attribution
-							const isRepost = item.is_shared;
-							let sharedByDataForCard = null; // Initialize to null
-
-							if (isRepost) {
-								// Only populate sharedByDataForCard if we have actual shared_by info
-								if (
-									item.shared_by &&
-									typeof item.shared_by === "object" &&
-									item.shared_by.id &&
-									item.shared_by.username
-								) {
-									sharedByDataForCard = {
-										id: item.shared_by.id,
-										username: item.shared_by.username,
-										displayName:
-											item.shared_by.display_name || item.shared_by.username, // Fallback for displayName
-										avatarUrl: item.shared_by.avatar_url || null,
-									};
-								}
-								// If item.is_shared is true, but item.shared_by is not valid,
-								// sharedByDataForCard will remain null.
-								// This means the VoiceNoteCard will not render the "Reposted by" text if data is incomplete.
-							}
-
-							return (
-								<View key={item.id} style={styles.cardContainer}>
-									<VoiceNoteCard
-										voiceNote={{
-											...item,
-											backgroundImage:
-												item.backgroundImage || item.background_image || null,
-											// Ensure all stats are proper numbers to prevent [object Object] display
-											likes: normalizeCount(item.likes),
-											comments: normalizeCount(item.comments),
-											plays: normalizeCount(item.plays),
-											shares: normalizeCount(item.shares),
-										}}
-										userId={creatorId} // This is the original creator of the voice note
-										displayName={creatorDisplayName}
-										username={creatorUsername}
-										userAvatarUrl={creatorAvatarUrl}
-										timePosted={displayTimestamp}
-										onPlay={() => handlePlayVoiceNote(item.id)}
-										onShare={() => handleShareVoiceNote(item.id)}
-										onProfilePress={() => {
-											// Use the voice note's username for navigation
-											router.push({
-												pathname: "/profile/[username]",
-												params: { username: creatorUsername },
-											});
-										}}
-										currentUserId={userId} // Pass profile owner's ID as currentUserId for context in VoiceNoteCard
-										isShared={isRepost}
-										showRepostAttribution={showRepostAttribution} // Prop from parent (ProfileScreen)
-										sharedBy={sharedByDataForCard}
-									/>
-								</View>
-							);
-						})}
-					</View>
-				</ScrollView>
+				/>
 			)}
 		</View>
 	);
@@ -468,7 +466,6 @@ export function VoiceNotesList({
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#FFFFFF",
 	},
 	separatorContainer: {
 		flexDirection: "row",
@@ -532,14 +529,43 @@ const styles = StyleSheet.create({
 		color: "#666",
 	},
 	loadingContainer: {
-		flex: 1,
-		justifyContent: "center",
+		padding: 20,
 		alignItems: "center",
+		justifyContent: "center",
 	},
 	scrollView: {
 		flex: 1,
 	},
 	cardsContainer: {
 		padding: 16,
+	},
+	list: {
+		flex: 1,
+	},
+	listContent: {
+		paddingBottom: 20,
+	},
+	emptyContainer: {
+		padding: 40,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	emptyText: {
+		fontSize: 16,
+		textAlign: "center",
+	},
+	refreshButton: {
+		marginTop: 10,
+		paddingVertical: 8,
+		paddingHorizontal: 16,
+		borderRadius: 20,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	refreshButtonText: {
+		marginLeft: 8,
+		fontSize: 14,
+		fontWeight: "500",
 	},
 });
