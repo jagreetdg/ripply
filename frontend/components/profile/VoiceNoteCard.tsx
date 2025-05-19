@@ -13,13 +13,16 @@ import {
 	Alert,
 	ScrollView,
 } from "react-native";
-import { Feather, MaterialIcons } from "@expo/vector-icons";
+import { Feather, MaterialIcons, FontAwesome } from "@expo/vector-icons";
+import { Audio } from "expo-av";
+import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { CommentPopup } from "../comments/CommentPopup";
 import {
 	recordShare,
 	likeVoiceNote,
 	unlikeVoiceNote,
+	addComment,
 	getComments,
 	checkLikeStatus,
 	checkShareStatus,
@@ -29,7 +32,6 @@ import {
 } from "../../services/api/voiceNoteService";
 import DefaultAvatar from "../DefaultAvatar";
 import { useUser } from "../../context/UserContext";
-import { useTheme } from "../../context/ThemeContext";
 
 // Development mode flag
 const isDev = process.env.NODE_ENV === "development" || __DEV__;
@@ -240,11 +242,9 @@ export function VoiceNoteCard({
 	voiceNoteUsers,
 }: VoiceNoteCardProps) {
 	const router = useRouter();
-	const { user } = useUser();
-	const { colors, isDarkMode } = useTheme();
-	const styles = getStyles(colors, isDarkMode, !!voiceNote.backgroundImage);
+	const { user } = useUser(); // Get current logged-in user from context
 	const [isPlaying, setIsPlaying] = useState(false);
-	const loggedInUserId = user?.id || currentUserId;
+	const loggedInUserId = user?.id || currentUserId; // Use user from context or fallback to prop
 	const progressContainerRef = useRef<View>(null);
 	const statusTimeout = useRef<any>(null);
 	const scrollViewRef = useRef<ScrollView>(null);
@@ -257,13 +257,13 @@ export function VoiceNoteCard({
 		userAvatarUrl || voiceNoteUsers?.avatar_url || null;
 
 	// Handle duplicate isShared identifier by using the prop value or defaulting to the state
-	const [internalIsShared, setInternalIsShared] = useState<boolean>(
+	const [isSharedState, setIsShared] = useState<boolean>(
 		isSharedProp !== undefined ? isSharedProp : false
 	);
 
 	// Use the prop if provided, otherwise use the state
 	const isSharedEffective =
-		isSharedProp !== undefined ? isSharedProp : internalIsShared;
+		isSharedProp !== undefined ? isSharedProp : isSharedState;
 
 	// Debug log to check the username value
 	console.log("VoiceNoteCard received props:", {
@@ -355,13 +355,13 @@ export function VoiceNoteCard({
 			onUserProfilePress();
 		} else if (onProfilePress) {
 			onProfilePress();
-		} else if (effectiveUsername && effectiveUsername !== "user") {
+		} else if (username) {
 			router.push({
 				pathname: "/profile/[username]",
-				params: { username: effectiveUsername },
+				params: { username },
 			});
 		}
-	}, [router, effectiveUsername, onProfilePress, onUserProfilePress]);
+	}, [router, username, onProfilePress, onUserProfilePress]);
 
 	// Handle like button press
 	const handleLikePress = useCallback(() => {
@@ -502,7 +502,7 @@ export function VoiceNoteCard({
 
 				// Update the shared state based on the response
 				const newSharedState = response.isShared;
-				setInternalIsShared(newSharedState);
+				setIsShared(newSharedState);
 
 				// Update shares count with the accurate number from server
 				if (typeof response.shareCount === "number") {
@@ -536,6 +536,55 @@ export function VoiceNoteCard({
 				setIsLoadingShareCount(false);
 			});
 	}, [shareScale, voiceNote.id, loggedInUserId, onShare, isLoadingShareCount]);
+
+	// Handle native share
+	const handleNativeShare = useCallback(async () => {
+		if (isLoadingShareCount) {
+			return;
+		}
+
+		try {
+			setIsLoadingShareCount(true);
+
+			// Create a shareable link/message
+			const shareMessage = `Check out this voice note: ${voiceNote.title}\n\nhttps://ripply.app/voice-note/${voiceNote.id}`;
+
+			// Use native share API
+			const result = await Share.share({
+				message: shareMessage,
+				title: voiceNote.title,
+			});
+
+			// Record share if completed
+			if (result.action === Share.sharedAction && loggedInUserId) {
+				try {
+					const response = await recordShare(voiceNote.id, loggedInUserId);
+					console.log("Voice note share recorded:", response);
+
+					// Check if there was an error
+					if (response.error) {
+						console.error("Error in sharing response:", response.error);
+						return;
+					}
+
+					// Update the shared state based on the response
+					setIsShared(response.isShared);
+
+					// Update shares count with the accurate number from server
+					if (typeof response.shareCount === "number") {
+						setSharesCount(response.shareCount);
+					}
+				} catch (shareError) {
+					console.error("Error recording share:", shareError);
+				}
+			}
+		} catch (error) {
+			console.error("Error sharing:", error);
+			Alert.alert("Error", "Could not share this voice note");
+		} finally {
+			setIsLoadingShareCount(false);
+		}
+	}, [voiceNote, loggedInUserId, isLoadingShareCount]);
 
 	// Handle play button press
 	const handlePlayPress = useCallback(() => {
@@ -642,7 +691,7 @@ export function VoiceNoteCard({
 						voiceNote.id,
 						loggedInUserId
 					);
-					setInternalIsShared(isUserShared);
+					setIsShared(isUserShared);
 
 					const isUserLiked = await checkLikeStatus(
 						voiceNote.id,
@@ -737,308 +786,34 @@ export function VoiceNoteCard({
 		});
 	};
 
-	// Adjust repost attribution background based on theme
-	const repostAttributionBackgroundColor = voiceNote.backgroundImage
-		? isDarkMode
-			? "rgba(0,0,0,0.45)"
-			: "rgba(255,255,255,0.35)"
-		: isDarkMode
-		? "rgba(30,30,30,0.85)"
-		: "rgba(235,235,235,0.85)";
-	const repostAttributionTextColor = voiceNote.backgroundImage
-		? isDarkMode
-			? "#FFFFFF"
-			: colors.card
-		: colors.text;
-
 	// Render the card with or without background image
 	if (!voiceNote.backgroundImage) {
 		return (
 			<>
-				<View style={styles.cardOuterContainer}>
-					<View style={[styles.container, styles.plainContainer]}>
-						{/* Add repost attribution if needed */}
-						{showRepostAttribution && isSharedEffective && sharedBy && (
-							<View
-								style={[
-									styles.repostAttributionContainer,
-									{ backgroundColor: repostAttributionBackgroundColor },
-								]}
-							>
-								<Text
-									style={[
-										styles.repostAttributionText,
-										{ color: repostAttributionTextColor },
-									]}
-								>
-									<Feather
-										name="repeat"
-										size={14}
-										color={repostAttributionTextColor}
-									/>{" "}
-									Reposted by{" "}
-									<TouchableOpacity
-										onPress={() => {
-											if (sharedBy.username) {
-												router.push({
-													pathname: "/profile/[username]",
-													params: { username: sharedBy.username },
-												});
-											}
-										}}
-									>
-										<Text
-											style={[
-												styles.repostAttributionUsername,
-												{ color: repostAttributionTextColor },
-											]}
-										>
-											@{sharedBy.username}
-										</Text>
-									</TouchableOpacity>
-								</Text>
-							</View>
-						)}
-						<View style={styles.content}>
-							{/* User info and options header */}
-							{(userId || displayName) && (
-								<View style={styles.cardHeader}>
-									<TouchableOpacity
-										style={styles.userInfoContainer}
-										onPress={handleProfilePress}
-									>
-										<DefaultProfilePicture
-											userId={userId || "user"}
-											size={32}
-											avatarUrl={effectiveAvatarUrl}
-										/>
-										<View style={styles.userInfo}>
-											<Text style={styles.displayName}>
-												{effectiveDisplayName}
-											</Text>
-											<Text style={styles.username}>@{effectiveUsername}</Text>
-										</View>
-									</TouchableOpacity>
-									<View style={styles.headerActions}>
-										{timePosted && (
-											<Text style={styles.timePosted}>{timePosted}</Text>
-										)}
-										<TouchableOpacity style={styles.optionsButton}>
-											<Feather
-												name="more-horizontal"
-												size={16}
-												color={colors.tabIconDefault}
-											/>
-										</TouchableOpacity>
-									</View>
-								</View>
-							)}
-							<Text style={styles.title}>{voiceNote.title}</Text>
-
-							<View style={styles.playerContainer}>
-								<TouchableOpacity
-									onPress={handlePlayPress}
-									style={styles.playButton}
-									activeOpacity={0.7}
-								>
-									<MaterialIcons
-										name={isPlaying ? "pause" : "play-arrow"}
-										size={24}
-										color={colors.background}
-									/>
-								</TouchableOpacity>
-
-								{renderProgressBar()}
-
-								<Text style={styles.duration}>
-									{formatDuration(voiceNote.duration)}
-								</Text>
-							</View>
-
-							{/* Tags section */}
-							{voiceNote.tags && voiceNote.tags.length > 0 && (
-								<View style={styles.tagsContainer}>
-									{voiceNote.tags.slice(0, 10).map((tag, index) => (
-										<TouchableOpacity
-											key={index}
-											style={styles.tagItem}
-											activeOpacity={0.7}
-											onPress={() => handleTagPress(tag)}
-										>
-											<Text style={styles.tagText}>#{tag}</Text>
-										</TouchableOpacity>
-									))}
-								</View>
-							)}
-
-							<View style={styles.interactions}>
-								<TouchableOpacity
-									style={styles.interactionButton}
-									activeOpacity={0.7}
-									onPress={handleLikePress}
-								>
-									<View style={styles.interactionContent}>
-										<Animated.View
-											style={[{ transform: [{ scale: likeScale }] }]}
-										>
-											<Feather
-												name={"heart"}
-												size={18}
-												color={isLiked ? colors.liked : colors.tabIconDefault}
-												style={isLiked ? styles.likedIcon : {}}
-											/>
-										</Animated.View>
-										<Text
-											style={[
-												styles.interactionCount,
-												{
-													color: isLiked ? colors.liked : colors.tabIconDefault,
-												},
-											]}
-										>
-											{formatNumber(likesCount)}
-										</Text>
-									</View>
-								</TouchableOpacity>
-								<TouchableOpacity
-									style={styles.interactionButton}
-									activeOpacity={0.7}
-									onPress={handleCommentPress}
-								>
-									<View style={styles.interactionContent}>
-										<Feather
-											name="message-circle"
-											size={18}
-											color={colors.tabIconDefault}
-										/>
-										<Text
-											style={[
-												styles.interactionText,
-												{ color: colors.tabIconDefault },
-											]}
-										>
-											{formatNumber(commentsCount)}
-										</Text>
-									</View>
-								</TouchableOpacity>
-								<TouchableOpacity
-									style={styles.interactionButton}
-									activeOpacity={0.7}
-									onPress={handlePlaysPress}
-								>
-									<View style={styles.interactionContent}>
-										<Feather
-											name="headphones"
-											size={18}
-											color={colors.tabIconDefault}
-										/>
-										<Text
-											style={[
-												styles.interactionText,
-												{ color: colors.tabIconDefault },
-											]}
-										>
-											{formatNumber(playsCount)}
-										</Text>
-									</View>
-								</TouchableOpacity>
-								<TouchableOpacity
-									style={styles.interactionButton}
-									activeOpacity={0.7}
-									onPress={handleRepostPress}
-									onLongPress={handleShareCountLongPress}
-									disabled={isLoadingShareCount}
-								>
-									<View style={styles.interactionContent}>
-										<Animated.View
-											style={[{ transform: [{ scale: shareScale }] }]}
-										>
-											<Feather
-												name="repeat"
-												size={18}
-												color={
-													isSharedEffective
-														? colors.reposted
-														: colors.tabIconDefault
-												}
-											/>
-										</Animated.View>
-										{isLoadingShareCount ? (
-											<Text
-												style={[
-													styles.interactionCount,
-													{
-														color: isSharedEffective
-															? colors.reposted
-															: colors.tabIconDefault,
-														opacity: 0.5,
-													},
-												]}
-											>
-												{formatNumber(sharesCount)}
-											</Text>
-										) : (
-											<Text
-												style={[
-													styles.interactionCount,
-													{
-														color: isSharedEffective
-															? colors.reposted
-															: colors.tabIconDefault,
-													},
-												]}
-											>
-												{formatNumber(sharesCount)}
-											</Text>
-										)}
-									</View>
-								</TouchableOpacity>
-							</View>
-						</View>
-					</View>
-				</View>
-
-				{/* Comment Popup */}
-				<CommentPopup
-					visible={showCommentPopup}
-					voiceNoteId={voiceNote.id}
-					currentUserId={loggedInUserId}
-					onClose={handleCloseCommentPopup}
-					onCommentAdded={handleCommentAdded}
-				/>
-			</>
-		);
-	}
-
-	return (
-		<>
-			<View style={styles.cardOuterContainer}>
-				<ImageBackground
-					source={{ uri: voiceNote.backgroundImage }}
-					style={styles.container}
-					imageStyle={{ borderRadius: 16 }}
-				>
-					<View style={styles.overlay} />
+				<View style={[styles.container, styles.plainContainer]}>
 					{/* Add repost attribution if needed */}
 					{showRepostAttribution && isSharedEffective && sharedBy && (
 						<View
-							style={[
-								styles.repostAttributionContainer,
-								{ backgroundColor: repostAttributionBackgroundColor },
-							]}
+							style={{
+								flexDirection: "row",
+								alignItems: "center",
+								paddingHorizontal: 10,
+								paddingVertical: 5,
+								backgroundColor: voiceNote.backgroundImage
+									? "rgba(255, 255, 255, 0.1)"
+									: "rgba(0,0,0,0.7)",
+								borderTopLeftRadius: 10,
+								borderTopRightRadius: 10,
+							}}
 						>
 							<Text
-								style={[
-									styles.repostAttributionText,
-									{ color: repostAttributionTextColor },
-								]}
+								style={{
+									fontSize: 12,
+									color: "#fff",
+									fontWeight: "400",
+								}}
 							>
-								<Feather
-									name="repeat"
-									size={14}
-									color={repostAttributionTextColor}
-								/>{" "}
-								Reposted by{" "}
+								<Feather name="repeat" size={14} color="#fff" /> Reposted by{" "}
 								<TouchableOpacity
 									onPress={() => {
 										if (sharedBy.username) {
@@ -1050,10 +825,10 @@ export function VoiceNoteCard({
 									}}
 								>
 									<Text
-										style={[
-											styles.repostAttributionUsername,
-											{ color: repostAttributionTextColor },
-										]}
+										style={{
+											fontWeight: "600",
+											color: "#fff",
+										}}
 									>
 										@{sharedBy.username}
 									</Text>
@@ -1075,46 +850,54 @@ export function VoiceNoteCard({
 										avatarUrl={effectiveAvatarUrl}
 									/>
 									<View style={styles.userInfo}>
-										<Text style={styles.displayNameOnImage}>
+										<Text style={styles.displayName}>
 											{effectiveDisplayName}
 										</Text>
-										<Text style={styles.usernameOnImage}>
-											@{effectiveUsername}
-										</Text>
+										<Text style={styles.username}>@{effectiveUsername}</Text>
 									</View>
 								</TouchableOpacity>
 								<View style={styles.headerActions}>
 									{timePosted && (
-										<Text style={styles.timePostedOnImage}>{timePosted}</Text>
+										<Text style={styles.timePosted}>{timePosted}</Text>
 									)}
 									<TouchableOpacity style={styles.optionsButton}>
 										<Feather
 											name="more-horizontal"
 											size={16}
-											color={colors.card}
+											color="#666666"
+											style={{
+												textShadowColor: "#FFFFFF",
+												textShadowOffset: { width: 0.5, height: 0.5 },
+												textShadowRadius: 1,
+											}}
 										/>
 									</TouchableOpacity>
 								</View>
 							</View>
 						)}
-						<Text style={styles.titleOnImage}>{voiceNote.title}</Text>
+						<Text style={styles.title}>{voiceNote.title}</Text>
 
 						<View style={styles.playerContainer}>
 							<TouchableOpacity
 								onPress={handlePlayPress}
-								style={[styles.playButton, styles.playButtonOnImage]}
+								style={styles.playButton}
 								activeOpacity={0.7}
 							>
 								<MaterialIcons
 									name={isPlaying ? "pause" : "play-arrow"}
 									size={24}
-									color={colors.background}
+									color="white"
+									style={{
+										textShadowColor: "#000000",
+										textShadowOffset: { width: 0.5, height: 0.5 },
+										textShadowRadius: 1,
+									}}
 								/>
 							</TouchableOpacity>
 
 							{renderProgressBar()}
 
-							<Text style={styles.durationOnImage}>
+							<Text style={styles.duration}>
 								{formatDuration(voiceNote.duration)}
 							</Text>
 						</View>
@@ -1125,19 +908,17 @@ export function VoiceNoteCard({
 								{voiceNote.tags.slice(0, 10).map((tag, index) => (
 									<TouchableOpacity
 										key={index}
-										style={[styles.tagItem, styles.tagItemOnImage]}
+										style={styles.tagItem}
 										activeOpacity={0.7}
 										onPress={() => handleTagPress(tag)}
 									>
-										<Text style={[styles.tagText, styles.tagTextOnImage]}>
-											#{tag}
-										</Text>
+										<Text style={styles.tagText}>#{tag}</Text>
 									</TouchableOpacity>
 								))}
 							</View>
 						)}
 
-						<View style={[styles.interactions, styles.interactionsOnImage]}>
+						<View style={styles.interactions}>
 							<TouchableOpacity
 								style={styles.interactionButton}
 								activeOpacity={0.7}
@@ -1145,25 +926,31 @@ export function VoiceNoteCard({
 							>
 								<View style={styles.interactionContent}>
 									<Animated.View
-										style={[{ transform: [{ scale: likeScale }] }]}
+										style={[
+											styles.iconContainer,
+											{ transform: [{ scale: likeScale }] },
+										]}
 									>
 										<Feather
-											name={"heart"}
+											name={isLiked ? "heart" : "heart"}
 											size={18}
-											color={isLiked ? colors.liked : colors.card}
-											style={
-												isLiked
-													? [styles.likedIcon, styles.likedIconOnImage]
-													: {}
-											}
+											color={isLiked ? "#E53935" : "#888"}
+											style={{
+												// Fill the heart if liked
+												...(isLiked && {
+													backgroundColor: "transparent",
+													// This creates a filled heart effect
+													textShadowColor: "#E53935",
+													textShadowOffset: { width: 0, height: 0 },
+													textShadowRadius: 1,
+												}),
+											}}
 										/>
 									</Animated.View>
 									<Text
 										style={[
 											styles.interactionCount,
-											{
-												color: isLiked ? colors.liked : colors.card,
-											},
+											isLiked && { color: "#E53935" },
 										]}
 									>
 										{formatNumber(likesCount)}
@@ -1179,11 +966,14 @@ export function VoiceNoteCard({
 									<Feather
 										name="message-circle"
 										size={18}
-										color={colors.card}
+										color="#666666"
+										style={{
+											textShadowColor: "#FFFFFF",
+											textShadowOffset: { width: 0.5, height: 0.5 },
+											textShadowRadius: 1,
+										}}
 									/>
-									<Text
-										style={[styles.interactionText, { color: colors.card }]}
-									>
+									<Text style={styles.interactionText}>
 										{formatNumber(commentsCount)}
 									</Text>
 								</View>
@@ -1194,10 +984,17 @@ export function VoiceNoteCard({
 								onPress={handlePlaysPress}
 							>
 								<View style={styles.interactionContent}>
-									<Feather name="headphones" size={18} color={colors.card} />
-									<Text
-										style={[styles.interactionText, { color: colors.card }]}
-									>
+									<Feather
+										name="headphones"
+										size={18}
+										color="#666666"
+										style={{
+											textShadowColor: "#FFFFFF",
+											textShadowOffset: { width: 0.5, height: 0.5 },
+											textShadowRadius: 1,
+										}}
+									/>
+									<Text style={styles.interactionText}>
 										{formatNumber(playsCount)}
 									</Text>
 								</View>
@@ -1211,26 +1008,23 @@ export function VoiceNoteCard({
 							>
 								<View style={styles.interactionContent}>
 									<Animated.View
-										style={[{ transform: [{ scale: shareScale }] }]}
+										style={[
+											styles.iconContainer,
+											{ transform: [{ scale: shareScale }] },
+										]}
 									>
 										<Feather
 											name="repeat"
 											size={18}
-											color={
-												isSharedEffective ? colors.repostedOnImage : colors.card
-											}
+											color={isSharedEffective ? "#4CAF50" : "#888"}
 										/>
 									</Animated.View>
 									{isLoadingShareCount ? (
 										<Text
 											style={[
 												styles.interactionCount,
-												{
-													color: isSharedEffective
-														? colors.repostedOnImage
-														: colors.card,
-													opacity: 0.5,
-												},
+												isSharedEffective && { color: "#4CAF50" },
+												{ opacity: 0.5 }, // Dim when loading
 											]}
 										>
 											{formatNumber(sharesCount)}
@@ -1239,11 +1033,7 @@ export function VoiceNoteCard({
 										<Text
 											style={[
 												styles.interactionCount,
-												{
-													color: isSharedEffective
-														? colors.repostedOnImage
-														: colors.card,
-												},
+												isSharedEffective && { color: "#4CAF50" },
 											]}
 										>
 											{formatNumber(sharesCount)}
@@ -1253,8 +1043,279 @@ export function VoiceNoteCard({
 							</TouchableOpacity>
 						</View>
 					</View>
-				</ImageBackground>
-			</View>
+				</View>
+
+				{/* Comment Popup */}
+				<CommentPopup
+					visible={showCommentPopup}
+					voiceNoteId={voiceNote.id}
+					currentUserId={loggedInUserId}
+					onClose={handleCloseCommentPopup}
+					onCommentAdded={handleCommentAdded}
+				/>
+			</>
+		);
+	}
+
+	return (
+		<>
+			<ImageBackground
+				source={{ uri: voiceNote.backgroundImage }}
+				style={styles.container}
+				imageStyle={{ opacity: 1 }}
+			>
+				<View style={styles.overlay} />
+				{/* Add repost attribution if needed */}
+				{showRepostAttribution && isSharedEffective && sharedBy && (
+					<View
+						style={{
+							flexDirection: "row",
+							alignItems: "center",
+							paddingHorizontal: 10,
+							paddingVertical: 5,
+							backgroundColor: voiceNote.backgroundImage
+								? "rgba(0,0,0,0.15)"
+								: "rgba(0,0,0,0.3)",
+							borderTopLeftRadius: 10,
+							borderTopRightRadius: 10,
+						}}
+					>
+						<Text
+							style={{
+								fontSize: 12,
+								color: "#fff",
+								fontWeight: "400",
+							}}
+						>
+							<Feather name="repeat" size={14} color="#fff" /> Reposted by{" "}
+							<TouchableOpacity
+								onPress={() => {
+									if (sharedBy.username) {
+										router.push({
+											pathname: "/profile/[username]",
+											params: { username: sharedBy.username },
+										});
+									}
+								}}
+							>
+								<Text
+									style={{
+										fontWeight: "600",
+										color: "#fff",
+									}}
+								>
+									@{sharedBy.username}
+								</Text>
+							</TouchableOpacity>
+						</Text>
+					</View>
+				)}
+				<View style={styles.content}>
+					{/* User info and options header */}
+					{(userId || displayName) && (
+						<View style={styles.cardHeader}>
+							<TouchableOpacity
+								style={styles.userInfoContainer}
+								onPress={handleProfilePress}
+							>
+								<DefaultProfilePicture
+									userId={userId || "@user"}
+									size={32}
+									avatarUrl={effectiveAvatarUrl}
+								/>
+								<View style={styles.userInfo}>
+									<Text style={styles.displayName}>{effectiveDisplayName}</Text>
+									<Text style={styles.username}>@{effectiveUsername}</Text>
+								</View>
+							</TouchableOpacity>
+							<View style={styles.headerActions}>
+								{timePosted && (
+									<Text style={styles.timePosted}>{timePosted}</Text>
+								)}
+								<TouchableOpacity style={styles.optionsButton}>
+									<Feather
+										name="more-horizontal"
+										size={16}
+										color="#666666"
+										style={{
+											textShadowColor: "#FFFFFF",
+											textShadowOffset: { width: 0.5, height: 0.5 },
+											textShadowRadius: 1,
+										}}
+									/>
+								</TouchableOpacity>
+							</View>
+						</View>
+					)}
+					<Text style={styles.title}>{voiceNote.title}</Text>
+
+					<View style={styles.playerContainer}>
+						<TouchableOpacity
+							onPress={handlePlayPress}
+							style={styles.playButton}
+							activeOpacity={0.7}
+						>
+							<MaterialIcons
+								name={isPlaying ? "pause" : "play-arrow"}
+								size={24}
+								color="white"
+								style={{
+									textShadowColor: "#000000",
+									textShadowOffset: { width: 0.5, height: 0.5 },
+									textShadowRadius: 1,
+								}}
+							/>
+						</TouchableOpacity>
+
+						{renderProgressBar()}
+
+						<Text style={styles.duration}>
+							{formatDuration(voiceNote.duration)}
+						</Text>
+					</View>
+
+					{/* Tags section */}
+					{voiceNote.tags && voiceNote.tags.length > 0 && (
+						<View style={styles.tagsContainer}>
+							{voiceNote.tags.slice(0, 10).map((tag, index) => (
+								<TouchableOpacity
+									key={index}
+									style={styles.tagItem}
+									activeOpacity={0.7}
+									onPress={() => handleTagPress(tag)}
+								>
+									<Text style={styles.tagText}>#{tag}</Text>
+								</TouchableOpacity>
+							))}
+						</View>
+					)}
+
+					<View style={styles.interactions}>
+						<TouchableOpacity
+							style={styles.interactionButton}
+							activeOpacity={0.7}
+							onPress={handleLikePress}
+						>
+							<View style={styles.interactionContent}>
+								<Animated.View
+									style={[
+										styles.iconContainer,
+										{ transform: [{ scale: likeScale }] },
+									]}
+								>
+									<Feather
+										name={isLiked ? "heart" : "heart"}
+										size={18}
+										color={isLiked ? "#E53935" : "#888"}
+										style={{
+											// Fill the heart if liked
+											...(isLiked && {
+												backgroundColor: "transparent",
+												// This creates a filled heart effect
+												textShadowColor: "#E53935",
+												textShadowOffset: { width: 0, height: 0 },
+												textShadowRadius: 1,
+											}),
+										}}
+									/>
+								</Animated.View>
+								<Text
+									style={[
+										styles.interactionCount,
+										isLiked && { color: "#E53935" },
+									]}
+								>
+									{formatNumber(likesCount)}
+								</Text>
+							</View>
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={styles.interactionButton}
+							activeOpacity={0.7}
+							onPress={handleCommentPress}
+						>
+							<View style={styles.interactionContent}>
+								<Feather
+									name="message-circle"
+									size={18}
+									color="#666666"
+									style={{
+										textShadowColor: "#FFFFFF",
+										textShadowOffset: { width: 0.5, height: 0.5 },
+										textShadowRadius: 1,
+									}}
+								/>
+								<Text style={styles.interactionText}>
+									{formatNumber(commentsCount)}
+								</Text>
+							</View>
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={styles.interactionButton}
+							activeOpacity={0.7}
+							onPress={handlePlaysPress}
+						>
+							<View style={styles.interactionContent}>
+								<Feather
+									name="headphones"
+									size={18}
+									color="#666666"
+									style={{
+										textShadowColor: "#FFFFFF",
+										textShadowOffset: { width: 0.5, height: 0.5 },
+										textShadowRadius: 1,
+									}}
+								/>
+								<Text style={styles.interactionText}>
+									{formatNumber(playsCount)}
+								</Text>
+							</View>
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={styles.interactionButton}
+							activeOpacity={0.7}
+							onPress={handleRepostPress}
+							onLongPress={handleShareCountLongPress}
+							disabled={isLoadingShareCount}
+						>
+							<View style={styles.interactionContent}>
+								<Animated.View
+									style={[
+										styles.iconContainer,
+										{ transform: [{ scale: shareScale }] },
+									]}
+								>
+									<Feather
+										name="repeat"
+										size={18}
+										color={isSharedEffective ? "#4CAF50" : "#888"}
+									/>
+								</Animated.View>
+								{isLoadingShareCount ? (
+									<Text
+										style={[
+											styles.interactionCount,
+											isSharedEffective && { color: "#4CAF50" },
+											{ opacity: 0.5 }, // Dim when loading
+										]}
+									>
+										{formatNumber(sharesCount)}
+									</Text>
+								) : (
+									<Text
+										style={[
+											styles.interactionCount,
+											isSharedEffective && { color: "#4CAF50" },
+										]}
+									>
+										{formatNumber(sharesCount)}
+									</Text>
+								)}
+							</View>
+						</TouchableOpacity>
+					</View>
+				</View>
+			</ImageBackground>
 
 			{/* Comment Popup */}
 			<CommentPopup
@@ -1268,281 +1329,204 @@ export function VoiceNoteCard({
 	);
 }
 
-// Convert StyleSheet.create to a function that accepts colors and isDarkMode
-const getStyles = (
-	colors: any,
-	isDarkMode: boolean,
-	hasBackgroundImage: boolean
-) =>
-	StyleSheet.create({
-		cardOuterContainer: {
-			borderRadius: 16,
-			marginVertical: 8, // Add some vertical margin between cards
-			marginHorizontal: Platform.OS === "web" ? 8 : 0, // Horizontal margin for web
-			// Add shadow for a more elevated look, conditional on theme perhaps
-			shadowColor: colors.shadow, // Use a theme color for shadow
-			shadowOffset: {
-				width: 0,
-				height: 2,
-			},
-			shadowOpacity: 0.1,
-			shadowRadius: 4,
-			elevation: 3, // For Android
-			backgroundColor: colors.background, // Important for shadow to show correctly
-		},
-		container: {
-			borderRadius: 16,
-			overflow: "hidden",
-			backgroundColor: hasBackgroundImage ? colors.background : colors.card,
-		},
-		plainContainer: {
-			borderWidth: 1,
-			borderColor: colors.border, // Theme border color
-		},
-		overlay: {
-			...StyleSheet.absoluteFillObject,
-			backgroundColor: isDarkMode
-				? "rgba(0, 0, 0, 0.5)"
-				: "rgba(255, 255, 255, 0.2)", // Adjusted for white overlay in light mode
-			borderRadius: 16, // Match container
-		},
-		repostAttributionContainer: {
-			flexDirection: "row",
-			alignItems: "center",
-			paddingHorizontal: 12,
-			paddingVertical: 6,
-			borderTopLeftRadius: 16, // Match card radius
-			borderTopRightRadius: 16, // Match card radius
-			// backgroundColor is set dynamically
-		},
-		repostAttributionText: {
-			fontSize: 12,
-			fontWeight: "500",
-			// color is set dynamically
-		},
-		repostAttributionUsername: {
-			fontWeight: "bold",
-			// color is set dynamically
-		},
-		content: {
-			padding: 16,
-			// For cards with background image, content background should be transparent
-			// For plain cards, it can be the card background or slightly different if desired
-			backgroundColor: "transparent",
-		},
-		cardHeader: {
-			flexDirection: "row",
-			justifyContent: "space-between",
-			alignItems: "center",
-			marginBottom: 12,
-		},
-		userInfoContainer: {
-			flexDirection: "row",
-			alignItems: "center",
-		},
-		userInfo: {
-			marginLeft: 10,
-			justifyContent: "center",
-		},
-		displayName: {
-			fontWeight: "bold",
-			fontSize: 14,
-			color: colors.text, // Themed text color
-		},
-		username: {
-			fontSize: 12,
-			color: colors.textSecondary, // Themed secondary text color
-		},
-		displayNameOnImage: {
-			fontWeight: "bold",
-			fontSize: 14,
-			color: colors.card, // Typically white or light color on dark image
-			textShadowColor: "rgba(0, 0, 0, 0.5)",
-			textShadowOffset: { width: 0, height: 1 },
-			textShadowRadius: 2,
-		},
-		usernameOnImage: {
-			fontSize: 12,
-			color: colors.card, // Typically white or light color on dark image
-			opacity: 0.9,
-			textShadowColor: "rgba(0, 0, 0, 0.4)",
-			textShadowOffset: { width: 0, height: 1 },
-			textShadowRadius: 2,
-		},
-		headerActions: {
-			flexDirection: "row",
-			alignItems: "center",
-		},
-		timePosted: {
-			fontSize: 12,
-			color: colors.textSecondary,
-			marginRight: 8,
-		},
-		timePostedOnImage: {
-			fontSize: 12,
-			color: colors.card, // Typically white or light color
-			opacity: 0.9,
-			marginRight: 8,
-			textShadowColor: "rgba(0, 0, 0, 0.5)",
-			textShadowOffset: { width: 0, height: 1 },
-			textShadowRadius: 2,
-		},
-		optionsButton: {
-			padding: 4,
-		},
-		title: {
-			fontSize: 16,
-			fontWeight: "bold",
-			marginBottom: 12,
-			color: colors.text, // Themed text color
-		},
-		titleOnImage: {
-			fontSize: 16,
-			fontWeight: "bold",
-			marginBottom: 12,
-			color: colors.card, // Typically white or light color
-			textShadowColor: "rgba(0, 0, 0, 0.5)",
-			textShadowOffset: { width: 0, height: 1 },
-			textShadowRadius: 3,
-		},
-		playerContainer: {
-			flexDirection: "row",
-			alignItems: "center",
-			marginBottom: 12,
-		},
-		playButton: {
-			width: 40,
-			height: 40,
-			borderRadius: 20,
-			backgroundColor: colors.tint, // Themed tint color
-			justifyContent: "center",
-			alignItems: "center",
-			marginRight: 12,
-		},
-		playButtonOnImage: {
-			backgroundColor: "rgba(255, 255, 255, 0.8)", // Semi-transparent white for visibility
-		},
-		progressContainer: {
-			flex: 1,
-			height: 24, // Increased height for easier touch
-			justifyContent: "center",
-			position: "relative",
-			marginRight: 12,
-		},
-		progressBackground: {
-			position: "absolute",
-			width: "100%",
-			height: 6, // Thicker bar
-			backgroundColor: isDarkMode
-				? "rgba(255, 255, 255, 0.2)"
-				: "rgba(0, 0, 0, 0.1)",
-			borderRadius: 3,
-			top: 9, // Center it (24-6)/2
-		},
-		progressBar: {
-			position: "absolute",
-			height: 6,
-			backgroundColor: colors.tint,
-			borderRadius: 3,
-			top: 9,
-			left: 0,
-			zIndex: 1,
-		},
-		progressHitSlop: {
-			position: "absolute",
-			top: 0,
-			bottom: 0,
-			left: -10, // Make hit area wider
-			right: -10,
-			backgroundColor: "transparent", // Must be transparent
-		},
-		duration: {
-			fontSize: 14,
-			color: colors.textSecondary,
-			minWidth: 45,
-			textAlign: "right",
-		},
-		durationOnImage: {
-			fontSize: 14,
-			color: colors.card, // Typically white or light color
-			opacity: 0.9,
-			minWidth: 45,
-			textAlign: "right",
-			textShadowColor: "rgba(0, 0, 0, 0.4)",
-			textShadowOffset: { width: 0, height: 1 },
-			textShadowRadius: 2,
-		},
-		tagsContainer: {
-			flexDirection: "row",
-			flexWrap: "wrap",
-			marginBottom: 12,
-		},
-		tagItem: {
-			backgroundColor: colors.tagBackground, // Themed tag background
-			borderRadius: 16,
-			paddingHorizontal: 12,
-			paddingVertical: 6,
-			marginRight: 8,
-			marginBottom: 8,
-			borderWidth: 1,
-			borderColor: colors.tagBorder, // Themed tag border
-		},
-		tagItemOnImage: {
-			backgroundColor: "rgba(255, 255, 255, 0.2)",
-			borderColor: "rgba(255, 255, 255, 0.4)",
-		},
-		tagText: {
-			color: colors.tint, // Themed tag text color (using tint)
-			fontSize: 12,
-			fontWeight: "500",
-		},
-		tagTextOnImage: {
-			color: colors.card, // White or light text on dark tag background
-			fontSize: 12,
-			fontWeight: "500",
-		},
-		interactions: {
-			flexDirection: "row",
-			justifyContent: "space-around", // Changed to space-around for better spacing
-			alignItems: "center",
-			paddingTop: 12,
-			marginTop: 8, // Add some margin before interactions
-			borderTopWidth: 1,
-			borderTopColor: colors.border, // Themed border color
-		},
-		interactionsOnImage: {
-			borderTopColor: "rgba(255, 255, 255, 0.2)", // Lighter border on image
-		},
-		interactionButton: {
-			alignItems: "center",
-			justifyContent: "center",
-			paddingHorizontal: 8, // Reduced padding to fit more easily
-			// minWidth: 48, // Removed minWidth to allow more flexible spacing
-			flex: 1, // Allow buttons to take equal space
-		},
-		interactionContent: {
-			flexDirection: "row",
-			alignItems: "center",
-			justifyContent: "center",
-		},
-		interactionText: {
-			fontSize: 14,
-			marginLeft: 6, // Slightly reduced margin
-			// color is set dynamically in the component
-		},
-		interactionCount: {
-			fontSize: 14,
-			marginLeft: 6,
-			// color is set dynamically in the component
-		},
-		likedIcon: {
-			// For filled heart effect
-			textShadowColor: colors.liked, // Use theme color for shadow
-			textShadowOffset: { width: 0, height: 0 },
-			textShadowRadius: isDarkMode ? 3 : 1, // Adjust shadow for dark mode if needed
-		},
-		likedIconOnImage: {
-			textShadowColor: colors.liked,
-		},
-		// Add other styles as needed, ensuring they use themed colors
-	});
+const styles = StyleSheet.create({
+	container: {
+		borderRadius: 16,
+		overflow: "hidden",
+		backgroundColor: "#FFFFFF",
+	},
+	tagsContainer: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		marginBottom: 12,
+	},
+	tagItem: {
+		backgroundColor: "rgba(107, 47, 188, 0.1)",
+		borderRadius: 16,
+		paddingHorizontal: 12,
+		paddingVertical: 6,
+		marginRight: 8,
+		marginBottom: 8,
+		borderWidth: 1,
+		borderColor: "rgba(107, 47, 188, 0.3)",
+	},
+	tagText: {
+		color: "#6B2FBC",
+		fontSize: 12,
+		fontWeight: "500",
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+	plainContainer: {
+		backgroundColor: "#FFFFFF",
+		borderWidth: 1,
+		borderColor: "rgba(0, 0, 0, 0.1)",
+	},
+	overlay: {
+		...StyleSheet.absoluteFillObject,
+		backgroundColor: "rgba(0, 0, 0, 0.3)",
+	},
+	content: {
+		padding: 16,
+		backgroundColor: "rgba(255, 255, 255, 0.7)",
+	},
+	cardHeader: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		marginBottom: 12,
+	},
+	userInfoContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+	},
+	userInfo: {
+		marginLeft: 8,
+		justifyContent: "center",
+	},
+	displayName: {
+		fontWeight: "bold",
+		fontSize: 14,
+		color: "#000000",
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+	username: {
+		fontSize: 12,
+		color: "#666666",
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+	headerActions: {
+		flexDirection: "row",
+		alignItems: "center",
+	},
+	timePosted: {
+		fontSize: 12,
+		color: "#666666",
+		marginRight: 8,
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+	optionsButton: {
+		padding: 4,
+	},
+	title: {
+		fontSize: 16,
+		fontWeight: "bold",
+		marginBottom: 12,
+		color: "#000000",
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+	playerContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: 12,
+	},
+	playButton: {
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+		backgroundColor: "#6B2FBC",
+		justifyContent: "center",
+		alignItems: "center",
+		marginRight: 12,
+	},
+	progressContainer: {
+		flex: 1,
+		height: 24,
+		backgroundColor: "transparent",
+		borderRadius: 2,
+		marginRight: 12,
+		justifyContent: "center",
+		position: "relative",
+	},
+	progressBackground: {
+		position: "absolute",
+		width: "100%",
+		height: 4,
+		backgroundColor: "rgba(107, 47, 188, 0.2)",
+		borderRadius: 2,
+		top: 10,
+	},
+	progressBar: {
+		position: "absolute",
+		height: 4,
+		backgroundColor: "#6B2FBC",
+		borderRadius: 2,
+		top: 10,
+		left: 0,
+		zIndex: 1,
+	},
+	progressHitSlop: {
+		position: "absolute",
+		width: "100%",
+		height: "100%",
+		backgroundColor: "transparent",
+	},
+	duration: {
+		fontSize: 14,
+		color: "#666666",
+		minWidth: 45,
+		textAlign: "right",
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+	interactions: {
+		flexDirection: "row",
+		justifyContent: "space-evenly",
+		alignItems: "center",
+		paddingTop: 12,
+		borderTopWidth: 1,
+		borderTopColor: "#E1E1E1",
+	},
+	interactionButton: {
+		alignItems: "center",
+		justifyContent: "center",
+		paddingHorizontal: 16,
+		marginHorizontal: 16,
+		minWidth: 48,
+		width: 60,
+	},
+	interactionContent: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		width: 72,
+	},
+	interactionText: {
+		fontSize: 14,
+		color: "#666666",
+		marginLeft: 8,
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+	likedText: {
+		color: "#FF4D67",
+	},
+	sharedText: {
+		color: "#4CAF50",
+		fontWeight: "600",
+	},
+	iconContainer: {
+		width: 24,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	interactionCount: {
+		fontSize: 14,
+		color: "#666666",
+		marginLeft: 8,
+		textShadowColor: "#FFFFFF",
+		textShadowOffset: { width: 0.5, height: 0.5 },
+		textShadowRadius: 1,
+	},
+});
