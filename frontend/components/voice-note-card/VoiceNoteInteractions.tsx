@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, Animated } from "react-native";
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { formatNumber } from "./VoiceNoteCardUtils"; // Path remains ./
 
@@ -16,6 +16,7 @@ interface VoiceNoteInteractionsProps {
 	shareScale: Animated.Value;
 	sharesCount: number;
 	isLoadingShareCount: boolean;
+	isLoadingStats?: boolean; // Add loading state for all stats
 	handleLikePress: () => void;
 	handleCommentPress: () => void;
 	handlePlaysPress: () => void;
@@ -39,6 +40,7 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 	shareScale,
 	sharesCount,
 	isLoadingShareCount,
+	isLoadingStats = false,
 	handleLikePress,
 	handleCommentPress,
 	handlePlaysPress,
@@ -61,6 +63,10 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 			: colors.reposted
 		: iconColor;
 
+	// Loading indicator styles
+	const loadingIndicatorColor = useOnImageStyles ? colors.white : colors.tint;
+	const loadingIndicatorSize = 14;
+
 	return (
 		<View
 			style={[
@@ -73,6 +79,7 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 				style={styles.interactionButton}
 				activeOpacity={0.7}
 				onPress={handleLikePress}
+				disabled={isLoadingStats}
 			>
 				<View style={styles.interactionContent}>
 					<Animated.View style={[{ transform: [{ scale: likeScale }] }]}>
@@ -83,16 +90,24 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 							style={isLiked ? { transform: [{ scale: 1.05 }] } : {}}
 						/>
 					</Animated.View>
-					<Text
-						style={[
-							useOnImageStyles
-								? styles.interactionTextOnImage
-								: styles.interactionCount,
-							{ color: likedColor },
-						]}
-					>
-						{formatNumber(likesCount)}
-					</Text>
+					{isLoadingStats ? (
+						<ActivityIndicator 
+							size={loadingIndicatorSize} 
+							color={loadingIndicatorColor} 
+							style={{ marginLeft: 5 }}
+						/>
+					) : (
+						<Text
+							style={[
+								useOnImageStyles
+									? styles.interactionTextOnImage
+									: styles.interactionCount,
+								{ color: likedColor },
+							]}
+						>
+							{formatNumber(likesCount)}
+						</Text>
+					)}
 				</View>
 			</TouchableOpacity>
 
@@ -101,21 +116,30 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 				style={styles.interactionButton}
 				activeOpacity={0.7}
 				onPress={handleCommentPress}
+				disabled={isLoadingStats}
 			>
 				<View style={styles.interactionContent}>
 					<View>
 						<Feather name="message-circle" size={18} color={iconColor} />
 					</View>
-					<Text
-						style={[
-							useOnImageStyles
-								? styles.interactionTextOnImage
-								: styles.interactionText,
-							{ color: iconColor },
-						]}
-					>
-						{formatNumber(commentsCount)}
-					</Text>
+					{isLoadingStats ? (
+						<ActivityIndicator 
+							size={loadingIndicatorSize} 
+							color={loadingIndicatorColor} 
+							style={{ marginLeft: 5 }}
+						/>
+					) : (
+						<Text
+							style={[
+								useOnImageStyles
+									? styles.interactionTextOnImage
+									: styles.interactionText,
+								{ color: iconColor },
+							]}
+						>
+							{formatNumber(commentsCount)}
+						</Text>
+					)}
 				</View>
 			</TouchableOpacity>
 
@@ -124,21 +148,30 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 				style={styles.interactionButton}
 				activeOpacity={0.7}
 				onPress={handlePlaysPress}
+				disabled={isLoadingStats}
 			>
 				<View style={styles.interactionContent}>
 					<View>
 						<Feather name="headphones" size={18} color={iconColor} />
 					</View>
-					<Text
-						style={[
-							useOnImageStyles
-								? styles.interactionTextOnImage
-								: styles.interactionText,
-							{ color: iconColor },
-						]}
-					>
-						{formatNumber(playsCount)}
-					</Text>
+					{isLoadingStats ? (
+						<ActivityIndicator 
+							size={loadingIndicatorSize} 
+							color={loadingIndicatorColor} 
+							style={{ marginLeft: 5 }}
+						/>
+					) : (
+						<Text
+							style={[
+								useOnImageStyles
+									? styles.interactionTextOnImage
+									: styles.interactionText,
+								{ color: iconColor },
+							]}
+						>
+							{formatNumber(playsCount)}
+						</Text>
+					)}
 				</View>
 			</TouchableOpacity>
 
@@ -148,7 +181,7 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 				activeOpacity={0.7}
 				onPress={handleRepostPress}
 				onLongPress={handleShareCountLongPress}
-				disabled={isLoadingShareCount}
+				disabled={isLoadingShareCount || isLoadingStats}
 			>
 				<View style={styles.interactionContent}>
 					<Animated.View style={[{ transform: [{ scale: shareScale }] }]}>
@@ -159,19 +192,26 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 							style={isShared ? { transform: [{ scale: 1.05 }] } : {}}
 						/>
 					</Animated.View>
-					<Text
-						style={[
-							useOnImageStyles
-								? styles.interactionTextOnImage
-								: styles.interactionCount,
-							{
-								color: repostedColor,
-								opacity: isLoadingShareCount ? 0.5 : 1,
-							},
-						]}
-					>
-						{formatNumber(sharesCount)}
-					</Text>
+					{isLoadingStats || isLoadingShareCount ? (
+						<ActivityIndicator 
+							size={loadingIndicatorSize} 
+							color={loadingIndicatorColor} 
+							style={{ marginLeft: 5 }}
+						/>
+					) : (
+						<Text
+							style={[
+								useOnImageStyles
+									? styles.interactionTextOnImage
+									: styles.interactionCount,
+								{
+									color: repostedColor,
+								},
+							]}
+						>
+							{formatNumber(sharesCount)}
+						</Text>
+					)}
 				</View>
 			</TouchableOpacity>
 		</View>

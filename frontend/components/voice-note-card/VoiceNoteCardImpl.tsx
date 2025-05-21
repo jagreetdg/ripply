@@ -9,6 +9,7 @@ import {
 	GestureResponderEvent,
 	Platform,
 	Share,
+	StyleSheet,
 } from "react-native";
 import { MaterialIcons, Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -26,7 +27,7 @@ import {
 } from "../../services/api/voiceNoteService";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
-import Colors from "../../constants/Colors";
+import Colors, { hexToRgba, opacityValues } from "../../constants/Colors";
 
 // Import types
 import {
@@ -86,6 +87,11 @@ export function VoiceNoteCardImpl({
 		hasBackgroundImage
 	);
 
+	// Determine overlay intensity based on theme
+	const overlayIntensity = isDarkMode
+		? opacityValues.heavy
+		: opacityValues.semitransparent;
+
 	// Combine username sources with fallbacks
 	const effectiveUsername = username || voiceNoteUsers?.username || "user";
 	const effectiveDisplayName =
@@ -140,15 +146,19 @@ export function VoiceNoteCardImpl({
 
 	// Theme-specific colors for repost attribution
 	const repostAttributionBackgroundColor = hasBackgroundImage
-		? "rgba(0, 0, 0, 0.7)" // Darker background for image voice notes
+		? hexToRgba(colors.black, opacityValues.heavy) // Darker background for image voice notes
 		: effectiveIsDarkMode
-		? "rgba(30, 30, 30, 0.8)" // Darker, more opaque background for dark mode
-		: "rgba(245, 245, 245, 0.8)"; // Lighter background for light mode
+		? hexToRgba(colors.black, opacityValues.nearsolid) // Darker, more opaque background for dark mode
+		: hexToRgba(colors.lightGrey, opacityValues.nearsolid); // Lighter background for light mode
 	const repostAttributionTextColor = hasBackgroundImage
-		? "rgba(255, 255, 255, 0.95)" // Brighter text for image backgrounds
+		? colors.white // Brighter text for image backgrounds
 		: effectiveIsDarkMode
-		? "rgba(220, 220, 220, 0.9)" // Light gray text for dark mode
+		? hexToRgba(colors.white, opacityValues.solid) // Light gray text for dark mode
 		: effectiveColors.text; // Default text color for light mode
+
+	// Read isLoadingStats from the voiceNote or default to false
+	const isLoadingStats =
+		voiceNote.isLoadingStats !== undefined ? voiceNote.isLoadingStats : false;
 
 	// Fetch the actual share count
 	const fetchShareCount = useCallback(async () => {
@@ -389,9 +399,14 @@ export function VoiceNoteCardImpl({
 
 	// Handle tag press
 	const handleTagPress = (tag: string) => {
+		console.log(`Tag clicked: ${tag}`);
 		router.push({
-			pathname: "/search",
-			params: { q: tag },
+			pathname: "/(tabs)/search",
+			params: {
+				tag: tag,
+				searchType: "tag",
+				timestamp: Date.now(), // Add timestamp to ensure route refresh
+			},
 		});
 	};
 
@@ -426,6 +441,32 @@ export function VoiceNoteCardImpl({
 
 		loadInitialData();
 	}, [voiceNote.id, loggedInUserId, fetchShareCount, statsLoaded]);
+
+	// Add a new effect to fetch stats on component mount
+	useEffect(() => {
+		// Only fetch stats if we have a valid voice note ID
+		if (!voiceNote.id) return;
+
+		const fetchStats = async () => {
+			try {
+				const stats = await getVoiceNoteStats(voiceNote.id);
+				console.log(`VoiceNoteCard: Fetched stats for ${voiceNote.id}:`, stats);
+
+				// Update all the stats
+				setLikesCount(stats.likes);
+				setCommentsCount(stats.comments);
+				setPlaysCount(normalizePlaysCount(stats.plays));
+				setSharesCount(stats.shares);
+			} catch (error) {
+				console.error(
+					`Error fetching stats for voice note ${voiceNote.id}:`,
+					error
+				);
+			}
+		};
+
+		fetchStats();
+	}, [voiceNote.id]); // Re-run when the voice note ID changes
 
 	// Determine text style based on background image
 	const titleStyle = hasBackgroundImage ? styles.titleOnImage : styles.title;
@@ -570,6 +611,7 @@ export function VoiceNoteCardImpl({
 				shareScale={shareScale}
 				sharesCount={sharesCount}
 				isLoadingShareCount={isLoadingShareCount}
+				isLoadingStats={isLoadingStats}
 				handleLikePress={handleLikePress}
 				handleCommentPress={handleCommentPress}
 				handlePlaysPress={handlePlaysPress}
@@ -579,36 +621,52 @@ export function VoiceNoteCardImpl({
 		</View>
 	);
 
+	// Render the card (basic structure, regardless of type)
 	return (
-		<>
-			<View style={styles.cardOuterContainer}>
-				{hasBackgroundImage ? (
-					<ImageBackground
-						source={{ uri: voiceNote.backgroundImage as string }}
-						style={styles.container}
-						imageStyle={{ borderRadius: 16 }}
-						blurRadius={3}
-					>
-						<View style={styles.overlay} />
-						<RepostAttribution />
-						<CardContent />
-					</ImageBackground>
-				) : (
-					<View style={[styles.container, styles.plainContainer]}>
-						<RepostAttribution />
-						<CardContent />
-					</View>
-				)}
-			</View>
+		<View style={styles.cardOuterContainer}>
+			{hasBackgroundImage ? (
+				<ImageBackground
+					source={{ uri: voiceNote.backgroundImage }}
+					style={styles.container}
+					imageStyle={{ borderRadius: 16 }}
+					resizeMode="cover"
+				>
+					{/* Add blur effect for better text readability */}
+					<BlurView
+						intensity={8}
+						tint={isDarkMode ? "dark" : "light"}
+						style={{
+							...StyleSheet.absoluteFillObject,
+							borderRadius: 16, // Match container
+						}}
+					/>
 
-			{/* Comment Popup */}
-			<CommentPopup
-				visible={showCommentPopup}
-				voiceNoteId={voiceNote.id}
-				currentUserId={loggedInUserId}
-				onClose={handleCloseCommentPopup}
-				onCommentAdded={handleCommentAdded}
-			/>
-		</>
+					{/* Add overlay with adaptive intensity based on theme */}
+					<View
+						style={[
+							styles.overlay,
+							{ backgroundColor: hexToRgba(colors.black, overlayIntensity) },
+						]}
+					/>
+
+					{isSharedEffective && showRepostAttribution ? (
+						<RepostAttribution />
+					) : null}
+					<CardContent />
+				</ImageBackground>
+			) : (
+				<View
+					style={[
+						styles.container,
+						!hasBackgroundImage && styles.plainContainer,
+					]}
+				>
+					{isSharedEffective && showRepostAttribution ? (
+						<RepostAttribution />
+					) : null}
+					<CardContent />
+				</View>
+			)}
+		</View>
 	);
 }

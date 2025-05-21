@@ -38,6 +38,9 @@ import {
 } from "./VoiceNotesListUtils";
 import { getStyles } from "./VoiceNotesListStyles";
 
+// Add debugging logs
+console.log("VoiceNotesList component is being loaded");
+
 // EMPTY_VOICE_NOTES can remain here or be moved to types, keeping here for now.
 const EMPTY_VOICE_NOTES: VoiceNote[] = [];
 
@@ -53,6 +56,7 @@ export function VoiceNotesList({
 	listHeaderComponent,
 	isOwnProfile,
 	activeTab,
+	loadingNotes: externalLoadingNotes = false,
 }: VoiceNotesListProps) {
 	const router = useRouter();
 	const { colors, isDarkMode } = useTheme();
@@ -62,11 +66,13 @@ export function VoiceNotesList({
 	// State for voice notes
 	const [localVoiceNotes, setLocalVoiceNotes] =
 		useState<VoiceNote[]>(voiceNotes);
-	// State for loading status
-	const [loadingNotes, setLoadingNotes] = useState(false);
+	// State for loading status - initialize based on props
+	const [loadingNotes, setLoadingNotes] = useState(externalLoadingNotes);
 	const [page, setPage] = useState(1);
 	const [hasMore, setHasMore] = useState(true);
 	const flatListRef = useRef<FlatList>(null);
+	// Add a new loading state for stats after the other states
+	const [loadingStats, setLoadingStats] = useState(true);
 
 	// Get styles from the decoupled function
 	const styles = getStyles(colors, listHeaderComponent, isDarkMode);
@@ -147,12 +153,17 @@ export function VoiceNotesList({
 		fetchRepostedNotesData();
 	}, [voiceNotes]);
 
-	// Add an effect to directly fetch stats for each voice note
+	// Update the useEffect to respond to changes in the voiceNotes prop
 	useEffect(() => {
 		const fetchAllVoiceNoteStats = async () => {
-			if (!localVoiceNotes || localVoiceNotes.length === 0) return;
+			if (!localVoiceNotes || localVoiceNotes.length === 0) {
+				// Make sure to set loading to false when there are no voice notes
+				setLoadingStats(false);
+				return;
+			}
 
 			console.log("VoiceNotesList: Fetching stats for all voice notes");
+			setLoadingStats(true);
 
 			// Create a new array to store updated voice notes
 			const updatedNotes = [...localVoiceNotes];
@@ -204,10 +215,65 @@ export function VoiceNotesList({
 			} else {
 				console.log("No stats updates needed");
 			}
+
+			setLoadingStats(false);
 		};
 
 		fetchAllVoiceNoteStats();
-	}, [localVoiceNotes.length]); // Only re-run if the number of notes changes
+	}, [localVoiceNotes.length, voiceNotes]); // Add voiceNotes dependency to trigger when props change
+
+	// Add a new effect that runs when the component comes into focus
+	// This ensures that stats are refreshed when navigating back to the profile
+	useFocusEffect(
+		useCallback(() => {
+			// Only run if we have voice notes
+			if (localVoiceNotes && localVoiceNotes.length > 0) {
+				console.log("VoiceNotesList: Component focused, refreshing stats");
+				setLoadingStats(true);
+
+				const refreshVoiceNoteStats = async () => {
+					// Create a new array to store updated voice notes
+					const updatedNotes = [...localVoiceNotes];
+					let hasUpdates = false;
+
+					// Process each voice note
+					for (let i = 0; i < updatedNotes.length; i++) {
+						const note = updatedNotes[i];
+						try {
+							// Get fresh stats for this note
+							const stats = await getVoiceNoteStats(note.id);
+							console.log(`Refreshed stats for note ${note.id}:`, stats);
+
+							// Always update the stats to ensure we have the latest values
+							updatedNotes[i] = {
+								...note,
+								likes: stats.likes,
+								comments: stats.comments,
+								plays: stats.plays,
+								shares: stats.shares,
+							};
+							hasUpdates = true;
+						} catch (error) {
+							console.error(
+								`Error refreshing stats for note ${note.id}:`,
+								error
+							);
+						}
+					}
+
+					// Only update state if we actually got different values
+					if (hasUpdates) {
+						console.log("Updating local state with fresh stats");
+						setLocalVoiceNotes(updatedNotes);
+					}
+
+					setLoadingStats(false);
+				};
+
+				refreshVoiceNoteStats();
+			}
+		}, [localVoiceNotes.length])
+	);
 
 	// Handle refresh
 	const handleRefresh = () => {
@@ -435,27 +501,30 @@ export function VoiceNotesList({
 		}
 
 		// Prepare the voiceNote prop to match VoiceNoteCardTypes.VoiceNote
-		const cardVoiceNote: import("../../voice-note-card/VoiceNoteCardTypes").VoiceNote =
-			{
-				id: item.id,
-				duration: item.duration,
-				title: item.title,
-				likes: normalizeCount(item.likes),
-				comments: normalizeCount(item.comments),
-				plays: normalizePlaysCount(item.plays),
-				shares: normalizeCount(item.shares),
-				backgroundImage: item.backgroundImage || item.background_image || null,
-				tags: item.tags || [],
-				userAvatarUrl: item.users?.avatar_url,
-				users: item.users
-					? {
+		const cardVoiceNote = {
+			id: item.id,
+			duration: item.duration,
+			title: item.title,
+			likes: loadingStats ? undefined : normalizeCount(item.likes),
+			comments: loadingStats ? undefined : normalizeCount(item.comments),
+			plays: loadingStats ? undefined : normalizePlaysCount(item.plays),
+			shares: loadingStats ? undefined : normalizeCount(item.shares),
+			backgroundImage: item.backgroundImage || item.background_image || null,
+			tags: item.tags || [],
+			userAvatarUrl: item.users?.avatar_url,
+			// If users data exists, include it for compatibility
+			...(item.users
+				? {
+						users: {
 							id: item.users.id,
 							username: item.users.username,
 							display_name: item.users.display_name,
 							avatar_url: item.users.avatar_url,
-					  }
-					: undefined,
-			};
+						},
+				  }
+				: {}),
+			isLoadingStats: loadingStats,
+		};
 
 		// Create sharedBy prop from either shared_by object or individual sharer fields
 		let sharedByProp = null;
@@ -515,58 +584,97 @@ export function VoiceNotesList({
 		);
 	};
 
-	const renderFooter = () => {
-		if (!hasMore || !loadingNotes || refreshing || page === 1) return null; // Don't show if not loading more, or if it's initial load/refresh
+	// Add a custom empty component function to properly handle loading states
+	const renderEmptyComponent = () => {
+		// Force showing loading when:
+		// 1. External loading flag is true OR
+		// 2. We have no voice notes AND we are still within the initial loading period
+		const isLoading =
+			externalLoadingNotes || (localVoiceNotes.length === 0 && loadingNotes);
+
+		console.log("EmptyComponent - rendering with states:", {
+			externalLoadingNotes,
+			localVoiceNotesLength: localVoiceNotes.length,
+			loadingNotes,
+			isLoading,
+			showSpinner: isLoading,
+		});
+
+		if (isLoading) {
+			return (
+				<View style={styles.emptyContainer}>
+					<ActivityIndicator size="large" color={colors.tint} />
+					<Text
+						style={[
+							styles.emptyText,
+							{ marginTop: 16, color: colors.textSecondary },
+						]}
+					>
+						Loading voice notes...
+					</Text>
+				</View>
+			);
+		}
+
+		// Only show empty state if not loading
 		return (
-			<View style={styles.footerLoadingContainer}>
-				<ActivityIndicator size="small" color={colors.tint} />
+			<View style={styles.emptyContainer}>
+				<Feather
+					name={activeTab === "shared" ? "repeat" : "mic-off"}
+					size={60}
+					color={colors.textSecondary}
+					style={styles.emptyIcon}
+				/>
+				<Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+					{activeTab === "shared"
+						? isOwnProfile
+							? "You haven't shared any voice notes yet."
+							: "This user hasn't shared any voice notes yet."
+						: isOwnProfile
+						? "You haven't created any voice notes yet."
+						: "This user hasn't created any voice notes yet."}
+				</Text>
+				{isOwnProfile && activeTab === "voicenotes" && (
+					<TouchableOpacity
+						style={styles.recordButton}
+						onPress={() => router.push("/voicenote/create")}
+					>
+						<Feather name="mic" size={20} color={colors.white} />
+						<Text style={styles.recordButtonText}>Record First Voice Note</Text>
+					</TouchableOpacity>
+				)}
 			</View>
 		);
 	};
 
-	const renderEmptyComponent = () => {
-		if (loadingNotes && !refreshing && page === 1) {
-			// Show main loading indicator only on initial load when voiceNotes is empty
-			return (
-				<View style={styles.fullScreenLoader}>
-					<ActivityIndicator size="large" color={colors.tint} />
-				</View>
-			);
-		}
-		if (!loadingNotes && !refreshing && localVoiceNotes.length === 0) {
-			return (
-				<View style={styles.emptyContainer}>
-					<Feather
-						name={activeTab === "shared" ? "repeat" : "mic-off"}
-						size={60}
-						color={colors.textSecondary}
-						style={styles.emptyIcon}
-					/>
-					<Text style={styles.emptyText}>
-						{activeTab === "shared"
-							? isOwnProfile
-								? "You haven't shared any voice notes yet."
-								: "This user hasn't shared any voice notes yet."
-							: isOwnProfile
-							? "You haven't created any voice notes yet."
-							: "This user hasn't created any voice notes yet."}
-					</Text>
-					{isOwnProfile && activeTab === "voicenotes" && (
-						<TouchableOpacity
-							style={styles.recordButton}
-							onPress={() => router.push("/voicenote/create")}
-						>
-							<Feather name="mic" size={20} color={colors.white} />
-							<Text style={styles.recordButtonText}>
-								Record First Voice Note
-							</Text>
-						</TouchableOpacity>
-					)}
-				</View>
-			);
-		}
-		return null;
-	};
+	// Update loading state when external loading state changes or voiceNotes prop changes
+	useEffect(() => {
+		console.log(
+			"VoiceNotesList: externalLoadingNotes changed to:",
+			externalLoadingNotes
+		);
+		setLoadingNotes(externalLoadingNotes);
+	}, [externalLoadingNotes]);
+
+	// Add specific effect for when voiceNotes array changes
+	useEffect(() => {
+		console.log(
+			"VoiceNotesList: voiceNotes prop changed, length:",
+			voiceNotes.length
+		);
+		// If we get a new empty array, this could be the start of a loading cycle
+		// In this case, we'll set localVoiceNotes but keep loadingNotes true
+		setLocalVoiceNotes(voiceNotes);
+	}, [voiceNotes]);
+
+	// Add debugging info every render
+	console.log("VoiceNotesList render state:", {
+		loadingNotes,
+		externalLoadingNotes,
+		refreshing,
+		localVoiceNotesLength: localVoiceNotes.length,
+		hasVoiceNotes: voiceNotes.length > 0,
+	});
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -576,37 +684,34 @@ export function VoiceNotesList({
 				<View style={styles.separatorLine} />
 			</View>
 
-			{loadingNotes ? (
-				<View style={styles.loadingContainer}>
-					<ActivityIndicator size="small" color={colors.tint} />
-				</View>
-			) : (
-				<FlatList
-					ref={flatListRef}
-					style={[styles.list, { backgroundColor: colors.background }]}
-					contentContainerStyle={styles.listContent}
-					data={localVoiceNotes}
-					renderItem={renderItem}
-					keyExtractor={(item) =>
-						// Create a unique key for each list item
-						`${item.id}-${item.is_shared ? "shared" : "original"}-${
-							item.shared_at || ""
-						}`
-					}
-					ListEmptyComponent={renderEmptyComponent}
-					refreshControl={
-						<RefreshControl
-							refreshing={refreshing}
-							onRefresh={handleRefresh}
-							tintColor={colors.tint}
-							colors={[colors.tint]}
-							progressBackgroundColor={colors.background}
-						/>
-					}
-					onEndReached={handleLoadMore}
-					onEndReachedThreshold={0.5}
-				/>
-			)}
+			<FlatList
+				ref={flatListRef}
+				style={[styles.list, { backgroundColor: colors.background }]}
+				contentContainerStyle={
+					localVoiceNotes.length === 0
+						? [styles.listContent, styles.emptyListContent]
+						: styles.listContent
+				}
+				data={localVoiceNotes}
+				renderItem={renderItem}
+				keyExtractor={(item) =>
+					`${item.id}-${item.is_shared ? "shared" : "original"}-${
+						item.shared_at || ""
+					}`
+				}
+				ListEmptyComponent={renderEmptyComponent}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={handleRefresh}
+						tintColor={colors.tint}
+						colors={[colors.tint]}
+						progressBackgroundColor={colors.background}
+					/>
+				}
+				onEndReached={handleLoadMore}
+				onEndReachedThreshold={0.5}
+			/>
 		</View>
 	);
 }

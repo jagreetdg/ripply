@@ -1,4 +1,5 @@
 import { StyleSheet, Platform } from "react-native";
+import Colors, { hexToRgba, opacityValues } from "../../constants/Colors";
 
 // Convert StyleSheet.create to a function that accepts colors and isDarkMode
 export const getStyles = (
@@ -33,9 +34,7 @@ export const getStyles = (
     },
     overlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: isDarkMode
-        ? "rgba(0, 0, 0, 0.65)" // Darker overlay in dark mode
-        : "rgba(0, 0, 0, 0.45)", // Darker overlay in light mode too
+      // Overlay opacity is now set dynamically in the component for adaptive intensity
       borderRadius: 16, // Match container
     },
     repostAttributionContainer: {
@@ -47,15 +46,15 @@ export const getStyles = (
       borderTopRightRadius: 16, // Match card radius
       borderBottomWidth: 1,
       borderBottomColor: isDarkMode 
-        ? "rgba(255, 255, 255, 0.1)" 
-        : "rgba(0, 0, 0, 0.05)",
+        ? hexToRgba(colors.white, opacityValues.soft) 
+        : hexToRgba(colors.black, opacityValues.minimal),
       // backgroundColor is set dynamically
     },
     repostAttributionContainerOnImage: {
       // Special styles for repost attribution on image backgrounds
-      borderBottomColor: "rgba(255, 255, 255, 0.2)",
+      borderBottomColor: hexToRgba(colors.white, opacityValues.soft),
       paddingVertical: 10, // Slightly taller
-      shadowColor: "#000",
+      shadowColor: colors.black,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.3,
       shadowRadius: 2,
@@ -68,7 +67,7 @@ export const getStyles = (
     repostAttributionTextOnImage: {
       fontSize: 12,
       fontWeight: "500",
-      textShadowColor: "rgba(0, 0, 0, 0.8)",
+      textShadowColor: hexToRgba(colors.black, opacityValues.heavy),
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 2,
     },
@@ -78,14 +77,14 @@ export const getStyles = (
     },
     repostAttributionUsernameOnImage: {
       fontWeight: "bold",
-      textShadowColor: "rgba(0, 0, 0, 0.8)",
+      textShadowColor: hexToRgba(colors.black, opacityValues.heavy),
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 2,
     },
     content: {
       padding: 16,
       // For cards with background image, content background should be transparent
-      backgroundColor: "transparent",
+      backgroundColor: colors.transparent,
     },
     cardHeader: {
       flexDirection: "row",
@@ -114,17 +113,17 @@ export const getStyles = (
       fontWeight: "bold",
       fontSize: 14,
       color: colors.card, // Typically white or light color on dark image
-      textShadowColor: "rgba(0, 0, 0, 0.8)",
+      textShadowColor: "rgba(0, 0, 0, 1.0)",
       textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 3,
+      textShadowRadius: 4,
     },
     usernameOnImage: {
       fontSize: 12,
       color: colors.card, // Typically white or light color on dark image
-      opacity: 0.9,
-      textShadowColor: "rgba(0, 0, 0, 0.7)",
+      opacity: 0.95,
+      textShadowColor: "rgba(0, 0, 0, 0.9)",
       textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 3,
+      textShadowRadius: 4,
     },
     headerActions: {
       flexDirection: "row",
@@ -138,11 +137,11 @@ export const getStyles = (
     timePostedOnImage: {
       fontSize: 12,
       color: colors.card, // Typically white or light color
-      opacity: 0.9,
+      opacity: 0.95,
       marginRight: 8,
-      textShadowColor: "rgba(0, 0, 0, 0.7)",
+      textShadowColor: "rgba(0, 0, 0, 0.9)",
       textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 3,
+      textShadowRadius: 4,
     },
     optionsButton: {
       padding: 4,
@@ -158,9 +157,9 @@ export const getStyles = (
       fontWeight: "bold",
       marginBottom: 12,
       color: colors.card, // Typically white or light color
-      textShadowColor: "rgba(0, 0, 0, 0.8)",
+      textShadowColor: "rgba(0, 0, 0, 1.0)",
       textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 4,
+      textShadowRadius: 5,
     },
     playerContainer: {
       flexDirection: "row",
@@ -177,7 +176,7 @@ export const getStyles = (
       marginRight: 12,
     },
     playButtonOnImage: {
-      backgroundColor: "rgba(255, 255, 255, 0.8)", // Semi-transparent white for visibility
+      backgroundColor: "rgba(255, 255, 255, 0.9)", // More opaque white for better visibility
     },
     progressContainer: {
       flex: 1,
@@ -191,13 +190,13 @@ export const getStyles = (
       width: "100%",
       height: 6, // Thicker bar
       backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.2)"
-        : "rgba(0, 0, 0, 0.1)",
+        ? hexToRgba(colors.white, opacityValues.soft)
+        : hexToRgba(colors.black, opacityValues.light),
       borderRadius: 3,
       top: 9, // Center it (24-6)/2
     },
     progressBackgroundOnImage: {
-      backgroundColor: "rgba(255, 255, 255, 0.35)", // Brighter background for better visibility on images
+      backgroundColor: hexToRgba(colors.white, opacityValues.moderate), // Brighter background for better visibility on images
     },
     progressBar: {
       position: "absolute",
@@ -250,8 +249,8 @@ export const getStyles = (
     },
     tagItem: {
       backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.1)"
-        : "rgba(0, 0, 0, 0.05)",
+        ? hexToRgba(colors.white, opacityValues.light)
+        : hexToRgba(colors.black, opacityValues.minimal),
       borderRadius: 12,
       paddingHorizontal: 10,
       paddingVertical: 4,
@@ -259,8 +258,8 @@ export const getStyles = (
       marginBottom: 8,
     },
     tagItemOnImage: {
-      backgroundColor: "rgba(0, 0, 0, 0.5)", // Darker background for better visibility
-      borderColor: "rgba(255, 255, 255, 0.3)", // Brighter border for better visibility
+      backgroundColor: hexToRgba(colors.black, opacityValues.semitransparent), // Darker background for better visibility
+      borderColor: hexToRgba(colors.white, opacityValues.medium), // Brighter border for better visibility
       borderWidth: 1,
     },
     tagText: {
@@ -268,10 +267,12 @@ export const getStyles = (
       color: colors.textSecondary,
     },
     tagTextOnImage: {
-      color: "rgba(255, 255, 255, 0.9)", // Brighter text on dark background
-      textShadowColor: "rgba(0, 0, 0, 0.5)",
+      color: colors.white,
+      fontSize: 12,
+      fontWeight: "600",
+      textShadowColor: hexToRgba(colors.black, opacityValues.nearsolid),
       textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
+      textShadowRadius: 3,
     },
     interactions: {
       flexDirection: "row",
@@ -325,5 +326,20 @@ export const getStyles = (
       bottom: 10,
       left: 10,
       right: 10,
+    },
+    tagsContainerOnImage: {
+      marginTop: 8,
+      flexDirection: "row",
+      flexWrap: "wrap",
+    },
+    tagOnImage: {
+      backgroundColor: hexToRgba(colors.white, opacityValues.soft),
+      borderWidth: 1,
+      borderColor: hexToRgba(colors.white, opacityValues.strong), // Brighter border for visibility
+      borderRadius: 16,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      marginRight: 8,
+      marginBottom: 8,
     },
   }); 

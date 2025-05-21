@@ -315,13 +315,14 @@ export function ProfileHeader({
 			paddingTop: 16,
 		},
 		iconButton: {
-			width: 32,
-			height: 32,
-			borderRadius: 16,
+			width: 42,
+			height: 42,
+			borderRadius: 21,
 			backgroundColor: "rgba(0, 0, 0, 0.3)",
 			justifyContent: "center",
 			alignItems: "center",
-			zIndex: 10, // Ensure buttons are clickable
+			marginHorizontal: 12,
+			padding: 8,
 		},
 		profileInfo: {
 			padding: 16,
@@ -651,7 +652,7 @@ export function ProfileHeader({
 					onPress={() => router.back()}
 					style={[styles.iconButton, { backgroundColor: "transparent" }]}
 				>
-					<Feather name="arrow-left" size={18} color={colors.text} />
+					<Feather name="arrow-left" size={24} color={colors.text} />
 				</TouchableOpacity>
 
 				<View style={styles.collapsedContent}>
@@ -711,16 +712,8 @@ export function ProfileHeader({
 								onPress={() => router.back()}
 								style={styles.iconButton}
 							>
-								<Feather name="arrow-left" size={18} color="white" />
+								<Feather name="arrow-left" size={24} color="white" />
 							</TouchableOpacity>
-							{isOwnProfile && (
-								<TouchableOpacity
-									onPress={() => router.push("/profile/edit")}
-									style={styles.iconButton}
-								>
-									<Feather name="edit" size={18} color="white" />
-								</TouchableOpacity>
-							)}
 						</View>
 					</ImageBackground>
 				</TouchableOpacity>
@@ -741,22 +734,10 @@ export function ProfileHeader({
 						>
 							<Feather
 								name="arrow-left"
-								size={18}
+								size={24}
 								color={isDarkMode ? "white" : "black"}
 							/>
 						</TouchableOpacity>
-						{isOwnProfile && (
-							<TouchableOpacity
-								onPress={() => router.push("/profile/edit")}
-								style={styles.iconButton}
-							>
-								<Feather
-									name="edit"
-									size={18}
-									color={isDarkMode ? "white" : "black"}
-								/>
-							</TouchableOpacity>
-						)}
 					</View>
 				</View>
 			)}

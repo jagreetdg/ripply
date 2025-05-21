@@ -6,6 +6,8 @@ import {
 	ActivityIndicator,
 } from "react-native";
 import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
+import Colors from "../../constants/Colors";
 import {
 	followUser,
 	unfollowUser,
@@ -28,8 +30,12 @@ export function FollowButton({
 	style,
 }: FollowButtonProps): JSX.Element | null {
 	const { user } = useUser();
+	const { colors, isDarkMode } = useTheme();
 	const [following, setFollowing] = useState(false);
 	const [loading, setLoading] = useState(true);
+
+	// Get the primary button color from the brand colors
+	const buttonColor = Colors.brand.primary;
 
 	// Check if the current user is following the profile user
 	const checkFollowStatus = useCallback(async () => {
@@ -101,7 +107,7 @@ export function FollowButton({
 		}
 	};
 
-	// Don\'t show the button if viewing own profile or not logged in
+	// Don't show the button if viewing own profile or not logged in
 	if (!user || user.id === userId) {
 		return null;
 	}
@@ -110,7 +116,9 @@ export function FollowButton({
 		<TouchableOpacity
 			style={[
 				styles.button,
-				following ? styles.followingButton : styles.followButton,
+				following
+					? [styles.followingButton, { borderColor: buttonColor }]
+					: [styles.followButton, { backgroundColor: buttonColor }],
 				style,
 			]}
 			onPress={handlePress}
@@ -119,13 +127,15 @@ export function FollowButton({
 			{loading ? (
 				<ActivityIndicator
 					size="small"
-					color={following ? "#7B3DD2" : "#FFFFFF"}
+					color={following ? buttonColor : colors.card}
 				/>
 			) : (
 				<Text
 					style={[
 						styles.buttonText,
-						following ? styles.followingText : styles.followText,
+						following
+							? [styles.followingText, { color: buttonColor }]
+							: [styles.followText, { color: colors.white }],
 					]}
 				>
 					{following ? "Following" : "Follow"}
@@ -145,21 +155,21 @@ const styles = StyleSheet.create({
 		minWidth: 100,
 	},
 	followButton: {
-		backgroundColor: "#7B3DD2",
+		// backgroundColor set dynamically
 	},
 	followingButton: {
 		backgroundColor: "transparent",
 		borderWidth: 1,
-		borderColor: "#7B3DD2",
+		// borderColor set dynamically
 	},
 	buttonText: {
 		fontSize: 14,
 		fontWeight: "600",
 	},
 	followText: {
-		color: "#FFFFFF",
+		// color set dynamically
 	},
 	followingText: {
-		color: "#7B3DD2",
+		// color set dynamically
 	},
 });

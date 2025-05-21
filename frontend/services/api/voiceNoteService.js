@@ -403,14 +403,33 @@ export const getShareCount = async (
 /**
  * Get complete stats for a voice note (likes, comments, shares, plays)
  * @param {string} voiceNoteId - Voice note ID
+ * @param {number} retryCount - Number of retries attempted (internal use)
  * @returns {Promise<{likes: number, comments: number, shares: number, plays: number}>} - Voice note stats
  */
-export const getVoiceNoteStats = async (voiceNoteId) => {
+export const getVoiceNoteStats = async (voiceNoteId, retryCount = 0) => {
 	try {
 		console.log(`Fetching complete stats for voice note: ${voiceNoteId}`);
 
 		// First try to get the complete voice note data
-		const voiceNoteData = await getVoiceNoteById(voiceNoteId);
+		let voiceNoteData;
+		try {
+			voiceNoteData = await getVoiceNoteById(voiceNoteId);
+		} catch (error) {
+			console.error(
+				`Error fetching voice note data for ${voiceNoteId}:`,
+				error
+			);
+			// If we fail to get the voice note data after 2 retries, throw the error
+			if (retryCount >= 2) {
+				throw error;
+			}
+
+			// Wait a short time before retrying
+			await new Promise((resolve) => setTimeout(resolve, 500));
+
+			// Retry with increment to retry count
+			return getVoiceNoteStats(voiceNoteId, retryCount + 1);
+		}
 
 		// Helper function to normalize any count value
 		const normalizeCount = (value) => {
@@ -486,12 +505,27 @@ export const getVoiceNoteStats = async (voiceNoteId) => {
 		return stats;
 	} catch (error) {
 		console.error(`Error getting voice note stats for ${voiceNoteId}:`, error);
-		// Return default values if something went wrong
-		return {
-			likes: 0,
-			comments: 0,
-			shares: 0,
-			plays: 0,
-		};
+
+		// If we've already retried 3 times, return default values
+		if (retryCount >= 3) {
+			console.warn(
+				`Giving up on fetching stats for ${voiceNoteId} after ${retryCount} retries`
+			);
+			return {
+				likes: 0,
+				comments: 0,
+				shares: 0,
+				plays: 0,
+			};
+		}
+
+		// Wait a bit longer before retrying
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+
+		// Retry with increment to retry count
+		console.log(
+			`Retrying getVoiceNoteStats for ${voiceNoteId}, attempt ${retryCount + 1}`
+		);
+		return getVoiceNoteStats(voiceNoteId, retryCount + 1);
 	}
 };

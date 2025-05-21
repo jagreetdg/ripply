@@ -11,11 +11,17 @@ export const formatDuration = (seconds: number): string => {
 
 /**
  * Formats a number for display (e.g., 1000 -> 1.0k)
+ * Returns a loading placeholder or "0" for undefined/null values
  */
 export const formatNumber = (num: any): string => {
+  // Return loading placeholder for undefined
+  if (num === undefined) {
+    return "-";
+  }
+  
   // Log unexpected values for debugging
-  if (num === null || num === undefined) {
-    console.log("formatNumber received null/undefined");
+  if (num === null) {
+    console.log("formatNumber received null");
     return "0";
   }
 

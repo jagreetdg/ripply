@@ -52,4 +52,5 @@ export interface VoiceNotesListProps {
 	listHeaderComponent?: React.ReactElement | null;
 	isOwnProfile: boolean;
 	activeTab?: "voicenotes" | "shared"; // Made optional since we're combining tabs
+	loadingNotes?: boolean; // Add this property to indicate if notes are being loaded
 } 

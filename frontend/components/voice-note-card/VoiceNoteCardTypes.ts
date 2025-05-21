@@ -47,6 +47,7 @@ export interface VoiceNote {
 		display_name: string;
 		avatar_url: string | null;
 	};
+	isLoadingStats?: boolean; // Flag to show loading indicators for stats
 }
 
 export interface VoiceNoteCardProps {

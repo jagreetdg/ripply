@@ -26,6 +26,11 @@ export const getStyles = (colors: any, listHeaderComponent: any, isDarkMode: boo
         padding: 20,
         marginTop: listHeaderComponent ? 20 : 100,
     },
+    emptyListContent: {
+        flexGrow: 1, 
+        justifyContent: 'center',
+        minHeight: 300,
+    },
     emptyIcon: {
         marginBottom: 20,
         opacity: 0.7,

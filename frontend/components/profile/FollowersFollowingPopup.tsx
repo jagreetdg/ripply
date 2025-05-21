@@ -22,6 +22,8 @@ import {
 } from "../../services/api/userService";
 import { FollowButton } from "./FollowButton";
 import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
+import Colors, { hexToRgba, opacityValues } from "../../constants/Colors";
 
 // Development mode flag
 const isDev = process.env.NODE_ENV === "development" || __DEV__;
@@ -59,6 +61,7 @@ export function FollowersFollowingPopup({
 	const [loading, setLoading] = useState(true);
 	const router = useRouter();
 	const { user: currentUser } = useUser();
+	const { colors, isDarkMode } = useTheme();
 	const screenHeight = Dimensions.get("window").height;
 
 	// Determine if we're showing followers or following
@@ -182,7 +185,7 @@ export function FollowersFollowingPopup({
 	};
 
 	const renderUserItem = ({ item }: { item: UserType }) => (
-		<View style={styles.userItem}>
+		<View style={[styles.userItem, { borderBottomColor: colors.border }]}>
 			<TouchableOpacity
 				style={styles.userInfo}
 				onPress={() => handleProfilePress(item.username)}
@@ -191,19 +194,21 @@ export function FollowersFollowingPopup({
 					<UserAvatar user={item} />
 					<View style={styles.userInfoText}>
 						<View style={styles.nameContainer}>
-							<Text style={styles.displayName}>
+							<Text style={[styles.displayName, { color: colors.text }]}>
 								{item.display_name || item.username}
 							</Text>
 							{item.is_verified && (
 								<Feather
 									name="check-circle"
 									size={14}
-									color="#6B2FBC"
+									color={colors.tint}
 									style={styles.verifiedIcon}
 								/>
 							)}
 						</View>
-						<Text style={styles.username}>@{item.username}</Text>
+						<Text style={[styles.username, { color: colors.textSecondary }]}>
+							@{item.username}
+						</Text>
 					</View>
 				</View>
 			</TouchableOpacity>
@@ -228,32 +233,59 @@ export function FollowersFollowingPopup({
 			onRequestClose={onClose}
 		>
 			<TouchableWithoutFeedback onPress={onClose}>
-				<View style={styles.modalOverlay}>
+				<View
+					style={[
+						styles.modalOverlay,
+						{
+							backgroundColor: isDarkMode
+								? colors.modalOverlay
+								: hexToRgba(colors.black, opacityValues.semitransparent),
+						},
+					]}
+				>
 					<TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
 						<View
-							style={[styles.modalContainer, { maxHeight: screenHeight * 0.7 }]}
+							style={[
+								styles.modalContainer,
+								{
+									maxHeight: screenHeight * 0.7,
+									backgroundColor: colors.background,
+								},
+							]}
 						>
-							<SafeAreaView style={styles.container}>
-								<View style={styles.header}>
+							<SafeAreaView
+								style={[
+									styles.container,
+									{ backgroundColor: colors.background },
+								]}
+							>
+								<View
+									style={[styles.header, { borderBottomColor: colors.border }]}
+								>
 									<View style={styles.placeholder} />
-									<Text style={styles.title}>
+									<Text style={[styles.title, { color: colors.text }]}>
 										{isFollowersTab ? "Followers" : "Following"}
 									</Text>
 									<TouchableOpacity
 										style={styles.closeButton}
 										onPress={onClose}
 									>
-										<Feather name="x" size={22} color="#333" />
+										<Feather name="x" size={22} color={colors.text} />
 									</TouchableOpacity>
 								</View>
 
 								{loading ? (
 									<View style={styles.loadingContainer}>
-										<ActivityIndicator size="large" color="#6B2FBC" />
+										<ActivityIndicator size="large" color={colors.tint} />
 									</View>
 								) : users.length === 0 ? (
 									<View style={styles.emptyContainer}>
-										<Text style={styles.emptyText}>
+										<Text
+											style={[
+												styles.emptyText,
+												{ color: colors.textSecondary },
+											]}
+										>
 											No {isFollowersTab ? "followers" : "following"} yet
 										</Text>
 									</View>
@@ -277,17 +309,15 @@ export function FollowersFollowingPopup({
 const styles = StyleSheet.create({
 	modalOverlay: {
 		flex: 1,
-		backgroundColor: "rgba(0, 0, 0, 0.5)",
 		justifyContent: "center",
 		alignItems: "center",
 	},
 	modalContainer: {
 		width: "70%",
-		backgroundColor: "white",
 		borderRadius: 12,
 		overflow: "hidden",
 		elevation: 5,
-		shadowColor: "#000",
+		shadowColor: Colors.light.shadow,
 		shadowOffset: {
 			width: 0,
 			height: 2,
@@ -297,7 +327,6 @@ const styles = StyleSheet.create({
 	},
 	container: {
 		flex: 1,
-		backgroundColor: "white",
 	},
 	header: {
 		flexDirection: "row",
@@ -305,7 +334,6 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		padding: 16,
 		borderBottomWidth: 1,
-		borderBottomColor: "#EEEEEE",
 	},
 	closeButton: {
 		padding: 4,
@@ -317,7 +345,6 @@ const styles = StyleSheet.create({
 	title: {
 		fontSize: 18,
 		fontWeight: "bold",
-		color: "#333",
 	},
 	placeholder: {
 		width: 30,
@@ -336,7 +363,6 @@ const styles = StyleSheet.create({
 	},
 	emptyText: {
 		fontSize: 16,
-		color: "#888",
 		textAlign: "center",
 	},
 	listContent: {
@@ -348,7 +374,6 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		paddingVertical: 12,
 		borderBottomWidth: 1,
-		borderBottomColor: "#EEEEEE",
 	},
 	userInfo: {
 		flexDirection: "row",
@@ -369,14 +394,12 @@ const styles = StyleSheet.create({
 	displayName: {
 		fontSize: 16,
 		fontWeight: "bold",
-		color: "#333",
 	},
 	verifiedIcon: {
 		marginLeft: 4,
 	},
 	username: {
 		fontSize: 14,
-		color: "#888",
 		marginTop: 2,
 	},
 	followButton: {

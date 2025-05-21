@@ -116,6 +116,7 @@ export default function ProfileByUsernameScreen() {
 	const [sharedVoiceNotes, setSharedVoiceNotes] = useState<VoiceNote[]>([]);
 	const [loadingShared, setLoadingShared] = useState(false);
 	const [combinedVoiceNotes, setCombinedVoiceNotes] = useState<VoiceNote[]>([]);
+	const [loadingVoiceNotes, setLoadingVoiceNotes] = useState(true);
 
 	// Replace the single popup state with separate states
 	const [showFollowersPopup, setShowFollowersPopup] = useState(false);
@@ -199,6 +200,8 @@ export default function ProfileByUsernameScreen() {
 
 	useEffect(() => {
 		if (username) {
+			console.log("Profile: Fetching user data for username:", username);
+			setLoadingVoiceNotes(true); // Set loading to true immediately when username changes
 			fetchUserData();
 		}
 	}, [username]);
@@ -211,205 +214,164 @@ export default function ProfileByUsernameScreen() {
 
 	const fetchUserData = async () => {
 		setLoading(true);
+		setLoadingVoiceNotes(true);
+
 		try {
 			// Reset user not found state
 			setUserNotFound(false);
 
-			// Fetch user profile by username
-			const profileData = await getUserProfileByUsername(username);
+			// Attempt to fetch user profile by username
+			const userProfileResponse = (await getUserProfileByUsername(
+				username
+			)) as unknown as UserProfile;
 
-			if (!profileData) {
-				setUserNotFound(true);
-				setLoading(false);
-				return;
-			}
+			if (userProfileResponse && !("error" in userProfileResponse)) {
+				// Set user profile data
+				setUserProfile(userProfileResponse);
 
-			// Ensure we have a valid user profile object
-			if (
-				typeof profileData === "object" &&
-				"id" in profileData &&
-				"username" in profileData
-			) {
-				const typedProfile = profileData as UserProfile;
-				setUserProfile(typedProfile);
-
-				// Fetch user voice notes using the user ID from the profile
-				const voiceNotesData = await getUserVoiceNotes(typedProfile.id);
-				let processedVoiceNotes = [];
-
-				// Fetch complete data for each voice note to ensure we have all stats
-				if (Array.isArray(voiceNotesData) && voiceNotesData.length > 0) {
-					const fetchPromises = voiceNotesData.map(async (note) => {
-						try {
-							// Get the complete voice note stats
-							const stats = await getVoiceNoteStats(note.id);
-
-							// Get the basic note data
-							const completeData = await getVoiceNoteById(note.id);
-
-							// Create a complete note with accurate stats
-							return {
-								...note, // Base note data
-								...completeData, // Complete note data
-								likes: stats.likes, // Use the accurate stats
-								comments: stats.comments,
-								plays: stats.plays,
-								shares: stats.shares,
-								users: note.users, // Preserve user info
-							};
-						} catch (error) {
-							console.error(
-								`Error fetching complete data for note ${note.id}:`,
-								error
-							);
-							// Return normalized note as fallback
-							return {
-								...note,
-								likes: typeof note.likes === "number" ? note.likes : 0,
-								comments: typeof note.comments === "number" ? note.comments : 0,
-								plays: normalizePlaysCount(note.plays),
-								shares: typeof note.shares === "number" ? note.shares : 0,
-							};
-						}
-					});
-
-					// Wait for all notes to be fetched
-					processedVoiceNotes = await Promise.all(fetchPromises);
-					setVoiceNotes(processedVoiceNotes);
+				// Check if this is the current user's profile
+				if (currentUser && currentUser.id === userProfileResponse.id) {
+					setIsOwnProfile(true);
 				} else {
-					setVoiceNotes([]);
-					processedVoiceNotes = [];
+					setIsOwnProfile(false);
 				}
 
-				// Fetch shared voice notes
-				setLoadingShared(true);
-				try {
-					const sharedVoiceNotesData = await getUserSharedVoiceNotes(
-						typedProfile.id
-					);
-					let processedSharedNotes = [];
-
-					// Fetch complete data for each shared voice note
-					if (
-						Array.isArray(sharedVoiceNotesData) &&
-						sharedVoiceNotesData.length > 0
-					) {
-						const fetchSharedPromises = sharedVoiceNotesData.map(
-							async (note) => {
-								try {
-									// Get the complete voice note stats
-									const stats = await getVoiceNoteStats(note.id);
-
-									// Get the basic note data
-									const completeData = await getVoiceNoteById(note.id);
-
-									// Create a complete note with accurate stats
-									return {
-										...note, // Base note data
-										...completeData, // Complete note data
-										likes: stats.likes, // Use the accurate stats
-										comments: stats.comments,
-										plays: stats.plays,
-										shares: stats.shares,
-										users: note.users, // Preserve user info
-										is_shared: true,
-										shared_at: note.shared_at,
-										shared_by: {
-											id: typedProfile.id,
-											username: typedProfile.username,
-											display_name: typedProfile.display_name,
-											avatar_url: typedProfile.avatar_url,
-										},
-										// Add explicit sharer information fields to make sure they are available
-										sharer_id: typedProfile.id,
-										sharer_username: typedProfile.username,
-										sharer_display_name: typedProfile.display_name,
-										sharer_avatar_url: typedProfile.avatar_url,
-									};
-								} catch (error) {
-									console.error(
-										`Error fetching complete data for shared note ${note.id}:`,
-										error
-									);
-									// Return normalized note as fallback
-									return {
-										...note,
-										likes: typeof note.likes === "number" ? note.likes : 0,
-										comments:
-											typeof note.comments === "number" ? note.comments : 0,
-										plays: normalizePlaysCount(note.plays),
-										shares: typeof note.shares === "number" ? note.shares : 0,
-										is_shared: true,
-										shared_by: {
-											id: typedProfile.id,
-											username: typedProfile.username,
-											display_name: typedProfile.display_name,
-											avatar_url: typedProfile.avatar_url,
-										},
-										// Add explicit sharer information fields
-										sharer_id: typedProfile.id,
-										sharer_username: typedProfile.username,
-										sharer_display_name: typedProfile.display_name,
-										sharer_avatar_url: typedProfile.avatar_url,
-									};
-								}
-							}
-						);
-
-						// Wait for all shared notes to be fetched
-						processedSharedNotes = await Promise.all(fetchSharedPromises);
-						setSharedVoiceNotes(processedSharedNotes);
-					} else {
-						setSharedVoiceNotes([]);
-						processedSharedNotes = [];
-					}
-
-					// Combine and sort voice notes and shared posts by date
-					const combined = [...processedVoiceNotes, ...processedSharedNotes];
-
-					// Sort by creation/shared date (newest first)
-					combined.sort((a, b) => {
-						const dateA = a.shared_at
-							? new Date(a.shared_at).getTime()
-							: new Date(a.created_at).getTime();
-						const dateB = b.shared_at
-							? new Date(b.shared_at).getTime()
-							: new Date(b.created_at).getTime();
-						return dateB - dateA;
-					});
-
-					setCombinedVoiceNotes(combined);
-				} catch (sharedError) {
-					console.error("Error fetching shared voice notes:", sharedError);
-					setSharedVoiceNotes([]);
-					setCombinedVoiceNotes(processedVoiceNotes);
-				} finally {
-					setLoadingShared(false);
+				// Attempt to fetch voice bio
+				const voiceBioResponse = (await getVoiceBio(
+					userProfileResponse.id
+				)) as unknown as VoiceBio;
+				if (voiceBioResponse && !("error" in voiceBioResponse)) {
+					setVoiceBio(voiceBioResponse);
 				}
 
 				// Fetch follower and following counts
-				const followers = await getFollowerCount(typedProfile.id);
-				const following = await getFollowingCount(typedProfile.id);
-				setFollowerCount(followers);
-				setFollowingCount(following);
-
-				// Fetch user voice bio if available
 				try {
-					const voiceBioData = await getVoiceBio(typedProfile.id);
-					if (voiceBioData) {
-						setVoiceBio(voiceBioData as VoiceBio);
+					const followerCountResponse = await getFollowerCount(
+						userProfileResponse.id
+					);
+					if (typeof followerCountResponse === "number") {
+						setFollowerCount(followerCountResponse);
 					}
-				} catch (bioError) {
-					// Voice bio not found or error fetching it - this is optional
+
+					const followingCountResponse = await getFollowingCount(
+						userProfileResponse.id
+					);
+					if (typeof followingCountResponse === "number") {
+						setFollowingCount(followingCountResponse);
+					}
+				} catch (error) {
+					console.error("Error fetching follow counts:", error);
+				}
+
+				// Fetch user's voice notes
+				try {
+					console.log(
+						"Profile: Starting to fetch voice notes for user:",
+						userProfileResponse.id
+					);
+					// Always set loading to true before any API calls
+					setLoadingVoiceNotes(true);
+
+					// Fetching voice notes
+					const voiceNotesResponse = (await getUserVoiceNotes(
+						userProfileResponse.id
+					)) as unknown as VoiceNote[];
+					setVoiceNotes(voiceNotesResponse);
+					console.log(
+						"Profile: Fetched user voice notes:",
+						voiceNotesResponse?.length || 0
+					);
+
+					// Fetching shared voice notes
+					const sharedVoiceNotesResponse = (await getUserSharedVoiceNotes(
+						userProfileResponse.id
+					)) as unknown as VoiceNote[];
+					setSharedVoiceNotes(sharedVoiceNotesResponse);
+					console.log(
+						"Profile: Fetched shared voice notes:",
+						sharedVoiceNotesResponse?.length || 0
+					);
+
+					// Combine both types of voice notes
+					const combinedNotes = [
+						...(voiceNotesResponse || []).map((note: any) => ({
+							...note,
+							is_shared: false,
+						})),
+						...(sharedVoiceNotesResponse || []).map((note: any) => ({
+							...note,
+							is_shared: true,
+						})),
+					];
+
+					// Sort by date, latest first
+					combinedNotes.sort((a: any, b: any) => {
+						const dateA = new Date(
+							a.is_shared && a.shared_at ? a.shared_at : a.created_at
+						);
+						const dateB = new Date(
+							b.is_shared && b.shared_at ? b.shared_at : b.created_at
+						);
+						return dateB.getTime() - dateA.getTime();
+					});
+
+					// Update the voice notes state - but keep loading true for at least 500ms
+					// to ensure loading animation is visible to the user
+					console.log(
+						"Profile: Setting combinedVoiceNotes with",
+						combinedNotes.length,
+						"notes"
+					);
+					setCombinedVoiceNotes(combinedNotes);
+
+					// Always add a small delay to show loading state, even if we have notes
+					setTimeout(() => {
+						console.log(
+							"Profile: Setting loadingVoiceNotes to FALSE after delay"
+						);
+						setLoadingVoiceNotes(false);
+					}, 800);
+				} catch (error) {
+					console.error("Error fetching voice notes:", error);
+					console.log(
+						"Profile: Setting combinedVoiceNotes to empty array due to error"
+					);
+					setCombinedVoiceNotes([]);
+
+					// Set loading to false after a short delay to show loading animation
+					console.log(
+						"Profile: Keeping loadingVoiceNotes TRUE for delay after error"
+					);
+					setTimeout(() => {
+						console.log(
+							"Profile: Setting loadingVoiceNotes to FALSE after error delay"
+						);
+						setLoadingVoiceNotes(false);
+					}, 800);
 				}
 			} else {
+				// User not found
+				console.error("User not found");
 				setUserNotFound(true);
+				setCombinedVoiceNotes([]);
+
+				// Set loading to false after a short delay to show loading animation
+				setTimeout(() => {
+					setLoadingVoiceNotes(false);
+				}, 1500);
 			}
 		} catch (error: any) {
 			// Check if this is a user not found error
-			if (error.name === "UserNotFoundError") {
+			console.error("Error fetching user data:", error);
+			if (error.message?.includes("not found") || error.statusCode === 404) {
 				setUserNotFound(true);
 			}
+			setCombinedVoiceNotes([]);
+
+			// Set loading to false after a short delay to show loading animation
+			setTimeout(() => {
+				setLoadingVoiceNotes(false);
+			}, 1500);
 		} finally {
 			setLoading(false);
 		}
@@ -441,6 +403,14 @@ export default function ProfileByUsernameScreen() {
 				]}
 			>
 				<ActivityIndicator size="large" color={colors.tint} />
+				<Text
+					style={[
+						styles.loadingText,
+						{ color: colors.textSecondary, marginTop: 12 },
+					]}
+				>
+					Loading profile...
+				</Text>
 			</View>
 		);
 	}
@@ -643,41 +613,44 @@ export default function ProfileByUsernameScreen() {
 					</View>
 				)}
 
-				{loading || loadingShared ? (
+				{loading ? (
 					<View
 						style={[
 							styles.loadingContainer,
 							{ backgroundColor: colors.background },
 						]}
 					>
-						<ActivityIndicator size="small" color={colors.tint} />
+						<ActivityIndicator size="large" color={colors.tint} />
+						<Text
+							style={[
+								styles.loadingText,
+								{ color: colors.textSecondary, marginTop: 12 },
+							]}
+						>
+							Loading profile...
+						</Text>
 					</View>
 				) : (
+					// Always use VoiceNotesList which has its own proper loading states
 					<>
-						{combinedVoiceNotes.length === 0 ? (
-							<View
-								style={[
-									styles.emptyState,
-									{ backgroundColor: colors.background },
-								]}
-							>
-								<Text
-									style={[styles.emptyText, { color: colors.textSecondary }]}
-								>
-									No voice notes yet
-								</Text>
-							</View>
-						) : (
-							<VoiceNotesList
-								userId={userProfile.id}
-								username={userProfile.username}
-								displayName={userProfile.display_name}
-								voiceNotes={combinedVoiceNotes}
-								onRefresh={handleRefresh}
-								showRepostAttribution={true}
-								isOwnProfile={isOwnProfile}
-							/>
-						)}
+						{/* Add logging using a self-executing function */}
+						{(() => {
+							console.log("Profile: Passing to VoiceNotesList:", {
+								voiceNotesCount: combinedVoiceNotes.length,
+								loadingNotesValue: loadingVoiceNotes,
+							});
+							return null;
+						})()}
+						<VoiceNotesList
+							userId={userProfile.id}
+							username={userProfile.username}
+							displayName={userProfile.display_name}
+							voiceNotes={combinedVoiceNotes}
+							onRefresh={handleRefresh}
+							showRepostAttribution={true}
+							isOwnProfile={isOwnProfile}
+							loadingNotes={loadingVoiceNotes}
+						/>
 					</>
 				)}
 			</Animated.ScrollView>
@@ -838,6 +811,9 @@ const styles = StyleSheet.create({
 	},
 	headerContent: {
 		position: "relative", // For positioning the indicator
+	},
+	loadingText: {
+		fontSize: 14,
 	},
 	// Removed tab container styles as we're combining voice notes and shared notes
 });
