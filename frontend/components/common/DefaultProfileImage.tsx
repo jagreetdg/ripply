@@ -1,38 +1,43 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTheme } from "../../context/ThemeContext";
 
 interface DefaultProfileImageProps {
-	userId: string;
-	displayName?: string;
 	size?: number;
-	style?: any;
+	iconSize?: number;
+	style?: object;
 }
 
 /**
- * Default profile image component that shows a gray person icon on a light purple background
+ * Default profile image component that shows a gray person icon on a themed background.
  */
-export function DefaultProfileImage({
-	userId,
-	displayName,
-	size = 80,
+const DefaultProfileImage = ({
+	size = 100,
+	iconSize,
 	style,
-}: DefaultProfileImageProps) {
-	const containerStyle = {
-		width: size,
-		height: size,
-		borderRadius: size / 2,
-		backgroundColor: "#F0E6FF", // Light purple background
-	};
+}: DefaultProfileImageProps) => {
+	const { colors } = useTheme();
 
-	const iconSize = size * 0.5; // Icon size proportional to the container
+	const finalIconSize = iconSize || size * 0.6;
 
 	return (
-		<View style={[styles.container, containerStyle, style]}>
-			<Feather name="user" size={iconSize} color="#9E9E9E" />
+		<View
+			style={[
+				styles.container,
+				{
+					width: size,
+					height: size,
+					borderRadius: size / 2,
+					backgroundColor: colors.tagBackground,
+				},
+				style,
+			]}
+		>
+			<Feather name="user" size={finalIconSize} color={colors.textTertiary} />
 		</View>
 	);
-}
+};
 
 const styles = StyleSheet.create({
 	container: {
@@ -41,3 +46,5 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 	},
 });
+
+export default DefaultProfileImage;

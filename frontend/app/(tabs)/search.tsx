@@ -20,7 +20,7 @@ import { Feather } from "@expo/vector-icons";
 // Import components
 import { SearchBar } from "../../components/search/SearchBar";
 import { UserSearchResult } from "../../components/search/UserSearchResult";
-import { VoiceNoteCard } from "../../components/profile/VoiceNoteCard";
+import { VoiceNoteCard } from "../../components/voice-note-card/VoiceNoteCard";
 
 // Import services
 import {

@@ -12,7 +12,7 @@ import {
 	TouchableWithoutFeedback,
 } from "react-native";
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
-import { VoiceNotesList } from "../../components/profile/VoiceNotesList";
+import { VoiceNotesList } from "../../components/profile/voice-notes-list/VoiceNotesList";
 import {
 	getUserProfileByUsername,
 	getUserVoiceNotes,
@@ -29,9 +29,9 @@ import { UserNotFound } from "../../components/common/UserNotFound";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
 import { FollowButton } from "../../components/profile/FollowButton";
 import { FollowersFollowingPopup } from "../../components/profile/FollowersFollowingPopup";
-import { useTheme } from "../../context/ThemeContext";
 
 interface UserProfile {
 	id: string;
@@ -49,10 +49,21 @@ interface VoiceNote {
 	id: string;
 	title: string;
 	duration: number;
-	likes: number | { count: number }[];
-	comments: number | { count: number }[];
-	plays: number | { count: number }[];
+	audio_url: string;
+	created_at: string;
+	likes: number;
+	comments: number;
+	plays: number;
+	shares: number;
 	users?: {
+		id: string;
+		username: string;
+		display_name: string;
+		avatar_url: string | null;
+	};
+	is_shared?: boolean;
+	shared_at?: string;
+	shared_by?: {
 		id: string;
 		username: string;
 		display_name: string;
@@ -77,12 +88,12 @@ const normalizePlaysCount = (plays: any): number => {
 	}
 
 	if (plays && typeof plays === "object") {
-		// If it's an object with count property
+		// If it\'s an object with count property
 		if (typeof plays.count === "number") {
 			return plays.count;
 		}
 
-		// If it's an array of objects with count
+		// If it\'s an array of objects with count
 		if (
 			Array.isArray(plays) &&
 			plays.length > 0 &&
@@ -96,6 +107,7 @@ const normalizePlaysCount = (plays: any): number => {
 };
 
 export default function ProfileByUsernameScreen() {
+	const { colors, isDarkMode } = useTheme();
 	const [refreshing, setRefreshing] = useState(false);
 	const { user: currentUser } = useUser();
 	const [followerCount, setFollowerCount] = useState(0);
@@ -104,14 +116,17 @@ export default function ProfileByUsernameScreen() {
 	const [sharedVoiceNotes, setSharedVoiceNotes] = useState<VoiceNote[]>([]);
 	const [loadingShared, setLoadingShared] = useState(false);
 	const [combinedVoiceNotes, setCombinedVoiceNotes] = useState<VoiceNote[]>([]);
-	const { colors, isDarkMode } = useTheme();
 
 	// Replace the single popup state with separate states
 	const [showFollowersPopup, setShowFollowersPopup] = useState(false);
 	const [showFollowingPopup, setShowFollowingPopup] = useState(false);
 
 	// Add a ref for the ScrollView to enable scrolling to top programmatically
-	const scrollViewRef = useRef<Animated.ScrollView>(null);
+	const scrollViewRef = useRef<ScrollView>(null);
+
+	// No longer need tab state as we're combining voice notes and shared notes
+
+	// Removed tab container as we're combining voice notes and shared notes
 
 	// Handler for pull-to-refresh
 	const handleRefresh = async () => {
@@ -299,7 +314,17 @@ export default function ProfileByUsernameScreen() {
 										users: note.users, // Preserve user info
 										is_shared: true,
 										shared_at: note.shared_at,
-										shared_by: note.shared_by,
+										shared_by: {
+											id: typedProfile.id,
+											username: typedProfile.username,
+											display_name: typedProfile.display_name,
+											avatar_url: typedProfile.avatar_url,
+										},
+										// Add explicit sharer information fields to make sure they are available
+										sharer_id: typedProfile.id,
+										sharer_username: typedProfile.username,
+										sharer_display_name: typedProfile.display_name,
+										sharer_avatar_url: typedProfile.avatar_url,
 									};
 								} catch (error) {
 									console.error(
@@ -315,6 +340,17 @@ export default function ProfileByUsernameScreen() {
 										plays: normalizePlaysCount(note.plays),
 										shares: typeof note.shares === "number" ? note.shares : 0,
 										is_shared: true,
+										shared_by: {
+											id: typedProfile.id,
+											username: typedProfile.username,
+											display_name: typedProfile.display_name,
+											avatar_url: typedProfile.avatar_url,
+										},
+										// Add explicit sharer information fields
+										sharer_id: typedProfile.id,
+										sharer_username: typedProfile.username,
+										sharer_display_name: typedProfile.display_name,
+										sharer_avatar_url: typedProfile.avatar_url,
 									};
 								}
 							}
@@ -431,7 +467,10 @@ export default function ProfileByUsernameScreen() {
 			<View
 				style={[
 					styles.statusBarBackground,
-					{ height: insets.top, backgroundColor: colors.background },
+					{
+						height: insets.top,
+						backgroundColor: colors.background,
+					},
 				]}
 			/>
 			<Stack.Screen
@@ -447,8 +486,8 @@ export default function ProfileByUsernameScreen() {
 					{
 						opacity: collapsedHeaderOpacity,
 						top: 0, // Start from the very top of the screen
-						backgroundColor: colors.card,
-						shadowColor: isDarkMode ? "#000" : "#000",
+						shadowColor: colors.shadow,
+						// Remove the solid background to allow BlurView to work
 					},
 				]}
 			>
@@ -491,7 +530,6 @@ export default function ProfileByUsernameScreen() {
 						onRefresh={handleRefresh}
 						tintColor={colors.tint}
 						colors={[colors.tint]}
-						progressBackgroundColor={colors.background}
 					/>
 				}
 			>
@@ -514,7 +552,12 @@ export default function ProfileByUsernameScreen() {
 				</Animated.View>
 
 				{/* Stats bar */}
-				<View style={[styles.statsContainer, { backgroundColor: colors.card }]}>
+				<View
+					style={[
+						styles.statsContainer,
+						{ backgroundColor: colors.background },
+					]}
+				>
 					<TouchableOpacity
 						style={styles.statsItem}
 						onPress={handleFollowingPress}
@@ -554,21 +597,31 @@ export default function ProfileByUsernameScreen() {
 				</View>
 
 				{isOwnProfile ? (
-					<View style={styles.followButtonContainer}>
+					<View
+						style={[
+							styles.followButtonContainer,
+							{ backgroundColor: colors.background },
+						]}
+					>
 						<TouchableOpacity
 							style={[
 								styles.editProfileButtonInline,
-								{ backgroundColor: colors.tint },
+								{ backgroundColor: "#7B3DD2" },
 							]}
 							onPress={() => router.push("/profile/edit")}
 						>
-							<Text style={[styles.buttonText, { color: colors.card }]}>
+							<Text style={[styles.buttonText, { color: colors.white }]}>
 								Edit Profile
 							</Text>
 						</TouchableOpacity>
 					</View>
 				) : (
-					<View style={styles.followButtonContainer}>
+					<View
+						style={[
+							styles.followButtonContainer,
+							{ backgroundColor: colors.background },
+						]}
+					>
 						<FollowButton
 							userId={userProfile.id}
 							onFollowChange={(isFollowing, updatedCount) => {
@@ -599,23 +652,33 @@ export default function ProfileByUsernameScreen() {
 					>
 						<ActivityIndicator size="small" color={colors.tint} />
 					</View>
-				) : combinedVoiceNotes.length === 0 ? (
-					<View
-						style={[styles.emptyState, { backgroundColor: colors.background }]}
-					>
-						<Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-							No voice notes yet
-						</Text>
-					</View>
 				) : (
-					<VoiceNotesList
-						userId={userProfile.id}
-						username={userProfile.username}
-						displayName={userProfile.display_name}
-						voiceNotes={combinedVoiceNotes}
-						onRefresh={handleRefresh}
-						showRepostAttribution={true}
-					/>
+					<>
+						{combinedVoiceNotes.length === 0 ? (
+							<View
+								style={[
+									styles.emptyState,
+									{ backgroundColor: colors.background },
+								]}
+							>
+								<Text
+									style={[styles.emptyText, { color: colors.textSecondary }]}
+								>
+									No voice notes yet
+								</Text>
+							</View>
+						) : (
+							<VoiceNotesList
+								userId={userProfile.id}
+								username={userProfile.username}
+								displayName={userProfile.display_name}
+								voiceNotes={combinedVoiceNotes}
+								onRefresh={handleRefresh}
+								showRepostAttribution={true}
+								isOwnProfile={isOwnProfile}
+							/>
+						)}
+					</>
 				)}
 			</Animated.ScrollView>
 
@@ -626,11 +689,12 @@ export default function ProfileByUsernameScreen() {
 					{
 						bottom: insets.bottom + 16,
 						backgroundColor: colors.tint,
+						shadowColor: colors.shadow,
 					},
 				]}
 				onPress={() => router.push("/create")}
 			>
-				<Feather name="mic" size={24} color={colors.card} />
+				<Feather name="mic" size={24} color={colors.white} />
 			</TouchableOpacity>
 
 			{/* Add the followers/following popups */}
@@ -660,17 +724,18 @@ const styles = StyleSheet.create({
 		top: 0,
 		left: 0,
 		right: 0,
-		zIndex: 101, // Higher than the header
+		zIndex: 9, // Just below the header
 	},
 	fixedHeader: {
 		position: "absolute",
 		left: 0,
 		right: 0,
-		zIndex: 100,
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 2,
-		elevation: 3,
+		zIndex: 10,
+		// Improved shadow for semi-translucent header
+		shadowOffset: { width: 0, height: 1 },
+		shadowRadius: 3,
+		shadowOpacity: 0.2,
+		elevation: 4,
 	},
 	container: {
 		flex: 1,
@@ -738,6 +803,7 @@ const styles = StyleSheet.create({
 		minWidth: 100,
 	},
 	buttonText: {
+		color: "white",
 		fontSize: 14,
 		fontWeight: "600",
 	},
@@ -751,7 +817,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		elevation: 8,
 		zIndex: 1000,
-		shadowColor: "#000",
 		shadowOffset: {
 			width: 0,
 			height: 4,
@@ -774,4 +839,5 @@ const styles = StyleSheet.create({
 	headerContent: {
 		position: "relative", // For positioning the indicator
 	},
+	// Removed tab container styles as we're combining voice notes and shared notes
 });

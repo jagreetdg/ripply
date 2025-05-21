@@ -55,14 +55,14 @@ const SettingsItem: React.FC<SettingsItemProps> = ({
 				<Feather
 					name={icon}
 					size={20}
-					color={isDestructive ? "#FF3B30" : colors.tint}
+					color={isDestructive ? colors.error : colors.tint}
 				/>
 			</View>
 			<View style={styles.settingContent}>
 				<Text
 					style={[
 						styles.settingTitle,
-						{ color: isDestructive ? "#FF3B30" : colors.text },
+						{ color: isDestructive ? colors.error : colors.text },
 					]}
 				>
 					{title}

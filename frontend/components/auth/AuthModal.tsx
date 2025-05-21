@@ -20,6 +20,8 @@ import {
 	checkEmailAvailability,
 } from "../../services/api/authService";
 import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
+import Colors, { hexToRgba } from "../../constants/Colors";
 
 type AuthModalProps = {
 	isVisible: boolean;
@@ -63,6 +65,7 @@ export default function AuthModal({
 }: AuthModalProps) {
 	const router = useRouter();
 	const { setUser } = useUser();
+	const { colors } = useTheme();
 	const scrollViewRef = useRef<ScrollView>(null);
 	const [username, setUsername] = useState("");
 	const [email, setEmail] = useState("");
@@ -465,17 +468,26 @@ export default function AuthModal({
 			visible={isVisible}
 			onRequestClose={handleClose}
 		>
-			<Pressable style={styles.overlay} onPress={handleClose}>
+			<Pressable
+				style={[styles.overlay, { backgroundColor: colors.modalOverlay }]}
+				onPress={handleClose}
+			>
 				<Pressable
-					style={styles.modalContent}
+					style={[
+						styles.modalContent,
+						{
+							backgroundColor: colors.card,
+							shadowColor: colors.shadow,
+						},
+					]}
 					onPress={(e) => e.stopPropagation()}
 				>
 					<View style={styles.header}>
-						<Text style={styles.title}>
+						<Text style={[styles.title, { color: colors.text }]}>
 							{type === "login" ? "Log In" : "Create Account"}
 						</Text>
 						<Pressable onPress={handleClose} style={styles.closeButton}>
-							<Feather name="x" size={24} color="#666" />
+							<Feather name="x" size={24} color={colors.textSecondary} />
 						</Pressable>
 					</View>
 
@@ -485,31 +497,56 @@ export default function AuthModal({
 						contentContainerStyle={styles.scrollViewContent}
 					>
 						{error ? (
-							<View style={styles.errorContainer}>
-								<Feather name="alert-circle" size={18} color="#e74c3c" />
-								<Text style={styles.errorText}>{error}</Text>
+							<View
+								style={[
+									styles.errorContainer,
+									{ backgroundColor: hexToRgba(colors.error, 0.1) },
+								]}
+							>
+								<Feather name="alert-circle" size={18} color={colors.error} />
+								<Text style={[styles.errorText, { color: colors.error }]}>
+									{error}
+								</Text>
 							</View>
 						) : null}
 
 						{type === "signup" && (
 							<View style={styles.inputContainer}>
-								<Text style={styles.inputLabel}>Username</Text>
+								<Text style={[styles.inputLabel, { color: colors.text }]}>
+									Username
+								</Text>
 								<View
 									style={[
 										styles.inputWrapper,
-										usernameIsFocused && styles.inputWrapperFocused,
+										{
+											borderColor: colors.inputBorder,
+											backgroundColor: colors.background,
+										},
+										usernameIsFocused && {
+											borderColor: colors.inputFocused,
+											borderWidth: 2,
+											shadowColor: colors.inputFocused,
+										},
 									]}
 								>
 									<Feather
 										name="user"
 										size={20}
-										color={usernameIsFocused ? "#6B2FBC" : "#999"}
+										color={
+											usernameIsFocused
+												? colors.inputFocused
+												: colors.inputPlaceholder
+										}
 										style={styles.inputIcon}
 									/>
 									<TextInput
-										style={[styles.input, webStyles]}
+										style={[
+											styles.input,
+											{ color: colors.inputText },
+											webStyles,
+										]}
 										placeholder="Choose a username"
-										placeholderTextColor="#999"
+										placeholderTextColor={colors.inputPlaceholder}
 										autoCapitalize="none"
 										value={username}
 										onChangeText={(text) => {
@@ -538,11 +575,13 @@ export default function AuthModal({
 								{isCheckingUsername ? (
 									<ActivityIndicator
 										size="small"
-										color="#6B2FBC"
+										color={colors.tint}
 										style={styles.checkingIndicator}
 									/>
 								) : usernameAvailable === false ? (
-									<Text style={styles.unavailableText}>
+									<Text
+										style={[styles.unavailableText, { color: colors.error }]}
+									>
 										{!isValidUsername(username) && username.length > 0
 											? username.length < 5
 												? "Username must be at least 5 characters"
@@ -554,23 +593,37 @@ export default function AuthModal({
 						)}
 
 						<View style={styles.inputContainer}>
-							<Text style={styles.inputLabel}>Email</Text>
+							<Text style={[styles.inputLabel, { color: colors.text }]}>
+								Email
+							</Text>
 							<View
 								style={[
 									styles.inputWrapper,
-									emailIsFocused && styles.inputWrapperFocused,
+									{
+										borderColor: colors.inputBorder,
+										backgroundColor: colors.background,
+									},
+									emailIsFocused && {
+										borderColor: colors.inputFocused,
+										borderWidth: 2,
+										shadowColor: colors.inputFocused,
+									},
 								]}
 							>
 								<Feather
 									name="mail"
 									size={20}
-									color={emailIsFocused ? "#6B2FBC" : "#999"}
+									color={
+										emailIsFocused
+											? colors.inputFocused
+											: colors.inputPlaceholder
+									}
 									style={styles.inputIcon}
 								/>
 								<TextInput
-									style={[styles.input, webStyles]}
+									style={[styles.input, { color: colors.inputText }, webStyles]}
 									placeholder="Enter your email"
-									placeholderTextColor="#999"
+									placeholderTextColor={colors.inputPlaceholder}
 									keyboardType="email-address"
 									autoCapitalize="none"
 									value={email}
@@ -597,11 +650,11 @@ export default function AuthModal({
 							{isCheckingEmail ? (
 								<ActivityIndicator
 									size="small"
-									color="#6B2FBC"
+									color={colors.tint}
 									style={styles.checkingIndicator}
 								/>
 							) : emailAvailable === false ? (
-								<Text style={styles.unavailableText}>
+								<Text style={[styles.unavailableText, { color: colors.error }]}>
 									{!isValidEmail(email) && email.length > 0
 										? "Please enter a valid email address"
 										: "Email is already registered"}
@@ -610,27 +663,41 @@ export default function AuthModal({
 						</View>
 
 						<View style={styles.inputContainer}>
-							<Text style={styles.inputLabel}>Password</Text>
+							<Text style={[styles.inputLabel, { color: colors.text }]}>
+								Password
+							</Text>
 							<View
 								style={[
 									styles.inputWrapper,
-									passwordIsFocused && styles.inputWrapperFocused,
+									{
+										borderColor: colors.inputBorder,
+										backgroundColor: colors.background,
+									},
+									passwordIsFocused && {
+										borderColor: colors.inputFocused,
+										borderWidth: 2,
+										shadowColor: colors.inputFocused,
+									},
 								]}
 							>
 								<Feather
 									name="lock"
 									size={20}
-									color={passwordIsFocused ? "#6B2FBC" : "#999"}
+									color={
+										passwordIsFocused
+											? colors.inputFocused
+											: colors.inputPlaceholder
+									}
 									style={styles.inputIcon}
 								/>
 								<TextInput
-									style={[styles.input, webStyles]}
+									style={[styles.input, { color: colors.inputText }, webStyles]}
 									placeholder={
 										type === "login"
 											? "Enter your password"
 											: "Create a password"
 									}
-									placeholderTextColor="#999"
+									placeholderTextColor={colors.inputPlaceholder}
 									secureTextEntry={!showPassword}
 									value={password}
 									onChangeText={handlePasswordChange}
@@ -645,46 +712,74 @@ export default function AuthModal({
 									<Feather
 										name={showPassword ? "eye-off" : "eye"}
 										size={20}
-										color={passwordIsFocused ? "#6B2FBC" : "#999"}
+										color={
+											passwordIsFocused
+												? colors.inputFocused
+												: colors.inputPlaceholder
+										}
 									/>
 								</Pressable>
 							</View>
 							{type === "signup" &&
 								password.length > 0 &&
 								(passwordStrength === "weak" ? (
-									<Text style={styles.unavailableText}>
+									<Text
+										style={[styles.unavailableText, { color: colors.error }]}
+									>
 										{password.length < 8
 											? "Password must be at least 8 characters"
 											: "Password is too weak"}
 									</Text>
 								) : passwordStrength === "medium" ? (
-									<Text style={styles.warningText}>
+									<Text style={[styles.warningText, { color: colors.warning }]}>
 										Password is medium strength
 									</Text>
 								) : passwordStrength === "strong" ? (
-									<Text style={styles.availableText}>Password is strong</Text>
+									<Text
+										style={[styles.availableText, { color: colors.success }]}
+									>
+										Password is strong
+									</Text>
 								) : null)}
 						</View>
 
 						{type === "signup" && (
 							<View style={styles.inputContainer}>
-								<Text style={styles.inputLabel}>Confirm Password</Text>
+								<Text style={[styles.inputLabel, { color: colors.text }]}>
+									Confirm Password
+								</Text>
 								<View
 									style={[
 										styles.inputWrapper,
-										confirmPasswordIsFocused && styles.inputWrapperFocused,
+										{
+											borderColor: colors.inputBorder,
+											backgroundColor: colors.background,
+										},
+										confirmPasswordIsFocused && {
+											borderColor: colors.inputFocused,
+											borderWidth: 2,
+											shadowColor: colors.inputFocused,
+										},
 									]}
 								>
 									<Feather
 										name="lock"
 										size={20}
-										color={confirmPasswordIsFocused ? "#6B2FBC" : "#999"}
+										color={
+											confirmPasswordIsFocused
+												? colors.inputFocused
+												: colors.inputPlaceholder
+										}
 										style={styles.inputIcon}
 									/>
 									<TextInput
-										style={[styles.input, webStyles]}
+										style={[
+											styles.input,
+											{ color: colors.inputText },
+											webStyles,
+										]}
 										placeholder="Confirm your password"
-										placeholderTextColor="#999"
+										placeholderTextColor={colors.inputPlaceholder}
 										secureTextEntry={!showConfirmPassword}
 										value={confirmPassword}
 										onChangeText={(text) => {
@@ -702,12 +797,18 @@ export default function AuthModal({
 										<Feather
 											name={showConfirmPassword ? "eye-off" : "eye"}
 											size={20}
-											color={confirmPasswordIsFocused ? "#6B2FBC" : "#999"}
+											color={
+												confirmPasswordIsFocused
+													? colors.inputFocused
+													: colors.inputPlaceholder
+											}
 										/>
 									</Pressable>
 								</View>
 								{confirmPassword.length > 0 && passwordsMatch === false && (
-									<Text style={styles.unavailableText}>
+									<Text
+										style={[styles.unavailableText, { color: colors.error }]}
+									>
 										Passwords do not match
 									</Text>
 								)}
@@ -716,62 +817,97 @@ export default function AuthModal({
 
 						{type === "login" && (
 							<Pressable style={styles.forgotPasswordButton}>
-								<Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+								<Text
+									style={[
+										styles.forgotPasswordText,
+										{ color: colors.textSecondary },
+									]}
+								>
+									Forgot Password?
+								</Text>
 							</Pressable>
 						)}
 
 						{type === "login" && (
 							<View style={styles.inputContainer}>
 								<Pressable
-									style={styles.rememberMeContainer}
+									style={[
+										styles.rememberMeContainer,
+										{ backgroundColor: colors.background },
+									]}
 									onPress={() => setRememberMe(!rememberMe)}
 								>
 									<Feather
 										name={rememberMe ? "check-square" : "square"}
 										size={20}
-										color={rememberMe ? "#6B2FBC" : "#999"}
+										color={rememberMe ? colors.tint : colors.textSecondary}
 										style={{ marginRight: 8 }}
 									/>
-									<Text style={styles.rememberMeText}>Remember Me</Text>
+									<Text style={[styles.rememberMeText, { color: colors.text }]}>
+										Remember Me
+									</Text>
 								</Pressable>
 							</View>
 						)}
 
 						<View style={styles.termsText}>
-							<Text style={styles.termsText}>
+							<Text style={[styles.termsText, { color: colors.textSecondary }]}>
 								By signing up, you agree to our{" "}
-								<Text style={styles.termsLink}>Terms of Service</Text> and{" "}
-								<Text style={styles.termsLink}>Privacy Policy</Text>
+								<Text
+									style={[styles.termsLink, { color: colors.textSecondary }]}
+								>
+									Terms of Service
+								</Text>{" "}
+								and{" "}
+								<Text
+									style={[styles.termsLink, { color: colors.textSecondary }]}
+								>
+									Privacy Policy
+								</Text>
 							</Text>
 						</View>
 
 						<Pressable
 							style={[
 								styles.authButton,
-								isAuthButtonDisabled() && styles.authButtonDisabled,
+								{
+									backgroundColor: colors.tint,
+									shadowColor: colors.tint,
+								},
+								isAuthButtonDisabled() && {
+									backgroundColor: hexToRgba(colors.tint, 0.6),
+								},
 							]}
 							onPress={handleAuth}
 							disabled={isAuthButtonDisabled()}
 						>
 							{isLoading ? (
-								<Text style={styles.authButtonText}>
-									{type === "login" ? "Logging in..." : "Creating account..."}
-								</Text>
+								<ActivityIndicator size="small" color={colors.white} />
 							) : (
-								<Text style={styles.authButtonText}>
+								<Text style={[styles.authButtonText, { color: colors.white }]}>
 									{type === "login" ? "Log In" : "Create Account"}
 								</Text>
 							)}
 						</Pressable>
 
 						<View style={styles.divider}>
-							<View style={styles.dividerLine} />
-							<Text style={styles.dividerText}>OR</Text>
-							<View style={styles.dividerLine} />
+							<View
+								style={[styles.dividerLine, { backgroundColor: colors.border }]}
+							/>
+							<Text
+								style={[styles.dividerText, { color: colors.textTertiary }]}
+							>
+								OR
+							</Text>
+							<View
+								style={[styles.dividerLine, { backgroundColor: colors.border }]}
+							/>
 						</View>
 
 						<View style={styles.switchContainer}>
-							<Text style={styles.switchText}>
+							<Text
+								style={[styles.switchText, { color: colors.textSecondary }]}
+							>
 								{type === "login"
 									? "Don't have an account?"
 									: "Already have an account?"}
@@ -788,7 +924,7 @@ export default function AuthModal({
 									}
 								}}
 							>
-								<Text style={styles.switchLink}>
+								<Text style={[styles.switchLink, { color: colors.tint }]}>
 									{type === "login" ? "Sign Up" : "Log In"}
 								</Text>
 							</Pressable>
@@ -816,17 +952,14 @@ const webStyles = Platform.select({
 const styles = StyleSheet.create({
 	overlay: {
 		flex: 1,
-		backgroundColor: "rgba(0, 0, 0, 0.5)",
 		justifyContent: "center",
 		alignItems: "center",
 	},
 	modalContent: {
 		width: modalWidth,
 		maxHeight: "90%",
-		backgroundColor: "#fff",
 		borderRadius: 16,
 		padding: 24,
-		shadowColor: "#000",
 		shadowOffset: { width: 0, height: 10 },
 		shadowOpacity: 0.1,
 		shadowRadius: 15,
@@ -841,7 +974,6 @@ const styles = StyleSheet.create({
 	title: {
 		fontSize: 24,
 		fontWeight: "bold",
-		color: "#333",
 	},
 	closeButton: {
 		padding: 4,
@@ -849,13 +981,11 @@ const styles = StyleSheet.create({
 	errorContainer: {
 		flexDirection: "row",
 		alignItems: "center",
-		backgroundColor: "#fdeaea",
 		padding: 12,
 		borderRadius: 8,
 		marginBottom: 16,
 	},
 	errorText: {
-		color: "#e74c3c",
 		marginLeft: 8,
 		fontSize: 14,
 	},
@@ -865,30 +995,18 @@ const styles = StyleSheet.create({
 	inputLabel: {
 		fontSize: 14,
 		fontWeight: "500",
-		color: "#333",
-		marginBottom: 6,
 	},
 	inputWrapper: {
 		flexDirection: "row",
 		alignItems: "center",
 		borderWidth: 1,
-		borderColor: "#E1E1E1",
 		borderRadius: 8,
 		paddingLeft: 16,
 		paddingRight: 12,
-		backgroundColor: "#F9F9F9",
 		overflow: "hidden",
 	},
 	inputWrapperFocused: {
-		borderColor: "#6B2FBC",
-		borderWidth: 2,
-		paddingLeft: 15,
-		paddingRight: 11,
-		shadowColor: "#6B2FBC",
-		shadowOffset: { width: 0, height: 0 },
-		shadowOpacity: 0.3,
-		shadowRadius: 3,
-		elevation: 3,
+		// We're using inline styles instead
 	},
 	inputIcon: {
 		marginRight: 16,
@@ -897,7 +1015,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 		height: 44,
 		fontSize: 16,
-		color: "#333",
 		paddingLeft: 8,
 		paddingRight: 8,
 	},
@@ -910,37 +1027,31 @@ const styles = StyleSheet.create({
 		marginBottom: 16,
 	},
 	forgotPasswordText: {
-		color: "#6B2FBC",
 		fontSize: 14,
 		fontWeight: "500",
 	},
 	termsText: {
 		fontSize: 12,
-		color: "#666",
 		marginBottom: 16,
 		textAlign: "center",
 	},
 	termsLink: {
-		color: "#6B2FBC",
 		fontWeight: "500",
 	},
 	authButton: {
-		backgroundColor: "#6B2FBC",
 		borderRadius: 8,
 		paddingVertical: 12,
 		alignItems: "center",
 		marginBottom: 16,
-		shadowColor: "#6B2FBC",
 		shadowOffset: { width: 0, height: 4 },
 		shadowOpacity: 0.2,
 		shadowRadius: 8,
 		elevation: 4,
 	},
 	authButtonDisabled: {
-		backgroundColor: "#9D7BC7",
+		// We'll use inline style
 	},
 	authButtonText: {
-		color: "#fff",
 		fontSize: 16,
 		fontWeight: "600",
 	},
@@ -952,11 +1063,9 @@ const styles = StyleSheet.create({
 	dividerLine: {
 		flex: 1,
 		height: 1,
-		backgroundColor: "#E1E1E1",
 	},
 	dividerText: {
 		paddingHorizontal: 12,
-		color: "#999",
 		fontSize: 12,
 	},
 	switchContainer: {
@@ -966,12 +1075,10 @@ const styles = StyleSheet.create({
 	},
 	switchText: {
 		fontSize: 14,
-		color: "#666",
 	},
 	switchLink: {
 		fontSize: 14,
 		fontWeight: "600",
-		color: "#6B2FBC",
 		marginLeft: 4,
 	},
 	checkingIndicator: {
@@ -980,27 +1087,24 @@ const styles = StyleSheet.create({
 	},
 	unavailableText: {
 		fontSize: 12,
-		color: "#e74c3c",
 		marginTop: 4,
 	},
 	warningText: {
 		fontSize: 12,
-		color: "#FFC107",
 		marginTop: 4,
 	},
 	availableText: {
 		fontSize: 12,
-		color: "#2ecc71",
 		marginTop: 4,
 	},
 	rememberMeContainer: {
 		flexDirection: "row",
 		alignItems: "center",
-		alignSelf: "center", // Center align with the text below
+		alignSelf: "center",
+		marginBottom: 16,
 	},
 	rememberMeText: {
 		fontSize: 14,
-		color: "#333",
 	},
 	scrollView: {
 		flex: 1,

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Image, StyleSheet, Platform } from "react-native";
 import DefaultAvatar from "../DefaultAvatar";
+import { useTheme } from "../../context/ThemeContext";
+import Colors from "../../constants/Colors";
 
 interface AvatarProps {
 	userId: string;
@@ -21,6 +23,7 @@ export const Avatar = ({
 	onPress,
 	displayName,
 }: AvatarProps) => {
+	const { colors } = useTheme();
 	// State to track if the avatar image failed to load
 	const [imageError, setImageError] = useState(false);
 
@@ -44,7 +47,10 @@ export const Avatar = ({
 						? {
 								uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(
 									displayName || userId
-								)}&background=6B2FBC&color=fff`,
+								)}&background=${Colors.brand.primary.replace(
+									"#",
+									""
+								)}&color=fff`,
 						  }
 						: undefined
 				}
@@ -58,12 +64,12 @@ export const Avatar = ({
 
 const styles = StyleSheet.create({
 	defaultAvatar: {
-		backgroundColor: "#6B2FBC",
+		backgroundColor: Colors.brand.primary,
 		justifyContent: "center",
 		alignItems: "center",
 	},
 	defaultAvatarText: {
-		color: "#fff",
+		color: Colors.light.white,
 		fontWeight: "bold",
 	},
 });

@@ -26,7 +26,7 @@ export function FollowButton({
 	userId,
 	onFollowChange,
 	style,
-}: FollowButtonProps) {
+}: FollowButtonProps): JSX.Element | null {
 	const { user } = useUser();
 	const [following, setFollowing] = useState(false);
 	const [loading, setLoading] = useState(true);
@@ -101,7 +101,7 @@ export function FollowButton({
 		}
 	};
 
-	// Don't show the button if viewing own profile or not logged in
+	// Don\'t show the button if viewing own profile or not logged in
 	if (!user || user.id === userId) {
 		return null;
 	}
@@ -119,7 +119,7 @@ export function FollowButton({
 			{loading ? (
 				<ActivityIndicator
 					size="small"
-					color={following ? "#6B2FBC" : "#FFFFFF"}
+					color={following ? "#7B3DD2" : "#FFFFFF"}
 				/>
 			) : (
 				<Text
@@ -145,12 +145,12 @@ const styles = StyleSheet.create({
 		minWidth: 100,
 	},
 	followButton: {
-		backgroundColor: "#6B2FBC",
+		backgroundColor: "#7B3DD2",
 	},
 	followingButton: {
 		backgroundColor: "transparent",
 		borderWidth: 1,
-		borderColor: "#6B2FBC",
+		borderColor: "#7B3DD2",
 	},
 	buttonText: {
 		fontSize: 14,
@@ -160,6 +160,6 @@ const styles = StyleSheet.create({
 		color: "#FFFFFF",
 	},
 	followingText: {
-		color: "#6B2FBC",
+		color: "#7B3DD2",
 	},
 });

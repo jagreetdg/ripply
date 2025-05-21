@@ -1,14 +1,15 @@
 /**
  * Utility functions for handling default profile and cover images
  */
+import Colors from '../constants/Colors';
 
 // Default profile image colors
 const PROFILE_COLORS = [
-	"#6B2FBC", // Purple
-	"#2F80ED", // Blue
-	"#F2994A", // Orange
-	"#27AE60", // Green
-	"#EB5757", // Red
+	Colors.brand.primary, // Purple
+	Colors.brand.googleBlue, // Blue
+	Colors.brand.googleYellow, // Orange/Yellow
+	Colors.brand.googleGreen, // Green
+	Colors.brand.googleRed, // Red
 ];
 
 /**

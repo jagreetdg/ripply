@@ -1,4 +1,6 @@
 import { ScrollViewStyleReset } from "expo-router/html";
+import React from "react";
+import Colors from "../constants/Colors"; // Assuming Colors.ts is in frontend/constants/
 
 // This file is web-only and used to configure the root HTML for every
 // web page during static rendering.
@@ -32,7 +34,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
 const responsiveBackground = `
 body {
-  background-color: #fff;
+  background-color: ${Colors.light.background};
 }
 
 /* Attempt to hide any default scroll-to-top buttons injected by frameworks on web */
@@ -60,6 +62,6 @@ div[style*="z-index"][style*="opacity"][style*="bottom"][style*="left"][style*="
 
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: #000;
+    background-color: ${Colors.dark.background};
   }
 }`;

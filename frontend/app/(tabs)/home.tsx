@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
-import { VoiceNoteCard } from "../../components/profile/VoiceNoteCard";
+import { VoiceNoteCard } from "../../components/voice-note-card/VoiceNoteCard";
 import { HomeHeader } from "../../components/home/HomeHeader";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";

@@ -2,7 +2,8 @@ import React, { useCallback, memo } from "react";
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { VoiceNoteCard } from "../profile/VoiceNoteCard";
+import { VoiceNoteCard } from "../voice-note-card/VoiceNoteCard";
+import { useTheme } from "../../context/ThemeContext";
 
 interface FeedItemProps {
 	item: {
@@ -35,6 +36,7 @@ interface FeedItemProps {
 
 function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 	const router = useRouter();
+	const { colors, isDarkMode } = useTheme();
 
 	// Use proper expo-router navigation
 	const handleProfilePress = useCallback(() => {
@@ -60,14 +62,14 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 	}, [item.sharedBy, router]);
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
 			{/* Show repost attribution if needed */}
 			{item.isShared && item.sharedBy && (
 				<View style={styles.repostAttribution}>
-					<Text style={styles.repostText}>
+					<Text style={[styles.repostText, { color: colors.textSecondary }]}>
 						<Text style={styles.repostIcon}>↻</Text> Reposted by{" "}
 						<Text
-							style={styles.repostUsername}
+							style={[styles.repostUsername, { color: colors.tint }]}
 							onPress={handleSharerProfilePress}
 						>
 							@{item.sharedBy.username}
@@ -81,23 +83,23 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 					style={styles.userInfoContainer}
 					onPress={handleProfilePress}
 				>
-					<View style={styles.avatar}>
+					<View style={[styles.avatar, { backgroundColor: colors.tint }]}>
 						<Text style={styles.avatarText}>
 							{item.userName.charAt(0).toUpperCase()}
 						</Text>
 					</View>
 					<View style={styles.userInfo}>
-						<Text style={styles.userName}>
+						<Text style={[styles.userName, { color: colors.text }]}>
 							{item.displayName || item.userName}
 						</Text>
-						<Text style={styles.userId}>@{item.userName}</Text>
+						<Text style={[styles.userId, { color: colors.textSecondary }]}>@{item.userName}</Text>
 					</View>
 				</TouchableOpacity>
 
 				<View style={styles.timeContainer}>
-					<Text style={styles.timeText}>{item.timePosted}</Text>
+					<Text style={[styles.timeText, { color: colors.textSecondary }]}>{item.timePosted}</Text>
 					<TouchableOpacity style={styles.moreButton}>
-						<Feather name="more-horizontal" size={16} color="#666666" />
+						<Feather name="more-horizontal" size={16} color={colors.textSecondary} />
 					</TouchableOpacity>
 				</View>
 			</View>
@@ -116,10 +118,8 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 
 const styles = StyleSheet.create({
 	container: {
-		backgroundColor: "#FFFFFF",
 		marginBottom: 8,
 		borderBottomWidth: 1,
-		borderBottomColor: "#E1E1E1",
 	},
 	header: {
 		flexDirection: "row",
@@ -136,7 +136,6 @@ const styles = StyleSheet.create({
 		width: 40,
 		height: 40,
 		borderRadius: 20,
-		backgroundColor: "#6B2FBC",
 		justifyContent: "center",
 		alignItems: "center",
 		marginRight: 12,
@@ -152,11 +151,9 @@ const styles = StyleSheet.create({
 	userName: {
 		fontWeight: "bold",
 		fontSize: 15,
-		color: "#000000",
 	},
 	userId: {
 		fontSize: 13,
-		color: "#666666",
 	},
 	timeContainer: {
 		flexDirection: "row",
@@ -164,7 +161,6 @@ const styles = StyleSheet.create({
 	},
 	timeText: {
 		fontSize: 13,
-		color: "#666666",
 		marginRight: 8,
 	},
 	moreButton: {
@@ -181,14 +177,12 @@ const styles = StyleSheet.create({
 	},
 	repostText: {
 		fontSize: 13,
-		color: "#666666",
 	},
 	repostIcon: {
 		fontWeight: "bold",
 	},
 	repostUsername: {
 		fontWeight: "bold",
-		color: "#6B2FBC",
 	},
 });
 

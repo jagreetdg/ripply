@@ -34,6 +34,7 @@ import GoogleIcon from "../assets/icons/googleIcon";
 import AppleIcon from "../assets/icons/appleIcon";
 import { getCurrentUser } from "../services/api/authService";
 import { SocialAuthButtons } from "../components/auth/SocialAuthButtons";
+import Colors from "../constants/Colors";
 
 // Register for the auth callback
 WebBrowser.maybeCompleteAuthSession();
@@ -400,12 +401,12 @@ export default function LandingPage() {
 
 			<LinearGradient
 				colors={[
-					"#0F0524",
-					"#1A0B2E",
-					"#321A5B",
-					"#4B2A89",
-					"#6B2FBC",
-					"#8A4FD6",
+					"#0F0524", // Very dark purple
+					"#1A0B2E", // Dark purple
+					"#321A5B", // Medium dark purple
+					"#4B2A89", // Medium purple
+					"#6B2FBC", // Main purple
+					"#8A4FD6", // Accent purple
 				]}
 				start={{ x: 0, y: 0 }}
 				end={{ x: 0.5, y: 1 }}
@@ -564,7 +565,7 @@ const { width, height } = Dimensions.get("window");
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#0F0524", // Match the first color of the gradient
+		backgroundColor: "#0F0524", // Very dark purple background
 	},
 	gradient: {
 		flex: 1,
@@ -804,22 +805,15 @@ const styles = StyleSheet.create({
 		alignSelf: "center",
 		gap: 20,
 	},
-	socialButtonsContainer: {
+	socialButtonsRow: {
 		flexDirection: "row",
-		justifyContent: "space-between",
+		justifyContent: "center",
+		alignItems: "center",
 		width: "100%",
-		maxWidth: 500,
-		paddingHorizontal: 10,
+		marginBottom: 16,
+		gap: 20,
 	},
 	authButton: {
-		width: "45%",
-		height: 56,
-		minWidth: 130,
-		marginHorizontal: 0,
-		flex: 1,
-		maxWidth: "45%",
-	},
-	socialAuthButton: {
 		width: "45%",
 		height: 56,
 		minWidth: 130,
@@ -835,14 +829,6 @@ const styles = StyleSheet.create({
 	signupButton: {
 		borderColor: "#FFFFFF",
 		borderWidth: 2,
-	},
-	socialButtonsRow: {
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-		width: "100%",
-		marginBottom: 16,
-		gap: 20,
 	},
 	iconButton: {
 		width: 56,

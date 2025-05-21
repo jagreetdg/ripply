@@ -3,6 +3,8 @@ import { StyleSheet, View, Pressable, Text, Platform } from "react-native";
 import { FontAwesome, Feather } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
+import { useTheme } from "../../context/ThemeContext";
+import Colors from "../../constants/Colors";
 
 // Register for the auth callback
 WebBrowser.maybeCompleteAuthSession();
@@ -24,6 +26,8 @@ export default function SocialAuthButtons({
 	onAppleAuth,
 	onFacebookAuth,
 }: SocialAuthButtonsProps) {
+	const { colors } = useTheme();
+
 	// Handle Google authentication
 	const handleGoogleAuth = async () => {
 		try {
@@ -98,52 +102,78 @@ export default function SocialAuthButtons({
 	return (
 		<View style={styles.container}>
 			<View style={styles.dividerContainer}>
-				<View style={styles.divider} />
-				<Text style={styles.dividerText}>OR</Text>
-				<View style={styles.divider} />
+				<View style={[styles.divider, { backgroundColor: colors.border }]} />
+				<Text style={[styles.dividerText, { color: colors.textTertiary }]}>
+					OR
+				</Text>
+				<View style={[styles.divider, { backgroundColor: colors.border }]} />
 			</View>
 
 			<View style={styles.buttonsContainer}>
 				<Pressable
-					style={[styles.socialButton, styles.googleButton]}
+					style={[
+						styles.socialButton,
+						{
+							borderColor: colors.border,
+							backgroundColor: colors.card,
+						},
+					]}
 					onPress={handleGoogleAuth}
 				>
 					<Feather
 						name="chrome"
 						size={20}
-						color="#DB4437"
+						color={Colors.brand.googleRed}
 						style={styles.socialIcon}
 					/>
-					<Text style={styles.socialButtonText}>Continue with Google</Text>
+					<Text style={[styles.socialButtonText, { color: colors.text }]}>
+						Continue with Google
+					</Text>
 				</Pressable>
 
 				{/* Only show Apple login on iOS devices */}
 				{Platform.OS === "ios" && (
 					<Pressable
-						style={[styles.socialButton, styles.appleButton]}
+						style={[
+							styles.socialButton,
+							{
+								borderColor: colors.isDark ? colors.white : colors.black,
+								backgroundColor: colors.card,
+							},
+						]}
 						onPress={handleAppleAuth}
 					>
 						<FontAwesome
 							name="apple"
 							size={20}
-							color="#000"
+							color={colors.isDark ? colors.white : Colors.brand.appleBlack}
 							style={styles.socialIcon}
 						/>
-						<Text style={styles.socialButtonText}>Continue with Apple</Text>
+						<Text style={[styles.socialButtonText, { color: colors.text }]}>
+							Continue with Apple
+						</Text>
 					</Pressable>
 				)}
 
 				<Pressable
-					style={[styles.socialButton, styles.facebookButton]}
+					style={[
+						styles.socialButton,
+						{
+							borderColor: colors.border,
+							backgroundColor: colors.card,
+						},
+					]}
 					onPress={handleFacebookAuth}
 				>
 					<FontAwesome
 						name="facebook"
 						size={20}
-						color="#1877F2"
+						color={Colors.brand.facebookBlue}
 						style={styles.socialIcon}
 					/>
-					<Text style={styles.socialButtonText}>Continue with Facebook</Text>
+					<Text style={[styles.socialButtonText, { color: colors.text }]}>
+						Continue with Facebook
+					</Text>
 				</Pressable>
 			</View>
 		</View>
@@ -163,11 +193,9 @@ const styles = StyleSheet.create({
 	divider: {
 		flex: 1,
 		height: 1,
-		backgroundColor: "#E0E0E0",
 	},
 	dividerText: {
 		marginHorizontal: 10,
-		color: "#666",
 		fontSize: 14,
 	},
 	buttonsContainer: {
@@ -181,23 +209,10 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		borderWidth: 1,
 	},
-	googleButton: {
-		borderColor: "#E0E0E0",
-		backgroundColor: "#FFFFFF",
-	},
-	appleButton: {
-		borderColor: "#000",
-		backgroundColor: "#FFFFFF",
-	},
-	facebookButton: {
-		borderColor: "#E0E0E0",
-		backgroundColor: "#FFFFFF",
-	},
 	socialButtonText: {
 		fontSize: 16,
 		fontWeight: "500",
 		marginLeft: 10,
-		color: "#333",
 	},
 	socialIcon: {
 		width: 20,

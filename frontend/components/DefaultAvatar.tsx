@@ -1,12 +1,14 @@
 import React from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTheme } from "../context/ThemeContext";
 
 interface DefaultAvatarProps {
+	userId: string;
 	size?: number;
-	color?: string;
+	fontSize?: number;
+	style?: object;
 	onPress?: () => void;
-	userId?: string;
 }
 
 /**
@@ -14,28 +16,56 @@ interface DefaultAvatarProps {
  * Used across the app as a standard default profile picture
  */
 const DefaultAvatar = ({
-	size = 100,
-	color = "#6B2FBC",
-	onPress,
 	userId,
+	size = 50,
+	fontSize,
+	style,
+	onPress,
 }: DefaultAvatarProps) => {
+	const { colors } = useTheme();
+
+	const backgroundColor = colors.tint;
+	const iconColor = colors.white;
+
+	const styles = StyleSheet.create({
+		avatar: {
+			width: size,
+			height: size,
+			borderRadius: size / 2,
+			backgroundColor: backgroundColor,
+			justifyContent: "center",
+			alignItems: "center",
+			overflow: "hidden",
+		},
+		initials: {
+			color: iconColor,
+			fontSize: fontSize || size / 2.5,
+			fontWeight: "bold",
+		},
+	});
+
+	const getInitials = (id: string) => {
+		if (!id) return "?";
+		const parts = id.split(/[\s_-]+/);
+		let initials = "";
+		if (parts.length > 0 && parts[0]) {
+			initials += parts[0][0].toUpperCase();
+		}
+		return initials || "?";
+	};
+
+	const initials = getInitials(userId);
+
 	const avatarContent = (
-		<View
-			style={[
-				styles.container,
-				{
-					width: size,
-					height: size,
-					borderRadius: size / 2,
-					backgroundColor: color,
-				},
-			]}
-		>
-			<Feather name="user" size={size * 0.6} color="#fff" />
+		<View style={[styles.avatar, style]}>
+			{userId ? (
+				<Text style={styles.initials}>{initials}</Text>
+			) : (
+				<Feather name="user" size={size * 0.6} color={iconColor} />
+			)}
 		</View>
 	);
 
-	// If onPress is provided, wrap in TouchableOpacity
 	if (onPress) {
 		return (
 			<TouchableOpacity onPress={onPress} activeOpacity={0.7}>
@@ -46,13 +76,5 @@ const DefaultAvatar = ({
 
 	return avatarContent;
 };
-
-const styles = StyleSheet.create({
-	container: {
-		justifyContent: "center",
-		alignItems: "center",
-		overflow: "hidden",
-	},
-});
 
 export default DefaultAvatar;

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "expo-router";
 import { View, ActivityIndicator, Platform } from "react-native";
 import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Token storage key - must match the one used in UserContext
@@ -17,6 +18,7 @@ type RequireAuthProps = {
  */
 export default function RequireAuth({ children }: RequireAuthProps) {
 	const { user, loading } = useUser();
+	const { colors } = useTheme();
 	const router = useRouter();
 	const pathname = usePathname();
 	const [checkingStorage, setCheckingStorage] = useState(false);
@@ -24,7 +26,14 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 	const [hasStoredToken, setHasStoredToken] = useState(false);
 
 	// Public routes that don't require authentication
-	const publicRoutes = ["/", "/auth/login", "/auth/signup", "/auth/social-callback", "/auth/google-callback", "/auth/apple-callback"];
+	const publicRoutes = [
+		"/",
+		"/auth/login",
+		"/auth/signup",
+		"/auth/social-callback",
+		"/auth/google-callback",
+		"/auth/apple-callback",
+	];
 	const isPublicRoute = publicRoutes.includes(pathname);
 
 	console.log("[DEBUG] RequireAuth - Component rendered");
@@ -34,7 +43,7 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 	console.log("[DEBUG] RequireAuth - Auth loading state:", loading);
 	console.log("[DEBUG] RequireAuth - Checking storage:", checkingStorage);
 	console.log("[DEBUG] RequireAuth - Has stored token:", hasStoredToken);
-	
+
 	// For web only, log the current URL
 	if (Platform.OS === "web" && typeof window !== "undefined") {
 		console.log("[DEBUG] RequireAuth - Current URL:", window.location.href);
@@ -69,14 +78,20 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 	// Handle protected route access
 	useEffect(() => {
 		console.log("[DEBUG] RequireAuth - useEffect executed");
-		
+
 		// We should only redirect if:
 		// 1. Not loading the user state
-		// 2. Not checking AsyncStorage 
+		// 2. Not checking AsyncStorage
 		// 3. User is not authenticated
 		// 4. No token found in AsyncStorage
 		// 5. Not on a public route
-		if (!loading && !checkingStorage && !user && !hasStoredToken && !isPublicRoute) {
+		if (
+			!loading &&
+			!checkingStorage &&
+			!user &&
+			!hasStoredToken &&
+			!isPublicRoute
+		) {
 			console.log("[DEBUG] RequireAuth - Redirecting to landing page");
 			console.log("[DEBUG] RequireAuth - From pathname:", pathname);
 			router.replace("/");
@@ -87,14 +102,22 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 			console.log("[DEBUG] RequireAuth - Has stored token:", hasStoredToken);
 			console.log("[DEBUG] RequireAuth - Is public route:", isPublicRoute);
 		}
-	}, [user, loading, router, pathname, isPublicRoute, checkingStorage, hasStoredToken]);
+	}, [
+		user,
+		loading,
+		router,
+		pathname,
+		isPublicRoute,
+		checkingStorage,
+		hasStoredToken,
+	]);
 
 	// Show loading if we're loading user data or checking storage
 	if ((loading || checkingStorage) && !isPublicRoute) {
 		console.log("[DEBUG] RequireAuth - Showing loading indicator");
 		return (
 			<View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-				<ActivityIndicator size="large" color="#8A4FD6" />
+				<ActivityIndicator size="large" color={colors.tint} />
 			</View>
 		);
 	}

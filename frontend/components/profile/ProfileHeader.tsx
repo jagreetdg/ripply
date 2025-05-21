@@ -15,12 +15,14 @@ import {
 	ImageStyle,
 	Platform,
 	ActivityIndicator,
+	TouchableWithoutFeedback,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { getVoiceBio } from "../../services/api/voiceBioService";
 import DefaultAvatar from "../DefaultAvatar";
+import { useTheme } from "../../context/ThemeContext";
 
 interface ProfileHeaderProps {
 	userId: string;
@@ -53,6 +55,7 @@ interface Styles {
 	profileInfo: ViewStyle;
 	avatarContainer: ViewStyle;
 	avatar: ViewStyle;
+	avatarSmall: ViewStyle;
 	defaultAvatar: ViewStyle;
 	defaultAvatarText: TextStyle;
 	nameContainer: ViewStyle;
@@ -117,6 +120,7 @@ export function ProfileHeader({
 	username = "",
 }: ProfileHeaderProps) {
 	const router = useRouter();
+	const { colors, isDarkMode } = useTheme();
 	const [isVoiceBioPlaying, setIsVoiceBioPlaying] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [progress, setProgress] = useState(0);
@@ -134,6 +138,7 @@ export function ProfileHeader({
 	const [voiceBio, setVoiceBio] = useState<VoiceBio | null>(null);
 	const [loadingVoiceBio, setLoadingVoiceBio] = useState(false);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
+	const progressContainerRef = useRef<View>(null);
 
 	// Fetch voice bio data
 	useEffect(() => {
@@ -293,139 +298,490 @@ export function ProfileHeader({
 		setModalVisible(false);
 	};
 
+	// Dynamic styles based on theme
+	const styles = StyleSheet.create({
+		container: {
+			backgroundColor: colors.background,
+		},
+		coverPhoto: {
+			width: "100%",
+			height: 150,
+			justifyContent: "space-between",
+		},
+		topBar: {
+			flexDirection: "row",
+			justifyContent: "space-between",
+			paddingHorizontal: 16,
+			paddingTop: 16,
+		},
+		iconButton: {
+			width: 32,
+			height: 32,
+			borderRadius: 16,
+			backgroundColor: "rgba(0, 0, 0, 0.3)",
+			justifyContent: "center",
+			alignItems: "center",
+			zIndex: 10, // Ensure buttons are clickable
+		},
+		profileInfo: {
+			padding: 16,
+			alignItems: "center", // Center the profile info
+		},
+		avatarContainer: {
+			position: "absolute",
+			top: -45, // Half of avatar height to overlap the cover photo
+			alignSelf: "center", // Center the avatar
+			width: 90, // Slightly larger than avatar for padding
+			height: 90, // Keep it square
+			borderRadius: 45, // Half of width for perfect circle
+			backgroundColor: colors.background, // Solid background matching page
+			// Drop shadow for container
+			shadowColor: colors.shadow,
+			shadowOffset: { width: 0, height: 3 },
+			shadowOpacity: 0.25,
+			shadowRadius: 6,
+			elevation: 6,
+			// Center the avatar inside
+			alignItems: "center",
+			justifyContent: "center",
+			// Add a subtle ring/glow effect with border
+			borderWidth: 1,
+			borderColor: isDarkMode
+				? "rgba(255,255,255,0.15)" // Light border in dark mode
+				: "rgba(0,0,0,0.05)", // Dark border in light mode
+		},
+		avatar: {
+			width: 80, // Slightly smaller than container
+			height: 80,
+			borderRadius: 40, // Half of width for perfect circle
+			borderWidth: isDarkMode ? 1 : 0, // Thin inner border in dark mode for definition
+			borderColor: "rgba(255,255,255,0.2)", // Subtle white border
+		},
+		avatarSmall: {
+			width: 40,
+			height: 40,
+			borderRadius: 20,
+			borderWidth: isDarkMode ? 1 : 0, // Thin inner border in dark mode for definition
+			borderColor: "rgba(255,255,255,0.2)", // Subtle white border
+		},
+		defaultAvatar: {
+			width: 80,
+			height: 80,
+			borderRadius: 40,
+			backgroundColor: colors.tint,
+			justifyContent: "center",
+			alignItems: "center",
+		},
+		defaultAvatarText: {
+			color: "white",
+			fontSize: 32,
+			fontWeight: "bold",
+		},
+		nameContainer: {
+			marginTop: 48, // Space for the avatar
+			alignItems: "center", // Center name and bio
+		},
+		nameGroup: {
+			alignItems: "center",
+		},
+		nameRow: {
+			flexDirection: "row",
+			alignItems: "center",
+		},
+		name: {
+			fontSize: 18,
+			fontWeight: "bold",
+			marginRight: 4,
+			color: colors.text,
+		},
+		username: {
+			fontSize: 14,
+			color: colors.textSecondary,
+			marginTop: 2,
+		},
+		verifiedBadge: {
+			marginLeft: 4,
+			marginTop: 2,
+		},
+		biosContainer: {
+			marginTop: 12,
+			alignItems: "center", // Center the bio text
+		},
+		bio: {
+			fontSize: 14,
+			lineHeight: 20,
+			color: colors.text,
+			textAlign: "center", // Center align the bio text
+		},
+		voiceBioButton: {
+			height: 32,
+			borderRadius: 16,
+			backgroundColor: `${colors.tint}20`,
+			marginTop: 12,
+			paddingHorizontal: 8,
+			flexDirection: "row",
+			alignItems: "center",
+			width: "auto", // Auto width instead of fixed width
+			minWidth: 120, // Minimum width for the button
+		},
+		voiceBioButtonPlaying: {
+			backgroundColor: `${colors.tint}30`,
+		},
+		voiceBioContent: {
+			flex: 1,
+			flexDirection: "row",
+			alignItems: "center",
+			justifyContent: "space-between",
+			paddingRight: 8,
+		},
+		iconWrapper: {
+			width: 24,
+			height: 24,
+			borderRadius: 12,
+			backgroundColor: colors.tint,
+			justifyContent: "center",
+			alignItems: "center",
+		},
+		playIcon: {
+			color: "white",
+		},
+		voiceBioContainer: {
+			flex: 1,
+			flexDirection: "row",
+			alignItems: "center",
+			paddingLeft: 8,
+		},
+		voiceBioDuration: {
+			fontSize: 12,
+			color: colors.textSecondary,
+			marginLeft: 8,
+		},
+		progressContainer: {
+			flex: 1,
+			flexDirection: "row",
+			height: 4,
+			marginLeft: 8,
+			marginRight: 8,
+			alignItems: "center",
+		},
+		progressBackground: {
+			flex: 1,
+			height: 4,
+			backgroundColor: `${colors.tint}30`,
+			borderRadius: 2,
+		},
+		progressBar: {
+			height: 4,
+			backgroundColor: colors.tint,
+			borderRadius: 2,
+		},
+		collapseButton: {
+			width: 24,
+			height: 24,
+			justifyContent: "center",
+			alignItems: "center",
+		},
+		stats: {
+			flexDirection: "row",
+			justifyContent: "space-around",
+			paddingVertical: 16,
+			borderTopWidth: 1,
+			borderTopColor: colors.border,
+		},
+		statItem: {
+			alignItems: "center",
+		},
+		statNumber: {
+			fontSize: 16,
+			fontWeight: "bold",
+			color: colors.text,
+		},
+		statLabel: {
+			fontSize: 12,
+			color: colors.textSecondary,
+		},
+		statDivider: {
+			width: 1,
+			height: "60%",
+			alignSelf: "center",
+			backgroundColor: colors.border,
+		},
+		collapsedContainer: {
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+			flexDirection: "row",
+			padding: 16,
+			alignItems: "center",
+			justifyContent: "space-between",
+			// Add shadow for depth without solid background
+			shadowColor: colors.shadow,
+			shadowOffset: { width: 0, height: 2 },
+			shadowOpacity: isDarkMode ? 0.3 : 0.1,
+			shadowRadius: 3,
+			elevation: 3,
+			zIndex: 100, // Ensure it stays above content
+		},
+		collapsedContent: {
+			flexDirection: "row",
+			alignItems: "center",
+			flex: 1,
+			justifyContent: "center", // Center the content
+		},
+		collapsedInfo: {
+			marginLeft: 12,
+			alignItems: "center", // Center the text
+		},
+		avatarSmallContainer: {
+			width: 44, // Slightly larger than the avatar
+			height: 44,
+			borderRadius: 22,
+			backgroundColor: colors.background,
+			alignItems: "center",
+			justifyContent: "center",
+			// Subtle shadow
+			shadowColor: colors.shadow,
+			shadowOffset: { width: 0, height: 1 },
+			shadowOpacity: 0.1,
+			shadowRadius: 2,
+			elevation: 2,
+			// Subtle ring effect with border
+			borderWidth: 1,
+			borderColor: isDarkMode
+				? "rgba(255,255,255,0.15)" // Light border in dark mode
+				: "rgba(0,0,0,0.05)", // Dark border in light mode
+		},
+		collapsedRightSpace: {
+			width: 32, // Match the width of the back button
+		},
+		collapsedNameRow: {
+			flexDirection: "row",
+			alignItems: "center",
+			justifyContent: "center",
+		},
+		collapsedName: {
+			fontSize: 16,
+			fontWeight: "600",
+			marginRight: 4,
+			color: colors.text,
+		},
+		collapsedUsername: {
+			fontSize: 14,
+			color: colors.textSecondary,
+		},
+		collapsedPostCount: {
+			fontSize: 14,
+			color: colors.textSecondary,
+		},
+		modalOverlay: {
+			flex: 1,
+			backgroundColor: "rgba(0, 0, 0, 0.7)",
+			justifyContent: "center",
+			alignItems: "center",
+		},
+		modalContent: {
+			backgroundColor: colors.background,
+			borderRadius: 10,
+			padding: 20,
+			width: "80%",
+			alignItems: "center",
+		},
+		fullscreenImage: {
+			width: "100%",
+			height: undefined,
+			maxHeight: "80%",
+		},
+		actionButton: {
+			paddingVertical: 10,
+			paddingHorizontal: 20,
+			borderRadius: 20,
+			backgroundColor: "#6B2FBC",
+			marginVertical: 5,
+		},
+		actionButtonText: {
+			color: "white",
+			fontWeight: "bold",
+		},
+		actionButtons: {
+			flexDirection: "row",
+			justifyContent: "space-around",
+			width: "100%",
+			marginTop: 20,
+		},
+		fullscreenImageContainer: {
+			width: "90%",
+			maxHeight: "70%",
+			marginBottom: 20,
+			borderRadius: 10,
+			overflow: "hidden",
+		},
+		profileImageContainer: {
+			marginBottom: 20,
+		},
+		modalContainer: {
+			flex: 1,
+			justifyContent: "center",
+			alignItems: "center",
+			backgroundColor: "rgba(0, 0, 0, 0.7)",
+		},
+		noVoiceBioText: {
+			fontSize: 12,
+			color: colors.textSecondary,
+			marginLeft: 8,
+		},
+	});
+
 	if (isCollapsed) {
 		return (
-			<View style={styles.collapsedContainer}>
-				<View style={styles.collapsedContent}>
-					<TouchableOpacity
-						onPress={() => router.back()}
-						style={styles.iconButton}
-					>
-						<Feather name="arrow-left" size={24} color="#666666" />
-					</TouchableOpacity>
+			<BlurView
+				intensity={80}
+				tint={isDarkMode ? "dark" : "light"}
+				style={[
+					styles.collapsedContainer,
+					{
+						backgroundColor: isDarkMode
+							? "rgba(20, 20, 20, 0.7)"
+							: "rgba(255, 255, 255, 0.7)",
+						borderBottomColor: isDarkMode
+							? "rgba(255, 255, 255, 0.1)"
+							: "rgba(0, 0, 0, 0.1)",
+					},
+				]}
+			>
+				<TouchableOpacity
+					onPress={() => router.back()}
+					style={[styles.iconButton, { backgroundColor: "transparent" }]}
+				>
+					<Feather name="arrow-left" size={18} color={colors.text} />
+				</TouchableOpacity>
 
+				<View style={styles.collapsedContent}>
+					<View style={styles.avatarSmallContainer}>
+						{avatarUrl ? (
+							<TouchableOpacity
+								onPress={() => handlePhotoPress("profile")}
+								activeOpacity={0.8}
+							>
+								<Image
+									source={{ uri: avatarUrl }}
+									style={styles.avatarSmall}
+									resizeMode="cover"
+								/>
+							</TouchableOpacity>
+						) : (
+							<DefaultAvatar userId={userId} size={40} />
+						)}
+					</View>
 					<View style={styles.collapsedInfo}>
 						<View style={styles.collapsedNameRow}>
 							<Text style={styles.collapsedName}>{displayName}</Text>
-							<Text style={styles.collapsedUsername}>
-								@{username || userId}
-							</Text>
+							{isVerified && (
+								<MaterialIcons
+									name="verified"
+									size={16}
+									color={colors.tint}
+									style={styles.verifiedBadge}
+								/>
+							)}
 						</View>
-						<Text style={styles.collapsedPostCount}>
-							{postCount} voice notes
-						</Text>
+						<Text style={styles.collapsedUsername}>@{username}</Text>
 					</View>
-
-					<TouchableOpacity style={styles.iconButton}>
-						<Feather name="more-vertical" size={24} color="#666666" />
-					</TouchableOpacity>
 				</View>
-			</View>
+
+				{/* Removed post count from collapsed header as requested */}
+				<View style={styles.collapsedRightSpace} />
+			</BlurView>
 		);
 	}
 
 	return (
 		<View style={styles.container}>
-			<TouchableOpacity
-				activeOpacity={0.9}
-				onPress={() => handlePhotoPress("cover")}
-			>
-				<ImageBackground
-					source={{
-						uri: coverPhotoUrl || "https://picsum.photos/seed/ripply/1200/400",
-					}}
-					style={styles.coverPhoto}
-					onError={(e) => {
-						console.log("Cover photo load error:", e.nativeEvent.error);
-						// Fallback is handled by the || operator in the uri
-					}}
-					resizeMode="cover"
-					onLoad={(e) => {
-						try {
-							// Check if source exists and has width/height properties
-							if (
-								e.nativeEvent &&
-								e.nativeEvent.source &&
-								e.nativeEvent.source.width &&
-								e.nativeEvent.source.height
-							) {
-								const { width, height } = e.nativeEvent.source;
-								setImageAspectRatio(width / height);
-							} else {
-								// Default to 16:9 aspect ratio if dimensions are not available
-								setImageAspectRatio(16 / 9);
-							}
-						} catch (error) {
-							console.warn("Error getting image dimensions:", error);
-							// Use a default aspect ratio
-							setImageAspectRatio(16 / 9);
-						}
-					}}
+			{/* Cover photo - make it clickable */}
+			{coverPhotoUrl ? (
+				<TouchableOpacity
+					activeOpacity={0.9}
+					onPress={() => handlePhotoPress("cover")}
+				>
+					<ImageBackground
+						source={{ uri: coverPhotoUrl }}
+						style={styles.coverPhoto}
+						resizeMode="cover"
+					>
+						<View style={styles.topBar}>
+							<TouchableOpacity
+								onPress={() => router.back()}
+								style={styles.iconButton}
+							>
+								<Feather name="arrow-left" size={18} color="white" />
+							</TouchableOpacity>
+							{isOwnProfile && (
+								<TouchableOpacity
+									onPress={() => router.push("/profile/edit")}
+									style={styles.iconButton}
+								>
+									<Feather name="edit" size={18} color="white" />
+								</TouchableOpacity>
+							)}
+						</View>
+					</ImageBackground>
+				</TouchableOpacity>
+			) : (
+				<View
+					style={[
+						styles.coverPhoto,
+						{
+							backgroundColor: `${colors.tint}20`,
+							justifyContent: "space-between",
+						},
+					]}
 				>
 					<View style={styles.topBar}>
 						<TouchableOpacity
 							onPress={() => router.back()}
 							style={styles.iconButton}
 						>
-							<Feather name="arrow-left" size={24} color="white" />
-						</TouchableOpacity>
-						<TouchableOpacity style={styles.iconButton}>
-							<Feather name="more-vertical" size={24} color="white" />
-						</TouchableOpacity>
-					</View>
-				</ImageBackground>
-			</TouchableOpacity>
-
-			<View style={styles.profileInfo}>
-				<TouchableOpacity
-					activeOpacity={0.9}
-					onPress={() => handlePhotoPress("profile")}
-					style={styles.avatarContainer}
-				>
-					<View style={styles.avatar}>
-						{avatarUrl ? (
-							<Image
-								source={{ uri: avatarUrl }}
-								style={{
-									width: "100%",
-									height: "100%",
-									borderRadius: 50,
-								}}
-								onError={(e) => {
-									console.log("Avatar load error:", e.nativeEvent.error);
-									// We'll handle fallback in the component
-								}}
-								resizeMode="cover"
-								onLoad={(e) => {
-									try {
-										// Check if source exists and has width/height properties
-										if (
-											e.nativeEvent &&
-											e.nativeEvent.source &&
-											e.nativeEvent.source.width &&
-											e.nativeEvent.source.height
-										) {
-											const { width, height } = e.nativeEvent.source;
-											setImageAspectRatio(width / height);
-										} else {
-											// Default to 1:1 aspect ratio if dimensions are not available
-											setImageAspectRatio(1);
-										}
-									} catch (error) {
-										console.warn("Error getting image dimensions:", error);
-										// Use a default aspect ratio
-										setImageAspectRatio(1);
-									}
-								}}
+							<Feather
+								name="arrow-left"
+								size={18}
+								color={isDarkMode ? "white" : "black"}
 							/>
-						) : (
-							<View style={{ width: "100%", height: "100%", borderRadius: 50 }}>
-								<DefaultAvatar userId={userId} size={100} />
-							</View>
+						</TouchableOpacity>
+						{isOwnProfile && (
+							<TouchableOpacity
+								onPress={() => router.push("/profile/edit")}
+								style={styles.iconButton}
+							>
+								<Feather
+									name="edit"
+									size={18}
+									color={isDarkMode ? "white" : "black"}
+								/>
+							</TouchableOpacity>
 						)}
 					</View>
-				</TouchableOpacity>
+				</View>
+			)}
 
+			{/* Profile info */}
+			<View style={styles.profileInfo}>
+				{/* Avatar */}
+				<View style={styles.avatarContainer}>
+					{avatarUrl ? (
+						<TouchableOpacity
+							onPress={() => handlePhotoPress("profile")}
+							activeOpacity={0.8}
+						>
+							<Image
+								source={{ uri: avatarUrl }}
+								style={styles.avatar}
+								resizeMode="cover"
+							/>
+						</TouchableOpacity>
+					) : (
+						<DefaultAvatar userId={userId} size={80} />
+					)}
+				</View>
+
+				{/* Name and bio */}
 				<View style={styles.nameContainer}>
 					<View style={styles.nameGroup}>
 						<View style={styles.nameRow}>
@@ -433,519 +789,195 @@ export function ProfileHeader({
 							{isVerified && (
 								<MaterialIcons
 									name="verified"
-									size={24}
-									color="#6B2FBC"
+									size={16}
+									color={colors.tint}
 									style={styles.verifiedBadge}
 								/>
 							)}
 						</View>
-						<Text style={styles.username}>@{username || userId}</Text>
-						<View style={styles.voiceBioContainer}>
-							{loadingVoiceBio ? (
-								<View style={styles.voiceBioButton}>
-									<ActivityIndicator size="small" color="#6B2FBC" />
-								</View>
-							) : voiceBio ? (
-								<TouchableOpacity
-									style={[
-										styles.voiceBioButton,
-										isVoiceBioPlaying && styles.voiceBioButtonPlaying,
-									]}
-									onPress={handleVoiceBioPlayPause}
-									accessibilityLabel={
-										isVoiceBioPlaying ? "Pause voice bio" : "Play voice bio"
-									}
-									accessibilityRole="button"
-								>
-									<Animated.View
-										style={[styles.voiceBioContent, { width: buttonWidth }]}
-									>
-										<View style={styles.iconWrapper}>
-											<Feather
-												name={isVoiceBioPlaying ? "pause" : "play"}
-												size={16}
-												color="#6B2FBC"
-												style={styles.playIcon}
-											/>
-										</View>
-										{!isExpanded && (
-											<Text style={styles.voiceBioDuration}>
-												{formatDuration(voiceBio.duration)}
-											</Text>
-										)}
-										{isExpanded && (
-											<>
-												<View
-													style={styles.progressContainer}
-													onTouchStart={handleSeekStart}
-													onTouchEnd={handleSeekEnd}
-													onTouchMove={handleSeek}
-												>
-													<View style={styles.progressBackground} />
-													<View
-														style={[
-															styles.progressBar,
-															{ width: `${progress * 100}%` },
-														]}
-													/>
-												</View>
-												<TouchableOpacity
-													onPress={handleVoiceBioCollapse}
-													style={styles.collapseButton}
-												>
-													<Feather name="x" size={14} color="#666666" />
-												</TouchableOpacity>
-											</>
-										)}
-									</Animated.View>
-								</TouchableOpacity>
-							) : null}
-						</View>
+						<Text style={styles.username}>@{username}</Text>
 					</View>
-				</View>
 
-				<View style={styles.biosContainer}>
-					<Text style={styles.bio}>{bio || "No bio available"}</Text>
+					{/* Bio text */}
+					{bio && (
+						<View style={styles.biosContainer}>
+							<Text style={styles.bio}>{bio}</Text>
+						</View>
+					)}
+
+					{/* Voice bio button - fixed width */}
+					{loadingVoiceBio ? (
+						<View style={styles.voiceBioButton}>
+							<View style={styles.voiceBioContainer}>
+								<ActivityIndicator size="small" color={colors.tint} />
+								<Text style={styles.noVoiceBioText}>Loading...</Text>
+							</View>
+						</View>
+					) : voiceBio ? (
+						<Animated.View
+							style={[
+								styles.voiceBioButton,
+								isVoiceBioPlaying && styles.voiceBioButtonPlaying,
+								isExpanded ? { width: 200 } : { width: "auto" },
+							]}
+						>
+							{isExpanded ? (
+								<>
+									<View style={styles.voiceBioContent}>
+										<TouchableOpacity
+											onPress={() => {
+												setIsVoiceBioPlaying(!isVoiceBioPlaying);
+
+												if (!isVoiceBioPlaying) {
+													// Audio is not playing, start it
+													if (audioRef.current) {
+														audioRef.current.play();
+													}
+												} else {
+													// Audio is playing, pause it
+													if (audioRef.current) {
+														audioRef.current.pause();
+													}
+												}
+											}}
+										>
+											<View style={styles.iconWrapper}>
+												<Feather
+													name={isVoiceBioPlaying ? "pause" : "play"}
+													size={14}
+													style={styles.playIcon}
+												/>
+											</View>
+										</TouchableOpacity>
+
+										<TouchableWithoutFeedback onPress={handleSeek}>
+											<View
+												style={styles.progressContainer}
+												ref={progressContainerRef}
+											>
+												<View style={styles.progressBackground} />
+												<View
+													style={[
+														styles.progressBar,
+														{ width: `${progress * 100}%` },
+													]}
+												/>
+											</View>
+										</TouchableWithoutFeedback>
+
+										<TouchableOpacity
+											onPress={handleVoiceBioCollapse}
+											style={styles.collapseButton}
+										>
+											<Feather
+												name="chevron-left"
+												size={18}
+												color={colors.tint}
+											/>
+										</TouchableOpacity>
+									</View>
+									{Platform.OS === "web" && voiceBio && (
+										// @ts-ignore
+										<audio
+											ref={audioRef}
+											src={voiceBio.audio_url}
+											onTimeUpdate={() => {
+												if (audioRef.current && !isSeeking) {
+													const currentTime = audioRef.current.currentTime;
+													const duration = audioRef.current.duration;
+													setProgress(currentTime / duration);
+												}
+											}}
+											onEnded={handleVoiceBioCollapse}
+											style={{ display: "none" }}
+										/>
+									)}
+								</>
+							) : (
+								<TouchableOpacity
+									style={styles.voiceBioContainer}
+									onPress={() => {
+										setIsExpanded(true);
+									}}
+								>
+									<View style={styles.iconWrapper}>
+										<Feather
+											name="headphones"
+											size={14}
+											style={styles.playIcon}
+										/>
+									</View>
+									<Text style={styles.voiceBioDuration}>
+										{formatDuration(voiceBio.duration)}
+									</Text>
+								</TouchableOpacity>
+							)}
+						</Animated.View>
+					) : !loadingVoiceBio && isOwnProfile ? (
+						<TouchableOpacity
+							style={styles.voiceBioButton}
+							onPress={() => router.push("/profile/voice-bio")}
+						>
+							<View style={styles.voiceBioContainer}>
+								<Feather name="mic" size={14} color={colors.tint} />
+								<Text style={styles.voiceBioDuration}>Record voice bio</Text>
+							</View>
+						</TouchableOpacity>
+					) : null}
 				</View>
 			</View>
 
-			{/* Stats section removed - now handled in the profile screen */}
-
+			{/* Modal for fullscreen images */}
 			<Modal
-				animationType="none"
-				transparent={true}
 				visible={modalVisible}
+				transparent={true}
+				animationType="fade"
 				onRequestClose={() => setModalVisible(false)}
-				statusBarTranslucent={true}
 			>
-				<View style={{ flex: 1 }}>
-					<BlurView
-						intensity={Platform.OS === "ios" ? 25 : 40}
-						tint="dark"
-						style={StyleSheet.absoluteFillObject}
-					/>
-					<Pressable
-						style={[
-							StyleSheet.absoluteFill,
-							{
-								backgroundColor: "rgba(0, 0, 0, 0.3)",
-								justifyContent: "center",
-								alignItems: "center",
-							},
-						]}
-						onPress={() => setModalVisible(false)}
-					>
-						<View style={styles.modalContent}>
-							<Pressable
-								style={styles.fullscreenImageContainer}
-								onPress={(e) => e.stopPropagation()}
-							>
-								{activePhoto === "cover" ? (
-									<Image
-										source={{
-											uri:
-												coverPhotoUrl ||
-												"https://picsum.photos/seed/ripply/1200/400",
-										}}
-										style={[
-											styles.fullscreenImage,
-											{ aspectRatio: imageAspectRatio },
-										]}
-										onError={(e) => {
-											console.log(
-												"Cover photo load error:",
-												e.nativeEvent.error
-											);
-											// Fallback is handled by the || operator in the uri
-										}}
-										resizeMode="cover"
-										onLoad={(e) => {
-											try {
-												// Check if source exists and has width/height properties
-												if (
-													e.nativeEvent &&
-													e.nativeEvent.source &&
-													e.nativeEvent.source.width &&
-													e.nativeEvent.source.height
-												) {
-													const { width, height } = e.nativeEvent.source;
-													setImageAspectRatio(width / height);
-												} else {
-													// Default to 16:9 aspect ratio if dimensions are not available
-													setImageAspectRatio(16 / 9);
-												}
-											} catch (error) {
-												console.warn("Error getting image dimensions:", error);
-												// Use a default aspect ratio
-												setImageAspectRatio(16 / 9);
-											}
-										}}
-									/>
-								) : (
-									<View style={styles.profileImageContainer}>
-										{avatarUrl ? (
-											<Image
-												source={{ uri: avatarUrl }}
-												style={{
-													width: "100%",
-													height: "100%",
-													borderRadius: 12,
-												}}
-												resizeMode="cover"
-												onError={(e) => {
-													console.log(
-														"Avatar load error:",
-														e.nativeEvent.error
-													);
-													// We'll handle fallback in the component
-												}}
-											/>
-										) : (
-											<View style={{ width: 300, height: 300 }}>
-												<DefaultAvatar userId={userId} size={300} />
-											</View>
-										)}
-									</View>
-								)}
-							</Pressable>
-							<Pressable
-								style={styles.actionButtons}
-								onPress={(e) => e.stopPropagation()}
-							>
-								<TouchableOpacity
-									style={styles.actionButton}
-									onPress={handleEditPhoto}
-								>
-									<Feather name="edit-2" size={24} color="white" />
-								</TouchableOpacity>
-								<TouchableOpacity
-									style={[styles.actionButton, { backgroundColor: "#FF3B30" }]}
-									onPress={handleRemovePhoto}
-								>
-									<Feather name="trash-2" size={24} color="white" />
-								</TouchableOpacity>
-							</Pressable>
+				<View style={styles.modalContainer}>
+					{activePhoto === "profile" && avatarUrl && (
+						<View style={styles.fullscreenImageContainer}>
+							<Image
+								source={{ uri: avatarUrl }}
+								style={[
+									styles.fullscreenImage,
+									{ aspectRatio: imageAspectRatio },
+								]}
+								resizeMode="contain"
+							/>
 						</View>
-					</Pressable>
+					)}
+
+					{activePhoto === "cover" && coverPhotoUrl && (
+						<View style={styles.fullscreenImageContainer}>
+							<Image
+								source={{ uri: coverPhotoUrl }}
+								style={[
+									styles.fullscreenImage,
+									{ aspectRatio: imageAspectRatio },
+								]}
+								resizeMode="contain"
+							/>
+						</View>
+					)}
+
+					<View style={styles.actionButtons}>
+						<TouchableOpacity
+							style={styles.actionButton}
+							onPress={handleEditPhoto}
+						>
+							<Feather name="edit" size={24} color="white" />
+						</TouchableOpacity>
+
+						<TouchableOpacity
+							style={styles.actionButton}
+							onPress={() => setModalVisible(false)}
+						>
+							<Feather name="x" size={24} color="white" />
+						</TouchableOpacity>
+					</View>
 				</View>
 			</Modal>
 		</View>
 	);
 }
-
-const styles = StyleSheet.create<Styles>({
-	container: {
-		backgroundColor: "#FFFFFF",
-	},
-	coverPhoto: {
-		height: 120,
-		justifyContent: "flex-start",
-	},
-	topBar: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		paddingHorizontal: 16,
-		paddingTop: Platform.OS === "ios" ? 12 : 12,
-	},
-	iconButton: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: "rgba(0, 0, 0, 0.3)",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	profileInfo: {
-		alignItems: "center",
-		paddingHorizontal: 16,
-		paddingBottom: 8,
-		marginTop: -40,
-	},
-	avatarContainer: {
-		padding: 3,
-		backgroundColor: "#FFFFFF",
-		borderRadius: 54,
-		marginBottom: 4,
-	},
-	avatar: {
-		width: 100,
-		height: 100,
-		borderRadius: 50,
-		backgroundColor: "#E1E1E1",
-		overflow: "hidden",
-		position: "relative",
-	},
-	defaultAvatar: {
-		width: 80, // Default size, will be overridden by inline styles
-		height: 80, // Default size, will be overridden by inline styles
-		backgroundColor: "#6B2FBC",
-		justifyContent: "center",
-		alignItems: "center",
-		borderRadius: 40, // Default, will be overridden
-		alignSelf: "center", // Ensure it's centered within its container
-		overflow: "hidden", // Match the regular avatar overflow property
-		position: "absolute", // Position it absolutely to fill the container
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-	},
-	defaultAvatarText: {
-		color: "white",
-		fontSize: 40, // Default size, will be overridden by inline styles
-		fontWeight: "bold",
-	},
-	nameContainer: {
-		alignItems: "center",
-		marginTop: 4,
-		marginBottom: 4,
-	},
-	nameGroup: {
-		alignItems: "center",
-		gap: 2,
-	},
-	nameRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		marginBottom: 0,
-	},
-	name: {
-		fontSize: 22,
-		fontWeight: "bold",
-		color: "#000000",
-	},
-	username: {
-		fontSize: 15,
-		color: "#666666",
-		lineHeight: 18,
-		textAlign: "center",
-		marginBottom: 2,
-	},
-	verifiedBadge: {
-		marginLeft: 6,
-		marginTop: 1,
-	},
-	biosContainer: {
-		alignItems: "center",
-		width: "100%",
-		marginBottom: 8,
-		paddingHorizontal: 12,
-	},
-	bio: {
-		color: "#666666",
-		fontSize: 14,
-		lineHeight: 18,
-		textAlign: "center",
-	},
-	voiceBioContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 8,
-		marginTop: 6,
-	},
-	voiceBioButton: {
-		backgroundColor: "rgba(107, 47, 188, 0.1)",
-		borderRadius: 16,
-		height: 32,
-		justifyContent: "center",
-		alignItems: "flex-start",
-		borderWidth: 1,
-		borderColor: "rgba(107, 47, 188, 0.2)",
-		padding: 0,
-		overflow: "hidden",
-		marginTop: 6,
-	},
-	voiceBioButtonPlaying: {
-		backgroundColor: "rgba(107, 47, 188, 0.15)",
-		borderColor: "rgba(107, 47, 188, 0.3)",
-	},
-	voiceBioContent: {
-		flexDirection: "row",
-		alignItems: "center",
-		height: "100%",
-		minWidth: 80,
-	},
-	iconWrapper: {
-		width: 32,
-		height: 32,
-		justifyContent: "center",
-		alignItems: "center",
-		position: "relative",
-	},
-	playIcon: {
-		marginLeft: 10,
-	},
-	progressContainer: {
-		flex: 1,
-		height: 4,
-		marginHorizontal: 12,
-		borderRadius: 2,
-		overflow: "hidden",
-		backgroundColor: "rgba(107, 47, 188, 0.1)",
-	},
-	progressBackground: {
-		position: "absolute",
-		width: "100%",
-		height: "100%",
-		backgroundColor: "rgba(107, 47, 188, 0.1)",
-	},
-	progressBar: {
-		height: "100%",
-		backgroundColor: "#6B2FBC",
-		borderRadius: 2,
-	},
-	collapseButton: {
-		width: 24,
-		height: 24,
-		justifyContent: "center",
-		alignItems: "center",
-		marginRight: 4,
-	},
-	stats: {
-		flexDirection: "row",
-		justifyContent: "space-evenly",
-		alignItems: "center",
-		paddingVertical: 12,
-		borderTopWidth: 1,
-		borderTopColor: "#E1E1E1",
-		paddingHorizontal: 16,
-	},
-	statItem: {
-		alignItems: "center",
-		width: "30%",
-	},
-	statNumber: {
-		fontSize: 18,
-		fontWeight: "bold",
-		marginBottom: 4,
-	},
-	statLabel: {
-		color: "#666666",
-	},
-	statDivider: {
-		width: 1,
-		height: 30,
-		backgroundColor: "#E1E1E1",
-		marginHorizontal: 8,
-	},
-	collapsedContainer: {
-		backgroundColor: "#FFFFFF",
-		height: 60,
-		justifyContent: "center",
-	},
-	collapsedContent: {
-		flexDirection: "row",
-		alignItems: "center",
-		paddingHorizontal: 16,
-		gap: 16,
-	},
-	collapsedInfo: {
-		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	collapsedNameRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 8,
-		marginBottom: 2,
-	},
-	collapsedName: {
-		fontSize: 16,
-		fontWeight: "bold",
-		color: "#000000",
-	},
-	collapsedUsername: {
-		fontSize: 14,
-		color: "#666666",
-	},
-	collapsedPostCount: {
-		fontSize: 12,
-		color: "#666666",
-	},
-	voiceBioDuration: {
-		fontSize: 15,
-		color: "#666666",
-		marginLeft: 2,
-		marginRight: 5,
-		marginBottom: 2,
-	},
-	modalContainer: {
-		flex: 1,
-		backgroundColor: "transparent",
-	},
-	modalOverlay: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	modalContent: {
-		width: "100%",
-		height: "100%",
-		justifyContent: "center",
-		alignItems: "center",
-		paddingHorizontal: 20,
-		backgroundColor: "rgba(0, 0, 0, 0.75)", // Darker background for better contrast
-	},
-	fullscreenImageContainer: {
-		width: "80%", // Reduced from 100% to make it smaller
-		maxWidth: 500, // Maximum width to prevent it from being too large
-		backgroundColor: "transparent", // Changed from #E1E1E1 to transparent
-		borderRadius: 12,
-		overflow: "hidden",
-	},
-	fullscreenImage: {
-		width: "100%",
-		height: undefined,
-		// No default aspectRatio - will be set dynamically
-	},
-	profileImageContainer: {
-		width: "70%", // Reduced from 100% to make it smaller
-		maxWidth: 300, // Maximum width for profile image
-		aspectRatio: 1,
-		backgroundColor: "transparent", // Changed from #E1E1E1 to transparent
-		borderRadius: 12,
-		overflow: "hidden",
-		alignSelf: "center",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	actionButtons: {
-		position: "absolute",
-		bottom: 50,
-		left: 0,
-		right: 0,
-		flexDirection: "row",
-		justifyContent: "center",
-		gap: 16,
-		paddingHorizontal: 16,
-	},
-	actionButton: {
-		backgroundColor: "#6B2FBC",
-		width: 50,
-		height: 50,
-		borderRadius: 25,
-		justifyContent: "center",
-		alignItems: "center",
-		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.25,
-		shadowRadius: 3.84,
-		elevation: 5,
-	},
-	actionButtonText: {
-		color: "white",
-		fontSize: 16,
-		fontWeight: "600",
-	},
-	noVoiceBioText: {
-		fontSize: 14,
-		color: "#666666",
-		marginTop: 6,
-	},
-});
