@@ -1,12 +1,16 @@
 import React from "react";
-import { Tabs, useRouter } from "expo-router";
+import { useRouter, Slot, usePathname } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { Pressable } from "react-native";
+import { TouchableOpacity } from "react-native";
 
 import Colors from "@/constants/Colors";
 import { useTheme } from "@/context/ThemeContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { View, Platform, StyleSheet } from "react-native";
+
+// Define tab bar height constant
+const TAB_BAR_HEIGHT = 50;
 
 function TabBarIcon(props: {
 	name: React.ComponentProps<typeof Feather>["name"];
@@ -22,9 +26,28 @@ function TabBarIcon(props: {
 export default function TabLayout() {
 	const router = useRouter();
 	const { colors } = useTheme(); // Get current theme colors
+	const insets = useSafeAreaInsets();
+	const pathname = usePathname();
+
+	// Check if we're on an auth screen to hide the tab bar
+	const isAuthScreen = pathname?.startsWith("/auth");
+
+	// Function to determine if a tab is active
+	const isActive = (path: string) => {
+		if (path === "/home") {
+			// Special case for home tab - also check if we're at root
+			return pathname === "/home" || pathname === "/";
+		}
+		return pathname === path || pathname?.startsWith(path);
+	};
+
+	// Function to navigate to a tab
+	const navigateToTab = (path: string) => {
+		router.push(path);
+	};
 
 	return (
-		// Wrap the Tabs with a container View to ensure clean background
+		// Wrap with a container View to ensure clean background
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			{/* This View blocks any background elements from showing through */}
 			<View
@@ -34,52 +57,71 @@ export default function TabLayout() {
 				]}
 			/>
 
-			<Tabs
-				screenOptions={{
-					tabBarActiveTintColor: colors.tint,
-					tabBarInactiveTintColor: colors.tabIconDefault,
-					tabBarStyle: {
-						borderTopColor: colors.border,
-						backgroundColor: colors.card,
-						...Platform.select({
-							ios: { paddingBottom: 0 },
-							android: { paddingBottom: 0 },
-							default: {},
-						}),
-					},
-					tabBarShowLabel: false,
-					tabBarItemStyle: {
-						alignItems: "center",
-						justifyContent: "center",
-					},
-					// Disable the static render of the header on web
-					// to prevent a hydration error in React Navigation v6.
-					headerShown: false,
-				}}
+			{/* Always render the main screen content using Slot */}
+			<View
+				style={[
+					styles.contentContainer,
+					// Only add padding if not on auth screen
+					!isAuthScreen && { paddingBottom: TAB_BAR_HEIGHT + insets.bottom },
+				]}
 			>
-				<Tabs.Screen
-					name="home"
-					options={{
-						tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
-					}}
-				/>
-				<Tabs.Screen
-					name="search"
-					options={{
-						tabBarIcon: ({ color }) => (
-							<TabBarIcon name="search" color={color} />
-						),
-					}}
-				/>
-				<Tabs.Screen
-					name="settings"
-					options={{
-						tabBarIcon: ({ color }) => (
-							<TabBarIcon name="settings" color={color} />
-						),
-					}}
-				/>
-			</Tabs>
+				<Slot />
+			</View>
+
+			{/* Custom Tab Bar - only render when not on auth screens */}
+			{!isAuthScreen && (
+				<View
+					style={[
+						styles.tabBarContainer,
+						{
+							paddingBottom: insets.bottom,
+							backgroundColor: colors.card,
+							borderTopColor: colors.border,
+							borderTopWidth: 1,
+							height: TAB_BAR_HEIGHT + insets.bottom,
+						},
+					]}
+				>
+					<View style={styles.tabBar}>
+						{/* Home Tab */}
+						<TouchableOpacity
+							style={styles.tabButton}
+							onPress={() => navigateToTab("/home")}
+						>
+							<TabBarIcon
+								name="home"
+								color={isActive("/home") ? colors.tint : colors.tabIconDefault}
+							/>
+						</TouchableOpacity>
+
+						{/* Search Tab */}
+						<TouchableOpacity
+							style={styles.tabButton}
+							onPress={() => navigateToTab("/search")}
+						>
+							<TabBarIcon
+								name="search"
+								color={
+									isActive("/search") ? colors.tint : colors.tabIconDefault
+								}
+							/>
+						</TouchableOpacity>
+
+						{/* Settings Tab */}
+						<TouchableOpacity
+							style={styles.tabButton}
+							onPress={() => navigateToTab("/settings")}
+						>
+							<TabBarIcon
+								name="settings"
+								color={
+									isActive("/settings") ? colors.tint : colors.tabIconDefault
+								}
+							/>
+						</TouchableOpacity>
+					</View>
+				</View>
+			)}
 		</View>
 	);
 }
@@ -90,13 +132,33 @@ const styles = StyleSheet.create({
 		flex: 1,
 		position: "relative",
 	},
+	contentContainer: {
+		flex: 1,
+	},
+	tabBarContainer: {
+		position: "absolute",
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+	tabBar: {
+		flexDirection: "row",
+		justifyContent: "space-around",
+		alignItems: "center",
+		height: TAB_BAR_HEIGHT,
+	},
+	tabButton: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		height: TAB_BAR_HEIGHT,
+	},
 	backgroundBlocker: {
 		position: "absolute",
 		top: 0,
 		left: 0,
 		right: 0,
 		bottom: 0,
-		// backgroundColor: "#FFF", // Removing this hardcoded color
 		zIndex: -1, // Place behind content but above any unwanted background elements
 	},
 });

@@ -7,6 +7,7 @@ import { UserProvider } from "../context/UserContext";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import RequireAuth from "../components/auth/RequireAuth";
 import { View } from "react-native";
+import TabLayout from "./(tabs)/_layout";
 
 export {
 	// Catch any errors thrown by the Layout component.
