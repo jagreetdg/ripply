@@ -112,8 +112,14 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 		hasStoredToken,
 	]);
 
-	// Show loading if we're loading user data or checking storage
-	if ((loading || checkingStorage) && !isPublicRoute) {
+	// Only show loading if:
+	// 1. We're loading user data or checking storage
+	// 2. We're not on a public route
+	// 3. We don't already have a user or token
+	const shouldShowLoading =
+		(loading || checkingStorage) && !isPublicRoute && !user && !hasStoredToken;
+
+	if (shouldShowLoading) {
 		console.log("[DEBUG] RequireAuth - Showing loading indicator");
 		return (
 			<View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>

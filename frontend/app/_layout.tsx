@@ -48,6 +48,19 @@ export default function RootLayout() {
 		}
 
 		prepare();
+
+		// Add a safety timeout to hide splash screen even if fonts aren't loaded
+		const timeoutId = setTimeout(() => {
+			if (!appIsReady) {
+				console.log("Timeout reached, hiding splash screen anyway");
+				SplashScreen.hideAsync().catch((e) =>
+					console.warn("Error hiding splash:", e)
+				);
+				setAppIsReady(true);
+			}
+		}, 3000); // 3 seconds max wait time
+
+		return () => clearTimeout(timeoutId);
 	}, [fontsLoaded]);
 
 	// If the app isn't ready, show nothing (splash screen will be visible)

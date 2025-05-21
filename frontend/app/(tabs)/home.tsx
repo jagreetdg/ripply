@@ -63,6 +63,7 @@ export default function HomeScreen() {
 	const [runningDiagnostics, setRunningDiagnostics] = useState(false);
 	const { colors, isDarkMode } = useTheme();
 	const pathname = usePathname();
+	const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
 	// Only show FAB in home tab
 	const showFAB = pathname === "/home";
@@ -90,7 +91,7 @@ export default function HomeScreen() {
 	const handleRefresh = async () => {
 		setRefreshing(true);
 		try {
-			await fetchVoiceNotes();
+			await fetchVoiceNotes(true);
 		} finally {
 			setRefreshing(false);
 		}
@@ -239,144 +240,154 @@ export default function HomeScreen() {
 	}, [currentUser]);
 
 	// Fetch voice notes from the API
-	const fetchVoiceNotes = useCallback(async () => {
-		setLoading(true);
-		try {
-			let data;
-
-			// If diagnostics were run, log the findings
-			if (diagnosticData) {
-				console.log("[DIAGNOSTIC] Fetching with diagnostic data available");
-				console.log(
-					"[DIAGNOSTIC] Following count:",
-					diagnosticData.summary.followingCount
-				);
-				console.log(
-					"[DIAGNOSTIC] Should have empty feed:",
-					diagnosticData.summary.shouldHaveEmptyFeed
-				);
+	const fetchVoiceNotes = useCallback(
+		async (isRefreshing = false) => {
+			// Only show loading indicator on initial load, not on subsequent refreshes
+			if (!initialLoadComplete && !isRefreshing) {
+				setLoading(true);
 			}
 
-			// Check if user is logged in
-			if (currentUser?.id) {
-				// Fetch personalized feed for logged in users
-				console.log("Fetching personalized feed for user:", currentUser.id);
-				data = await getPersonalizedFeed(currentUser.id);
-				console.log(
-					"Personalized feed data:",
-					Array.isArray(data) ? `Array with ${data.length} items` : typeof data,
-					data && data.length > 0
-						? `First item user_id: ${data[0].user_id}`
-						: "Empty array"
-				);
-			} else {
-				// Fallback to all voice notes if user is not logged in
-				console.log("No user logged in, fetching general feed");
-				data = await getVoiceNotes();
-			}
+			try {
+				let data;
 
-			if (!Array.isArray(data)) {
-				console.error("Expected array of voice notes but got:", typeof data);
-				setFeedItems([]);
-				setError("Invalid data format received from server");
-				return;
-			}
-
-			// If we have diagnostic data, validate if the posts are from followed users
-			if (diagnosticData && currentUser?.id && data.length > 0) {
-				const followingIds =
-					diagnosticData.followData?.follows?.map(
-						(f: { id: string }) => f.id
-					) || [];
-
-				// Check if any posts are from users not followed
-				const unfollowedPosts = data.filter((item) => {
-					// For regular posts, check if the creator is followed
-					if (!item.is_shared) {
-						return !followingIds.includes(item.user_id);
-					}
-
-					// For shared posts, check if the sharer is followed
-					// If shared_by exists and has an id field, use that to check
-					if (item.shared_by && item.shared_by.id) {
-						return !followingIds.includes(item.shared_by.id);
-					}
-
-					// If we can't determine the sharer, treat as unfollowed
-					return true;
-				});
-
-				if (unfollowedPosts.length > 0) {
-					console.error(
-						"[DIAGNOSTIC] CRITICAL ERROR: Found posts from unfollowed users!",
-						unfollowedPosts.map((p) => ({
-							id: p.id,
-							user_id: p.user_id,
-							is_shared: p.is_shared,
-							shared_by_id: p.shared_by?.id,
-						}))
-					);
-				} else {
+				// If diagnostics were run, log the findings
+				if (diagnosticData) {
+					console.log("[DIAGNOSTIC] Fetching with diagnostic data available");
 					console.log(
-						"[DIAGNOSTIC] All posts are from followed users, as expected"
+						"[DIAGNOSTIC] Following count:",
+						diagnosticData.summary.followingCount
+					);
+					console.log(
+						"[DIAGNOSTIC] Should have empty feed:",
+						diagnosticData.summary.shouldHaveEmptyFeed
 					);
 				}
-			}
 
-			// Transform backend data format to match our frontend component expectations
-			const transformedData = data.map((item) => {
-				// Determine if this is a shared voice note (repost)
-				const isShared = !!item.is_shared;
+				// Check if user is logged in
+				if (currentUser?.id) {
+					// Fetch personalized feed for logged in users
+					console.log("Fetching personalized feed for user:", currentUser.id);
+					data = await getPersonalizedFeed(currentUser.id);
+					console.log(
+						"Personalized feed data:",
+						Array.isArray(data)
+							? `Array with ${data.length} items`
+							: typeof data,
+						data && data.length > 0
+							? `First item user_id: ${data[0].user_id}`
+							: "Empty array"
+					);
+				} else {
+					// Fallback to all voice notes if user is not logged in
+					console.log("No user logged in, fetching general feed");
+					data = await getVoiceNotes();
+				}
 
-				// Get sharer info if available
-				const sharerInfo =
-					isShared && item.shared_by
-						? {
-								id: item.shared_by.id,
-								username: item.shared_by.username || "",
-								displayName: item.shared_by.display_name || "User",
-								avatarUrl: item.shared_by.avatar_url,
-						  }
-						: null;
+				if (!Array.isArray(data)) {
+					console.error("Expected array of voice notes but got:", typeof data);
+					setFeedItems([]);
+					setError("Invalid data format received from server");
+					return;
+				}
 
-				return {
-					id: item.id,
-					userId: item.user_id,
-					displayName: item.users?.display_name || "User",
-					username: item.users?.username || "",
-					userAvatar: item.users?.avatar_url,
-					timePosted:
-						isShared && item.shared_at
-							? new Date(item.shared_at).toLocaleDateString()
-							: new Date(item.created_at).toLocaleDateString(),
-					isShared,
-					sharedBy: sharerInfo,
-					voiceNote: {
+				// If we have diagnostic data, validate if the posts are from followed users
+				if (diagnosticData && currentUser?.id && data.length > 0) {
+					const followingIds =
+						diagnosticData.followData?.follows?.map(
+							(f: { id: string }) => f.id
+						) || [];
+
+					// Check if any posts are from users not followed
+					const unfollowedPosts = data.filter((item) => {
+						// For regular posts, check if the creator is followed
+						if (!item.is_shared) {
+							return !followingIds.includes(item.user_id);
+						}
+
+						// For shared posts, check if the sharer is followed
+						// If shared_by exists and has an id field, use that to check
+						if (item.shared_by && item.shared_by.id) {
+							return !followingIds.includes(item.shared_by.id);
+						}
+
+						// If we can't determine the sharer, treat as unfollowed
+						return true;
+					});
+
+					if (unfollowedPosts.length > 0) {
+						console.error(
+							"[DIAGNOSTIC] CRITICAL ERROR: Found posts from unfollowed users!",
+							unfollowedPosts.map((p) => ({
+								id: p.id,
+								user_id: p.user_id,
+								is_shared: p.is_shared,
+								shared_by_id: p.shared_by?.id,
+							}))
+						);
+					} else {
+						console.log(
+							"[DIAGNOSTIC] All posts are from followed users, as expected"
+						);
+					}
+				}
+
+				// Transform backend data format to match our frontend component expectations
+				const transformedData = data.map((item) => {
+					// Determine if this is a shared voice note (repost)
+					const isShared = !!item.is_shared;
+
+					// Get sharer info if available
+					const sharerInfo =
+						isShared && item.shared_by
+							? {
+									id: item.shared_by.id,
+									username: item.shared_by.username || "",
+									displayName: item.shared_by.display_name || "User",
+									avatarUrl: item.shared_by.avatar_url,
+							  }
+							: null;
+
+					return {
 						id: item.id,
-						duration: item.duration,
-						title: item.title,
-						likes: item.likes?.[0]?.count || 0,
-						comments: item.comments?.[0]?.count || 0,
-						plays: item.plays?.[0]?.count || 0,
-						shares: item.shares || 0,
-						backgroundImage: item.background_image,
-						tags: item.tags || [],
-						// Include the users object from the API response
-						users: item.users,
-					},
-				};
-			});
+						userId: item.user_id,
+						displayName: item.users?.display_name || "User",
+						username: item.users?.username || "",
+						userAvatar: item.users?.avatar_url,
+						timePosted:
+							isShared && item.shared_at
+								? new Date(item.shared_at).toLocaleDateString()
+								: new Date(item.created_at).toLocaleDateString(),
+						isShared,
+						sharedBy: sharerInfo,
+						voiceNote: {
+							id: item.id,
+							duration: item.duration,
+							title: item.title,
+							likes: item.likes?.[0]?.count || 0,
+							comments: item.comments?.[0]?.count || 0,
+							plays: item.plays?.[0]?.count || 0,
+							shares: item.shares || 0,
+							backgroundImage: item.background_image,
+							tags: item.tags || [],
+							// Include the users object from the API response
+							users: item.users,
+						},
+					};
+				});
 
-			setFeedItems(transformedData);
-			setError(null);
-		} catch (err) {
-			console.error("Error fetching voice notes:", err);
-			setError("Failed to load voice notes. Please try again.");
-		} finally {
-			setLoading(false);
-			setRefreshing(false);
-		}
-	}, [currentUser, diagnosticData]);
+				setFeedItems(transformedData);
+				setError(null);
+			} catch (err) {
+				console.error("Error fetching voice notes:", err);
+				setError("Failed to load voice notes. Please try again.");
+			} finally {
+				setLoading(false);
+				setRefreshing(false);
+				setInitialLoadComplete(true);
+			}
+		},
+		[currentUser, diagnosticData, initialLoadComplete]
+	);
 
 	// Initial data fetch
 	useEffect(() => {

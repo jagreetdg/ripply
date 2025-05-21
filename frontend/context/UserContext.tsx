@@ -60,6 +60,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 			newUser ? `user:${newUser.id}` : "null"
 		);
 		setUserState(newUser);
+		// When we explicitly set a user, we're no longer loading
+		setLoading(false);
 	};
 
 	// Function to refresh user data
@@ -67,6 +69,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 		setLoading(true);
 		setError(null);
 		console.log("[DEBUG] UserContext - refreshUser started");
+
+		// Set a timeout to avoid loading state hanging indefinitely
+		const loadingTimeout = setTimeout(() => {
+			console.log(
+				"[DEBUG] UserContext - Loading timeout reached, forcing loading to false"
+			);
+			setLoading(false);
+		}, 3000); // 3 seconds max loading time
+
 		try {
 			// First try to get user from local storage
 			const userData = await getCurrentUser();
@@ -109,6 +120,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 			);
 			setUser(null);
 		} finally {
+			clearTimeout(loadingTimeout);
 			setLoading(false);
 			console.log(
 				"[DEBUG] UserContext - refreshUser completed, loading set to false"
@@ -133,6 +145,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 	// Load user data on initial mount
 	useEffect(() => {
 		refreshUser();
+
+		// Set a fallback timeout to ensure loading state doesn't get stuck
+		const fallbackTimeout = setTimeout(() => {
+			if (loading) {
+				console.log(
+					"[DEBUG] UserContext - Fallback timeout reached, forcing loading to false"
+				);
+				setLoading(false);
+			}
+		}, 5000); // 5 seconds max loading time for initial load
+
+		return () => clearTimeout(fallbackTimeout);
 	}, []);
 
 	return (
