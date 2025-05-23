@@ -382,7 +382,6 @@ export default function SearchScreen() {
 		return (
 			<View style={styles.postItemContainer}>
 				<VoiceNoteCard
-					key={`${item.id}-${searchQuery}`} // Force re-render on search query change
 					voiceNote={voiceNoteData}
 					userId={voiceNoteData.user_id}
 					displayName={userData.display_name}
