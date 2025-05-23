@@ -152,3 +152,79 @@ export const searchVoiceNotes = async (term, tagOnly = false) => {
 		return [];
 	}
 };
+
+/**
+ * Get discovery posts for a user (personalized "For You" feed)
+ * @param {string} userId - Current user ID
+ * @returns {Promise<Array>} - List of discovery posts
+ */
+export const getDiscoveryPosts = async (userId) => {
+	try {
+		if (!userId) {
+			console.log("No user ID provided for discovery posts");
+			return [];
+		}
+
+		console.log(`Fetching discovery posts for user: ${userId}`);
+
+		// API call to the backend
+		const response = await apiRequest(
+			`${ENDPOINTS.VOICE_NOTES}/discovery/posts/${userId}`
+		);
+
+		console.log("Discovery posts API response:", response);
+
+		// Check if we got a valid response
+		if (response && (response.data || Array.isArray(response))) {
+			const postsData = response.data || response;
+			console.log(
+				`Found ${postsData.length} discovery posts for user "${userId}"`
+			);
+			return postsData;
+		}
+
+		console.log(`No discovery posts found for user "${userId}"`);
+		return [];
+	} catch (error) {
+		console.error("Error fetching discovery posts:", error);
+		return [];
+	}
+};
+
+/**
+ * Get trending users for discovery
+ * @param {string} userId - Current user ID
+ * @returns {Promise<Array>} - List of trending users
+ */
+export const getTrendingUsers = async (userId) => {
+	try {
+		if (!userId) {
+			console.log("No user ID provided for trending users");
+			return [];
+		}
+
+		console.log(`Fetching trending users for user: ${userId}`);
+
+		// API call to the backend
+		const response = await apiRequest(
+			`${ENDPOINTS.VOICE_NOTES}/discovery/users/${userId}`
+		);
+
+		console.log("Trending users API response:", response);
+
+		// Check if we got a valid response
+		if (response && (response.data || Array.isArray(response))) {
+			const usersData = response.data || response;
+			console.log(
+				`Found ${usersData.length} trending users for user "${userId}"`
+			);
+			return usersData;
+		}
+
+		console.log(`No trending users found for user "${userId}"`);
+		return [];
+	} catch (error) {
+		console.error("Error fetching trending users:", error);
+		return [];
+	}
+};

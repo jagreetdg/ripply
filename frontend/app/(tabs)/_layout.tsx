@@ -100,7 +100,7 @@ export default function TabLayout() {
 							onPress={() => navigateToTab("/search")}
 						>
 							<TabBarIcon
-								name="search"
+								name="compass"
 								color={
 									isActive("/search") ? colors.tint : colors.tabIconDefault
 								}

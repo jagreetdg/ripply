@@ -748,12 +748,10 @@ router.post("/:voiceNoteId/share", async (req, res) => {
 		if (selectError) {
 			// An actual error, not just "not found"
 			console.error("[ERROR] Error checking for existing share:", selectError);
-			return res
-				.status(500)
-				.json({
-					message: "Error checking share status",
-					error: selectError.message,
-				});
+			return res.status(500).json({
+				message: "Error checking share status",
+				error: selectError.message,
+			});
 		}
 
 		let isNowShared = false;
@@ -767,12 +765,10 @@ router.post("/:voiceNoteId/share", async (req, res) => {
 
 			if (deleteError) {
 				console.error("[ERROR] Error deleting share:", deleteError);
-				return res
-					.status(500)
-					.json({
-						message: "Error unsharing voice note",
-						error: deleteError.message,
-					});
+				return res.status(500).json({
+					message: "Error unsharing voice note",
+					error: deleteError.message,
+				});
 			}
 			isNowShared = false;
 			console.log(`[DEBUG] User ${userId} unshared voice note ${voiceNoteId}`);
@@ -788,12 +784,10 @@ router.post("/:voiceNoteId/share", async (req, res) => {
 
 			if (insertError) {
 				console.error("[ERROR] Error inserting share:", insertError);
-				return res
-					.status(500)
-					.json({
-						message: "Error sharing voice note",
-						error: insertError.message,
-					});
+				return res.status(500).json({
+					message: "Error sharing voice note",
+					error: insertError.message,
+				});
 			}
 			isNowShared = true;
 			console.log(`[DEBUG] User ${userId} shared voice note ${voiceNoteId}`);
@@ -871,20 +865,16 @@ router.get("/:voiceNoteId/shares", async (req, res) => {
 			// Check if the table voice_note_shares doesn't exist (e.g., after a DB reset but before migration)
 			if (countError.code === "42P01") {
 				// undefined_table
-				return res
-					.status(500)
-					.json({
-						message:
-							"Shares table not found. Please ensure database migrations are complete.",
-						shareCount: 0,
-					});
-			}
-			return res
-				.status(500)
-				.json({
-					message: "Error fetching share count",
-					error: countError.message,
+				return res.status(500).json({
+					message:
+						"Shares table not found. Please ensure database migrations are complete.",
+					shareCount: 0,
 				});
+			}
+			return res.status(500).json({
+				message: "Error fetching share count",
+				error: countError.message,
+			});
 		}
 
 		console.log(`[DEBUG] Voice note ${voiceNoteId} has ${count || 0} shares`);
@@ -1223,6 +1213,290 @@ router.get("/diagnostic/feed/:userId", async (req, res) => {
 			message: "Error running feed trace",
 			error: error.message,
 		});
+	}
+});
+
+// Discovery endpoint for posts - personalized "For You" feed
+router.get("/discovery/posts/:userId", async (req, res) => {
+	try {
+		const { userId } = req.params;
+		const { page = 1, limit = 20 } = req.query;
+		const offset = (page - 1) * limit;
+
+		console.log(`[DEBUG] Fetching discovery posts for user: ${userId}`);
+
+		// Get user's interaction history to understand preferences
+		const { data: userInteractions, error: interactionsError } = await supabase
+			.from("voice_note_likes")
+			.select(
+				"voice_note_id, voice_notes!inner(tags:voice_note_tags(tag_name), user_id)"
+			)
+			.eq("user_id", userId)
+			.limit(50);
+
+		if (interactionsError) {
+			console.error(
+				"[ERROR] Error fetching user interactions:",
+				interactionsError
+			);
+		}
+
+		// Get tags from liked posts to understand user preferences
+		const preferredTags = [];
+		const likedCreators = [];
+
+		if (userInteractions && userInteractions.length > 0) {
+			userInteractions.forEach((interaction) => {
+				if (interaction.voice_notes?.tags) {
+					interaction.voice_notes.tags.forEach((tag) => {
+						preferredTags.push(tag.tag_name);
+					});
+				}
+				if (interaction.voice_notes?.user_id) {
+					likedCreators.push(interaction.voice_notes.user_id);
+				}
+			});
+		}
+
+		// Get users the current user follows to exclude from discovery
+		const { data: followingData, error: followingError } = await supabase
+			.from("follows")
+			.select("following_id")
+			.eq("follower_id", userId);
+
+		const followingIds = followingData
+			? followingData.map((f) => f.following_id)
+			: [];
+
+		// Build discovery query - posts from users not followed, with preference for liked tags/creators
+		let discoveryQuery = supabase
+			.from("voice_notes")
+			.select(
+				`
+				*,
+				users:user_id (id, username, display_name, avatar_url, is_verified),
+				likes:voice_note_likes (count),
+				comments:voice_note_comments (count),
+				plays:voice_note_plays (count),
+				tags:voice_note_tags (tag_name)
+			`
+			)
+			.neq("user_id", userId); // Don't show user's own posts
+
+		// Exclude posts from users already followed (to encourage discovery)
+		if (followingIds.length > 0) {
+			discoveryQuery = discoveryQuery.not(
+				"user_id",
+				"in",
+				`(${followingIds.join(",")})`
+			);
+		}
+
+		// Order by engagement and recency for discovery
+		discoveryQuery = discoveryQuery
+			.order("created_at", { ascending: false })
+			.range(offset, offset + parseInt(limit) - 1);
+
+		const { data: discoveryPosts, error: discoveryError } =
+			await discoveryQuery;
+
+		if (discoveryError) {
+			console.error("[ERROR] Error fetching discovery posts:", discoveryError);
+			throw discoveryError;
+		}
+
+		// Process and score posts based on user preferences
+		const processedPosts = discoveryPosts.map((post) => {
+			let score = 1; // Base score
+
+			// Boost score for posts with preferred tags
+			if (post.tags && preferredTags.length > 0) {
+				const postTags = post.tags.map((t) => t.tag_name);
+				const tagMatches = postTags.filter((tag) =>
+					preferredTags.includes(tag)
+				);
+				score += tagMatches.length * 2;
+			}
+
+			// Boost score for posts from creators user has liked before
+			if (likedCreators.includes(post.user_id)) {
+				score += 3;
+			}
+
+			// Boost score based on engagement
+			const likes = post.likes?.[0]?.count || 0;
+			const comments = post.comments?.[0]?.count || 0;
+			const plays = post.plays?.[0]?.count || 0;
+			score += likes * 0.3 + comments * 0.5 + plays * 0.1;
+
+			return {
+				...post,
+				discoveryScore: score,
+				tags: post.tags ? post.tags.map((t) => t.tag_name) : [],
+			};
+		});
+
+		// Sort by discovery score and return
+		const sortedPosts = processedPosts.sort(
+			(a, b) => b.discoveryScore - a.discoveryScore
+		);
+
+		console.log(
+			`[DEBUG] Returning ${sortedPosts.length} discovery posts for user ${userId}`
+		);
+		res.status(200).json(sortedPosts);
+	} catch (error) {
+		console.error("Error fetching discovery posts:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
+
+// Discovery endpoint for users - trending creators based on user preferences
+router.get("/discovery/users/:userId", async (req, res) => {
+	try {
+		const { userId } = req.params;
+		const { page = 1, limit = 20 } = req.query;
+		const offset = (page - 1) * limit;
+
+		console.log(`[DEBUG] Fetching discovery users for user: ${userId}`);
+
+		// Get users the current user already follows
+		const { data: followingData, error: followingError } = await supabase
+			.from("follows")
+			.select("following_id")
+			.eq("follower_id", userId);
+
+		const followingIds = followingData
+			? followingData.map((f) => f.following_id)
+			: [];
+
+		// Get user's interaction history to understand preferences
+		const { data: userInteractions, error: interactionsError } = await supabase
+			.from("voice_note_likes")
+			.select(
+				"voice_note_id, voice_notes!inner(tags:voice_note_tags(tag_name), user_id)"
+			)
+			.eq("user_id", userId)
+			.limit(50);
+
+		// Extract preferred tags and creators
+		const preferredTags = [];
+		const likedCreators = [];
+
+		if (userInteractions && userInteractions.length > 0) {
+			userInteractions.forEach((interaction) => {
+				if (interaction.voice_notes?.tags) {
+					interaction.voice_notes.tags.forEach((tag) => {
+						preferredTags.push(tag.tag_name);
+					});
+				}
+				if (interaction.voice_notes?.user_id) {
+					likedCreators.push(interaction.voice_notes.user_id);
+				}
+			});
+		}
+
+		// Get trending users based on recent activity and engagement
+		let usersQuery = supabase
+			.from("users")
+			.select(
+				`
+				*,
+				voice_notes!inner(
+					id,
+					created_at,
+					likes:voice_note_likes(count),
+					comments:voice_note_comments(count),
+					plays:voice_note_plays(count),
+					tags:voice_note_tags(tag_name)
+				)
+			`
+			)
+			.neq("id", userId); // Don't include the current user
+
+		// Exclude users already followed
+		if (followingIds.length > 0) {
+			usersQuery = usersQuery.not("id", "in", `(${followingIds.join(",")})`);
+		}
+
+		// Filter for users with recent activity (last 30 days)
+		const thirtyDaysAgo = new Date();
+		thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+		usersQuery = usersQuery
+			.gte("voice_notes.created_at", thirtyDaysAgo.toISOString())
+			.range(offset, offset + parseInt(limit) - 1);
+
+		const { data: trendingUsers, error: usersError } = await usersQuery;
+
+		if (usersError) {
+			console.error("[ERROR] Error fetching trending users:", usersError);
+			throw usersError;
+		}
+
+		// Process and score users based on preferences and activity
+		const processedUsers = trendingUsers.map((user) => {
+			let score = 1; // Base score
+
+			// Calculate engagement score from their voice notes
+			let totalLikes = 0;
+			let totalComments = 0;
+			let totalPlays = 0;
+			let recentPosts = 0;
+			let tagMatches = 0;
+
+			if (user.voice_notes && Array.isArray(user.voice_notes)) {
+				user.voice_notes.forEach((note) => {
+					recentPosts++;
+					totalLikes += note.likes?.[0]?.count || 0;
+					totalComments += note.comments?.[0]?.count || 0;
+					totalPlays += note.plays?.[0]?.count || 0;
+
+					// Check for preferred tags
+					if (note.tags && preferredTags.length > 0) {
+						const noteTags = note.tags.map((t) => t.tag_name);
+						tagMatches += noteTags.filter((tag) =>
+							preferredTags.includes(tag)
+						).length;
+					}
+				});
+			}
+
+			// Calculate scores
+			score += totalLikes * 0.3 + totalComments * 0.5 + totalPlays * 0.1;
+			score += recentPosts * 2; // Boost for active creators
+			score += tagMatches * 3; // Boost for creators in preferred topics
+
+			// Boost verified users slightly
+			if (user.is_verified) {
+				score += 5;
+			}
+
+			return {
+				id: user.id,
+				username: user.username,
+				display_name: user.display_name,
+				avatar_url: user.avatar_url,
+				is_verified: user.is_verified,
+				bio: user.bio,
+				discoveryScore: score,
+				recentPostsCount: recentPosts,
+				totalEngagement: totalLikes + totalComments + totalPlays,
+			};
+		});
+
+		// Sort by discovery score and return
+		const sortedUsers = processedUsers.sort(
+			(a, b) => b.discoveryScore - a.discoveryScore
+		);
+
+		console.log(
+			`[DEBUG] Returning ${sortedUsers.length} discovery users for user ${userId}`
+		);
+		res.status(200).json(sortedUsers);
+	} catch (error) {
+		console.error("Error fetching discovery users:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
 	}
 });
 

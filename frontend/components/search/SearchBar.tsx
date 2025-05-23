@@ -71,7 +71,7 @@ export const SearchBar = ({
 				onPress={() => inputRef.current?.focus()}
 			>
 				<Feather
-					name="search"
+					name={value.length > 0 ? "search" : "compass"}
 					size={20}
 					color={isFocused ? colors.tint : colors.textSecondary}
 					style={styles.searchIcon}

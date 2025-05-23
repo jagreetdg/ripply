@@ -26,6 +26,8 @@ import { VoiceNoteCard } from "../../components/voice-note-card/VoiceNoteCard";
 import {
 	searchUsers,
 	searchVoiceNotes,
+	getDiscoveryPosts,
+	getTrendingUsers,
 } from "../../services/api/searchService";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -50,12 +52,14 @@ export default function SearchScreen() {
 		initialTag ? `#${initialTag}` : ""
 	);
 	const [activeTab, setActiveTab] = useState<SearchTab>(
-		initialSearchType === "tag" ? "posts" : "users"
+		initialSearchType === "tag" ? "posts" : "posts"
 	);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const [userResults, setUserResults] = useState([]);
-	const [postResults, setPostResults] = useState([]);
+	const [userResults, setUserResults] = useState<any[]>([]);
+	const [postResults, setPostResults] = useState<any[]>([]);
+	const [discoveryPosts, setDiscoveryPosts] = useState<any[]>([]);
+	const [trendingUsers, setTrendingUsers] = useState<any[]>([]);
 	const [showAllUsers, setShowAllUsers] = useState(false);
 	const [showAllPosts, setShowAllPosts] = useState(false);
 	const [lastParams, setLastParams] = useState({
@@ -89,9 +93,9 @@ export default function SearchScreen() {
 			setShowAllUsers(false);
 			setShowAllPosts(false);
 
-			// Animate the tab indicator
+			// Animate the tab indicator - Updated for new tab order
 			Animated.spring(tabIndicatorPosition, {
-				toValue: tab === "users" ? 0 : 1,
+				toValue: tab === "posts" ? 0 : 1,
 				useNativeDriver: true,
 				speed: 12,
 				bounciness: 4,
@@ -100,6 +104,9 @@ export default function SearchScreen() {
 			// If search query exists, perform search
 			if (searchQuery.trim().length > 0) {
 				performSearch(tab, searchQuery);
+			} else {
+				// Load discovery content when no search query
+				loadDiscoveryContent(tab);
 			}
 
 			// Start fade in animation
@@ -111,23 +118,53 @@ export default function SearchScreen() {
 		});
 	};
 
+	// Load discovery content for empty search state
+	const loadDiscoveryContent = async (tab: SearchTab) => {
+		if (!currentUser?.id) return;
+
+		setIsLoading(true);
+		try {
+			if (tab === "posts") {
+				// Load discovery posts (for you feed)
+				const posts = await getDiscoveryPosts(currentUser.id);
+				setDiscoveryPosts(posts || []);
+			} else if (tab === "users") {
+				// Load trending users
+				const users = await getTrendingUsers(currentUser.id);
+				setTrendingUsers(users || []);
+			}
+		} catch (error) {
+			console.error("Error loading discovery content:", error);
+			// Set empty arrays on error
+			if (tab === "posts") {
+				setDiscoveryPosts([]);
+			} else {
+				setTrendingUsers([]);
+			}
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
 	// Handle search
 	const performSearch = async (tab: SearchTab, query: string) => {
 		if (query.trim() === "") {
 			setUserResults([]);
 			setPostResults([]);
+			// Load discovery content when search is cleared
+			loadDiscoveryContent(tab);
 			return;
 		}
 
 		setIsLoading(true);
 
 		try {
-			if (tab === "users" || tab === "all") {
-				const users = await searchUsers(query, currentUser?.id);
+			if (tab === "users") {
+				const users = await searchUsers(query, currentUser?.id || "");
 				setUserResults(users);
 			}
 
-			if (tab === "posts" || tab === "all") {
+			if (tab === "posts") {
 				const posts = await searchVoiceNotes(query);
 				setPostResults(posts);
 			}
@@ -159,9 +196,10 @@ export default function SearchScreen() {
 		if (text.trim().length >= 1) {
 			debouncedSearch(activeTab, text);
 		} else {
-			// Clear results if search is empty
+			// Clear results and load discovery content if search is empty
 			setUserResults([]);
 			setPostResults([]);
+			loadDiscoveryContent(activeTab);
 		}
 	};
 
@@ -180,9 +218,9 @@ export default function SearchScreen() {
 			// Set active tab based on search type
 			if (initialSearchType === "tag") {
 				setActiveTab("posts");
-				// Move tab indicator
+				// Move tab indicator - Updated for new tab order
 				Animated.spring(tabIndicatorPosition, {
-					toValue: 1,
+					toValue: 0,
 					useNativeDriver: true,
 					speed: 12,
 					bounciness: 4,
@@ -190,10 +228,10 @@ export default function SearchScreen() {
 			}
 
 			// Perform the search
-			performSearch(
-				initialSearchType === "tag" ? "posts" : "all",
-				`#${initialTag}`
-			);
+			performSearch("posts", `#${initialTag}`);
+		} else {
+			// Load discovery content on initial load
+			loadDiscoveryContent(activeTab);
 		}
 	}, [initialTag, initialSearchType, timestamp]);
 
@@ -238,18 +276,15 @@ export default function SearchScreen() {
 				setSearchQuery(`#${currentTag}`);
 				if (currentSearchType === "tag") {
 					setActiveTab("posts");
-					// Move tab indicator
+					// Move tab indicator - Updated for new tab order
 					Animated.spring(tabIndicatorPosition, {
-						toValue: 1,
+						toValue: 0,
 						useNativeDriver: true,
 						speed: 12,
 						bounciness: 4,
 					}).start();
 				}
-				performSearch(
-					currentSearchType === "tag" ? "posts" : "all",
-					`#${currentTag}`
-				);
+				performSearch("posts", `#${currentTag}`);
 
 				// Update last params
 				setLastParams({
@@ -257,6 +292,9 @@ export default function SearchScreen() {
 					searchType: currentSearchType,
 					timestamp: currentTimestamp,
 				});
+			} else if (!currentTag && searchQuery.trim() === "") {
+				// Load discovery content if no search params and no query
+				loadDiscoveryContent(activeTab);
 			}
 
 			// Cleanup function
@@ -292,7 +330,12 @@ export default function SearchScreen() {
 	// Handle refresh
 	const handleRefresh = () => {
 		setIsRefreshing(true);
-		performSearch(activeTab, searchQuery);
+		if (searchQuery.trim().length > 0) {
+			performSearch(activeTab, searchQuery);
+		} else {
+			loadDiscoveryContent(activeTab);
+			setIsRefreshing(false);
+		}
 	};
 
 	// Handle clear search
@@ -304,20 +347,22 @@ export default function SearchScreen() {
 
 	// Get filtered lists based on show all setting
 	const getFilteredUsers = () => {
-		return showAllUsers ? userResults : userResults.slice(0, PREVIEW_COUNT);
+		const users = searchQuery.trim().length > 0 ? userResults : trendingUsers;
+		return showAllUsers ? users : users.slice(0, PREVIEW_COUNT);
 	};
 
 	const getFilteredPosts = () => {
-		return showAllPosts ? postResults : postResults.slice(0, PREVIEW_COUNT);
+		const posts = searchQuery.trim().length > 0 ? postResults : discoveryPosts;
+		return showAllPosts ? posts : posts.slice(0, PREVIEW_COUNT);
 	};
 
 	// Render user item
-	const renderUserItem = ({ item }) => {
+	const renderUserItem = ({ item }: { item: any }) => {
 		return <UserSearchResult user={item} />;
 	};
 
 	// Render post item
-	const renderPostItem = ({ item }) => {
+	const renderPostItem = ({ item }: { item: any }) => {
 		// Extract user data with fallbacks
 		const userData = item.users || {};
 
@@ -391,18 +436,22 @@ export default function SearchScreen() {
 			return (
 				<View style={styles.emptyStateContainer}>
 					<Feather
-						name="search"
+						name="compass"
 						size={40}
 						color={colors.textSecondary}
 						style={{ marginBottom: 16 }}
 					/>
 					<Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-						Search Ripply
+						{activeTab === "posts"
+							? "Discover Voice Notes"
+							: "Discover Creators"}
 					</Text>
 					<Text
 						style={[styles.emptyStateText, { color: colors.textSecondary }]}
 					>
-						Find users or posts by searching above
+						{activeTab === "posts"
+							? "Explore voice notes tailored to your interests"
+							: "Find trending creators in your favorite topics"}
 					</Text>
 				</View>
 			);
@@ -438,7 +487,7 @@ export default function SearchScreen() {
 		return null;
 	};
 
-	// Tab indicator animated position
+	// Tab indicator animated position - Updated for new tab order
 	const tabIndicatorTranslateX = tabIndicatorPosition.interpolate({
 		inputRange: [0, 1],
 		outputRange: [0, windowWidth / 2],
@@ -464,7 +513,7 @@ export default function SearchScreen() {
 				onChangeText={handleSearchChange}
 				onSubmit={() => performSearch(activeTab, searchQuery)}
 				onClear={handleClearSearch}
-				placeholder="Search users or posts..."
+				placeholder="Search or discover..."
 			/>
 
 			<View
@@ -476,28 +525,7 @@ export default function SearchScreen() {
 					},
 				]}
 			>
-				<TouchableOpacity
-					style={styles.tab}
-					onPress={() => handleTabChange("users")}
-					activeOpacity={0.7}
-				>
-					<Text
-						style={[
-							styles.tabText,
-							activeTab === "users" && [
-								styles.activeTabText,
-								{ color: colors.tint },
-							],
-							{
-								color:
-									activeTab !== "users" ? colors.textSecondary : colors.tint,
-							},
-						]}
-					>
-						Users
-					</Text>
-				</TouchableOpacity>
-
+				{/* Posts Tab - Now on the left */}
 				<TouchableOpacity
 					style={styles.tab}
 					onPress={() => handleTabChange("posts")}
@@ -517,6 +545,29 @@ export default function SearchScreen() {
 						]}
 					>
 						Posts
+					</Text>
+				</TouchableOpacity>
+
+				{/* Users Tab - Now on the right */}
+				<TouchableOpacity
+					style={styles.tab}
+					onPress={() => handleTabChange("users")}
+					activeOpacity={0.7}
+				>
+					<Text
+						style={[
+							styles.tabText,
+							activeTab === "users" && [
+								styles.activeTabText,
+								{ color: colors.tint },
+							],
+							{
+								color:
+									activeTab !== "users" ? colors.textSecondary : colors.tint,
+							},
+						]}
+					>
+						Users
 					</Text>
 				</TouchableOpacity>
 
@@ -543,14 +594,14 @@ export default function SearchScreen() {
 					},
 				]}
 			>
-				{activeTab === "users" ? (
+				{activeTab === "posts" ? (
 					<FlatList
-						data={getFilteredUsers()}
-						renderItem={renderUserItem}
+						data={getFilteredPosts()}
+						renderItem={renderPostItem}
 						keyExtractor={(item) => item.id}
 						contentContainerStyle={styles.listContent}
 						ListEmptyComponent={renderEmptyState}
-						ListFooterComponent={() => renderShowMoreButton("users")}
+						ListFooterComponent={() => renderShowMoreButton("posts")}
 						refreshControl={
 							<RefreshControl
 								refreshing={isRefreshing}
@@ -562,12 +613,12 @@ export default function SearchScreen() {
 					/>
 				) : (
 					<FlatList
-						data={getFilteredPosts()}
-						renderItem={renderPostItem}
+						data={getFilteredUsers()}
+						renderItem={renderUserItem}
 						keyExtractor={(item) => item.id}
 						contentContainerStyle={styles.listContent}
 						ListEmptyComponent={renderEmptyState}
-						ListFooterComponent={() => renderShowMoreButton("posts")}
+						ListFooterComponent={() => renderShowMoreButton("users")}
 						refreshControl={
 							<RefreshControl
 								refreshing={isRefreshing}
