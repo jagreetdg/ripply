@@ -13,8 +13,8 @@ import {
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../context/ThemeContext";
-import DefaultAvatar from "../components/DefaultAvatar";
+import { useTheme } from "../../context/ThemeContext";
+import DefaultAvatar from "../../components/DefaultAvatar";
 
 const { width } = Dimensions.get("window");
 

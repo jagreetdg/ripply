@@ -24,7 +24,7 @@ export function HomeHeader({ onLogoPress }: HomeHeaderProps) {
 	};
 
 	const handleNotificationsPress = () => {
-		router.push("/notifications");
+		router.push("/(tabs)/notifications");
 	};
 
 	return (
