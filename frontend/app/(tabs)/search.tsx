@@ -67,6 +67,12 @@ export default function SearchScreen() {
 		searchType: initialSearchType,
 		timestamp,
 	});
+	// Add loading state protection and content loaded tracking
+	const [isLoadingDiscovery, setIsLoadingDiscovery] = useState(false);
+	const [discoveryContentLoaded, setDiscoveryContentLoaded] = useState({
+		posts: false,
+		users: false,
+	});
 
 	// Animations
 	const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -105,8 +111,8 @@ export default function SearchScreen() {
 			if (searchQuery.trim().length > 0) {
 				performSearch(tab, searchQuery);
 			} else {
-				// Load discovery content when no search query
-				loadDiscoveryContent(tab);
+				// Load discovery content when no search query - only if not already loaded
+				loadDiscoveryContent(tab, false);
 			}
 
 			// Start fade in animation
@@ -119,19 +125,32 @@ export default function SearchScreen() {
 	};
 
 	// Load discovery content for empty search state
-	const loadDiscoveryContent = async (tab: SearchTab) => {
+	const loadDiscoveryContent = async (tab: SearchTab, forceReload = false) => {
 		if (!currentUser?.id) return;
 
+		// Check if content is already loaded and we're not forcing a reload
+		if (!forceReload && discoveryContentLoaded[tab]) {
+			return;
+		}
+
+		// Prevent multiple simultaneous loads
+		if (isLoadingDiscovery) {
+			return;
+		}
+
+		setIsLoadingDiscovery(true);
 		setIsLoading(true);
 		try {
 			if (tab === "posts") {
 				// Load discovery posts (for you feed)
 				const posts = await getDiscoveryPosts(currentUser.id);
 				setDiscoveryPosts(posts || []);
+				setDiscoveryContentLoaded((prev) => ({ ...prev, posts: true }));
 			} else if (tab === "users") {
 				// Load trending users
 				const users = await getTrendingUsers(currentUser.id);
 				setTrendingUsers(users || []);
+				setDiscoveryContentLoaded((prev) => ({ ...prev, users: true }));
 			}
 		} catch (error) {
 			console.error("Error loading discovery content:", error);
@@ -143,6 +162,7 @@ export default function SearchScreen() {
 			}
 		} finally {
 			setIsLoading(false);
+			setIsLoadingDiscovery(false);
 		}
 	};
 
@@ -199,7 +219,8 @@ export default function SearchScreen() {
 			// Clear results and load discovery content if search is empty
 			setUserResults([]);
 			setPostResults([]);
-			loadDiscoveryContent(activeTab);
+			// Only load discovery content if not already loaded
+			loadDiscoveryContent(activeTab, false);
 		}
 	};
 
@@ -230,8 +251,8 @@ export default function SearchScreen() {
 			// Perform the search
 			performSearch("posts", `#${initialTag}`);
 		} else {
-			// Load discovery content on initial load
-			loadDiscoveryContent(activeTab);
+			// Load discovery content on initial load - only if not loaded
+			loadDiscoveryContent(activeTab, false);
 		}
 	}, [initialTag, initialSearchType, timestamp]);
 
@@ -293,8 +314,8 @@ export default function SearchScreen() {
 					timestamp: currentTimestamp,
 				});
 			} else if (!currentTag && searchQuery.trim() === "") {
-				// Load discovery content if no search params and no query
-				loadDiscoveryContent(activeTab);
+				// Load discovery content if no search params and no query - only if not loaded
+				loadDiscoveryContent(activeTab, false);
 			}
 
 			// Cleanup function
@@ -333,7 +354,9 @@ export default function SearchScreen() {
 		if (searchQuery.trim().length > 0) {
 			performSearch(activeTab, searchQuery);
 		} else {
-			loadDiscoveryContent(activeTab);
+			// Force reload discovery content on refresh
+			setDiscoveryContentLoaded((prev) => ({ ...prev, [activeTab]: false }));
+			loadDiscoveryContent(activeTab, true);
 			setIsRefreshing(false);
 		}
 	};

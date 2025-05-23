@@ -6,7 +6,6 @@ import { TouchableOpacity } from "react-native";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { SearchDiscoveryIcon } from "@/components/icons/SearchDiscoveryIcon";
 
 import { View, Platform, StyleSheet } from "react-native";
 
@@ -100,12 +99,11 @@ export default function TabLayout() {
 							style={styles.tabButton}
 							onPress={() => navigateToTab("/search")}
 						>
-							<SearchDiscoveryIcon
-								size={24}
+							<TabBarIcon
+								name="target"
 								color={
 									isActive("/search") ? colors.tint : colors.tabIconDefault
 								}
-								showSearch={false}
 							/>
 						</TouchableOpacity>
 

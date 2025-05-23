@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
-import { SearchDiscoveryIcon } from "../icons/SearchDiscoveryIcon";
 
 interface SearchBarProps {
 	value: string;
@@ -71,13 +70,12 @@ export const SearchBar = ({
 				]}
 				onPress={() => inputRef.current?.focus()}
 			>
-				<View style={styles.searchIcon}>
-					<SearchDiscoveryIcon
-						size={20}
-						color={isFocused ? colors.tint : colors.textSecondary}
-						showSearch={value.length > 0}
-					/>
-				</View>
+				<Feather
+					name={value.length > 0 ? "search" : "target"}
+					size={20}
+					color={isFocused ? colors.tint : colors.textSecondary}
+					style={styles.searchIcon}
+				/>
 				<TextInput
 					ref={inputRef}
 					style={[styles.input, { color: colors.text }]}
