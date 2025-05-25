@@ -50,8 +50,8 @@ const USER_KEY = "@ripply_user";
 export default function LandingPage() {
 	const router = useRouter();
 	const { user, loading } = useUser();
-	const [authModalVisible, setAuthModalVisible] = useState(false);
-	const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+	const [loginModalVisible, setLoginModalVisible] = useState(false);
+	const [signupModalVisible, setSignupModalVisible] = useState(false);
 
 	// Animation refs
 	const rippleAnims = useRef([
@@ -109,9 +109,12 @@ export default function LandingPage() {
 		};
 	}, []);
 
-	const handleAuthPress = (mode: "login" | "signup") => {
-		setAuthMode(mode);
-		setAuthModalVisible(true);
+	const handleLogin = () => {
+		setLoginModalVisible(true);
+	};
+
+	const handleSignup = () => {
+		setSignupModalVisible(true);
 	};
 
 	const handleSocialAuth = async (provider: "google" | "apple") => {
@@ -213,13 +216,13 @@ export default function LandingPage() {
 									<View style={styles.buttonRow}>
 										<AnimatedButton
 											text="Log In"
-											onPress={() => handleAuthPress("login")}
+											onPress={handleLogin}
 											primary={false}
 											style={[styles.authButton, styles.loginButton]}
 										/>
 										<AnimatedButton
 											text="Sign Up"
-											onPress={() => handleAuthPress("signup")}
+											onPress={handleSignup}
 											primary={true}
 											style={styles.authButton}
 										/>
@@ -361,7 +364,7 @@ export default function LandingPage() {
 								<View style={styles.ctaButtonContainer}>
 									<AnimatedButton
 										text="Sign Up Now"
-										onPress={() => handleAuthPress("signup")}
+										onPress={handleSignup}
 										style={styles.ctaButton}
 										icon="arrow-right"
 										iconPosition="right"
@@ -385,12 +388,25 @@ export default function LandingPage() {
 				</View>
 			</LinearGradient>
 
-			{/* Auth Modal */}
+			{/* Authentication modals */}
 			<AuthModal
-				visible={authModalVisible}
-				onClose={() => setAuthModalVisible(false)}
-				mode={authMode}
-				onModeChange={setAuthMode}
+				isVisible={loginModalVisible}
+				onClose={() => setLoginModalVisible(false)}
+				type="login"
+				onSwitchToSignup={() => {
+					setLoginModalVisible(false);
+					setSignupModalVisible(true);
+				}}
+			/>
+
+			<AuthModal
+				isVisible={signupModalVisible}
+				onClose={() => setSignupModalVisible(false)}
+				type="signup"
+				onSwitchToLogin={() => {
+					setSignupModalVisible(false);
+					setLoginModalVisible(true);
+				}}
 			/>
 		</View>
 	);
