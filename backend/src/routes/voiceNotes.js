@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const supabase = require("../config/supabase");
 const uuidv4 = require("uuid").v4;
+const { authenticateToken } = require("../middleware/auth");
 
-// Search for voice notes by title or tags
+// Search for voice notes by title or tags - PUBLIC (no auth required)
 router.get("/search", async (req, res) => {
 	try {
 		const { term, searchType } = req.query;
@@ -98,8 +99,8 @@ router.get("/search", async (req, res) => {
 	}
 });
 
-// Get personalized feed for a user
-router.get("/feed/:userId", async (req, res) => {
+// Get personalized feed for a user - REQUIRES AUTHENTICATION
+router.get("/feed/:userId", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
 		const { page = 1, limit = 10 } = req.query;
@@ -263,8 +264,8 @@ router.get("/feed/:userId", async (req, res) => {
 	}
 });
 
-// Get all voice notes (with pagination)
-router.get("/", async (req, res) => {
+// Get all voice notes (with pagination) - REQUIRES AUTHENTICATION
+router.get("/", authenticateToken, async (req, res) => {
 	try {
 		const { page = 1, limit = 10, userId } = req.query;
 		const offset = (page - 1) * limit;
@@ -390,8 +391,8 @@ router.get("/:id", async (req, res) => {
 	}
 });
 
-// Create a new voice note
-router.post("/", async (req, res) => {
+// Create a new voice note - REQUIRES AUTHENTICATION
+router.post("/", authenticateToken, async (req, res) => {
 	try {
 		const {
 			title,
@@ -495,8 +496,8 @@ router.delete("/:id", async (req, res) => {
 	}
 });
 
-// Like a voice note
-router.post("/:id/like", async (req, res) => {
+// Like a voice note - REQUIRES AUTHENTICATION
+router.post("/:id/like", authenticateToken, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { user_id } = req.body;
@@ -535,8 +536,8 @@ router.post("/:id/like", async (req, res) => {
 	}
 });
 
-// Unlike a voice note
-router.post("/:id/unlike", async (req, res) => {
+// Unlike a voice note - REQUIRES AUTHENTICATION
+router.post("/:id/unlike", authenticateToken, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { user_id } = req.body;
@@ -628,8 +629,8 @@ router.get("/:id/comments", async (req, res) => {
 	}
 });
 
-// Add a comment to a voice note
-router.post("/:id/comments", async (req, res) => {
+// Add a comment to a voice note - REQUIRES AUTHENTICATION
+router.post("/:id/comments", authenticateToken, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { user_id, content } = req.body;
@@ -705,8 +706,8 @@ router.get("/tags/:tagName", async (req, res) => {
 	}
 });
 
-// Record a share for a voice note
-router.post("/:voiceNoteId/share", async (req, res) => {
+// Record a share for a voice note - REQUIRES AUTHENTICATION
+router.post("/:voiceNoteId/share", authenticateToken, async (req, res) => {
 	try {
 		const { voiceNoteId } = req.params;
 		const { userId } = req.body; // Expecting userId from frontend
@@ -888,8 +889,8 @@ router.get("/:voiceNoteId/shares", async (req, res) => {
 	}
 });
 
-// Check if a user has liked a voice note
-router.get("/:id/likes/check", async (req, res) => {
+// Check if a user has liked a voice note - REQUIRES AUTHENTICATION
+router.get("/:id/likes/check", authenticateToken, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { userId } = req.query;
@@ -930,8 +931,8 @@ router.get("/:id/likes/check", async (req, res) => {
 	}
 });
 
-// Check if a user has shared a voice note
-router.get("/:id/shares/check", async (req, res) => {
+// Check if a user has shared a voice note - REQUIRES AUTHENTICATION
+router.get("/:id/shares/check", authenticateToken, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { userId } = req.query;
@@ -1216,8 +1217,8 @@ router.get("/diagnostic/feed/:userId", async (req, res) => {
 	}
 });
 
-// Discovery endpoint for posts - personalized "For You" feed
-router.get("/discovery/posts/:userId", async (req, res) => {
+// Discovery endpoint for posts - personalized "For You" feed - REQUIRES AUTHENTICATION
+router.get("/discovery/posts/:userId", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
 		const { page = 1, limit = 20 } = req.query;
@@ -1399,8 +1400,8 @@ router.get("/discovery/posts/:userId", async (req, res) => {
 	}
 });
 
-// Discovery endpoint for users - trending creators based on user preferences
-router.get("/discovery/users/:userId", async (req, res) => {
+// Discovery endpoint for users - trending creators based on user preferences - REQUIRES AUTHENTICATION
+router.get("/discovery/users/:userId", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
 		const { page = 1, limit = 20 } = req.query;

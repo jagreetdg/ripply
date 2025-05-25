@@ -93,13 +93,13 @@ const SettingsItem: React.FC<SettingsItemProps> = ({
 export default function SettingsScreen() {
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
-	const { setUser } = useUser();
+	const { setUser, logout } = useUser();
 	const { theme, setTheme, isDarkMode, colors } = useTheme();
 
 	const handleLogout = async () => {
 		try {
-			await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
-			setUser(null);
+			// Call the proper logout service which handles both backend and frontend cleanup
+			await logout();
 			router.replace("/");
 		} catch (error) {
 			console.error("Error logging out:", error);

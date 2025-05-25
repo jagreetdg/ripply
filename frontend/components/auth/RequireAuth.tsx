@@ -1,12 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useRouter, usePathname } from "expo-router";
-import { View, ActivityIndicator, Platform } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-// Token storage key - must match the one used in UserContext
-const TOKEN_KEY = "@ripply_auth_token";
 
 type RequireAuthProps = {
 	children: React.ReactNode;
@@ -21,9 +17,6 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 	const { colors } = useTheme();
 	const router = useRouter();
 	const pathname = usePathname();
-	const [checkingStorage, setCheckingStorage] = useState(false);
-	const [hasCheckedStorage, setHasCheckedStorage] = useState(false);
-	const [hasStoredToken, setHasStoredToken] = useState(false);
 
 	// Public routes that don't require authentication
 	const publicRoutes = [
@@ -36,90 +29,26 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 	];
 	const isPublicRoute = publicRoutes.includes(pathname);
 
-	console.log("[DEBUG] RequireAuth - Component rendered");
 	console.log("[DEBUG] RequireAuth - Current pathname:", pathname);
 	console.log("[DEBUG] RequireAuth - Is public route:", isPublicRoute);
 	console.log("[DEBUG] RequireAuth - User authenticated:", !!user);
 	console.log("[DEBUG] RequireAuth - Auth loading state:", loading);
-	console.log("[DEBUG] RequireAuth - Checking storage:", checkingStorage);
-	console.log("[DEBUG] RequireAuth - Has stored token:", hasStoredToken);
-
-	// For web only, log the current URL
-	if (Platform.OS === "web" && typeof window !== "undefined") {
-		console.log("[DEBUG] RequireAuth - Current URL:", window.location.href);
-	}
-
-	// First check for token in AsyncStorage to catch cases where user context hasn't synced yet
-	useEffect(() => {
-		// Skip check if already checked or if we're on a public route
-		if (hasCheckedStorage || isPublicRoute || user) {
-			return;
-		}
-
-		const checkForToken = async () => {
-			setCheckingStorage(true);
-			try {
-				console.log("[DEBUG] RequireAuth - Checking AsyncStorage for token");
-				const token = await AsyncStorage.getItem(TOKEN_KEY);
-				const hasToken = !!token;
-				console.log("[DEBUG] RequireAuth - Token found in storage:", hasToken);
-				setHasStoredToken(hasToken);
-			} catch (error) {
-				console.error("[DEBUG] RequireAuth - Error checking token:", error);
-			} finally {
-				setCheckingStorage(false);
-				setHasCheckedStorage(true);
-			}
-		};
-
-		checkForToken();
-	}, [user, isPublicRoute, hasCheckedStorage]);
 
 	// Handle protected route access
 	useEffect(() => {
-		console.log("[DEBUG] RequireAuth - useEffect executed");
-
-		// We should only redirect if:
+		// Only redirect if:
 		// 1. Not loading the user state
-		// 2. Not checking AsyncStorage
-		// 3. User is not authenticated
-		// 4. No token found in AsyncStorage
-		// 5. Not on a public route
-		if (
-			!loading &&
-			!checkingStorage &&
-			!user &&
-			!hasStoredToken &&
-			!isPublicRoute
-		) {
+		// 2. User is not authenticated
+		// 3. Not on a public route
+		if (!loading && !user && !isPublicRoute) {
 			console.log("[DEBUG] RequireAuth - Redirecting to landing page");
 			console.log("[DEBUG] RequireAuth - From pathname:", pathname);
 			router.replace("/");
-		} else {
-			console.log("[DEBUG] RequireAuth - No redirect needed");
-			console.log("[DEBUG] RequireAuth - Loading:", loading);
-			console.log("[DEBUG] RequireAuth - User exists:", !!user);
-			console.log("[DEBUG] RequireAuth - Has stored token:", hasStoredToken);
-			console.log("[DEBUG] RequireAuth - Is public route:", isPublicRoute);
 		}
-	}, [
-		user,
-		loading,
-		router,
-		pathname,
-		isPublicRoute,
-		checkingStorage,
-		hasStoredToken,
-	]);
+	}, [user, loading, router, pathname, isPublicRoute]);
 
-	// Only show loading if:
-	// 1. We're loading user data or checking storage
-	// 2. We're not on a public route
-	// 3. We don't already have a user or token
-	const shouldShowLoading =
-		(loading || checkingStorage) && !isPublicRoute && !user && !hasStoredToken;
-
-	if (shouldShowLoading) {
+	// Show loading if we're still loading user data and not on a public route
+	if (loading && !isPublicRoute) {
 		console.log("[DEBUG] RequireAuth - Showing loading indicator");
 		return (
 			<View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>

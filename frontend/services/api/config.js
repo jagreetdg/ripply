@@ -7,6 +7,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Base URL for the API - deployed to Render
 const API_URL = "https://ripply-backend.onrender.com";
 
+// Token storage key
+const TOKEN_KEY = "@ripply_auth_token";
+
 // Detect platform and environment
 const isPhysicalDevice = Platform.OS === "ios" || Platform.OS === "android";
 
@@ -34,6 +37,7 @@ const NETWORK_CONFIG = {
 
 /**
  * Make an API request with proper error handling, timeout, and retry logic
+ * Automatically includes authentication headers if a token is available
  * @param {string} endpoint - API endpoint
  * @param {Object} options - Request options
  * @returns {Promise<any>} - Response data
@@ -57,6 +61,28 @@ const apiRequest = async (endpoint, options = {}) => {
 
 			const url = `${API_URL}${endpoint}`;
 			const headers = { ...DEFAULT_HEADERS, ...options.headers };
+
+			// Automatically include authentication header if token exists
+			// Skip for auth endpoints to avoid circular dependencies
+			if (
+				!endpoint.includes("/api/auth/login") &&
+				!endpoint.includes("/api/auth/register")
+			) {
+				try {
+					const token = await AsyncStorage.getItem(TOKEN_KEY);
+					if (token) {
+						headers.Authorization = `Bearer ${token}`;
+						console.log(`[AUTH] Including Bearer token for ${endpoint}`);
+					} else {
+						console.log(`[AUTH] No token found for ${endpoint}`);
+					}
+				} catch (tokenError) {
+					console.warn(
+						`[AUTH] Error retrieving token for ${endpoint}:`,
+						tokenError
+					);
+				}
+			}
 
 			// Create AbortController for timeout
 			const controller = new AbortController();
@@ -97,6 +123,18 @@ const apiRequest = async (endpoint, options = {}) => {
 
 						if (endpoint.includes("/shares/check")) {
 							return { isShared: false };
+						}
+					}
+
+					// Handle authentication errors
+					if (response.status === 401) {
+						console.warn(`[AUTH] Authentication failed for ${endpoint}`);
+						// Clear invalid token
+						try {
+							await AsyncStorage.removeItem(TOKEN_KEY);
+							await AsyncStorage.removeItem("@ripply_user");
+						} catch (clearError) {
+							console.warn("[AUTH] Error clearing invalid token:", clearError);
 						}
 					}
 

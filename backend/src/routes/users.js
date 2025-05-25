@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const supabase = require("../config/supabase");
+const { authenticateToken } = require("../middleware/auth");
 
-// Search for users based on username or display name
-router.get("/search", async (req, res) => {
+// Search for users based on username or display name - REQUIRES AUTHENTICATION
+router.get("/search", authenticateToken, async (req, res) => {
 	try {
 		const { term, currentUserId } = req.query;
 		const { page = 1, limit = 20 } = req.query;
@@ -78,8 +79,8 @@ router.get("/:userId", async (req, res) => {
 	}
 });
 
-// Update user profile
-router.put("/:userId", async (req, res) => {
+// Update user profile - REQUIRES AUTHENTICATION
+router.put("/:userId", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
 		const updates = req.body;
@@ -109,8 +110,8 @@ router.put("/:userId", async (req, res) => {
 	}
 });
 
-// Get user's followers
-router.get("/:userId/followers", async (req, res) => {
+// Get user's followers - REQUIRES AUTHENTICATION
+router.get("/:userId/followers", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
 
@@ -128,8 +129,8 @@ router.get("/:userId/followers", async (req, res) => {
 	}
 });
 
-// Get users that a user is following
-router.get("/:userId/following", async (req, res) => {
+// Get users that a user is following - REQUIRES AUTHENTICATION
+router.get("/:userId/following", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
 
@@ -147,8 +148,8 @@ router.get("/:userId/following", async (req, res) => {
 	}
 });
 
-// Follow a user
-router.post("/:userId/follow", async (req, res) => {
+// Follow a user - REQUIRES AUTHENTICATION
+router.post("/:userId/follow", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
 		const { followerId } = req.body;
@@ -196,8 +197,8 @@ router.post("/:userId/follow", async (req, res) => {
 	}
 });
 
-// Unfollow a user
-router.post("/:userId/unfollow", async (req, res) => {
+// Unfollow a user - REQUIRES AUTHENTICATION
+router.post("/:userId/unfollow", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
 		const { followerId } = req.body;
@@ -248,8 +249,8 @@ router.post("/:userId/unfollow", async (req, res) => {
 	}
 });
 
-// Get voice notes by user
-router.get("/:userId/voice-notes", async (req, res) => {
+// Get voice notes by user - REQUIRES AUTHENTICATION
+router.get("/:userId/voice-notes", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
 		const { page = 1, limit = 10 } = req.query;
