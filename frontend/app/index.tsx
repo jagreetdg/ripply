@@ -20,6 +20,9 @@ import { StatusBar } from "expo-status-bar";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
+import * as WebBrowser from "expo-web-browser";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useUser } from "../context/UserContext";
 import AuthModal from "../components/auth/AuthModal";
 import AnimatedButton from "../components/landing/AnimatedButton";
 import SocialAuthButton from "../components/landing/SocialAuthButton";
@@ -29,13 +32,24 @@ import TestimonialCard from "../components/landing/TestimonialCard";
 import Section from "../components/landing/Section";
 import GoogleIcon from "../assets/icons/googleIcon";
 import AppleIcon from "../assets/icons/appleIcon";
-import { useUser } from "../context/UserContext";
+import { getCurrentUser } from "../services/api/authService";
+
+// Register for the auth callback
+WebBrowser.maybeCompleteAuthSession();
+
+// API URL for authentication
+const API_URL = "https://ripply-backend.onrender.com";
+
+// Token storage keys
+const TOKEN_KEY = "@ripply_auth_token";
+const USER_KEY = "@ripply_user";
 
 export default function LandingPage() {
 	const router = useRouter();
-	const { user, loading } = useUser();
+	const { setUser } = useUser();
 	const [loginModalVisible, setLoginModalVisible] = useState(false);
 	const [signupModalVisible, setSignupModalVisible] = useState(false);
+	const [isLoading, setIsLoading] = useState(true);
 
 	// Animation values
 	const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -45,12 +59,134 @@ export default function LandingPage() {
 	const buttonAnim = useRef(new Animated.Value(0)).current;
 	const waveAnim = useRef(new Animated.Value(0)).current;
 
-	// If user is authenticated, redirect to home
+	// Check if user is already authenticated
 	useEffect(() => {
-		if (!loading && user) {
-			router.replace("/(tabs)/home");
-		}
-	}, [user, loading, router]);
+		const checkAuthStatus = async () => {
+			try {
+				console.log("[DEBUG] Landing Page - checkAuthStatus started");
+				console.log(
+					"[DEBUG] Landing Page - Current URL:",
+					window.location.href
+				);
+
+				// First check if there's a token in the URL
+				const urlParams = new URLSearchParams(window.location.search);
+				const token = urlParams.get("token");
+				const error = urlParams.get("error");
+
+				console.log("[DEBUG] Landing Page - Token in URL:", !!token);
+				console.log("[DEBUG] Landing Page - Error in URL:", !!error);
+
+				if (token) {
+					console.log("[Auth Flow] Token found in URL");
+					// Store the token
+					await AsyncStorage.setItem(TOKEN_KEY, token);
+
+					// Clear the URL parameters to prevent redirect loops
+					console.log("[DEBUG] Landing Page - About to clear URL params");
+					if (
+						Platform.OS === "web" &&
+						window.history &&
+						window.history.replaceState
+					) {
+						const newUrl = window.location.pathname;
+						window.history.replaceState({}, document.title, newUrl);
+						console.log(
+							"[DEBUG] Landing Page - URL params cleared, new URL:",
+							window.location.href
+						);
+					} else {
+						console.log(
+							"[DEBUG] Landing Page - URL params NOT cleared (conditions not met)"
+						);
+					}
+
+					// Get user data with the token
+					console.log("[DEBUG] Landing Page - Getting user data with token");
+					const user = await getCurrentUser();
+					console.log("[DEBUG] Landing Page - User data retrieved:", !!user);
+
+					if (user) {
+						console.log("[Auth Flow] User authenticated from URL token");
+						console.log("[DEBUG] Landing Page - Setting user and redirecting");
+						setUser(user);
+						console.log(
+							"[DEBUG] Landing Page - User set, about to navigate to home"
+						);
+						router.replace("/(tabs)/home");
+						console.log("[DEBUG] Landing Page - Navigation triggered");
+						return;
+					}
+				} else if (error) {
+					console.error("[Auth Flow] Auth error:", error);
+					alert("Authentication failed. Please try again.");
+					// Clear the URL parameters
+					if (
+						Platform.OS === "web" &&
+						window.history &&
+						window.history.replaceState
+					) {
+						const newUrl = window.location.pathname;
+						window.history.replaceState({}, document.title, newUrl);
+						console.log("[DEBUG] Landing Page - Error URL params cleared");
+					}
+				} else {
+					console.log(
+						"[DEBUG] Landing Page - No token in URL, checking stored token"
+					);
+					// Check for stored token if no URL token
+					const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+					console.log(
+						"[DEBUG] Landing Page - Stored token exists:",
+						!!storedToken
+					);
+
+					if (storedToken) {
+						console.log(
+							"[DEBUG] Landing Page - Getting user with stored token"
+						);
+						const user = await getCurrentUser();
+						console.log(
+							"[DEBUG] Landing Page - User from stored token:",
+							!!user
+						);
+
+						if (user) {
+							console.log("[Auth Flow] User authenticated from stored token");
+							setUser(user);
+							console.log(
+								"[DEBUG] Landing Page - Navigating with stored token auth"
+							);
+							router.replace("/(tabs)/home");
+							console.log(
+								"[DEBUG] Landing Page - Navigation with stored token triggered"
+							);
+							return;
+						} else {
+							console.log(
+								"[DEBUG] Landing Page - No user found with stored token"
+							);
+						}
+					}
+				}
+			} catch (err) {
+				console.error("[Auth Flow] Error checking auth status:", err);
+			} finally {
+				setIsLoading(false);
+				console.log("[DEBUG] Landing Page - checkAuthStatus completed");
+			}
+		};
+
+		console.log(
+			"[DEBUG] Landing Page - useEffect executed, calling checkAuthStatus"
+		);
+		checkAuthStatus();
+
+		// Clean-up function to see if component is being unmounted during navigation
+		return () => {
+			console.log("[DEBUG] Landing Page - Component unmounting");
+		};
+	}, []);
 
 	useEffect(() => {
 		// Staggered entrance animations for a premium feel
@@ -104,14 +240,90 @@ export default function LandingPage() {
 		setSignupModalVisible(true);
 	};
 
-	const handleGoogleAuth = () => {
-		// Implement Google auth logic here
-		console.log("Google auth pressed");
+	const handleGoogleAuth = async () => {
+		try {
+			const authUrl = "https://ripply-backend.onrender.com/api/auth/google";
+
+			if (Platform.OS === "web") {
+				window.location.href = authUrl;
+			} else {
+				const result = await WebBrowser.openAuthSessionAsync(authUrl);
+
+				if (result.type === "success") {
+					const url = result.url;
+					const token = url.split("token=")[1];
+
+					if (token) {
+						await AsyncStorage.setItem(TOKEN_KEY, token);
+						const user = await getCurrentUser();
+						if (user) {
+							setUser(user);
+
+							// Clear URL parameters if present to prevent redirect loops
+							if (
+								Platform.OS === "web" &&
+								window.history &&
+								window.history.replaceState
+							) {
+								window.history.replaceState(
+									{},
+									document.title,
+									window.location.pathname
+								);
+							}
+
+							router.replace("/(tabs)/home");
+						}
+					}
+				}
+			}
+		} catch (error) {
+			console.error("[Auth Flow] Google auth error:", error);
+			alert("Failed to authenticate with Google. Please try again.");
+		}
 	};
 
-	const handleAppleAuth = () => {
-		// Implement Apple auth logic here
-		console.log("Apple auth pressed");
+	const handleAppleAuth = async () => {
+		try {
+			const authUrl = "https://ripply-backend.onrender.com/api/auth/apple";
+
+			if (Platform.OS === "web") {
+				window.location.href = authUrl;
+			} else {
+				const result = await WebBrowser.openAuthSessionAsync(authUrl);
+
+				if (result.type === "success") {
+					const url = result.url;
+					const token = url.split("token=")[1];
+
+					if (token) {
+						await AsyncStorage.setItem(TOKEN_KEY, token);
+						const user = await getCurrentUser();
+						if (user) {
+							setUser(user);
+
+							// Clear URL parameters if present to prevent redirect loops
+							if (
+								Platform.OS === "web" &&
+								window.history &&
+								window.history.replaceState
+							) {
+								window.history.replaceState(
+									{},
+									document.title,
+									window.location.pathname
+								);
+							}
+
+							router.replace("/(tabs)/home");
+						}
+					}
+				}
+			}
+		} catch (error) {
+			console.error("[Auth Flow] Apple auth error:", error);
+			alert("Failed to authenticate with Apple. Please try again.");
+		}
 	};
 
 	// Features data
@@ -168,23 +380,12 @@ export default function LandingPage() {
 		},
 	];
 
-	// Show loading while checking auth state
-	if (loading) {
+	if (isLoading) {
 		return (
-			<View
-				style={[
-					styles.container,
-					{ justifyContent: "center", alignItems: "center" },
-				]}
-			>
-				<Text style={{ color: "#FFFFFF", fontSize: 18 }}>Loading...</Text>
+			<View style={styles.container}>
+				<Text>Loading...</Text>
 			</View>
 		);
-	}
-
-	// If user is authenticated, don't show landing page
-	if (user) {
-		return null;
 	}
 
 	return (
@@ -295,12 +496,14 @@ export default function LandingPage() {
 											onPress={handleGoogleAuth}
 											icon={<GoogleIcon size={24} />}
 											style={styles.iconButton}
+											isLoading={isLoading}
 										/>
 
 										<SocialAuthButton
 											onPress={handleAppleAuth}
 											icon={<AppleIcon size={24} />}
 											style={styles.iconButton}
+											isLoading={isLoading}
 										/>
 									</View>
 								</Animated.View>
