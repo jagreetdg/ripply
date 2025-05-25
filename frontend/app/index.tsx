@@ -47,8 +47,353 @@ const API_URL = "https://ripply-backend.onrender.com";
 const TOKEN_KEY = "@ripply_auth_token";
 const USER_KEY = "@ripply_user";
 
-export default function HomeRedirect() {
-	return <Redirect href="/home" />;
+export default function LandingPage() {
+	const router = useRouter();
+	const { user, loading } = useUser();
+	const [authModalVisible, setAuthModalVisible] = useState(false);
+	const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+
+	// Animation refs
+	const rippleAnims = useRef([
+		new Animated.Value(1),
+		new Animated.Value(1),
+		new Animated.Value(1),
+		new Animated.Value(1),
+		new Animated.Value(1),
+		new Animated.Value(1),
+		new Animated.Value(1),
+		new Animated.Value(1),
+	]).current;
+
+	// If user is authenticated, redirect to home
+	useEffect(() => {
+		if (!loading && user) {
+			router.replace("/(tabs)/home");
+		}
+	}, [user, loading, router]);
+
+	// Start ripple animations
+	useEffect(() => {
+		const createRippleAnimation = (
+			animValue: Animated.Value,
+			delay: number
+		) => {
+			return Animated.loop(
+				Animated.sequence([
+					Animated.timing(animValue, {
+						toValue: 1.2,
+						duration: 2000,
+						delay,
+						easing: Easing.inOut(Easing.sin),
+						useNativeDriver: true,
+					}),
+					Animated.timing(animValue, {
+						toValue: 1,
+						duration: 2000,
+						easing: Easing.inOut(Easing.sin),
+						useNativeDriver: true,
+					}),
+				])
+			);
+		};
+
+		// Start all ripple animations with different delays
+		const animations = rippleAnims.map((anim, index) =>
+			createRippleAnimation(anim, index * 300)
+		);
+
+		animations.forEach((animation) => animation.start());
+
+		return () => {
+			animations.forEach((animation) => animation.stop());
+		};
+	}, []);
+
+	const handleAuthPress = (mode: "login" | "signup") => {
+		setAuthMode(mode);
+		setAuthModalVisible(true);
+	};
+
+	const handleSocialAuth = async (provider: "google" | "apple") => {
+		try {
+			const authUrl = `${API_URL}/api/auth/${provider}`;
+			const result = await WebBrowser.openAuthSessionAsync(
+				authUrl,
+				`${API_URL}/auth/callback`
+			);
+
+			if (result.type === "success" && result.url) {
+				const url = new URL(result.url);
+				const token = url.searchParams.get("token");
+				const userData = url.searchParams.get("user");
+
+				if (token && userData) {
+					await AsyncStorage.setItem(TOKEN_KEY, token);
+					await AsyncStorage.setItem(USER_KEY, userData);
+					router.replace("/(tabs)/home");
+				}
+			}
+		} catch (error) {
+			console.error(`${provider} auth error:`, error);
+		}
+	};
+
+	// Show loading while checking auth state
+	if (loading) {
+		return (
+			<View
+				style={[
+					styles.container,
+					{ justifyContent: "center", alignItems: "center" },
+				]}
+			>
+				<Text style={{ color: "#FFFFFF", fontSize: 18 }}>Loading...</Text>
+			</View>
+		);
+	}
+
+	// If user is authenticated, don't show landing page
+	if (user) {
+		return null;
+	}
+
+	return (
+		<View style={styles.container}>
+			<StatusBar style="light" />
+			<LinearGradient
+				colors={["#0F0524", "#1A0B2E", "#2D1B69"]}
+				style={styles.gradient}
+			>
+				{/* Background Animations */}
+				<View style={styles.backgroundAnimations}>
+					<View style={styles.rippleContainer}>
+						{rippleAnims.slice(0, 6).map((anim, index) => (
+							<Animated.View
+								key={index}
+								style={[
+									styles.ripple,
+									styles[`ripple${index + 1}` as keyof typeof styles],
+									{ transform: [{ scale: anim }] },
+								]}
+							/>
+						))}
+					</View>
+					<View style={styles.rippleContainer2}>
+						{rippleAnims.slice(6, 8).map((anim, index) => (
+							<Animated.View
+								key={index + 6}
+								style={[
+									styles.ripple,
+									styles[`ripple${index + 7}` as keyof typeof styles],
+									{ transform: [{ scale: anim }] },
+								]}
+							/>
+						))}
+					</View>
+				</View>
+
+				<SafeAreaView style={styles.safeArea}>
+					<ScrollView
+						contentContainerStyle={styles.scrollContent}
+						showsVerticalScrollIndicator={false}
+					>
+						{/* Hero Section */}
+						<View style={styles.heroSection}>
+							<View style={styles.heroContent}>
+								<Text style={styles.heroTitle}>
+									Share Your Voice,{"\n"}Shape the World
+								</Text>
+								<Text style={styles.heroSubtitle}>
+									Connect through authentic voice notes and discover stories
+									that matter to you
+								</Text>
+
+								{/* Auth Buttons */}
+								<View style={styles.authButtonsContainer}>
+									<View style={styles.buttonRow}>
+										<AnimatedButton
+											text="Log In"
+											onPress={() => handleAuthPress("login")}
+											primary={false}
+											style={[styles.authButton, styles.loginButton]}
+										/>
+										<AnimatedButton
+											text="Sign Up"
+											onPress={() => handleAuthPress("signup")}
+											primary={true}
+											style={styles.authButton}
+										/>
+									</View>
+
+									<View style={styles.divider}>
+										<View style={styles.dividerLine} />
+										<Text style={styles.dividerText}>or continue with</Text>
+										<View style={styles.dividerLine} />
+									</View>
+
+									<View style={styles.socialButtonsRow}>
+										<TouchableOpacity
+											style={styles.iconButton}
+											onPress={() => handleSocialAuth("google")}
+										>
+											<GoogleIcon width={24} height={24} />
+										</TouchableOpacity>
+										<TouchableOpacity
+											style={styles.iconButton}
+											onPress={() => handleSocialAuth("apple")}
+										>
+											<AppleIcon width={24} height={24} />
+										</TouchableOpacity>
+									</View>
+								</View>
+							</View>
+						</View>
+
+						{/* Features Section */}
+						<Section
+							title="Why Choose Ripply?"
+							subtitle="Discover what makes our platform special"
+						>
+							<View style={styles.featuresContainer}>
+								<FeatureCard
+									icon="mic"
+									title="Voice-First Experience"
+									description="Share your thoughts through authentic voice notes that capture emotion and personality"
+									style={styles.featureCard}
+									index={1}
+								/>
+								<FeatureCard
+									icon="users"
+									title="Meaningful Connections"
+									description="Build genuine relationships through voice-based conversations and shared interests"
+									style={styles.featureCard}
+									index={2}
+								/>
+								<FeatureCard
+									icon="trending-up"
+									title="Discover & Grow"
+									description="Find trending topics, follow creators, and grow your own voice in the community"
+									style={styles.featureCard}
+									index={3}
+								/>
+							</View>
+						</Section>
+
+						{/* Highlights Section */}
+						<Section
+							title="Key Features"
+							subtitle="Everything you need to express yourself"
+						>
+							<View style={styles.highlightsContainer}>
+								<View style={styles.highlightItem}>
+									<LinearGradient
+										colors={["#6B2FBC", "#9D7BC7"]}
+										style={styles.highlightIcon}
+									>
+										<Feather name="headphones" size={24} color="#FFFFFF" />
+									</LinearGradient>
+									<Text style={styles.highlightTitle}>High-Quality Audio</Text>
+								</View>
+								<View style={styles.highlightItem}>
+									<LinearGradient
+										colors={["#6B2FBC", "#9D7BC7"]}
+										style={styles.highlightIcon}
+									>
+										<Feather name="shield" size={24} color="#FFFFFF" />
+									</LinearGradient>
+									<Text style={styles.highlightTitle}>Privacy First</Text>
+								</View>
+								<View style={styles.highlightItem}>
+									<LinearGradient
+										colors={["#6B2FBC", "#9D7BC7"]}
+										style={styles.highlightIcon}
+									>
+										<Feather name="zap" size={24} color="#FFFFFF" />
+									</LinearGradient>
+									<Text style={styles.highlightTitle}>Real-time Updates</Text>
+								</View>
+								<View style={styles.highlightItem}>
+									<LinearGradient
+										colors={["#6B2FBC", "#9D7BC7"]}
+										style={styles.highlightIcon}
+									>
+										<Feather name="globe" size={24} color="#FFFFFF" />
+									</LinearGradient>
+									<Text style={styles.highlightTitle}>Global Community</Text>
+								</View>
+							</View>
+						</Section>
+
+						{/* Testimonials Section */}
+						<Section
+							title="What People Say"
+							subtitle="Join thousands of users sharing their voices"
+						>
+							<View style={styles.testimonialsContainer}>
+								<TestimonialCard
+									quote="Ripply changed how I connect with others. Voice notes feel so much more personal than text."
+									name="Sarah M."
+									role="Content Creator"
+									style={styles.testimonialCard}
+								/>
+								<TestimonialCard
+									quote="The audio quality is amazing and the community is so welcoming. Love discovering new voices!"
+									name="Mike R."
+									role="Podcast Host"
+									style={styles.testimonialCard}
+								/>
+								<TestimonialCard
+									quote="Finally, a platform that values authentic communication over quick reactions."
+									name="Emma L."
+									role="Teacher"
+									style={styles.testimonialCard}
+								/>
+							</View>
+						</Section>
+
+						{/* CTA Section */}
+						<View style={styles.ctaSection}>
+							<BlurView intensity={20} style={styles.ctaContainer}>
+								<Text style={styles.ctaTitle}>Ready to Get Started?</Text>
+								<Text style={styles.ctaSubtitle}>
+									Join our community and start sharing your voice today
+								</Text>
+								<View style={styles.ctaButtonContainer}>
+									<AnimatedButton
+										text="Sign Up Now"
+										onPress={() => handleAuthPress("signup")}
+										style={styles.ctaButton}
+										icon="arrow-right"
+										iconPosition="right"
+									/>
+								</View>
+							</BlurView>
+						</View>
+					</ScrollView>
+				</SafeAreaView>
+
+				{/* Footer */}
+				<View style={styles.footer}>
+					<View style={styles.footerLinks}>
+						<Text style={styles.footerLink}>Privacy</Text>
+						<Text style={styles.footerLink}>Terms</Text>
+						<Text style={styles.footerLink}>Support</Text>
+					</View>
+					<Text style={styles.footerText}>
+						© 2024 Ripply. All rights reserved.
+					</Text>
+				</View>
+			</LinearGradient>
+
+			{/* Auth Modal */}
+			<AuthModal
+				visible={authModalVisible}
+				onClose={() => setAuthModalVisible(false)}
+				mode={authMode}
+				onModeChange={setAuthMode}
+			/>
+		</View>
+	);
 }
 
 const { width, height } = Dimensions.get("window");
