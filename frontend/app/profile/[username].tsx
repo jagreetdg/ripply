@@ -461,29 +461,22 @@ export default function ProfileByUsernameScreen() {
 					},
 				]}
 			>
-				{/* Add a touchable area over the header for scrolling to top */}
-				<TouchableOpacity
-					onPress={handleHeaderPress}
-					activeOpacity={0.7}
-					style={styles.headerTouchArea}
-				>
-					<View style={styles.headerContent}>
-						{/* Status bar spacer inside the header */}
-						<View style={{ height: insets.top }} />
-						<ProfileHeader
-							userId={userProfile.id}
-							username={userProfile.username}
-							displayName={userProfile.display_name}
-							avatarUrl={userProfile.avatar_url}
-							coverPhotoUrl={userProfile.cover_photo_url}
-							bio={userProfile.bio || undefined}
-							isVerified={userProfile.is_verified}
-							isCollapsed={true}
-							postCount={voiceNotes.length}
-							isOwnProfile={isOwnProfile}
-						/>
-					</View>
-				</TouchableOpacity>
+				{/* Status bar spacer */}
+				<View style={{ height: insets.top }} />
+				{/* Collapsed header with scroll-to-top functionality */}
+				<ProfileHeader
+					userId={userProfile.id}
+					username={userProfile.username}
+					displayName={userProfile.display_name}
+					avatarUrl={userProfile.avatar_url}
+					coverPhotoUrl={userProfile.cover_photo_url}
+					bio={userProfile.bio || undefined}
+					isVerified={userProfile.is_verified}
+					isCollapsed={true}
+					postCount={voiceNotes.length}
+					isOwnProfile={isOwnProfile}
+					onHeaderPress={handleHeaderPress} // Pass scroll-to-top handler
+				/>
 			</Animated.View>
 
 			<Animated.ScrollView

@@ -9,10 +9,6 @@ import {
 	Animated,
 	ViewStyle,
 	TextStyle,
-	Modal,
-	Dimensions,
-	Pressable,
-	ImageStyle,
 	Platform,
 	ActivityIndicator,
 	TouchableWithoutFeedback,
@@ -23,6 +19,7 @@ import { BlurView } from "expo-blur";
 import { getVoiceBio } from "../../services/api/voiceBioService";
 import DefaultAvatar from "../DefaultAvatar";
 import { useTheme } from "../../context/ThemeContext";
+import { PhotoViewerModal } from "./PhotoViewerModal";
 
 interface ProfileHeaderProps {
 	userId: string;
@@ -35,6 +32,7 @@ interface ProfileHeaderProps {
 	isVerified?: boolean;
 	isOwnProfile?: boolean;
 	username?: string;
+	onHeaderPress?: () => void; // For scroll-to-top functionality in collapsed header
 }
 
 interface VoiceBio {
@@ -89,15 +87,7 @@ interface Styles {
 	voiceBioButtonPlaying: ViewStyle;
 	voiceBioContainer: ViewStyle;
 	voiceBioDuration: TextStyle;
-	modalOverlay: ViewStyle;
-	modalContent: ViewStyle;
-	fullscreenImage: ImageStyle;
-	actionButton: ViewStyle;
-	actionButtonText: TextStyle;
-	actionButtons: ViewStyle;
-	fullscreenImageContainer: ViewStyle;
-	profileImageContainer: ViewStyle;
-	modalContainer: ViewStyle;
+
 	noVoiceBioText: TextStyle;
 }
 
@@ -118,6 +108,7 @@ export function ProfileHeader({
 	isVerified = false,
 	isOwnProfile = false,
 	username = "",
+	onHeaderPress,
 }: ProfileHeaderProps) {
 	const router = useRouter();
 	const { colors, isDarkMode } = useTheme();
@@ -134,11 +125,22 @@ export function ProfileHeader({
 	const [activePhoto, setActivePhoto] = useState<"profile" | "cover" | null>(
 		null
 	);
-	const [imageAspectRatio, setImageAspectRatio] = useState(1);
+	const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(
+		avatarUrl
+	);
+	const [localCoverPhotoUrl, setLocalCoverPhotoUrl] = useState<string | null>(
+		coverPhotoUrl
+	);
 	const [voiceBio, setVoiceBio] = useState<VoiceBio | null>(null);
 	const [loadingVoiceBio, setLoadingVoiceBio] = useState(false);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const progressContainerRef = useRef<View>(null);
+
+	// Sync local state with props
+	useEffect(() => {
+		setLocalAvatarUrl(avatarUrl);
+		setLocalCoverPhotoUrl(coverPhotoUrl);
+	}, [avatarUrl, coverPhotoUrl]);
 
 	// Fetch voice bio data
 	useEffect(() => {
@@ -224,7 +226,6 @@ export function ProfileHeader({
 
 	const handleVoiceBioPlayPause = useCallback(() => {
 		if (!voiceBio && !loadingVoiceBio) {
-			console.log("No voice bio available");
 			return;
 		}
 
@@ -286,16 +287,15 @@ export function ProfileHeader({
 		setModalVisible(true);
 	};
 
-	const handleEditPhoto = () => {
-		// TODO: Implement photo editing
-		console.log(`Edit ${activePhoto} photo`);
-		setModalVisible(false);
-	};
-
-	const handleRemovePhoto = () => {
-		// TODO: Implement photo removal
-		console.log(`Remove ${activePhoto} photo`);
-		setModalVisible(false);
+	const handlePhotoUpdated = (
+		type: "profile" | "cover",
+		newUrl: string | null
+	) => {
+		if (type === "profile") {
+			setLocalAvatarUrl(newUrl);
+		} else {
+			setLocalCoverPhotoUrl(newUrl);
+		}
 	};
 
 	// Dynamic styles based on theme
@@ -303,16 +303,32 @@ export function ProfileHeader({
 		container: {
 			backgroundColor: colors.background,
 		},
+		coverPhotoContainer: {
+			position: "relative",
+			width: "100%",
+			height: 150,
+		},
 		coverPhoto: {
 			width: "100%",
 			height: 150,
-			justifyContent: "space-between",
 		},
-		topBar: {
-			flexDirection: "row",
-			justifyContent: "space-between",
-			paddingHorizontal: 16,
-			paddingTop: 16,
+		backButtonAbsolute: {
+			position: "absolute",
+			top: 16,
+			left: 16,
+			zIndex: 10,
+			// Complete button style - no inheritance
+			width: 42,
+			height: 42,
+			borderRadius: 21,
+			backgroundColor: "rgba(0, 0, 0, 0.3)",
+			justifyContent: "center",
+			alignItems: "center",
+			// No margins or padding that could expand touch area
+			margin: 0,
+			padding: 0,
+			// Make it visual-only, not touchable
+			pointerEvents: "none",
 		},
 		iconButton: {
 			width: 42,
@@ -573,57 +589,7 @@ export function ProfileHeader({
 			fontSize: 14,
 			color: colors.textSecondary,
 		},
-		modalOverlay: {
-			flex: 1,
-			backgroundColor: "rgba(0, 0, 0, 0.7)",
-			justifyContent: "center",
-			alignItems: "center",
-		},
-		modalContent: {
-			backgroundColor: colors.background,
-			borderRadius: 10,
-			padding: 20,
-			width: "80%",
-			alignItems: "center",
-		},
-		fullscreenImage: {
-			width: "100%",
-			height: undefined,
-			maxHeight: "80%",
-		},
-		actionButton: {
-			paddingVertical: 10,
-			paddingHorizontal: 20,
-			borderRadius: 20,
-			backgroundColor: "#6B2FBC",
-			marginVertical: 5,
-		},
-		actionButtonText: {
-			color: "white",
-			fontWeight: "bold",
-		},
-		actionButtons: {
-			flexDirection: "row",
-			justifyContent: "space-around",
-			width: "100%",
-			marginTop: 20,
-		},
-		fullscreenImageContainer: {
-			width: "90%",
-			maxHeight: "70%",
-			marginBottom: 20,
-			borderRadius: 10,
-			overflow: "hidden",
-		},
-		profileImageContainer: {
-			marginBottom: 20,
-		},
-		modalContainer: {
-			flex: 1,
-			justifyContent: "center",
-			alignItems: "center",
-			backgroundColor: "rgba(0, 0, 0, 0.7)",
-		},
+
 		noVoiceBioText: {
 			fontSize: 12,
 			color: colors.textSecondary,
@@ -655,19 +621,19 @@ export function ProfileHeader({
 					<Feather name="arrow-left" size={24} color={colors.text} />
 				</TouchableOpacity>
 
-				<View style={styles.collapsedContent}>
+				{/* Scroll-to-top area - everything except the back button */}
+				<TouchableOpacity
+					onPress={onHeaderPress}
+					activeOpacity={0.7}
+					style={styles.collapsedContent}
+				>
 					<View style={styles.avatarSmallContainer}>
-						{avatarUrl ? (
-							<TouchableOpacity
-								onPress={() => handlePhotoPress("profile")}
-								activeOpacity={0.8}
-							>
-								<Image
-									source={{ uri: avatarUrl }}
-									style={styles.avatarSmall}
-									resizeMode="cover"
-								/>
-							</TouchableOpacity>
+						{localAvatarUrl ? (
+							<Image
+								source={{ uri: localAvatarUrl }}
+								style={styles.avatarSmall}
+								resizeMode="cover"
+							/>
 						) : (
 							<DefaultAvatar userId={userId} size={40} />
 						)}
@@ -686,7 +652,7 @@ export function ProfileHeader({
 						</View>
 						<Text style={styles.collapsedUsername}>@{username}</Text>
 					</View>
-				</View>
+				</TouchableOpacity>
 
 				{/* Removed post count from collapsed header as requested */}
 				<View style={styles.collapsedRightSpace} />
@@ -696,70 +662,65 @@ export function ProfileHeader({
 
 	return (
 		<View style={styles.container}>
-			{/* Cover photo - make it clickable */}
-			{coverPhotoUrl ? (
-				<TouchableOpacity
-					activeOpacity={0.9}
-					onPress={() => handlePhotoPress("cover")}
-				>
+			{/* Cover photo - clickable for photo viewer */}
+			<TouchableOpacity
+				activeOpacity={0.9}
+				onPress={() => handlePhotoPress("cover")}
+				style={styles.coverPhotoContainer}
+			>
+				{localCoverPhotoUrl ? (
 					<ImageBackground
-						source={{ uri: coverPhotoUrl }}
+						source={{ uri: localCoverPhotoUrl }}
 						style={styles.coverPhoto}
 						resizeMode="cover"
-					>
-						<View style={styles.topBar}>
-							<TouchableOpacity
-								onPress={() => router.back()}
-								style={styles.iconButton}
-							>
-								<Feather name="arrow-left" size={24} color="white" />
-							</TouchableOpacity>
-						</View>
-					</ImageBackground>
-				</TouchableOpacity>
-			) : (
-				<View
-					style={[
-						styles.coverPhoto,
-						{
-							backgroundColor: `${colors.tint}20`,
-							justifyContent: "space-between",
-						},
-					]}
-				>
-					<View style={styles.topBar}>
-						<TouchableOpacity
-							onPress={() => router.back()}
-							style={styles.iconButton}
-						>
-							<Feather
-								name="arrow-left"
-								size={24}
-								color={isDarkMode ? "white" : "black"}
-							/>
-						</TouchableOpacity>
-					</View>
+					/>
+				) : (
+					<View
+						style={[
+							styles.coverPhoto,
+							{
+								backgroundColor: `${colors.tint}20`,
+							},
+						]}
+					/>
+				)}
+
+				{/* Visual back button (not touchable) */}
+				<View style={styles.backButtonAbsolute}>
+					<Feather
+						name="arrow-left"
+						size={24}
+						color={
+							localCoverPhotoUrl ? "white" : isDarkMode ? "white" : "black"
+						}
+					/>
 				</View>
-			)}
+			</TouchableOpacity>
 
 			{/* Profile info */}
 			<View style={styles.profileInfo}>
-				{/* Avatar */}
-				<View style={styles.avatarContainer}>
-					{avatarUrl ? (
-						<TouchableOpacity
-							onPress={() => handlePhotoPress("profile")}
-							activeOpacity={0.8}
-						>
+				{/* Avatar - using pointerEvents: "box-none" to allow touches to pass through the container but still make the avatar touchable */}
+				<View style={[styles.avatarContainer, { pointerEvents: "box-none" }]}>
+					<TouchableOpacity
+						onPress={() => handlePhotoPress("profile")}
+						activeOpacity={0.8}
+						style={{
+							width: 80,
+							height: 80,
+							borderRadius: 40,
+							pointerEvents: "auto",
+						}}
+					>
+						{localAvatarUrl ? (
 							<Image
-								source={{ uri: avatarUrl }}
+								source={{ uri: localAvatarUrl }}
 								style={styles.avatar}
 								resizeMode="cover"
 							/>
-						</TouchableOpacity>
-					) : (
-						<DefaultAvatar userId={userId} size={80} />
-					)}
+						) : (
+							<DefaultAvatar userId={userId} size={80} />
+						)}
+					</TouchableOpacity>
 				</View>
 
 				{/* Name and bio */}
@@ -908,57 +869,18 @@ export function ProfileHeader({
 				</View>
 			</View>
 
-			{/* Modal for fullscreen images */}
-			<Modal
+			{/* Enhanced Photo Viewer Modal */}
+			<PhotoViewerModal
 				visible={modalVisible}
-				transparent={true}
-				animationType="fade"
-				onRequestClose={() => setModalVisible(false)}
-			>
-				<View style={styles.modalContainer}>
-					{activePhoto === "profile" && avatarUrl && (
-						<View style={styles.fullscreenImageContainer}>
-							<Image
-								source={{ uri: avatarUrl }}
-								style={[
-									styles.fullscreenImage,
-									{ aspectRatio: imageAspectRatio },
-								]}
-								resizeMode="contain"
-							/>
-						</View>
-					)}
-
-					{activePhoto === "cover" && coverPhotoUrl && (
-						<View style={styles.fullscreenImageContainer}>
-							<Image
-								source={{ uri: coverPhotoUrl }}
-								style={[
-									styles.fullscreenImage,
-									{ aspectRatio: imageAspectRatio },
-								]}
-								resizeMode="contain"
-							/>
-						</View>
-					)}
-
-					<View style={styles.actionButtons}>
-						<TouchableOpacity
-							style={styles.actionButton}
-							onPress={handleEditPhoto}
-						>
-							<Feather name="edit" size={24} color="white" />
-						</TouchableOpacity>
-
-						<TouchableOpacity
-							style={styles.actionButton}
-							onPress={() => setModalVisible(false)}
-						>
-							<Feather name="x" size={24} color="white" />
-						</TouchableOpacity>
-					</View>
-				</View>
-			</Modal>
+				onClose={() => setModalVisible(false)}
+				photoType={activePhoto}
+				imageUrl={
+					activePhoto === "profile" ? localAvatarUrl : localCoverPhotoUrl
+				}
+				userId={userId}
+				isOwnProfile={isOwnProfile}
+				onPhotoUpdated={handlePhotoUpdated}
+			/>
 		</View>
 	);
 }

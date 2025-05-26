@@ -332,7 +332,13 @@ export default function HomeScreen() {
 				}
 
 				// Transform backend data format to match our frontend component expectations
-				const transformedData = data.map((item) => {
+				// First, ensure uniqueness by filtering out any duplicate IDs
+				const uniqueData = data.filter(
+					(item, index, self) =>
+						index === self.findIndex((t) => t.id === item.id)
+				);
+
+				const transformedData = uniqueData.map((item) => {
 					// Determine if this is a shared voice note (repost)
 					const isShared = !!item.is_shared;
 
@@ -546,7 +552,6 @@ export default function HomeScreen() {
 									]}
 								>
 									<VoiceNoteCard
-										key={item.id}
 										voiceNote={item.voiceNote}
 										userId={item.userId}
 										displayName={item.displayName}

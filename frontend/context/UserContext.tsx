@@ -137,6 +137,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 		} catch (err) {
 			console.error("Error logging out:", err);
 			setError("Failed to logout");
+			// Still clear user state even if logout API fails
+			setUser(null);
 		} finally {
 			setLoading(false);
 		}

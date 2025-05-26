@@ -100,7 +100,8 @@ export default function SettingsScreen() {
 		try {
 			// Call the proper logout service which handles both backend and frontend cleanup
 			await logout();
-			router.replace("/");
+			// Don't manually navigate - let RequireAuth component handle the redirection
+			// when user state becomes null
 		} catch (error) {
 			console.error("Error logging out:", error);
 			alert("Failed to logout. Please try again.");

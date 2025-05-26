@@ -43,7 +43,26 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 		if (!loading && !user && !isPublicRoute) {
 			console.log("[DEBUG] RequireAuth - Redirecting to landing page");
 			console.log("[DEBUG] RequireAuth - From pathname:", pathname);
-			router.replace("/");
+
+			// Use setTimeout to ensure navigation happens after current render cycle
+			setTimeout(() => {
+				try {
+					router.replace("/");
+				} catch (error) {
+					console.error("[DEBUG] RequireAuth - Navigation error:", error);
+					// Fallback: try again after a short delay
+					setTimeout(() => {
+						try {
+							router.replace("/");
+						} catch (retryError) {
+							console.error(
+								"[DEBUG] RequireAuth - Retry navigation failed:",
+								retryError
+							);
+						}
+					}, 100);
+				}
+			}, 0);
 		}
 	}, [user, loading, router, pathname, isPublicRoute]);
 
