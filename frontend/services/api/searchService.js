@@ -68,13 +68,8 @@ export const searchUsers = async (term, currentUserId) => {
 		const searchTerm = term.startsWith("#") ? term.substring(1) : term;
 		console.log(`Searching users for: "${searchTerm}"`);
 
-		// Build the API URL with currentUserId if available
-		let apiUrl = `${ENDPOINTS.USERS}/search?term=${encodeURIComponent(
-			searchTerm
-		)}`;
-		if (currentUserId) {
-			apiUrl += `&currentUserId=${encodeURIComponent(currentUserId)}`;
-		}
+		// Build the API URL without excluding current user
+		const apiUrl = `${ENDPOINTS.USERS}/search?term=${encodeURIComponent(searchTerm)}`;
 
 		// API call to the backend
 		const response = await apiRequest(apiUrl);
