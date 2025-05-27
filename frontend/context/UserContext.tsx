@@ -54,10 +54,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 	const [error, setError] = useState<string | null>(null);
 
 	// Wrap setUser to add logging
-	const setUser = (newUser: User | null) => {
+	const setUser: React.Dispatch<React.SetStateAction<User | null>> = (
+		newUser
+	) => {
 		console.log(
 			"[DEBUG] UserContext - setUser called:",
-			newUser ? `user:${newUser.id}` : "null"
+			typeof newUser === "function"
+				? "function"
+				: newUser
+				? `user:${newUser.id}`
+				: "null"
 		);
 		setUserState(newUser);
 		// When we explicitly set a user, we're no longer loading

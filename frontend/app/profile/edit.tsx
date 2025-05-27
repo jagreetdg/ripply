@@ -14,6 +14,7 @@ import {
 	Animated,
 	ImageBackground,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -25,14 +26,12 @@ import { checkUsernameAvailability } from "../../services/api/authService";
 import DefaultAvatar from "../../components/DefaultAvatar";
 import { LinearGradient } from "expo-linear-gradient";
 import { getDefaultCoverPhoto } from "../../utils/defaultImages";
+import { useGlobalToast } from "../../components/common/Toast";
+import { PhotoViewerModal } from "../../components/profile/PhotoViewerModal";
 
 // Define response types to fix TypeScript errors
 interface UsernameAvailabilityResponse {
 	available: boolean;
-}
-
-interface UpdateProfileResponse {
-	success: boolean;
 }
 
 // Extended user type to include cover_photo_url
@@ -73,8 +72,9 @@ const HoverableView = ({
 export default function EditProfileScreen() {
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
-	const { user, refreshUser } = useUser();
+	const { user, refreshUser, setUser } = useUser();
 	const { colors, isDarkMode } = useTheme();
+	const { showToast } = useGlobalToast();
 
 	const [displayName, setDisplayName] = useState("");
 	const [bio, setBio] = useState("");
@@ -89,6 +89,12 @@ export default function EditProfileScreen() {
 	const [isCoverHovered, setIsCoverHovered] = useState(false);
 	const [isUsernameValid, setIsUsernameValid] = useState(true);
 	const [isUsernameEdited, setIsUsernameEdited] = useState(false);
+
+	// Photo viewer modal state
+	const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
+	const [photoViewerType, setPhotoViewerType] = useState<
+		"profile" | "cover" | null
+	>(null);
 
 	// Animation values
 	const [fadeAnim] = useState(new Animated.Value(0));
@@ -217,6 +223,30 @@ export default function EditProfileScreen() {
 		}
 	};
 
+	// Handle opening photo viewer
+	const handleOpenPhotoViewer = (type: "profile" | "cover") => {
+		setPhotoViewerType(type);
+		setPhotoViewerVisible(true);
+	};
+
+	// Handle closing photo viewer
+	const handleClosePhotoViewer = () => {
+		setPhotoViewerVisible(false);
+		setPhotoViewerType(null);
+	};
+
+	// Handle photo updated from viewer
+	const handlePhotoUpdated = (
+		type: "profile" | "cover",
+		newUrl: string | null
+	) => {
+		if (type === "profile") {
+			setAvatarUrl(newUrl);
+		} else if (type === "cover") {
+			setCoverPhotoUrl(newUrl);
+		}
+	};
+
 	// Handle cover photo selection
 	const handleSelectCoverPhoto = async () => {
 		try {
@@ -247,21 +277,77 @@ export default function EditProfileScreen() {
 		}
 	};
 
+	// Update user in AsyncStorage to maintain consistent state
+	const updateLocalUserData = async (updatedUser: any) => {
+		console.log("[EDIT PROFILE] updateLocalUserData called with:", updatedUser);
+		try {
+			const USER_KEY = "@ripply_user";
+			console.log(
+				"[EDIT PROFILE] Attempting to save to AsyncStorage with key:",
+				USER_KEY
+			);
+			await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+			console.log(
+				"[EDIT PROFILE] ✅ Successfully saved to AsyncStorage:",
+				updatedUser.username
+			);
+
+			// Verify the save by reading it back
+			const savedData = await AsyncStorage.getItem(USER_KEY);
+			const parsedData = savedData ? JSON.parse(savedData) : null;
+			console.log(
+				"[EDIT PROFILE] 🔍 Verification - data saved in AsyncStorage:",
+				parsedData
+					? { id: parsedData.id, username: parsedData.username }
+					: "null"
+			);
+		} catch (error: any) {
+			console.error("[EDIT PROFILE] ❌ Error updating local user data:", error);
+			console.log("[EDIT PROFILE] AsyncStorage error details:", error.message);
+		}
+	};
+
 	// Handle form submission
 	const handleSave = async () => {
-		if (!user) return;
+		console.log("[EDIT PROFILE] === SAVE PROCESS STARTED ===");
+		console.log(
+			"[EDIT PROFILE] Current user:",
+			user ? { id: user.id, username: user.username } : "null"
+		);
+		console.log("[EDIT PROFILE] Form data:", {
+			displayName: displayName.trim(),
+			bio: bio.trim(),
+			username: username.trim(),
+			originalUsername,
+			avatarUrl,
+			coverPhotoUrl,
+			usernameChanged: username !== originalUsername,
+		});
+
+		if (!user) {
+			console.log("[EDIT PROFILE] ERROR: No user found, aborting save");
+			return;
+		}
 
 		if (!displayName.trim()) {
-			Alert.alert("Error", "Display name cannot be empty");
+			console.log("[EDIT PROFILE] ERROR: Display name is empty");
+			showToast("Display name cannot be empty", "error");
 			return;
 		}
 
 		// Validate username
 		if (usernameError || !username.trim()) {
-			Alert.alert("Error", usernameError || "Username cannot be empty");
+			console.log("[EDIT PROFILE] ERROR: Username validation failed:", {
+				usernameError,
+				username: username.trim(),
+				isUsernameValid,
+				isUsernameEdited,
+			});
+			showToast(usernameError || "Username cannot be empty", "error");
 			return;
 		}
 
+		console.log("[EDIT PROFILE] Validation passed, starting API call");
 		setIsLoading(true);
 
 		try {
@@ -280,26 +366,105 @@ export default function EditProfileScreen() {
 				}),
 			};
 
-			// Call API to update profile
-			const result = (await updateUserProfile(
-				user.id,
-				userData
-			)) as UpdateProfileResponse;
+			console.log("[EDIT PROFILE] Prepared userData for API:", userData);
+			console.log("[EDIT PROFILE] Making API call to updateUserProfile...");
 
-			if (result.success) {
-				// Refresh user data
-				await refreshUser();
-				Alert.alert("Success", "Profile updated successfully", [
-					{ text: "OK", onPress: () => router.back() },
-				]);
+			// Call API to update profile
+			const result = (await updateUserProfile(user.id, userData)) as any;
+
+			console.log("[EDIT PROFILE] API response received:", result);
+
+			// Check if the API call was successful
+			// The API returns the updated user object directly, not a wrapper with success property
+			if (result && result.id && result.username) {
+				console.log(
+					"[EDIT PROFILE] ✅ API call successful - user object received"
+				);
+
+				// Check if username was changed
+				const usernameChanged = username !== originalUsername;
+				console.log("[EDIT PROFILE] Username changed:", usernameChanged);
+
+				// Create the complete updated user object using the API response
+				const updatedUserData = {
+					...user,
+					...result, // Use the API response data
+					// Ensure we have the latest data
+					display_name: result.display_name || displayName.trim(),
+					bio: result.bio || bio.trim(),
+					username: result.username || username.trim(),
+				};
+
+				console.log(
+					"[EDIT PROFILE] Created updated user data:",
+					updatedUserData
+				);
+
+				// Update AsyncStorage first
+				console.log("[EDIT PROFILE] Updating AsyncStorage...");
+				await updateLocalUserData(updatedUserData);
+				console.log("[EDIT PROFILE] ✅ AsyncStorage updated");
+
+				// Update the user context immediately
+				console.log("[EDIT PROFILE] Updating user context...");
+				setUser(updatedUserData);
+				console.log("[EDIT PROFILE] ✅ User context updated");
+
+				// Show success message immediately
+				console.log("[EDIT PROFILE] Showing success toast...");
+				showToast("Profile updated successfully", "success");
+				console.log("[EDIT PROFILE] ✅ Success toast shown");
+
+				// Navigate back to profile page with updated username after brief delay
+				// This gives the toast time to appear before navigation
+				setTimeout(() => {
+					console.log("[EDIT PROFILE] Setting up navigation...");
+					if (usernameChanged) {
+						console.log(
+							`[EDIT PROFILE] 🔄 Username changed from ${originalUsername} to ${result.username}`
+						);
+						console.log("[EDIT PROFILE] Navigating to new username profile...");
+						// Use replace to avoid navigation stack issues
+						router.replace({
+							pathname: "/profile/[username]",
+							params: { username: result.username },
+						});
+					} else {
+						console.log(
+							"[EDIT PROFILE] 🔄 No username change, navigating to current profile..."
+						);
+						// Navigate to current username if no change
+						router.replace({
+							pathname: "/profile/[username]",
+							params: { username: result.username },
+						});
+					}
+					console.log("[EDIT PROFILE] ✅ Navigation initiated");
+				}, 100); // Brief delay to let toast appear before navigation
 			} else {
-				Alert.alert("Error", "Failed to update profile");
+				console.log(
+					"[EDIT PROFILE] ❌ API call failed - invalid response:",
+					result
+				);
+				// Show error message and stay on edit screen
+				const errorMessage = "Failed to update profile - invalid response";
+				console.log("[EDIT PROFILE] Showing error toast:", errorMessage);
+				showToast(errorMessage, "error");
 			}
-		} catch (error) {
-			console.error("Error updating profile:", error);
-			Alert.alert("Error", "An error occurred while updating your profile");
+		} catch (error: any) {
+			console.log("[EDIT PROFILE] ❌ Exception during save:", error);
+			console.error("[EDIT PROFILE] Full error object:", error);
+			console.log("[EDIT PROFILE] Error message:", error.message);
+			console.log("[EDIT PROFILE] Error stack:", error.stack);
+
+			const errorMessage =
+				error.message || "An error occurred while updating your profile";
+			console.log("[EDIT PROFILE] Showing error toast:", errorMessage);
+			showToast(errorMessage, "error");
 		} finally {
+			console.log("[EDIT PROFILE] Setting loading to false");
 			setIsLoading(false);
+			console.log("[EDIT PROFILE] === SAVE PROCESS COMPLETED ===");
 		}
 	};
 
@@ -369,8 +534,9 @@ export default function EditProfileScreen() {
 							onHoverIn={() => setIsCoverHovered(true)}
 							onHoverOut={() => setIsCoverHovered(false)}
 						>
+							{/* Background touchable for viewing photo */}
 							<TouchableOpacity
-								onPress={handleSelectCoverPhoto}
+								onPress={() => handleOpenPhotoViewer("cover")}
 								style={styles.coverPhotoTouchable}
 								activeOpacity={0.8}
 							>
@@ -379,23 +545,7 @@ export default function EditProfileScreen() {
 										source={{ uri: coverPhotoUrl }}
 										style={styles.coverPhoto}
 										resizeMode="cover"
-									>
-										<View
-											style={[
-												styles.coverEditOverlay,
-												{ opacity: isCoverHovered ? 1 : 0.7 },
-											]}
-										>
-											<LinearGradient
-												colors={["transparent", "rgba(0,0,0,0.7)"]}
-												style={styles.coverGradient}
-											>
-												<View style={styles.coverEditButton}>
-													<Feather name="edit-2" size={16} color="#fff" />
-												</View>
-											</LinearGradient>
-										</View>
-									</ImageBackground>
+									/>
 								) : (
 									<View
 										style={[
@@ -406,28 +556,36 @@ export default function EditProfileScreen() {
 												alignItems: "center",
 											},
 										]}
-									>
-										<View
-											style={[
-												styles.coverEditOverlay,
-												{ opacity: isCoverHovered ? 1 : 0.7 },
-											]}
-										>
-											<LinearGradient
-												colors={["transparent", "rgba(0,0,0,0.5)"]}
-												style={styles.coverGradient}
-											>
-												<View style={styles.coverEditButton}>
-													<Feather name="plus" size={16} color="#fff" />
-													<Text style={styles.coverEditText}>
-														Add Cover Photo
-													</Text>
-												</View>
-											</LinearGradient>
-										</View>
-									</View>
+									/>
 								)}
 							</TouchableOpacity>
+
+							{/* Edit overlay */}
+							<View
+								style={[
+									styles.coverEditOverlay,
+									{ opacity: isCoverHovered ? 1 : 0 },
+								]}
+								pointerEvents="box-none"
+							>
+								<View style={styles.coverShade} pointerEvents="none" />
+								<TouchableOpacity
+									onPress={handleSelectCoverPhoto}
+									style={styles.coverEditButton}
+									activeOpacity={0.8}
+								>
+									<Feather
+										name={coverPhotoUrl ? "edit-2" : "plus"}
+										size={16}
+										color="#fff"
+									/>
+								</TouchableOpacity>
+								{!coverPhotoUrl && (
+									<View style={styles.coverAddText} pointerEvents="none">
+										<Text style={styles.coverEditText}>Add Cover Photo</Text>
+									</View>
+								)}
+							</View>
 						</HoverableView>
 					</View>
 
@@ -437,8 +595,9 @@ export default function EditProfileScreen() {
 							onHoverIn={() => setIsImageHovered(true)}
 							onHoverOut={() => setIsImageHovered(false)}
 						>
+							{/* Background touchable for viewing avatar */}
 							<TouchableOpacity
-								onPress={handleSelectImage}
+								onPress={() => handleOpenPhotoViewer("profile")}
 								style={styles.avatarTouchable}
 								activeOpacity={0.8}
 							>
@@ -447,26 +606,36 @@ export default function EditProfileScreen() {
 								) : (
 									<DefaultAvatar size={100} userId={user.id || ""} />
 								)}
-								<View
-									style={[
-										styles.editOverlay,
-										{
-											opacity: isImageHovered
-												? 1
-												: Platform.OS === "web"
-												? 0
-												: 0.8,
-										},
-									]}
+							</TouchableOpacity>
+
+							{/* Edit overlay */}
+							<View
+								style={[
+									styles.editOverlay,
+									{
+										opacity: isImageHovered
+											? 1
+											: Platform.OS === "web"
+											? 0
+											: 0.8,
+									},
+								]}
+								pointerEvents="box-none"
+							>
+								<LinearGradient
+									colors={["rgba(0,0,0,0.3)", "rgba(0,0,0,0.7)"]}
+									style={styles.editGradient}
+									pointerEvents="none"
 								>
-									<LinearGradient
-										colors={["rgba(0,0,0,0.3)", "rgba(0,0,0,0.7)"]}
-										style={styles.editGradient}
+									<TouchableOpacity
+										onPress={handleSelectImage}
+										style={styles.avatarEditButton}
+										activeOpacity={0.8}
 									>
 										<Feather name="edit-2" size={20} color="#fff" />
-									</LinearGradient>
-								</View>
-							</TouchableOpacity>
+									</TouchableOpacity>
+								</LinearGradient>
+							</View>
 						</HoverableView>
 					</View>
 
@@ -568,6 +737,17 @@ export default function EditProfileScreen() {
 					</View>
 				</Animated.View>
 			</ScrollView>
+
+			{/* Photo Viewer Modal */}
+			<PhotoViewerModal
+				visible={photoViewerVisible}
+				onClose={handleClosePhotoViewer}
+				photoType={photoViewerType}
+				imageUrl={photoViewerType === "profile" ? avatarUrl : coverPhotoUrl}
+				userId={user.id}
+				isOwnProfile={true}
+				onPhotoUpdated={handlePhotoUpdated}
+			/>
 		</KeyboardAvoidingView>
 	);
 }
@@ -626,17 +806,33 @@ const styles = StyleSheet.create({
 		width: "100%",
 		height: "100%",
 	},
+	coverEditTouchable: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		zIndex: 2,
+	},
 	coverPhoto: {
 		width: "100%",
 		height: 150,
 	},
 	coverEditOverlay: {
 		position: "absolute",
-		bottom: 0,
+		top: 0,
 		left: 0,
 		right: 0,
-		height: "100%",
-		justifyContent: "flex-end",
+		bottom: 0,
+		justifyContent: "flex-start",
+	},
+	coverShade: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		backgroundColor: "rgba(0,0,0,0.6)",
 	},
 	coverGradient: {
 		position: "absolute",
@@ -665,6 +861,14 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		fontWeight: "500",
 		marginLeft: 4,
+	},
+	coverAddText: {
+		position: "absolute",
+		bottom: 20,
+		left: 0,
+		right: 0,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	avatarSection: {
 		alignItems: "center",
@@ -706,6 +910,12 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		bottom: 0,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	avatarEditButton: {
+		width: "100%",
+		height: "100%",
 		justifyContent: "center",
 		alignItems: "center",
 	},

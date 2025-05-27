@@ -206,9 +206,53 @@ export default function ProfileByUsernameScreen() {
 		}
 	}, [username]);
 
+	// Add effect to refresh when current user changes (e.g., after profile update)
+	useEffect(() => {
+		if (username && currentUser) {
+			console.log(
+				"[PROFILE PAGE] Current user changed, refreshing profile data"
+			);
+			console.log("[PROFILE PAGE] Current user details:", {
+				id: currentUser.id,
+				username: currentUser.username,
+				display_name: currentUser.display_name,
+			});
+			console.log("[PROFILE PAGE] Profile username:", username);
+			fetchUserData();
+		}
+	}, [currentUser?.username, currentUser?.id]);
+
 	useEffect(() => {
 		if (currentUser && userProfile) {
-			setIsOwnProfile(currentUser.username === userProfile.username);
+			const isOwner =
+				currentUser.username === userProfile.username ||
+				currentUser.id === userProfile.id;
+			console.log("[PROFILE PAGE] 🔍 Profile ownership check:", {
+				currentUserUsername: currentUser.username,
+				currentUserId: currentUser.id,
+				profileUsername: userProfile.username,
+				profileId: userProfile.id,
+				usernameMatch: currentUser.username === userProfile.username,
+				idMatch: currentUser.id === userProfile.id,
+				isOwner,
+				previousIsOwnProfile: isOwnProfile,
+			});
+
+			if (isOwner !== isOwnProfile) {
+				console.log(
+					"[PROFILE PAGE] 🔄 Ownership status changed from",
+					isOwnProfile,
+					"to",
+					isOwner
+				);
+			}
+
+			setIsOwnProfile(isOwner);
+		} else {
+			console.log("[PROFILE PAGE] ⚠️ Missing data for ownership check:", {
+				hasCurrentUser: !!currentUser,
+				hasUserProfile: !!userProfile,
+			});
 		}
 	}, [currentUser, userProfile]);
 
@@ -229,9 +273,19 @@ export default function ProfileByUsernameScreen() {
 				// Set user profile data
 				setUserProfile(userProfileResponse);
 
-				// Check if this is the current user's profile
-				if (currentUser && currentUser.id === userProfileResponse.id) {
-					setIsOwnProfile(true);
+				// Check if this is the current user's profile using both username and ID
+				if (currentUser) {
+					const isOwner =
+						currentUser.username === userProfileResponse.username ||
+						currentUser.id === userProfileResponse.id;
+					console.log("[DEBUG] Initial profile ownership check:", {
+						currentUserUsername: currentUser.username,
+						currentUserId: currentUser.id,
+						profileUsername: userProfileResponse.username,
+						profileId: userProfileResponse.id,
+						isOwner,
+					});
+					setIsOwnProfile(isOwner);
 				} else {
 					setIsOwnProfile(false);
 				}

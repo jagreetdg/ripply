@@ -26,6 +26,7 @@ import {
 	getUserProfile,
 } from "../../services/api/userService";
 import { BlurView } from "expo-blur";
+import { ENDPOINTS, apiRequest } from "../../services/api/config";
 
 interface PhotoViewerModalProps {
 	visible: boolean;
@@ -291,6 +292,29 @@ export function PhotoViewerModal({
 	const [screenData, setScreenData] = useState(Dimensions.get("window"));
 	const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
 
+	// Calculate modal image URL with proper fallbacks
+	const modalImageUrl = useMemo(() => {
+		if (!imageUrl) return null;
+
+		// Handle different URL formats
+		if (
+			imageUrl.startsWith("http") ||
+			imageUrl.startsWith("data:") ||
+			imageUrl.startsWith("file:")
+		) {
+			return imageUrl;
+		}
+
+		// If it's a relative path, make it absolute
+		if (imageUrl.startsWith("/")) {
+			return `${
+				process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"
+			}${imageUrl}`;
+		}
+
+		return imageUrl;
+	}, [imageUrl]);
+
 	// Listen for orientation changes
 	useEffect(() => {
 		const subscription = Dimensions.addEventListener("change", ({ window }) => {
@@ -307,6 +331,31 @@ export function PhotoViewerModal({
 			setIsImageLoading(true);
 		}
 	}, [imageUrl, currentImageUrl]);
+
+	// Reset image loading state when modal opens/closes or image changes
+	useEffect(() => {
+		if (visible && modalImageUrl) {
+			setIsImageLoading(true);
+		}
+	}, [visible, modalImageUrl]);
+
+	// Handle escape key press to close modal (web only)
+	useEffect(() => {
+		if (!visible) return;
+
+		const handleKeyPress = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				onClose();
+			}
+		};
+
+		if (Platform.OS === "web") {
+			document.addEventListener("keydown", handleKeyPress);
+			return () => {
+				document.removeEventListener("keydown", handleKeyPress);
+			};
+		}
+	}, [visible, onClose]);
 
 	if (!visible || !photoType) {
 		return null;
@@ -435,36 +484,6 @@ export function PhotoViewerModal({
 	const fontSizes = getFontSizes();
 	const sizes = getSizes();
 
-	// Calculate modal image URL with proper fallbacks
-	const modalImageUrl = useMemo(() => {
-		if (!imageUrl) return null;
-
-		// Handle different URL formats
-		if (
-			imageUrl.startsWith("http") ||
-			imageUrl.startsWith("data:") ||
-			imageUrl.startsWith("file:")
-		) {
-			return imageUrl;
-		}
-
-		// If it's a relative path, make it absolute
-		if (imageUrl.startsWith("/")) {
-			return `${
-				process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"
-			}${imageUrl}`;
-		}
-
-		return imageUrl;
-	}, [imageUrl]);
-
-	// Reset image loading state when modal opens/closes or image changes
-	useEffect(() => {
-		if (visible && modalImageUrl) {
-			setIsImageLoading(true);
-		}
-	}, [visible, modalImageUrl]);
-
 	const handleImagePicker = async () => {
 		try {
 			setIsLoading(true);
@@ -532,15 +551,15 @@ export function PhotoViewerModal({
 
 			const result = await updateUserProfile(userId, updateData);
 
-			if (result.success) {
+			if (result) {
 				// Refresh user data to get the latest from server
 				await refreshUser();
 
 				// Get the server-returned image URL
 				const serverImageUrl =
 					photoType === "profile"
-						? result.user?.avatar_url
-						: result.user?.cover_photo_url;
+						? (result as any).avatar_url
+						: (result as any).cover_photo_url;
 
 				// Notify parent component
 				if (onPhotoUpdated) {
@@ -565,6 +584,7 @@ export function PhotoViewerModal({
 	};
 
 	const handleDeletePhoto = () => {
+		console.log("Delete photo button clicked for:", photoType);
 		Alert.alert(
 			"Delete Photo",
 			`Are you sure you want to delete your ${photoType} photo?`,
@@ -575,37 +595,68 @@ export function PhotoViewerModal({
 					style: "destructive",
 					onPress: async () => {
 						try {
+							console.log("Starting delete process for:", photoType);
 							setIsLoading(true);
 
-							const updateData = {
-								[photoType === "profile" ? "avatar_url" : "cover_photo_url"]:
-									null,
+							// Create update data with null value for the photo URL
+							const fieldName =
+								photoType === "profile" ? "avatar_url" : "cover_photo_url";
+							const updateData = { [fieldName]: null };
+
+							console.log("Sending update data:", JSON.stringify(updateData));
+
+							// Make the API call directly with explicit parameters
+							const endpoint = `${ENDPOINTS.USERS}/${userId}`;
+							const options = {
+								method: "PUT",
+								headers: {
+									"Content-Type": "application/json",
+								},
+								body: JSON.stringify(updateData),
 							};
 
-							const result = await updateUserProfile(userId, updateData);
+							console.log(`Making direct API request to: ${endpoint}`, options);
 
-							if (result.success) {
+							// Use the apiRequest function from config.js
+							const result = await apiRequest(endpoint, {
+								method: "PUT",
+								body: JSON.stringify(updateData),
+							});
+
+							console.log("Delete API response:", JSON.stringify(result));
+
+							if (result) {
+								console.log("Delete successful, refreshing user data");
+
 								// Refresh user data
 								await refreshUser();
+
+								// Update local state immediately for better UX
+								setCurrentImageUrl(null);
 
 								// Notify parent component
 								if (onPhotoUpdated) {
 									onPhotoUpdated(photoType!, null);
 								}
 
+								// Show success message
 								showToast(
 									`${
 										photoType === "profile" ? "Profile" : "Cover"
 									} photo deleted successfully!`
 								);
+
+								// Close modal
 								onClose();
 							} else {
+								console.error("Delete failed - no result returned");
 								Alert.alert(
 									"Delete Failed",
 									"Failed to delete photo. Please try again."
 								);
 							}
 						} catch (error) {
+							console.error("Delete error:", error);
 							Alert.alert("Error", "Failed to delete photo. Please try again.");
 						} finally {
 							setIsLoading(false);
@@ -628,14 +679,15 @@ export function PhotoViewerModal({
 			{/* Full screen container */}
 			<View style={styles.container}>
 				{/* Background */}
-				<Pressable style={styles.backdrop} onPress={onClose}>
-					<LinearGradient
-						colors={["rgba(0,0,0,0.9)", "rgba(0,0,0,0.95)"]}
-						style={StyleSheet.absoluteFillObject}
-					/>
-				</Pressable>
+				<LinearGradient
+					colors={["rgba(0,0,0,0.9)", "rgba(0,0,0,0.95)"]}
+					style={StyleSheet.absoluteFillObject}
+				/>
 
-				{/* Header */}
+				{/* Backdrop - clickable area that closes modal */}
+				<Pressable style={styles.backdrop} onPress={onClose} />
+
+				{/* Header - Just close button */}
 				<View
 					style={[
 						styles.header,
@@ -653,13 +705,7 @@ export function PhotoViewerModal({
 						},
 					]}
 				>
-					<View style={styles.headerLeft}>
-						<Text
-							style={[styles.headerTitle, { fontSize: fontSizes.headerTitle }]}
-						>
-							{photoType === "profile" ? "Profile Photo" : "Cover Photo"}
-						</Text>
-					</View>
+					<View style={styles.headerLeft} />
 					<TouchableOpacity
 						style={[
 							styles.closeButton,
@@ -751,20 +797,19 @@ export function PhotoViewerModal({
 								gap: spacing.buttonGap,
 								paddingHorizontal: spacing.contentPadding,
 								paddingBottom: spacing.bottomPadding,
-								flexDirection: isLandscape && !isTablet ? "row" : "row",
+								flexDirection: "row",
 								justifyContent: "center",
 							},
 						]}
 					>
 						<TouchableOpacity
 							style={[
-								styles.actionButton,
+								styles.circularButton,
 								styles.primaryButton,
 								{
-									paddingHorizontal: sizes.actionButtonPadding,
+									width: sizes.actionButtonHeight,
 									height: sizes.actionButtonHeight,
-									borderRadius: isTablet ? 16 : 12,
-									minWidth: isTablet ? 140 : 120,
+									borderRadius: sizes.actionButtonHeight / 2,
 								},
 							]}
 							onPress={handleImagePicker}
@@ -773,47 +818,25 @@ export function PhotoViewerModal({
 							{isLoading ? (
 								<ActivityIndicator size="small" color="white" />
 							) : (
-								<>
-									<Feather name="camera" size={20} color="white" />
-									<Text
-										style={[
-											styles.actionButtonText,
-											{ fontSize: fontSizes.buttonText },
-										]}
-									>
-										{modalImageUrl ? "Change" : "Upload"}
-									</Text>
-								</>
+								<Feather name="camera" size={24} color="white" />
 							)}
 						</TouchableOpacity>
 
 						{modalImageUrl && (
 							<TouchableOpacity
 								style={[
-									styles.actionButton,
+									styles.circularButton,
 									styles.secondaryButton,
 									{
-										paddingHorizontal: sizes.actionButtonPadding,
+										width: sizes.actionButtonHeight,
 										height: sizes.actionButtonHeight,
-										borderRadius: isTablet ? 16 : 12,
-										minWidth: isTablet ? 140 : 120,
+										borderRadius: sizes.actionButtonHeight / 2,
 									},
 								]}
 								onPress={handleDeletePhoto}
 								disabled={isLoading}
 							>
-								<Feather name="trash-2" size={20} color="#ff4757" />
-								<Text
-									style={[
-										styles.actionButtonText,
-										{
-											color: "#ff4757",
-											fontSize: fontSizes.buttonText,
-										},
-									]}
-								>
-									Delete
-								</Text>
+								<Feather name="trash-2" size={24} color="#ff4757" />
 							</TouchableOpacity>
 						)}
 					</View>
@@ -830,6 +853,7 @@ const styles = StyleSheet.create({
 	},
 	backdrop: {
 		...StyleSheet.absoluteFillObject,
+		zIndex: 1,
 	},
 	header: {
 		flexDirection: "row",
@@ -855,6 +879,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
+		zIndex: 10,
 	},
 	imageContainer: {
 		position: "relative",
@@ -894,12 +919,11 @@ const styles = StyleSheet.create({
 	actions: {
 		flexDirection: "row",
 		justifyContent: "center",
+		zIndex: 10,
 	},
-	actionButton: {
-		flexDirection: "row",
+	circularButton: {
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 8,
 	},
 	primaryButton: {
 		backgroundColor: "#6366f1",
@@ -913,9 +937,5 @@ const styles = StyleSheet.create({
 		backgroundColor: "rgba(255,255,255,0.1)",
 		borderWidth: 1,
 		borderColor: "rgba(255,71,87,0.3)",
-	},
-	actionButtonText: {
-		color: "white",
-		fontWeight: "600",
 	},
 });
