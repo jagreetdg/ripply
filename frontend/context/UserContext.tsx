@@ -18,6 +18,7 @@ export interface User {
 	display_name: string;
 	email: string;
 	avatar_url: string | null;
+	cover_photo_url?: string | null;
 	bio?: string | null;
 	is_verified?: boolean;
 	created_at?: string;

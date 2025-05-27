@@ -27,6 +27,12 @@ import {
 } from "../../services/api/userService";
 import { BlurView } from "expo-blur";
 import { ENDPOINTS, apiRequest } from "../../services/api/config";
+import { useGlobalToast } from "../common/Toast";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+	useConfirmation,
+	confirmationPresets,
+} from "../../hooks/useConfirmation";
 
 interface PhotoViewerModalProps {
 	visible: boolean;
@@ -132,8 +138,8 @@ const formatFileSize = (bytes: number): string => {
 	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
-// Utility function to show toast messages
-const showToast = (message: string) => {
+// Utility function to show toast messages (kept for compression feedback)
+const showCompressionToast = (message: string) => {
 	if (Platform.OS === "android") {
 		ToastAndroid.show(message, ToastAndroid.LONG);
 	} else {
@@ -286,7 +292,9 @@ export function PhotoViewerModal({
 	onPhotoUpdated,
 }: PhotoViewerModalProps) {
 	const { colors } = useTheme();
-	const { refreshUser, setUser } = useUser();
+	const { user, refreshUser, setUser } = useUser();
+	const { showToast } = useGlobalToast();
+	const { showConfirmation, ConfirmationComponent } = useConfirmation();
 	const [isLoading, setIsLoading] = useState(false);
 	const [isImageLoading, setIsImageLoading] = useState(true);
 	const [screenData, setScreenData] = useState(Dimensions.get("window"));
@@ -521,20 +529,19 @@ export function PhotoViewerModal({
 					photoType!
 				);
 
-				let message = "";
+				// Show compression feedback
 				if (compressionResult.wasCompressed) {
-					message = `Image compressed from ${formatFileSize(
+					const message = `Image compressed from ${formatFileSize(
 						compressionResult.originalSize
 					)} to ${formatFileSize(compressionResult.newSize)}`;
-				} else {
-					message = "Image ready for upload";
+					showCompressionToast(message);
 				}
 
 				// Upload the image
 				await updatePhoto(compressionResult.uri);
 			}
 		} catch (error) {
-			Alert.alert("Error", "Failed to select image. Please try again.");
+			showToast("Failed to select image. Please try again.", "error");
 		} finally {
 			setIsLoading(false);
 		}
@@ -551,9 +558,31 @@ export function PhotoViewerModal({
 
 			const result = await updateUserProfile(userId, updateData);
 
-			if (result) {
-				// Refresh user data to get the latest from server
-				await refreshUser();
+			if (result && user) {
+				// Create updated user object with the server response
+				const updatedUser = {
+					...user,
+					...result, // Merge the server response
+				};
+
+				// Update user context immediately
+				setUser(updatedUser);
+
+				// Update AsyncStorage to persist the changes
+				try {
+					await AsyncStorage.setItem(
+						"@ripply_user",
+						JSON.stringify(updatedUser)
+					);
+					console.log(
+						"[PHOTO VIEWER] ✅ Updated AsyncStorage with new user data"
+					);
+				} catch (storageError) {
+					console.error(
+						"[PHOTO VIEWER] ❌ Error updating AsyncStorage:",
+						storageError
+					);
+				}
 
 				// Get the server-returned image URL
 				const serverImageUrl =
@@ -569,280 +598,299 @@ export function PhotoViewerModal({
 				showToast(
 					`${
 						photoType === "profile" ? "Profile" : "Cover"
-					} photo updated successfully!`
+					} photo updated successfully!`,
+					"success"
 				);
 				onClose();
 			} else {
-				Alert.alert(
-					"Upload Failed",
-					"Failed to update photo. Please try again."
-				);
+				showToast("Failed to update photo. Please try again.", "error");
 			}
 		} catch (error) {
-			Alert.alert("Error", "Failed to update photo. Please try again.");
+			console.error("[PHOTO VIEWER] Error updating photo:", error);
+			showToast("Failed to update photo. Please try again.", "error");
 		}
 	};
 
-	const handleDeletePhoto = () => {
-		console.log("Delete photo button clicked for:", photoType);
-		Alert.alert(
-			"Delete Photo",
-			`Are you sure you want to delete your ${photoType} photo?`,
-			[
-				{ text: "Cancel", style: "cancel" },
-				{
-					text: "Delete",
-					style: "destructive",
-					onPress: async () => {
-						try {
-							console.log("Starting delete process for:", photoType);
-							setIsLoading(true);
+	const handleDeletePhoto = async () => {
+		console.log("[PHOTO VIEWER] Delete photo button clicked for:", photoType);
 
-							// Create update data with null value for the photo URL
-							const fieldName =
-								photoType === "profile" ? "avatar_url" : "cover_photo_url";
-							const updateData = { [fieldName]: null };
+		// Show custom confirmation modal
+		const confirmed = await showConfirmation({
+			title: "Delete Photo",
+			message: `Are you sure you want to delete your ${photoType} photo? This action cannot be undone.`,
+			confirmText: "Delete",
+			cancelText: "Cancel",
+			isDestructive: true,
+			icon: "trash-2",
+		});
 
-							console.log("Sending update data:", JSON.stringify(updateData));
+		if (!confirmed) {
+			console.log("[PHOTO VIEWER] Delete cancelled by user");
+			return;
+		}
 
-							// Make the API call directly with explicit parameters
-							const endpoint = `${ENDPOINTS.USERS}/${userId}`;
-							const options = {
-								method: "PUT",
-								headers: {
-									"Content-Type": "application/json",
-								},
-								body: JSON.stringify(updateData),
-							};
+		// Execute the deletion
+		try {
+			console.log("[PHOTO VIEWER] Starting delete process for:", photoType);
+			setIsLoading(true);
 
-							console.log(`Making direct API request to: ${endpoint}`, options);
+			// Create update data with null value for the photo URL
+			const fieldName =
+				photoType === "profile" ? "avatar_url" : "cover_photo_url";
+			const updateData = { [fieldName]: null };
 
-							// Use the apiRequest function from config.js
-							const result = await apiRequest(endpoint, {
-								method: "PUT",
-								body: JSON.stringify(updateData),
-							});
+			console.log(
+				"[PHOTO VIEWER] Sending update data:",
+				JSON.stringify(updateData)
+			);
 
-							console.log("Delete API response:", JSON.stringify(result));
+			// Use the same updateUserProfile service for consistency
+			const result = await updateUserProfile(userId, updateData);
 
-							if (result) {
-								console.log("Delete successful, refreshing user data");
+			console.log(
+				"[PHOTO VIEWER] Delete API response:",
+				JSON.stringify(result)
+			);
 
-								// Refresh user data
-								await refreshUser();
+			if (result && user) {
+				console.log("[PHOTO VIEWER] Delete successful, updating user data");
 
-								// Update local state immediately for better UX
-								setCurrentImageUrl(null);
+				// Create updated user object with the photo removed
+				const updatedUser = {
+					...user,
+					...result, // Merge the server response
+				};
 
-								// Notify parent component
-								if (onPhotoUpdated) {
-									onPhotoUpdated(photoType!, null);
-								}
+				// Update user context immediately
+				setUser(updatedUser);
 
-								// Show success message
-								showToast(
-									`${
-										photoType === "profile" ? "Profile" : "Cover"
-									} photo deleted successfully!`
-								);
+				// Update AsyncStorage to persist the changes
+				try {
+					await AsyncStorage.setItem(
+						"@ripply_user",
+						JSON.stringify(updatedUser)
+					);
+					console.log(
+						"[PHOTO VIEWER] ✅ Updated AsyncStorage after photo deletion"
+					);
+				} catch (storageError) {
+					console.error(
+						"[PHOTO VIEWER] ❌ Error updating AsyncStorage:",
+						storageError
+					);
+				}
 
-								// Close modal
-								onClose();
-							} else {
-								console.error("Delete failed - no result returned");
-								Alert.alert(
-									"Delete Failed",
-									"Failed to delete photo. Please try again."
-								);
-							}
-						} catch (error) {
-							console.error("Delete error:", error);
-							Alert.alert("Error", "Failed to delete photo. Please try again.");
-						} finally {
-							setIsLoading(false);
-						}
-					},
-				},
-			]
-		);
+				// Update local state immediately for better UX
+				setCurrentImageUrl(null);
+
+				// Notify parent component
+				if (onPhotoUpdated) {
+					onPhotoUpdated(photoType!, null);
+				}
+
+				// Show success message
+				showToast(
+					`${
+						photoType === "profile" ? "Profile" : "Cover"
+					} photo deleted successfully!`,
+					"success"
+				);
+
+				// Close modal
+				onClose();
+			} else {
+				console.error("[PHOTO VIEWER] Delete failed - no result returned");
+				showToast("Failed to delete photo. Please try again.", "error");
+			}
+		} catch (error) {
+			console.error("[PHOTO VIEWER] Delete error:", error);
+			showToast("Failed to delete photo. Please try again.", "error");
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
 	return (
-		<Modal
-			visible={visible}
-			transparent
-			animationType="fade"
-			statusBarTranslucent
-		>
-			{Platform.OS === "ios" && <StatusBar barStyle="light-content" />}
+		<>
+			<Modal
+				visible={visible}
+				transparent
+				animationType="fade"
+				statusBarTranslucent
+			>
+				{Platform.OS === "ios" && <StatusBar barStyle="light-content" />}
 
-			{/* Full screen container */}
-			<View style={styles.container}>
-				{/* Background */}
-				<LinearGradient
-					colors={["rgba(0,0,0,0.9)", "rgba(0,0,0,0.95)"]}
-					style={StyleSheet.absoluteFillObject}
-				/>
+				{/* Full screen container */}
+				<View style={styles.container}>
+					{/* Background */}
+					<LinearGradient
+						colors={["rgba(0,0,0,0.9)", "rgba(0,0,0,0.95)"]}
+						style={StyleSheet.absoluteFillObject}
+					/>
 
-				{/* Backdrop - clickable area that closes modal */}
-				<Pressable style={styles.backdrop} onPress={onClose} />
+					{/* Backdrop - clickable area that closes modal */}
+					<Pressable style={styles.backdrop} onPress={onClose} />
 
-				{/* Header - Just close button */}
-				<View
-					style={[
-						styles.header,
-						{
-							paddingHorizontal: spacing.headerPadding,
-							paddingTop:
-								Platform.OS === "ios"
-									? isTablet
-										? 80
-										: 60
-									: isTablet
-									? 60
-									: 40,
-							paddingBottom: spacing.headerPadding / 2,
-						},
-					]}
-				>
-					<View style={styles.headerLeft} />
-					<TouchableOpacity
+					{/* Header - Just close button */}
+					<View
 						style={[
-							styles.closeButton,
+							styles.header,
 							{
-								width: sizes.closeButton,
-								height: sizes.closeButton,
-								borderRadius: sizes.closeButton / 2,
+								paddingHorizontal: spacing.headerPadding,
+								paddingTop:
+									Platform.OS === "ios"
+										? isTablet
+											? 80
+											: 60
+										: isTablet
+										? 60
+										: 40,
+								paddingBottom: spacing.headerPadding / 2,
 							},
 						]}
-						onPress={onClose}
 					>
-						<Feather name="x" size={sizes.closeIcon} color="white" />
-					</TouchableOpacity>
-				</View>
-
-				{/* Content */}
-				<View
-					style={[
-						styles.content,
-						{ paddingHorizontal: spacing.contentPadding },
-					]}
-				>
-					{modalImageUrl ? (
-						<View
+						<View style={styles.headerLeft} />
+						<TouchableOpacity
 							style={[
-								styles.imageContainer,
+								styles.closeButton,
 								{
-									borderRadius: isTablet ? 20 : 16,
+									width: sizes.closeButton,
+									height: sizes.closeButton,
+									borderRadius: sizes.closeButton / 2,
 								},
 							]}
+							onPress={onClose}
 						>
-							<Image
-								source={{ uri: modalImageUrl }}
+							<Feather name="x" size={sizes.closeIcon} color="white" />
+						</TouchableOpacity>
+					</View>
+
+					{/* Content */}
+					<View
+						style={[
+							styles.content,
+							{ paddingHorizontal: spacing.contentPadding },
+						]}
+					>
+						{modalImageUrl ? (
+							<View
 								style={[
-									styles.image,
+									styles.imageContainer,
 									{
-										width: imageDimensions.width,
-										height: imageDimensions.height,
 										borderRadius: isTablet ? 20 : 16,
 									},
 								]}
-								resizeMode="cover"
-								onLoad={() => setIsImageLoading(false)}
-								onError={() => setIsImageLoading(false)}
-							/>
-							{isImageLoading && (
-								<View style={styles.imageLoadingOverlay}>
-									<ActivityIndicator size="large" color="white" />
-								</View>
-							)}
-						</View>
-					) : (
-						<View style={styles.placeholderContainer}>
-							<View
-								style={[
-									styles.placeholderIcon,
-									{
-										width: sizes.placeholderIcon,
-										height: sizes.placeholderIcon,
-										borderRadius: sizes.placeholderIcon / 2,
-										marginBottom: spacing.contentPadding / 2,
-									},
-								]}
 							>
-								<Feather
-									name={photoType === "profile" ? "user" : "image"}
-									size={sizes.placeholderIconSize}
-									color="rgba(255,255,255,0.6)"
+								<Image
+									source={{ uri: modalImageUrl }}
+									style={[
+										styles.image,
+										{
+											width: imageDimensions.width,
+											height: imageDimensions.height,
+											borderRadius: isTablet ? 20 : 16,
+										},
+									]}
+									resizeMode="cover"
+									onLoad={() => setIsImageLoading(false)}
+									onError={() => setIsImageLoading(false)}
 								/>
+								{isImageLoading && (
+									<View style={styles.imageLoadingOverlay}>
+										<ActivityIndicator size="large" color="white" />
+									</View>
+								)}
 							</View>
-							<Text
-								style={[
-									styles.placeholderText,
-									{ fontSize: fontSizes.placeholderText },
-								]}
-							>
-								No {photoType} photo
-							</Text>
-						</View>
-					)}
-				</View>
+						) : (
+							<View style={styles.placeholderContainer}>
+								<View
+									style={[
+										styles.placeholderIcon,
+										{
+											width: sizes.placeholderIcon,
+											height: sizes.placeholderIcon,
+											borderRadius: sizes.placeholderIcon / 2,
+											marginBottom: spacing.contentPadding / 2,
+										},
+									]}
+								>
+									<Feather
+										name={photoType === "profile" ? "user" : "image"}
+										size={sizes.placeholderIconSize}
+										color="rgba(255,255,255,0.6)"
+									/>
+								</View>
+								<Text
+									style={[
+										styles.placeholderText,
+										{ fontSize: fontSizes.placeholderText },
+									]}
+								>
+									No {photoType} photo
+								</Text>
+							</View>
+						)}
+					</View>
 
-				{/* Actions */}
-				{isOwnProfile && (
-					<View
-						style={[
-							styles.actions,
-							{
-								gap: spacing.buttonGap,
-								paddingHorizontal: spacing.contentPadding,
-								paddingBottom: spacing.bottomPadding,
-								flexDirection: "row",
-								justifyContent: "center",
-							},
-						]}
-					>
-						<TouchableOpacity
+					{/* Actions */}
+					{isOwnProfile && (
+						<View
 							style={[
-								styles.circularButton,
-								styles.primaryButton,
+								styles.actions,
 								{
-									width: sizes.actionButtonHeight,
-									height: sizes.actionButtonHeight,
-									borderRadius: sizes.actionButtonHeight / 2,
+									gap: spacing.buttonGap,
+									paddingHorizontal: spacing.contentPadding,
+									paddingBottom: spacing.bottomPadding,
+									flexDirection: "row",
+									justifyContent: "center",
 								},
 							]}
-							onPress={handleImagePicker}
-							disabled={isLoading}
 						>
-							{isLoading ? (
-								<ActivityIndicator size="small" color="white" />
-							) : (
-								<Feather name="camera" size={24} color="white" />
-							)}
-						</TouchableOpacity>
-
-						{modalImageUrl && (
 							<TouchableOpacity
 								style={[
 									styles.circularButton,
-									styles.secondaryButton,
+									styles.primaryButton,
 									{
 										width: sizes.actionButtonHeight,
 										height: sizes.actionButtonHeight,
 										borderRadius: sizes.actionButtonHeight / 2,
 									},
 								]}
-								onPress={handleDeletePhoto}
+								onPress={handleImagePicker}
 								disabled={isLoading}
 							>
-								<Feather name="trash-2" size={24} color="#ff4757" />
+								{isLoading ? (
+									<ActivityIndicator size="small" color="white" />
+								) : (
+									<Feather name="camera" size={24} color="white" />
+								)}
 							</TouchableOpacity>
-						)}
-					</View>
-				)}
-			</View>
-		</Modal>
+
+							{modalImageUrl && (
+								<TouchableOpacity
+									style={[
+										styles.circularButton,
+										styles.secondaryButton,
+										{
+											width: sizes.actionButtonHeight,
+											height: sizes.actionButtonHeight,
+											borderRadius: sizes.actionButtonHeight / 2,
+										},
+									]}
+									onPress={handleDeletePhoto}
+									disabled={isLoading}
+								>
+									<Feather name="trash-2" size={24} color="#ff4757" />
+								</TouchableOpacity>
+							)}
+						</View>
+					)}
+				</View>
+			</Modal>
+
+			{/* Confirmation Modal */}
+			<ConfirmationComponent />
+		</>
 	);
 }
 

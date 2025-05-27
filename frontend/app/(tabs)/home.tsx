@@ -625,7 +625,7 @@ export default function HomeScreen() {
 					]}
 					onPress={handleNewVoiceNote}
 				>
-					<Feather name="plus" size={24} color={colors.card} />
+					<Feather name="mic" size={24} color={colors.card} />
 				</TouchableOpacity>
 			)}
 		</View>

@@ -24,6 +24,7 @@ import * as ImagePicker from "expo-image-picker";
 import { updateUserProfile } from "../../services/api/userService";
 import { checkUsernameAvailability } from "../../services/api/authService";
 import DefaultAvatar from "../../components/DefaultAvatar";
+import DefaultCoverPhoto from "../../components/DefaultCoverPhoto";
 import { LinearGradient } from "expo-linear-gradient";
 import { getDefaultCoverPhoto } from "../../utils/defaultImages";
 import { useGlobalToast } from "../../components/common/Toast";
@@ -34,10 +35,7 @@ interface UsernameAvailabilityResponse {
 	available: boolean;
 }
 
-// Extended user type to include cover_photo_url
-interface ExtendedUser {
-	cover_photo_url?: string | null;
-}
+// Note: cover_photo_url is now included in the main User interface
 
 // Create a custom hover component for web
 const HoverableView = ({
@@ -76,6 +74,38 @@ export default function EditProfileScreen() {
 	const { colors, isDarkMode } = useTheme();
 	const { showToast } = useGlobalToast();
 
+	// Dynamic styles that need theme context
+	const dynamicStyles = StyleSheet.create({
+		avatarContainer: {
+			width: 110, // Slightly larger than avatar for padding (like ProfileHeader)
+			height: 110,
+			borderRadius: 55,
+			overflow: "hidden",
+			backgroundColor: colors.background, // Use theme background color
+			// Drop shadow for container (matching ProfileHeader)
+			shadowColor: colors.shadow,
+			shadowOffset: { width: 0, height: 3 },
+			shadowOpacity: 0.25,
+			shadowRadius: 6,
+			elevation: 6,
+			// Center the avatar inside
+			alignItems: "center",
+			justifyContent: "center",
+			// Add a subtle ring/glow effect with border (matching ProfileHeader)
+			borderWidth: 1,
+			borderColor: isDarkMode
+				? "rgba(255,255,255,0.15)" // Light border in dark mode
+				: "rgba(0,0,0,0.05)", // Dark border in light mode
+		},
+		avatar: {
+			width: 100, // Match touchable size
+			height: 100,
+			borderRadius: 50,
+			borderWidth: isDarkMode ? 1 : 0, // Thin inner border in dark mode for definition
+			borderColor: "rgba(255,255,255,0.2)", // Subtle white border
+		},
+	});
+
 	const [displayName, setDisplayName] = useState("");
 	const [bio, setBio] = useState("");
 	const [username, setUsername] = useState("");
@@ -99,6 +129,7 @@ export default function EditProfileScreen() {
 	// Animation values
 	const [fadeAnim] = useState(new Animated.Value(0));
 	const [scaleAnim] = useState(new Animated.Value(0.95));
+	const [animationStarted, setAnimationStarted] = useState(false);
 
 	// Initialize form with user data
 	useEffect(() => {
@@ -108,26 +139,50 @@ export default function EditProfileScreen() {
 			setUsername(user.username || "");
 			setOriginalUsername(user.username || "");
 			setAvatarUrl(user.avatar_url);
-			// Safely access cover_photo_url which might not be in the User type
-			setCoverPhotoUrl(
-				(user as unknown as ExtendedUser).cover_photo_url || null
-			);
+			// Access cover_photo_url from the User interface
+			setCoverPhotoUrl(user.cover_photo_url || null);
 
-			// Start entrance animation
-			Animated.parallel([
-				Animated.timing(fadeAnim, {
-					toValue: 1,
-					duration: 400,
-					useNativeDriver: true,
-				}),
-				Animated.timing(scaleAnim, {
-					toValue: 1,
-					duration: 400,
-					useNativeDriver: true,
-				}),
-			]).start();
+			// Start entrance animation only on first load
+			if (!animationStarted) {
+				setAnimationStarted(true);
+				Animated.parallel([
+					Animated.timing(fadeAnim, {
+						toValue: 1,
+						duration: 400,
+						useNativeDriver: true,
+					}),
+					Animated.timing(scaleAnim, {
+						toValue: 1,
+						duration: 400,
+						useNativeDriver: true,
+					}),
+				]).start();
+			}
 		}
 	}, [user]);
+
+	// Sync local photo state when user context changes (e.g., from PhotoViewerModal)
+	useEffect(() => {
+		if (user) {
+			// Only update if the URLs are different to avoid unnecessary re-renders
+			if (user.avatar_url !== avatarUrl) {
+				console.log(
+					"[EDIT PROFILE] Syncing avatar URL from user context:",
+					user.avatar_url
+				);
+				setAvatarUrl(user.avatar_url);
+			}
+
+			const userCoverPhoto = user.cover_photo_url;
+			if (userCoverPhoto !== coverPhotoUrl) {
+				console.log(
+					"[EDIT PROFILE] Syncing cover photo URL from user context:",
+					userCoverPhoto
+				);
+				setCoverPhotoUrl(userCoverPhoto || null);
+			}
+		}
+	}, [user?.avatar_url, user?.cover_photo_url]);
 
 	// Validate username with debounce
 	useEffect(() => {
@@ -360,8 +415,7 @@ export default function EditProfileScreen() {
 				// Only include avatar if it changed
 				...(avatarUrl !== user.avatar_url && { avatar_url: avatarUrl }),
 				// Only include cover photo if it changed
-				...(coverPhotoUrl !==
-					(user as unknown as ExtendedUser).cover_photo_url && {
+				...(coverPhotoUrl !== user.cover_photo_url && {
 					cover_photo_url: coverPhotoUrl,
 				}),
 			};
@@ -547,15 +601,10 @@ export default function EditProfileScreen() {
 										resizeMode="cover"
 									/>
 								) : (
-									<View
-										style={[
-											styles.coverPhoto,
-											{
-												backgroundColor: `${colors.tint}20`,
-												justifyContent: "center",
-												alignItems: "center",
-											},
-										]}
+									<DefaultCoverPhoto
+										width={400}
+										height={150}
+										style={styles.coverPhoto}
 									/>
 								)}
 							</TouchableOpacity>
@@ -591,7 +640,7 @@ export default function EditProfileScreen() {
 
 					<View style={styles.avatarSection}>
 						<HoverableView
-							style={styles.avatarContainer}
+							style={dynamicStyles.avatarContainer}
 							onHoverIn={() => setIsImageHovered(true)}
 							onHoverOut={() => setIsImageHovered(false)}
 						>
@@ -602,7 +651,10 @@ export default function EditProfileScreen() {
 								activeOpacity={0.8}
 							>
 								{avatarUrl ? (
-									<Image source={{ uri: avatarUrl }} style={styles.avatar} />
+									<Image
+										source={{ uri: avatarUrl }}
+										style={dynamicStyles.avatar}
+									/>
 								) : (
 									<DefaultAvatar size={100} userId={user.id || ""} />
 								)}
@@ -861,6 +913,7 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		fontWeight: "500",
 		marginLeft: 4,
+    marginBottom: 50
 	},
 	coverAddText: {
 		position: "absolute",
@@ -875,25 +928,10 @@ const styles = StyleSheet.create({
 		paddingVertical: 24,
 		marginTop: -50,
 	},
-	avatarContainer: {
-		width: 100,
+	avatarTouchable: {
+		width: 100, // Slightly smaller than container (like ProfileHeader)
 		height: 100,
 		borderRadius: 50,
-		overflow: "hidden",
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.2,
-		shadowRadius: 5,
-		elevation: 5,
-		backgroundColor: "#fff",
-	},
-	avatarTouchable: {
-		width: "100%",
-		height: "100%",
-	},
-	avatar: {
-		width: "100%",
-		height: "100%",
 	},
 	editOverlay: {
 		position: "absolute",

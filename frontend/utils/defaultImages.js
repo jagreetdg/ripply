@@ -32,8 +32,8 @@ export const getColorFromUserId = (userId) => {
  * @returns {string} - URL to default cover image
  */
 export const getDefaultCoverPhoto = () => {
-	// Return a light purple gradient background
-	return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23E6D9FF;stop-opacity:1" /><stop offset="100%" style="stop-color:%23C4A5FF;stop-opacity:1" /></linearGradient></defs><rect width="1200" height="400" fill="url(%23grad)" /></svg>';
+	// Return a purple gradient background with circular ripples
+	return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%236B2FBC;stop-opacity:1" /><stop offset="50%" style="stop-color:%238B5CF6;stop-opacity:1" /><stop offset="100%" style="stop-color:%23A855F7;stop-opacity:1" /></linearGradient></defs><rect width="1200" height="400" fill="url(%23grad)" /><g opacity="0.3"><circle cx="300" cy="200" r="80" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"/><circle cx="300" cy="200" r="120" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/><circle cx="300" cy="200" r="160" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/><circle cx="600" cy="150" r="60" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"/><circle cx="600" cy="150" r="90" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/><circle cx="600" cy="150" r="120" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/><circle cx="900" cy="250" r="70" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"/><circle cx="900" cy="250" r="100" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/><circle cx="900" cy="250" r="130" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/></g></svg>';
 };
 
 /**

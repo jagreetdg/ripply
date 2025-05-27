@@ -16,8 +16,8 @@ export function HomeHeader({ onLogoPress }: HomeHeaderProps) {
 	const { colors, isDarkMode } = useTheme();
 
 	const handleProfilePress = () => {
-		if (user && user.username) {
-			router.push(`/profile/${user.username}`);
+		if (user) {
+			router.push("/profile");
 		} else {
 			router.push("/auth/login");
 		}

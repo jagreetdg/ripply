@@ -109,7 +109,7 @@ export default function SettingsScreen() {
 	};
 
 	const handleProfilePress = () => {
-		router.push({ pathname: "/profile/edit" });
+		router.push("/profile");
 	};
 
 	const themeOptions = [

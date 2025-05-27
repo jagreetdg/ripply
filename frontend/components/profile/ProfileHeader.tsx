@@ -18,6 +18,7 @@ import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { getVoiceBio } from "../../services/api/voiceBioService";
 import DefaultAvatar from "../DefaultAvatar";
+import DefaultCoverPhoto from "../DefaultCoverPhoto";
 import { useTheme } from "../../context/ThemeContext";
 import { PhotoViewerModal } from "./PhotoViewerModal";
 
@@ -675,13 +676,10 @@ export function ProfileHeader({
 						resizeMode="cover"
 					/>
 				) : (
-					<View
-						style={[
-							styles.coverPhoto,
-							{
-								backgroundColor: `${colors.tint}20`,
-							},
-						]}
+					<DefaultCoverPhoto
+						width={400}
+						height={150}
+						style={styles.coverPhoto}
 					/>
 				)}
 

@@ -6,19 +6,18 @@ import { useTheme } from "../context/ThemeContext";
 interface DefaultAvatarProps {
 	userId: string;
 	size?: number;
-	fontSize?: number;
 	style?: object;
 	onPress?: () => void;
 }
 
 /**
- * A unified default avatar component that displays a silhouette user icon
+ * A unified default avatar component that displays a consistent user icon for all users
+ * Shows a white user silhouette icon on a purple background (like Instagram/Twitter)
  * Used across the app as a standard default profile picture
  */
 const DefaultAvatar = ({
 	userId,
 	size = 50,
-	fontSize,
 	style,
 	onPress,
 }: DefaultAvatarProps) => {
@@ -37,32 +36,11 @@ const DefaultAvatar = ({
 			alignItems: "center",
 			overflow: "hidden",
 		},
-		initials: {
-			color: iconColor,
-			fontSize: fontSize || size / 2.5,
-			fontWeight: "bold",
-		},
 	});
-
-	const getInitials = (id: string) => {
-		if (!id) return "?";
-		const parts = id.split(/[\s_-]+/);
-		let initials = "";
-		if (parts.length > 0 && parts[0]) {
-			initials += parts[0][0].toUpperCase();
-		}
-		return initials || "?";
-	};
-
-	const initials = getInitials(userId);
 
 	const avatarContent = (
 		<View style={[styles.avatar, style]}>
-			{userId ? (
-				<Text style={styles.initials}>{initials}</Text>
-			) : (
-				<Feather name="user" size={size * 0.6} color={iconColor} />
-			)}
+			<Feather name="user" size={size * 0.6} color={iconColor} />
 		</View>
 	);
 
