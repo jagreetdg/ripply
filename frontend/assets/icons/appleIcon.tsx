@@ -16,5 +16,5 @@ const xml = `
 `;
 
 export default function AppleIcon({ size = 24 }) {
-  return <SvgXml xml={xml} width={size} height={size} style={{ borderRadius: 4 }} />;
+	return <SvgXml xml={xml} width={size} height={size} style={{ borderRadius: 4 }} />;
 }

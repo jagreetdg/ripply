@@ -8,7 +8,8 @@ import {
   TextStyle,
   Easing,
   View,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 
 interface SocialAuthButtonProps {
@@ -18,6 +19,7 @@ interface SocialAuthButtonProps {
   textStyle?: TextStyle;
   icon: React.ReactNode;
   disabled?: boolean;
+  isLoading?: boolean;
 }
 
 export default function SocialAuthButton({
@@ -27,6 +29,7 @@ export default function SocialAuthButton({
   textStyle,
   icon,
   disabled = false,
+  isLoading = false,
 }: SocialAuthButtonProps) {
   const [scaleAnim] = useState(new Animated.Value(1));
   const [shadowAnim] = useState(new Animated.Value(1));
@@ -86,14 +89,20 @@ export default function SocialAuthButton({
     <Animated.View style={animatedStyles}>
       <Pressable
         style={({ pressed }) => pressed ? [buttonStyles, { opacity: 0.9 }] : buttonStyles}
-        onPress={disabled ? undefined : onPress}
-        onPressIn={disabled ? undefined : handlePressIn}
-        onPressOut={disabled ? undefined : handlePressOut}
-        android_ripple={disabled ? undefined : { color: '#E8DEF8', borderless: true, radius: -1 }}
+        onPress={(isLoading || disabled) ? undefined : onPress}
+        onPressIn={(isLoading || disabled) ? undefined : handlePressIn}
+        onPressOut={(isLoading || disabled) ? undefined : handlePressOut}
+        android_ripple={(isLoading || disabled) ? undefined : { color: '#E8DEF8', borderless: true, radius: -1 }}
       >
         <View style={[styles.contentContainer, !text && styles.iconOnlyContainer]}>
-          <View style={[styles.iconContainer, !text && styles.iconOnlyIconContainer]}>{icon}</View>
-          {text && <Text style={textStyles}>{text}</Text>}
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#6B2FBC" />
+          ) : (
+            <>
+              <View style={[styles.iconContainer, !text && styles.iconOnlyIconContainer]}>{icon}</View>
+              {text && <Text style={textStyles}>{text}</Text>}
+            </>
+          )}
         </View>
       </Pressable>
     </Animated.View>

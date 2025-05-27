@@ -1,368 +1,866 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import { View, StyleSheet, ScrollView, ActivityIndicator, Text, TouchableOpacity, Animated, RefreshControl } from "react-native";
+import {
+	View,
+	StyleSheet,
+	ScrollView,
+	ActivityIndicator,
+	Text,
+	TouchableOpacity,
+	Animated,
+	RefreshControl,
+	TouchableWithoutFeedback,
+} from "react-native";
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
-import { VoiceNotesList } from "../../components/profile/VoiceNotesList";
-import { getUserProfileByUsername, getUserVoiceNotes } from "../../services/api/userService";
+import { VoiceNotesList } from "../../components/profile/voice-notes-list/VoiceNotesList";
+import {
+	getUserProfileByUsername,
+	getUserVoiceNotes,
+	getUserSharedVoiceNotes,
+	getFollowerCount,
+	getFollowingCount,
+} from "../../services/api/userService";
 import { getVoiceBio } from "../../services/api/voiceBioService";
+import {
+	getVoiceNoteById,
+	getVoiceNoteStats,
+} from "../../services/api/voiceNoteService";
 import { UserNotFound } from "../../components/common/UserNotFound";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
+import { FollowButton } from "../../components/profile/FollowButton";
+import { FollowersFollowingPopup } from "../../components/profile/FollowersFollowingPopup";
 
 interface UserProfile {
-  id: string;
-  username: string;
-  display_name: string;
-  avatar_url: string | null;
-  cover_photo_url: string | null;
-  bio: string | null;
-  is_verified: boolean;
-  created_at: string;
-  updated_at: string;
+	id: string;
+	username: string;
+	display_name: string;
+	avatar_url: string | null;
+	cover_photo_url: string | null;
+	bio: string | null;
+	is_verified: boolean;
+	created_at: string;
+	updated_at: string;
 }
 
 interface VoiceNote {
-  id: string;
-  title: string;
-  duration: number;
-  likes: number | { count: number }[];
-  comments: number | { count: number }[];
-  plays: number | { count: number }[];
-  users?: {
-    id: string;
-    username: string;
-    display_name: string;
-    avatar_url: string | null;
-  };
+	id: string;
+	title: string;
+	duration: number;
+	audio_url: string;
+	created_at: string;
+	likes: number;
+	comments: number;
+	plays: number;
+	shares: number;
+	users?: {
+		id: string;
+		username: string;
+		display_name: string;
+		avatar_url: string | null;
+	};
+	is_shared?: boolean;
+	shared_at?: string;
+	shared_by?: {
+		id: string;
+		username: string;
+		display_name: string;
+		avatar_url: string | null;
+	};
 }
 
 interface VoiceBio {
-  id: string;
-  user_id: string;
-  duration: number;
-  audio_url: string;
-  transcript?: string;
-  created_at: string;
-  updated_at: string;
+	id: string;
+	user_id: string;
+	duration: number;
+	audio_url: string;
+	transcript?: string;
+	created_at: string;
+	updated_at: string;
 }
 
+// Function to safely extract plays count from various formats
+const normalizePlaysCount = (plays: any): number => {
+	if (typeof plays === "number") {
+		return plays;
+	}
+
+	if (plays && typeof plays === "object") {
+		// If it\'s an object with count property
+		if (typeof plays.count === "number") {
+			return plays.count;
+		}
+
+		// If it\'s an array of objects with count
+		if (
+			Array.isArray(plays) &&
+			plays.length > 0 &&
+			typeof plays[0].count === "number"
+		) {
+			return plays[0].count;
+		}
+	}
+
+	return 0; // Default to 0 if no valid format is found
+};
+
 export default function ProfileByUsernameScreen() {
-  // ...existing code...
-  const [refreshing, setRefreshing] = useState(false);
+	const { colors, isDarkMode } = useTheme();
+	const [refreshing, setRefreshing] = useState(false);
+	const { user: currentUser } = useUser();
+	const [followerCount, setFollowerCount] = useState(0);
+	const [followingCount, setFollowingCount] = useState(0);
+	const [isOwnProfile, setIsOwnProfile] = useState(false);
+	const [sharedVoiceNotes, setSharedVoiceNotes] = useState<VoiceNote[]>([]);
+	const [loadingShared, setLoadingShared] = useState(false);
+	const [combinedVoiceNotes, setCombinedVoiceNotes] = useState<VoiceNote[]>([]);
+	const [loadingVoiceNotes, setLoadingVoiceNotes] = useState(true);
 
-  // Handler for pull-to-refresh
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await fetchUserData();
-    } finally {
-      setRefreshing(false);
-    }
-  }
-  // Get username from URL params
-  const params = useLocalSearchParams<{ username: string }>();
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  
-  const [username, setUsername] = useState<string>("");
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [voiceNotes, setVoiceNotes] = useState<VoiceNote[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [voiceBio, setVoiceBio] = useState<VoiceBio | null>(null);
-  const [userNotFound, setUserNotFound] = useState(false);
-  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
-  const scrollY = useRef(new Animated.Value(0)).current;
-  
-  // Create animated values for smooth transitions
-  const headerHeight = useRef(new Animated.Value(0)).current;
-  const headerOpacity = useRef(new Animated.Value(1)).current;
-  const collapsedHeaderOpacity = useRef(new Animated.Value(0)).current;
-  
-  // Add a listener to scrollY to update header collapse state
-  useEffect(() => {
-    const listenerId = scrollY.addListener(({ value }) => {
-      // Calculate progress of collapse (0 to 1)
-      const COLLAPSE_THRESHOLD = 120;
-      const COLLAPSE_RANGE = 40;
-      
-      // Calculate progress between 0 and 1 based on scroll position
-      const progress = Math.max(0, Math.min(1, (value - (COLLAPSE_THRESHOLD - COLLAPSE_RANGE)) / COLLAPSE_RANGE));
-      
-      // Update the animated values based on progress
-      headerOpacity.setValue(1 - progress);
-      collapsedHeaderOpacity.setValue(progress);
-      
-      // Update the collapsed state for conditional logic
-      setIsHeaderCollapsed(progress > 0.5);
-    });
-    
-    return () => {
-      scrollY.removeListener(listenerId);
-    };
-  }, [scrollY]);
-  
-  const handleBackPress = () => {
-    router.back();
-  };
+	// Replace the single popup state with separate states
+	const [showFollowersPopup, setShowFollowersPopup] = useState(false);
+	const [showFollowingPopup, setShowFollowingPopup] = useState(false);
 
-  useEffect(() => {
-    if (params.username) {
-      setUsername(params.username);
-    }
-  }, [params.username]);
+	// Add a ref for the ScrollView to enable scrolling to top programmatically
+	const scrollViewRef = useRef<ScrollView>(null);
 
-  useEffect(() => {
-    if (username) {
-      fetchUserData();
-    }
-  }, [username]);
+	// No longer need tab state as we're combining voice notes and shared notes
 
-  const fetchUserData = async () => {
-    setLoading(true);
-    try {
-      // Reset user not found state
-      setUserNotFound(false);
-      
-      // Fetch user profile by username
-      const profileData = await getUserProfileByUsername(username);
-      
-      if (!profileData) {
-        setUserNotFound(true);
-        setLoading(false);
-        return;
-      }
-      
-      // Ensure we have a valid user profile object
-      if (typeof profileData === 'object' && 'id' in profileData && 'username' in profileData) {
-        const typedProfile = profileData as UserProfile;
-        setUserProfile(typedProfile);
-        
-        // Fetch user voice notes using the user ID from the profile
-        const voiceNotesData = await getUserVoiceNotes(typedProfile.id);
-        
-        if (Array.isArray(voiceNotesData)) {
-          setVoiceNotes(voiceNotesData);
-        } else {
-          setVoiceNotes([]);
-        }
-        
-        // Fetch user voice bio if available
-        try {
-          const voiceBioData = await getVoiceBio(typedProfile.id);
-          if (voiceBioData) {
-            setVoiceBio(voiceBioData as VoiceBio);
-          }
-        } catch (bioError) {
-          // Voice bio not found or error fetching it - this is optional
-        }
-      } else {
-        setUserNotFound(true);
-      }
-    } catch (error: any) {
-      // Check if this is a user not found error
-      if (error.name === 'UserNotFoundError') {
-        setUserNotFound(true);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+	// Removed tab container as we're combining voice notes and shared notes
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6B2FBC" />
-      </View>
-    );
-  }
+	// Handler for pull-to-refresh
+	const handleRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await fetchUserData();
+		} catch (error) {
+			console.error("Error refreshing profile data:", error);
+		} finally {
+			setRefreshing(false);
+		}
+	};
+	// Get username from URL params
+	const params = useLocalSearchParams<{ username: string }>();
+	const router = useRouter();
+	const insets = useSafeAreaInsets();
 
-  if (userNotFound) {
-    return <UserNotFound username={username} />;
-  }
+	const [username, setUsername] = useState<string>("");
+	const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+	const [voiceNotes, setVoiceNotes] = useState<VoiceNote[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [voiceBio, setVoiceBio] = useState<VoiceBio | null>(null);
+	const [userNotFound, setUserNotFound] = useState(false);
+	const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+	const scrollY = useRef(new Animated.Value(0)).current;
 
-  if (!userProfile) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load profile data.</Text>
-      </View>
-    );
-  }
+	// Create animated values for smooth transitions
+	const headerHeight = useRef(new Animated.Value(0)).current;
+	const headerOpacity = useRef(new Animated.Value(1)).current;
+	const collapsedHeaderOpacity = useRef(new Animated.Value(0)).current;
 
-  return (
-    <View style={[styles.container]}>      
-      {/* Status bar background to prevent content from showing behind it */}
-      <View style={[styles.statusBarBackground, { height: insets.top }]} />
-      <Stack.Screen 
-        options={{
-          // Hide the default header when we're using our custom collapsible header
-          headerShown: false
-        }} 
-      />
-      {/* Always render the collapsed header as an overlay with animated opacity */}
-      <Animated.View 
-        style={[
-          styles.fixedHeader,
-          { 
-            opacity: collapsedHeaderOpacity,
-            top: 0, // Start from the very top of the screen
-          }
-        ]}
-      >
-        {/* Status bar spacer inside the header */}
-        <View style={{ height: insets.top }} />
-        <ProfileHeader
-          userId={userProfile.username}
-          displayName={userProfile.display_name}
-          avatarUrl={userProfile.avatar_url}
-          coverPhotoUrl={userProfile.cover_photo_url}
-          bio={userProfile.bio || undefined}
-          isVerified={userProfile.is_verified}
-          isCollapsed={true}
-          postCount={voiceNotes.length}
-        />
-      </Animated.View>
-      
-      <Animated.ScrollView 
-        style={styles.scrollView}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-        scrollEventThrottle={8}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#6B2FBC"
-            colors={["#6B2FBC"]}
-          />
-        }
-      >
-        {/* Always render the expanded header with animated opacity */}
-        <Animated.View style={{ opacity: headerOpacity }}>
-          {/* Add padding at the top to account for status bar */}
-          <View style={{ paddingTop: insets.top }} />
-          <ProfileHeader
-            userId={userProfile.username}
-            displayName={userProfile.display_name}
-            avatarUrl={userProfile.avatar_url}
-            coverPhotoUrl={userProfile.cover_photo_url}
-            bio={userProfile.bio || undefined}
-            isVerified={userProfile.is_verified}
-            isCollapsed={false}
-            postCount={voiceNotes.length}
-          />
-        </Animated.View>
-      
-      {/* Stats bar */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statsItem}>
-          <Text style={styles.statsNumber}>0</Text>
-          <Text style={styles.statsLabel}>Following</Text>
-        </View>
-        <View style={styles.statsDivider} />
-        <View style={styles.statsItem}>
-          <Text style={styles.statsNumber}>{voiceNotes.length}</Text>
-          <Text style={styles.statsLabel}>Notes</Text>
-        </View>
-        <View style={styles.statsDivider} />
-        <View style={styles.statsItem}>
-          <Text style={styles.statsNumber}>0</Text>
-          <Text style={styles.statsLabel}>Followers</Text>
-        </View>
-      </View>
-      
-        <VoiceNotesList
-          userId={userProfile.id}
-          username={userProfile.username}
-          displayName={userProfile.display_name}
-          voiceNotes={voiceNotes}
-        />
-      </Animated.ScrollView>
-    </View>
-  );
+	// Add a listener to scrollY to update header collapse state
+	useEffect(() => {
+		const listenerId = scrollY.addListener(({ value }) => {
+			// Calculate progress of collapse (0 to 1)
+			const COLLAPSE_THRESHOLD = 120;
+			const COLLAPSE_RANGE = 40;
+
+			// Calculate progress between 0 and 1 based on scroll position
+			const progress = Math.max(
+				0,
+				Math.min(
+					1,
+					(value - (COLLAPSE_THRESHOLD - COLLAPSE_RANGE)) / COLLAPSE_RANGE
+				)
+			);
+
+			// Update the animated values based on progress
+			headerOpacity.setValue(1 - progress);
+			collapsedHeaderOpacity.setValue(progress);
+
+			// Update the collapsed state for conditional logic
+			setIsHeaderCollapsed(progress > 0.5);
+		});
+
+		return () => {
+			scrollY.removeListener(listenerId);
+		};
+	}, [scrollY]);
+
+	const handleBackPress = () => {
+		router.back();
+	};
+
+	useEffect(() => {
+		if (params.username) {
+			setUsername(params.username);
+		}
+	}, [params.username]);
+
+	useEffect(() => {
+		if (username) {
+			console.log("Profile: Fetching user data for username:", username);
+			setLoadingVoiceNotes(true); // Set loading to true immediately when username changes
+			fetchUserData();
+		}
+	}, [username]);
+
+	// Add effect to refresh when current user changes (e.g., after profile update)
+	useEffect(() => {
+		if (username && currentUser) {
+			console.log(
+				"[PROFILE PAGE] Current user changed, refreshing profile data"
+			);
+			console.log("[PROFILE PAGE] Current user details:", {
+				id: currentUser.id,
+				username: currentUser.username,
+				display_name: currentUser.display_name,
+			});
+			console.log("[PROFILE PAGE] Profile username:", username);
+			fetchUserData();
+		}
+	}, [currentUser?.username, currentUser?.id]);
+
+	useEffect(() => {
+		if (currentUser && userProfile) {
+			const isOwner =
+				currentUser.username === userProfile.username ||
+				currentUser.id === userProfile.id;
+			console.log("[PROFILE PAGE] 🔍 Profile ownership check:", {
+				currentUserUsername: currentUser.username,
+				currentUserId: currentUser.id,
+				profileUsername: userProfile.username,
+				profileId: userProfile.id,
+				usernameMatch: currentUser.username === userProfile.username,
+				idMatch: currentUser.id === userProfile.id,
+				isOwner,
+				previousIsOwnProfile: isOwnProfile,
+			});
+
+			if (isOwner !== isOwnProfile) {
+				console.log(
+					"[PROFILE PAGE] 🔄 Ownership status changed from",
+					isOwnProfile,
+					"to",
+					isOwner
+				);
+			}
+
+			setIsOwnProfile(isOwner);
+		} else {
+			console.log("[PROFILE PAGE] ⚠️ Missing data for ownership check:", {
+				hasCurrentUser: !!currentUser,
+				hasUserProfile: !!userProfile,
+			});
+		}
+	}, [currentUser, userProfile]);
+
+	const fetchUserData = async () => {
+		setLoading(true);
+		setLoadingVoiceNotes(true);
+
+		try {
+			// Reset user not found state
+			setUserNotFound(false);
+
+			// Attempt to fetch user profile by username
+			const userProfileResponse = (await getUserProfileByUsername(
+				username
+			)) as unknown as UserProfile;
+
+			if (userProfileResponse && !("error" in userProfileResponse)) {
+				// Set user profile data
+				setUserProfile(userProfileResponse);
+
+				// Check if this is the current user's profile using both username and ID
+				if (currentUser) {
+					const isOwner =
+						currentUser.username === userProfileResponse.username ||
+						currentUser.id === userProfileResponse.id;
+					console.log("[DEBUG] Initial profile ownership check:", {
+						currentUserUsername: currentUser.username,
+						currentUserId: currentUser.id,
+						profileUsername: userProfileResponse.username,
+						profileId: userProfileResponse.id,
+						isOwner,
+					});
+					setIsOwnProfile(isOwner);
+				} else {
+					setIsOwnProfile(false);
+				}
+
+				// Attempt to fetch voice bio
+				const voiceBioResponse = (await getVoiceBio(
+					userProfileResponse.id
+				)) as unknown as VoiceBio;
+				if (voiceBioResponse && !("error" in voiceBioResponse)) {
+					setVoiceBio(voiceBioResponse);
+				}
+
+				// Fetch follower and following counts
+				try {
+					const followerCountResponse = await getFollowerCount(
+						userProfileResponse.id
+					);
+					if (typeof followerCountResponse === "number") {
+						setFollowerCount(followerCountResponse);
+					}
+
+					const followingCountResponse = await getFollowingCount(
+						userProfileResponse.id
+					);
+					if (typeof followingCountResponse === "number") {
+						setFollowingCount(followingCountResponse);
+					}
+				} catch (error) {
+					console.error("Error fetching follow counts:", error);
+				}
+
+				// Fetch user's voice notes
+				try {
+					console.log(
+						"Profile: Starting to fetch voice notes for user:",
+						userProfileResponse.id
+					);
+					// Always set loading to true before any API calls
+					setLoadingVoiceNotes(true);
+
+					// Fetching voice notes
+					const voiceNotesResponse = (await getUserVoiceNotes(
+						userProfileResponse.id
+					)) as unknown as VoiceNote[];
+					setVoiceNotes(voiceNotesResponse);
+					console.log(
+						"Profile: Fetched user voice notes:",
+						voiceNotesResponse?.length || 0
+					);
+
+					// Fetching shared voice notes
+					const sharedVoiceNotesResponse = (await getUserSharedVoiceNotes(
+						userProfileResponse.id
+					)) as unknown as VoiceNote[];
+					setSharedVoiceNotes(sharedVoiceNotesResponse);
+					console.log(
+						"Profile: Fetched shared voice notes:",
+						sharedVoiceNotesResponse?.length || 0
+					);
+
+					// Combine both types of voice notes
+					const combinedNotes = [
+						...(voiceNotesResponse || []).map((note: any) => ({
+							...note,
+							is_shared: false,
+						})),
+						...(sharedVoiceNotesResponse || []).map((note: any) => ({
+							...note,
+							is_shared: true,
+						})),
+					];
+
+					// Sort by date, latest first
+					combinedNotes.sort((a: any, b: any) => {
+						const dateA = new Date(
+							a.is_shared && a.shared_at ? a.shared_at : a.created_at
+						);
+						const dateB = new Date(
+							b.is_shared && b.shared_at ? b.shared_at : b.created_at
+						);
+						return dateB.getTime() - dateA.getTime();
+					});
+
+					// Update the voice notes state - but keep loading true for at least 500ms
+					// to ensure loading animation is visible to the user
+					console.log(
+						"Profile: Setting combinedVoiceNotes with",
+						combinedNotes.length,
+						"notes"
+					);
+					setCombinedVoiceNotes(combinedNotes);
+
+					// Always add a small delay to show loading state, even if we have notes
+					setTimeout(() => {
+						console.log(
+							"Profile: Setting loadingVoiceNotes to FALSE after delay"
+						);
+						setLoadingVoiceNotes(false);
+					}, 800);
+				} catch (error) {
+					console.error("Error fetching voice notes:", error);
+					console.log(
+						"Profile: Setting combinedVoiceNotes to empty array due to error"
+					);
+					setCombinedVoiceNotes([]);
+
+					// Set loading to false after a short delay to show loading animation
+					console.log(
+						"Profile: Keeping loadingVoiceNotes TRUE for delay after error"
+					);
+					setTimeout(() => {
+						console.log(
+							"Profile: Setting loadingVoiceNotes to FALSE after error delay"
+						);
+						setLoadingVoiceNotes(false);
+					}, 800);
+				}
+			} else {
+				// User not found
+				console.error("User not found");
+				setUserNotFound(true);
+				setCombinedVoiceNotes([]);
+
+				// Set loading to false after a short delay to show loading animation
+				setTimeout(() => {
+					setLoadingVoiceNotes(false);
+				}, 1500);
+			}
+		} catch (error: any) {
+			// Check if this is a user not found error
+			console.error("Error fetching user data:", error);
+			if (error.message?.includes("not found") || error.statusCode === 404) {
+				setUserNotFound(true);
+			}
+			setCombinedVoiceNotes([]);
+
+			// Set loading to false after a short delay to show loading animation
+			setTimeout(() => {
+				setLoadingVoiceNotes(false);
+			}, 1500);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	// Update handlers for showing followers and following popups
+	const handleFollowersPress = () => {
+		setShowFollowersPopup(true);
+	};
+
+	const handleFollowingPress = () => {
+		setShowFollowingPopup(true);
+	};
+
+	// Add a handler for the header click that scrolls to top
+	const handleHeaderPress = () => {
+		// Scroll to the top with animation
+		if (scrollViewRef.current) {
+			scrollViewRef.current.scrollTo({ y: 0, animated: true });
+		}
+	};
+
+	if (loading) {
+		return (
+			<View
+				style={[
+					styles.loadingContainer,
+					{ backgroundColor: colors.background },
+				]}
+			>
+				<ActivityIndicator size="large" color={colors.tint} />
+				<Text
+					style={[
+						styles.loadingText,
+						{ color: colors.textSecondary, marginTop: 12 },
+					]}
+				>
+					Loading profile...
+				</Text>
+			</View>
+		);
+	}
+
+	if (userNotFound) {
+		return <UserNotFound username={username} />;
+	}
+
+	if (!userProfile) {
+		return (
+			<View
+				style={[styles.errorContainer, { backgroundColor: colors.background }]}
+			>
+				<Text style={[styles.errorText, { color: colors.error }]}>
+					Failed to load profile data.
+				</Text>
+			</View>
+		);
+	}
+
+	return (
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
+			{/* Status bar background to prevent content from showing behind it */}
+			<View
+				style={[
+					styles.statusBarBackground,
+					{
+						height: insets.top,
+						backgroundColor: colors.background,
+					},
+				]}
+			/>
+			<Stack.Screen
+				options={{
+					// Hide the default header when we're using our custom collapsible header
+					headerShown: false,
+				}}
+			/>
+			{/* Always render the collapsed header as an overlay with animated opacity */}
+			<Animated.View
+				style={[
+					styles.fixedHeader,
+					{
+						opacity: collapsedHeaderOpacity,
+						top: 0, // Start from the very top of the screen
+						shadowColor: colors.shadow,
+						// Remove the solid background to allow BlurView to work
+					},
+				]}
+			>
+				{/* Status bar spacer */}
+				<View style={{ height: insets.top }} />
+				{/* Collapsed header with scroll-to-top functionality */}
+				<ProfileHeader
+					userId={userProfile.id}
+					username={userProfile.username}
+					displayName={userProfile.display_name}
+					avatarUrl={userProfile.avatar_url}
+					coverPhotoUrl={userProfile.cover_photo_url}
+					bio={userProfile.bio || undefined}
+					isVerified={userProfile.is_verified}
+					isCollapsed={true}
+					postCount={voiceNotes.length}
+					isOwnProfile={isOwnProfile}
+					onHeaderPress={handleHeaderPress} // Pass scroll-to-top handler
+				/>
+			</Animated.View>
+
+			<Animated.ScrollView
+				ref={scrollViewRef}
+				style={[styles.scrollView, { backgroundColor: colors.background }]}
+				onScroll={Animated.event(
+					[{ nativeEvent: { contentOffset: { y: scrollY } } }],
+					{ useNativeDriver: false }
+				)}
+				scrollEventThrottle={8}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={handleRefresh}
+						tintColor={colors.tint}
+						colors={[colors.tint]}
+					/>
+				}
+			>
+				{/* Always render the expanded header with animated opacity */}
+				<Animated.View style={{ opacity: headerOpacity }}>
+					{/* Add padding at the top to account for status bar */}
+					<View style={{ paddingTop: insets.top }} />
+					<ProfileHeader
+						userId={userProfile.id}
+						username={userProfile.username}
+						displayName={userProfile.display_name}
+						avatarUrl={userProfile.avatar_url}
+						coverPhotoUrl={userProfile.cover_photo_url}
+						bio={userProfile.bio || undefined}
+						isVerified={userProfile.is_verified}
+						isCollapsed={false}
+						postCount={voiceNotes.length}
+						isOwnProfile={isOwnProfile}
+					/>
+				</Animated.View>
+
+				{/* Stats bar */}
+				<View
+					style={[
+						styles.statsContainer,
+						{ backgroundColor: colors.background },
+					]}
+				>
+					<TouchableOpacity
+						style={styles.statsItem}
+						onPress={handleFollowingPress}
+					>
+						<Text style={[styles.statsNumber, { color: colors.text }]}>
+							{followingCount}
+						</Text>
+						<Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
+							Following
+						</Text>
+					</TouchableOpacity>
+					<View
+						style={[styles.statsDivider, { backgroundColor: colors.border }]}
+					/>
+					<TouchableOpacity style={styles.statsItem}>
+						<Text style={[styles.statsNumber, { color: colors.text }]}>
+							{voiceNotes.length}
+						</Text>
+						<Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
+							{voiceNotes.length === 1 ? "Note" : "Notes"}
+						</Text>
+					</TouchableOpacity>
+					<View
+						style={[styles.statsDivider, { backgroundColor: colors.border }]}
+					/>
+					<TouchableOpacity
+						style={styles.statsItem}
+						onPress={handleFollowersPress}
+					>
+						<Text style={[styles.statsNumber, { color: colors.text }]}>
+							{followerCount}
+						</Text>
+						<Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
+							{followerCount === 1 ? "Follower" : "Followers"}
+						</Text>
+					</TouchableOpacity>
+				</View>
+
+				{isOwnProfile ? (
+					<View
+						style={[
+							styles.followButtonContainer,
+							{ backgroundColor: colors.background },
+						]}
+					>
+						<TouchableOpacity
+							style={[
+								styles.editProfileButtonInline,
+								{ backgroundColor: "#7B3DD2" },
+							]}
+							onPress={() => router.push("/profile/edit")}
+						>
+							<Text style={[styles.buttonText, { color: colors.white }]}>
+								Edit Profile
+							</Text>
+						</TouchableOpacity>
+					</View>
+				) : (
+					<View
+						style={[
+							styles.followButtonContainer,
+							{ backgroundColor: colors.background },
+						]}
+					>
+						<FollowButton
+							userId={userProfile.id}
+							onFollowChange={(isFollowing, updatedCount) => {
+								// Use the accurate server count if available
+								if (typeof updatedCount === "number") {
+									console.log(
+										`Setting follower count to ${updatedCount} from server`
+									);
+									setFollowerCount(updatedCount);
+								} else {
+									// Fallback to the old increment/decrement method
+									console.log(`Using local calculation for follower count`);
+									setFollowerCount((prev) =>
+										isFollowing ? prev + 1 : Math.max(0, prev - 1)
+									);
+								}
+							}}
+						/>
+					</View>
+				)}
+
+				{loading ? (
+					<View
+						style={[
+							styles.loadingContainer,
+							{ backgroundColor: colors.background },
+						]}
+					>
+						<ActivityIndicator size="large" color={colors.tint} />
+						<Text
+							style={[
+								styles.loadingText,
+								{ color: colors.textSecondary, marginTop: 12 },
+							]}
+						>
+							Loading profile...
+						</Text>
+					</View>
+				) : (
+					// Always use VoiceNotesList which has its own proper loading states
+					<>
+						{/* Add logging using a self-executing function */}
+						{(() => {
+							console.log("Profile: Passing to VoiceNotesList:", {
+								voiceNotesCount: combinedVoiceNotes.length,
+								loadingNotesValue: loadingVoiceNotes,
+							});
+							return null;
+						})()}
+						<VoiceNotesList
+							userId={userProfile.id}
+							username={userProfile.username}
+							displayName={userProfile.display_name}
+							voiceNotes={combinedVoiceNotes}
+							onRefresh={handleRefresh}
+							showRepostAttribution={true}
+							isOwnProfile={isOwnProfile}
+							loadingNotes={loadingVoiceNotes}
+						/>
+					</>
+				)}
+			</Animated.ScrollView>
+
+			{/* Floating action button for creating voice note */}
+			<TouchableOpacity
+				style={[
+					styles.floatingActionButton,
+					{
+						bottom: insets.bottom + 16,
+						backgroundColor: colors.tint,
+						shadowColor: colors.shadow,
+					},
+				]}
+				onPress={() => router.push("/create")}
+			>
+				<Feather name="mic" size={24} color={colors.white} />
+			</TouchableOpacity>
+
+			{/* Add the followers/following popups */}
+			{userProfile && (
+				<>
+					<FollowersFollowingPopup
+						visible={showFollowersPopup}
+						userId={userProfile.id}
+						onClose={() => setShowFollowersPopup(false)}
+						initialTab="followers"
+					/>
+					<FollowersFollowingPopup
+						visible={showFollowingPopup}
+						userId={userProfile.id}
+						onClose={() => setShowFollowingPopup(false)}
+						initialTab="following"
+					/>
+				</>
+			)}
+		</View>
+	);
 }
 
 const styles = StyleSheet.create({
-  statusBarBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    zIndex: 101, // Higher than the header
-  },
-  fixedHeader: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  scrollView: {
-    flex: 1,
-    // Remove any top padding from the scroll view itself
-    paddingTop: 0,
-  },
-  headerTitle: {
-    color: "#6B2FBC",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  backButton: {
-    padding: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#e74c3c",
-    textAlign: "center",
-  },
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    alignItems: "center",
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-  },
-  statsItem: {
-    alignItems: "center",
-    width: "30%",
-  },
-  statsNumber: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 4,
-    color: "#333",
-  },
-  statsLabel: {
-    fontSize: 14,
-    color: "#666",
-  },
-  statsDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: "#eee",
-  }
+	statusBarBackground: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		zIndex: 9, // Just below the header
+	},
+	fixedHeader: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		zIndex: 10,
+		// Improved shadow for semi-translucent header
+		shadowOffset: { width: 0, height: 1 },
+		shadowRadius: 3,
+		shadowOpacity: 0.2,
+		elevation: 4,
+	},
+	container: {
+		flex: 1,
+	},
+	scrollView: {
+		flex: 1,
+		// Remove any top padding from the scroll view itself
+		paddingTop: 0,
+	},
+	headerTitle: {
+		fontSize: 18,
+		fontWeight: "600",
+	},
+	backButton: {
+		padding: 8,
+	},
+	loadingContainer: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	errorContainer: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+		padding: 20,
+	},
+	errorText: {
+		fontSize: 16,
+		textAlign: "center",
+	},
+	statsContainer: {
+		flexDirection: "row",
+		justifyContent: "space-evenly",
+		alignItems: "center",
+		paddingVertical: 16,
+	},
+	statsItem: {
+		alignItems: "center",
+		width: "30%",
+	},
+	statsNumber: {
+		fontSize: 18,
+		fontWeight: "bold",
+		marginBottom: 4,
+	},
+	statsLabel: {
+		fontSize: 14,
+	},
+	statsDivider: {
+		width: 1,
+		height: 30,
+	},
+	followButtonContainer: {
+		paddingHorizontal: 16,
+		paddingVertical: 12,
+		alignItems: "center",
+	},
+	editProfileButtonInline: {
+		paddingVertical: 8,
+		paddingHorizontal: 16,
+		borderRadius: 20,
+		justifyContent: "center",
+		alignItems: "center",
+		minWidth: 100,
+	},
+	buttonText: {
+		color: "white",
+		fontSize: 14,
+		fontWeight: "600",
+	},
+	floatingActionButton: {
+		position: "absolute",
+		right: 16,
+		width: 56,
+		height: 56,
+		borderRadius: 28,
+		justifyContent: "center",
+		alignItems: "center",
+		elevation: 8,
+		zIndex: 1000,
+		shadowOffset: {
+			width: 0,
+			height: 4,
+		},
+		shadowOpacity: 0.3,
+		shadowRadius: 4.65,
+	},
+	emptyState: {
+		alignItems: "center",
+		justifyContent: "center",
+		padding: 50,
+	},
+	emptyText: {
+		fontSize: 16,
+	},
+	headerTouchArea: {
+		width: "100%",
+		cursor: "pointer", // Add cursor pointer for web
+	},
+	headerContent: {
+		position: "relative", // For positioning the indicator
+	},
+	loadingText: {
+		fontSize: 14,
+	},
+	// Removed tab container styles as we're combining voice notes and shared notes
 });

@@ -1,9 +1,14 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { ThemeProvider, DefaultTheme } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Slot, SplashScreen } from "expo-router";
 import { useEffect, useState } from "react";
 import "react-native-reanimated";
+import { UserProvider } from "../context/UserContext";
+import { ThemeProvider, useTheme } from "../context/ThemeContext";
+import RequireAuth from "../components/auth/RequireAuth";
+import { View } from "react-native";
+import TabLayout from "./(tabs)/_layout";
+import { GlobalToastProvider } from "../components/common/Toast";
 
 export {
 	// Catch any errors thrown by the Layout component.
@@ -21,7 +26,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
 	// Use state to track font loading instead of directly using the hook result
 	const [appIsReady, setAppIsReady] = useState(false);
-	
+
 	// Load fonts
 	const [fontsLoaded, fontError] = useFonts({
 		SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -40,11 +45,24 @@ export default function RootLayout() {
 					setAppIsReady(true);
 				}
 			} catch (e) {
-				console.warn('Error in prepare:', e);
+				console.warn("Error in prepare:", e);
 			}
 		}
 
 		prepare();
+
+		// Add a safety timeout to hide splash screen even if fonts aren't loaded
+		const timeoutId = setTimeout(() => {
+			if (!appIsReady) {
+				console.log("Timeout reached, hiding splash screen anyway");
+				SplashScreen.hideAsync().catch((e) =>
+					console.warn("Error hiding splash:", e)
+				);
+				setAppIsReady(true);
+			}
+		}, 3000); // 3 seconds max wait time
+
+		return () => clearTimeout(timeoutId);
 	}, [fontsLoaded]);
 
 	// If the app isn't ready, show nothing (splash screen will be visible)
@@ -58,9 +76,25 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
 	return (
-		<ThemeProvider value={DefaultTheme}>
-			{/* Use Slot for better performance with less nesting */}
-			<Slot />
+		<ThemeProvider>
+			<ThemedRoot>
+				<GlobalToastProvider>
+					<UserProvider>
+						<RequireAuth>
+							<Slot />
+						</RequireAuth>
+					</UserProvider>
+				</GlobalToastProvider>
+			</ThemedRoot>
 		</ThemeProvider>
+	);
+}
+
+function ThemedRoot({ children }: { children: React.ReactNode }) {
+	const { colors } = useTheme();
+	return (
+		<View style={{ flex: 1, backgroundColor: colors.background }}>
+			{children}
+		</View>
 	);
 }
