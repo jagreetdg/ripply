@@ -468,11 +468,13 @@ export function ProfileHeader({
 			flexDirection: "row",
 			alignItems: "center",
 			paddingLeft: 8,
+			paddingRight: 8, // Add right padding to match left padding
 		},
 		voiceBioDuration: {
 			fontSize: 12,
 			color: colors.textSecondary,
 			marginLeft: 8,
+			marginRight: 8, // Add right margin to match left margin for perfect symmetry
 		},
 		progressContainer: {
 			flex: 1,

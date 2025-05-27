@@ -913,7 +913,7 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		fontWeight: "500",
 		marginLeft: 4,
-    marginBottom: 50
+		marginBottom: 50,
 	},
 	coverAddText: {
 		position: "absolute",
