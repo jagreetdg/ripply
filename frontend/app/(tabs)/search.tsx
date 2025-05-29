@@ -410,6 +410,7 @@ export default function SearchScreen() {
 					displayName={userData.display_name}
 					username={userData.username}
 					userAvatarUrl={userData.avatar_url}
+					currentUserId={currentUser?.id}
 				/>
 			</View>
 		);
