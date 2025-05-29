@@ -72,6 +72,9 @@ export function VoiceNoteCardImpl({
 	const { colors, isDarkMode } = useTheme();
 	const progressContainerRef = useRef<View>(null);
 
+	// Get user ID from context or props
+	const loggedInUserId = user?.id || currentUserId;
+
 	// Check if this voice note has a background image
 	const hasBackgroundImage = !!voiceNote.backgroundImage;
 
@@ -140,9 +143,6 @@ export function VoiceNoteCardImpl({
 	// Animation refs
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const shareScale = useRef(new Animated.Value(1)).current;
-
-	// Get user ID from context or props
-	const loggedInUserId = user?.id || currentUserId;
 
 	// Theme-specific colors for repost attribution
 	const repostAttributionBackgroundColor = hasBackgroundImage
@@ -304,7 +304,9 @@ export function VoiceNoteCardImpl({
 			return;
 		}
 
-		if (isLoadingShareCount) return;
+		if (isLoadingShareCount) {
+			return;
+		}
 
 		setIsLoadingShareCount(true);
 		recordShare(voiceNote.id, loggedInUserId)
@@ -667,6 +669,15 @@ export function VoiceNoteCardImpl({
 					<CardContent />
 				</View>
 			)}
+
+			{/* Comment Popup */}
+			<CommentPopup
+				visible={showCommentPopup}
+				voiceNoteId={voiceNote.id}
+				currentUserId={loggedInUserId}
+				onClose={handleCloseCommentPopup}
+				onCommentAdded={handleCommentAdded}
+			/>
 		</View>
 	);
 }

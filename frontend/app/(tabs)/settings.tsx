@@ -163,7 +163,7 @@ export default function SettingsScreen() {
 						title="Notification Preferences"
 						description="Manage notification settings"
 						onPress={() => {
-							/* Navigate to Notifications screen */
+							router.push("/settings/notifications");
 						}}
 					/>
 					<SettingsItem
@@ -171,7 +171,7 @@ export default function SettingsScreen() {
 						title="Privacy"
 						description="Manage privacy settings"
 						onPress={() => {
-							/* Navigate to Privacy screen */
+							router.push("/settings/privacy");
 						}}
 					/>
 				</View>
@@ -260,7 +260,7 @@ export default function SettingsScreen() {
 						title="Help & Support"
 						description="Get help with Ripply"
 						onPress={() => {
-							/* Navigate to Help & Support screen */
+							router.push("/settings/help");
 						}}
 					/>
 					<SettingsItem
@@ -268,7 +268,7 @@ export default function SettingsScreen() {
 						title="About"
 						description="App version and information"
 						onPress={() => {
-							/* Navigate to About screen */
+							router.push("/settings/about");
 						}}
 					/>
 				</View>

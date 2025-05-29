@@ -558,6 +558,7 @@ export default function HomeScreen() {
 										username={item.username}
 										userAvatarUrl={item.userAvatar}
 										timePosted={item.timePosted}
+										currentUserId={currentUser?.id}
 										voiceNoteUsers={item.voiceNote.users}
 										isShared={item.isShared}
 										sharedBy={item.sharedBy}

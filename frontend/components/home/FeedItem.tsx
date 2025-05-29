@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "../voice-note-card/VoiceNoteCard";
 import { useTheme } from "../../context/ThemeContext";
+import { useUser } from "../../context/UserContext";
 
 interface FeedItemProps {
 	item: {
@@ -37,6 +38,7 @@ interface FeedItemProps {
 function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 	const router = useRouter();
 	const { colors, isDarkMode } = useTheme();
+	const { user } = useUser();
 
 	// Use proper expo-router navigation
 	const handleProfilePress = useCallback(() => {
@@ -62,7 +64,15 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 	}, [item.sharedBy, router]);
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+		<View
+			style={[
+				styles.container,
+				{
+					backgroundColor: colors.background,
+					borderBottomColor: colors.border,
+				},
+			]}
+		>
 			{/* Show repost attribution if needed */}
 			{item.isShared && item.sharedBy && (
 				<View style={styles.repostAttribution}>
@@ -92,14 +102,22 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 						<Text style={[styles.userName, { color: colors.text }]}>
 							{item.displayName || item.userName}
 						</Text>
-						<Text style={[styles.userId, { color: colors.textSecondary }]}>@{item.userName}</Text>
+						<Text style={[styles.userId, { color: colors.textSecondary }]}>
+							@{item.userName}
+						</Text>
 					</View>
 				</TouchableOpacity>
 
 				<View style={styles.timeContainer}>
-					<Text style={[styles.timeText, { color: colors.textSecondary }]}>{item.timePosted}</Text>
+					<Text style={[styles.timeText, { color: colors.textSecondary }]}>
+						{item.timePosted}
+					</Text>
 					<TouchableOpacity style={styles.moreButton}>
-						<Feather name="more-horizontal" size={16} color={colors.textSecondary} />
+						<Feather
+							name="more-horizontal"
+							size={16}
+							color={colors.textSecondary}
+						/>
 					</TouchableOpacity>
 				</View>
 			</View>
@@ -109,6 +127,7 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 					voiceNote={item.voiceNote}
 					userId={item.userId}
 					username={item.userName}
+					currentUserId={user?.id}
 					onProfilePress={handleProfilePress}
 				/>
 			</View>
