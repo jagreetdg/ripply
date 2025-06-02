@@ -710,10 +710,11 @@ router.get("/tags/:tagName", async (req, res) => {
 router.post("/:voiceNoteId/share", authenticateToken, async (req, res) => {
 	try {
 		const { voiceNoteId } = req.params;
-		const { userId } = req.body; // Expecting userId from frontend
+		// Use the authenticated user's ID instead of client-provided userId for security
+		const userId = req.user.id;
 
 		if (!userId) {
-			return res.status(400).json({ message: "User ID is required" });
+			return res.status(401).json({ message: "Authentication required" });
 		}
 		if (!voiceNoteId) {
 			return res.status(400).json({ message: "Voice note ID is required" });
