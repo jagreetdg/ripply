@@ -285,19 +285,20 @@ export const getUserVoiceNotes = (userId) => {
 };
 
 /**
- * Record a share for a voice note (toggles share status)
- * @param {string} voiceNoteId - Voice note ID
- * @param {string} userId - ID of user sharing the voice note
+ * Record a share for a voice note (toggle share/unshare)
+ * @param {string} voiceNoteId - ID of voice note to share
+ * @param {string} userId - ID of user sharing the voice note (not used anymore, kept for compatibility)
  * @returns {Promise<{shareCount: number, isShared: boolean, message?: string, voiceNoteId: string, userId: string, error?: string}>} - Share data with updated count and share status
  */
 export const recordShare = async (voiceNoteId, userId) => {
 	console.log(`Toggle share for voice note: ${voiceNoteId} by user: ${userId}`);
 	try {
+		// Note: We no longer send userId in the body since the backend uses the authenticated user's ID
 		const response = await apiRequest(
 			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`,
 			{
 				method: "POST",
-				body: JSON.stringify({ userId: userId }),
+				body: JSON.stringify({}), // Empty body since backend uses authenticated user
 			}
 		);
 
@@ -329,7 +330,7 @@ export const recordShare = async (voiceNoteId, userId) => {
 			isShared: isShared,
 			message: response.message || "",
 			voiceNoteId,
-			userId,
+			userId: response.userId || userId, // Use response userId if available
 		};
 	} catch (error) {
 		console.error("Error toggling share:", error);

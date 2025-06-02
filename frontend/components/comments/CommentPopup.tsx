@@ -8,17 +8,19 @@ import {
 	StyleSheet,
 	Platform,
 	ActivityIndicator,
-	Keyboard,
 	Image,
 	Modal,
-	KeyboardAvoidingView,
 	Alert,
+	Dimensions,
+	ScrollView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { getComments, addComment } from "../../services/api/voiceNoteService";
 import { useRouter } from "expo-router";
-import DefaultAvatar from "../DefaultAvatar";
 import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
+import { getComments, addComment } from "../../services/api/voiceNoteService";
+
+const { height: screenHeight } = Dimensions.get("window");
 
 interface Comment {
 	id: string;
@@ -47,59 +49,11 @@ const formatDate = (dateString: string) => {
 	const now = new Date();
 	const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-	if (diffInSeconds < 60) {
-		return `${diffInSeconds}s ago`;
-	} else if (diffInSeconds < 3600) {
-		return `${Math.floor(diffInSeconds / 60)}m ago`;
-	} else if (diffInSeconds < 86400) {
-		return `${Math.floor(diffInSeconds / 3600)}h ago`;
-	} else if (diffInSeconds < 604800) {
-		return `${Math.floor(diffInSeconds / 86400)}d ago`;
-	} else {
-		return date.toLocaleDateString();
-	}
-};
-
-const DefaultProfilePicture = ({
-	userId,
-	size = 32,
-	avatarUrl = null,
-	onPress,
-}: {
-	userId: string;
-	size: number;
-	avatarUrl?: string | null;
-	onPress?: () => void;
-}) => {
-	// State to track if the avatar image failed to load
-	const [imageError, setImageError] = useState(false);
-
-	// Generate the content based on whether we have a valid avatar URL
-	if (avatarUrl && !imageError) {
-		return (
-			<Image
-				source={{ uri: avatarUrl }}
-				style={{
-					width: size,
-					height: size,
-					borderRadius: size / 2,
-				}}
-				onError={() => {
-					console.log("Error loading avatar in CommentPopup");
-					setImageError(true); // Mark this image as failed
-				}}
-				// Use a web-based avatar service instead of local assets
-				defaultSource={
-					Platform.OS === "ios"
-						? { uri: "https://ui-avatars.com/api/?name=" + (userId || "U") }
-						: undefined
-				}
-			/>
-		);
-	}
-
-	// Return our new DefaultAvatar
-	return <DefaultAvatar userId={userId} size={size} onPress={onPress} />;
+	if (diffInSeconds < 60) return "just now";
+	if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
+	if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
+	if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d`;
+	return date.toLocaleDateString();
 };
 
 export function CommentPopup({
@@ -113,22 +67,21 @@ export function CommentPopup({
 	const [newComment, setNewComment] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
-	const inputRef = useRef<TextInput>(null);
+	const textInputRef = useRef<TextInput>(null);
 	const router = useRouter();
-	const { user } = useUser(); // Get current logged-in user
+	const { user } = useUser();
+	const { colors, isDarkMode } = useTheme();
 
-	// Use user from context if available, otherwise use prop
 	const loggedInUserId = user?.id || currentUserId;
 
 	useEffect(() => {
 		if (visible) {
 			fetchComments();
-			// Focus the input when the popup opens
 			setTimeout(() => {
-				if (inputRef.current) {
-					inputRef.current.focus();
-				}
+				textInputRef.current?.focus();
 			}, 300);
+		} else {
+			setNewComment("");
 		}
 	}, [visible, voiceNoteId]);
 
@@ -148,10 +101,8 @@ export function CommentPopup({
 		}
 	};
 
-	const handleSubmitComment = async () => {
-		if (!newComment.trim()) {
-			return; // Don't submit empty comments
-		}
+	const handleAddComment = async () => {
+		if (!newComment.trim()) return;
 
 		if (!loggedInUserId) {
 			Alert.alert(
@@ -172,169 +123,185 @@ export function CommentPopup({
 				user_id: loggedInUserId,
 				content: newComment.trim(),
 			});
-
 			if (response) {
-				// Add the new comment to the top of the list
 				const newCommentData = response as Comment;
-				setComments((prevComments) => [newCommentData, ...prevComments]);
-				setNewComment(""); // Clear the input
-
-				// Call the callback with the new comment data
-				if (onCommentAdded) {
-					onCommentAdded(newCommentData);
-				}
-
-				// Hide keyboard after submitting
-				Keyboard.dismiss();
+				setComments((prev) => [newCommentData, ...prev]);
+				setNewComment("");
+				onCommentAdded?.(newCommentData);
 			}
 		} catch (error) {
 			console.error("Error adding comment:", error);
-			Alert.alert("Error", "Failed to post your comment. Please try again.");
+			Alert.alert("Error", "Failed to add comment. Please try again.");
 		} finally {
 			setSubmitting(false);
 		}
 	};
 
 	const handleProfilePress = (userId: string, username?: string) => {
-		// Navigate to the user profile using username if available, otherwise use userId
 		if (username) {
-			console.log("Navigating to profile by username:", username);
-			router.push({
-				pathname: "/profile/[username]",
-				params: { username },
-			});
-		} else {
-			console.log("Navigating to profile by userId:", userId);
-			router.push({
-				pathname: "/[userId]",
-				params: { userId },
-			});
+			router.push(`/profile/${username}`);
 		}
-
-		// Close the comment popup
 		onClose();
 	};
 
-	const renderCommentItem = ({ item }: { item: Comment }) => (
-		<View style={styles.commentItem}>
-			<DefaultProfilePicture
-				userId={item.user_id}
-				size={40}
-				avatarUrl={item.user?.avatar_url || null}
-				onPress={() => handleProfilePress(item.user_id, item.user?.username)}
-			/>
-			<View style={styles.commentContent}>
-				<View style={styles.commentHeader}>
+	const renderComment = ({ item }: { item: Comment }) => {
+		const user = item.user;
+		const displayName = user?.display_name || "User";
+		const username = user?.username || "";
+
+		return (
+			<View
+				style={[styles.commentItem, { backgroundColor: colors.background }]}
+			>
+				<View style={[styles.avatar, { backgroundColor: colors.tint }]}>
+					{user?.avatar_url ? (
+						<Image
+							source={{ uri: user.avatar_url }}
+							style={styles.avatarImage}
+						/>
+					) : (
+						<Text style={styles.avatarText}>
+							{displayName.charAt(0).toUpperCase()}
+						</Text>
+					)}
+				</View>
+
+				<View style={styles.commentContent}>
 					<TouchableOpacity
-						onPress={() =>
-							handleProfilePress(item.user_id, item.user?.username)
-						}
+						onPress={() => handleProfilePress(item.user_id, username)}
 					>
-						<Text style={styles.commentUserName}>
-							{item.user?.display_name || "User"}
+						<Text style={[styles.displayName, { color: colors.text }]}>
+							{displayName}
 						</Text>
 					</TouchableOpacity>
-					<Text style={styles.commentTime}>{formatDate(item.created_at)}</Text>
+
+					<Text style={[styles.commentText, { color: colors.text }]}>
+						{item.content}
+					</Text>
+
+					<Text style={[styles.timestamp, { color: colors.textSecondary }]}>
+						{formatDate(item.created_at)}
+					</Text>
 				</View>
-				<Text style={styles.commentText}>{item.content}</Text>
 			</View>
-		</View>
-	);
+		);
+	};
+
+	if (!visible) return null;
 
 	return (
 		<Modal
 			visible={visible}
-			transparent
+			transparent={true}
 			animationType="slide"
 			onRequestClose={onClose}
 		>
-			<KeyboardAvoidingView
-				behavior={Platform.OS === "ios" ? "padding" : undefined}
-				style={styles.keyboardAvoidingView}
-			>
-				<View style={styles.modalContainer}>
-					{/* Overlay - closes modal when tapped */}
-					<TouchableOpacity
-						style={styles.overlay}
-						activeOpacity={1}
-						onPress={onClose}
-					/>
+			<View style={styles.modalContainer}>
+				{/* Backdrop */}
+				<TouchableOpacity
+					style={styles.backdrop}
+					activeOpacity={1}
+					onPress={onClose}
+				/>
 
-					{/* Comment popup content */}
-					<View style={styles.popupContainer}>
-						<View style={styles.header}>
-							<Text style={styles.title}>Comments</Text>
-							<TouchableOpacity onPress={onClose} style={styles.closeButton}>
-								<Feather name="x" size={24} color="#333" />
-							</TouchableOpacity>
-						</View>
+				{/* Modal content */}
+				<View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+					{/* Header */}
+					<View style={[styles.header, { borderBottomColor: colors.border }]}>
+						<Text style={[styles.headerTitle, { color: colors.text }]}>
+							Comments
+						</Text>
+						<TouchableOpacity onPress={onClose}>
+							<Feather name="x" size={24} color={colors.text} />
+						</TouchableOpacity>
+					</View>
 
+					{/* Comments - Using ScrollView instead of FlatList for testing */}
+					<ScrollView
+						style={styles.commentsContainer}
+						contentContainerStyle={styles.scrollContent}
+						showsVerticalScrollIndicator={true}
+						bounces={true}
+					>
 						{loading ? (
 							<View style={styles.loadingContainer}>
-								<ActivityIndicator size="large" color="#6B2FBC" />
+								<ActivityIndicator size="large" color={colors.tint} />
+								<Text
+									style={[styles.loadingText, { color: colors.textSecondary }]}
+								>
+									Loading comments...
+								</Text>
+							</View>
+						) : comments.length === 0 ? (
+							<View style={styles.emptyContainer}>
+								<Feather
+									name="message-circle"
+									size={48}
+									color={colors.textSecondary}
+								/>
+								<Text
+									style={[styles.emptyText, { color: colors.textSecondary }]}
+								>
+									No comments yet
+								</Text>
+								<Text
+									style={[styles.emptySubtext, { color: colors.textTertiary }]}
+								>
+									Be the first to share your thoughts!
+								</Text>
 							</View>
 						) : (
-							<FlatList
-								style={styles.flatList}
-								data={comments}
-								renderItem={renderCommentItem}
-								keyExtractor={(item) => item.id}
-								contentContainerStyle={styles.commentsList}
-								scrollEnabled={true}
-								scrollEventThrottle={16}
-								showsVerticalScrollIndicator={true}
-								bounces={true}
-								onScrollBeginDrag={() => Keyboard.dismiss()}
-								ListEmptyComponent={
-									<View style={styles.emptyContainer}>
-										<Text style={styles.emptyText}>
-											No comments yet. Be the first to comment!
-										</Text>
-									</View>
-								}
-							/>
+							comments.map((comment) => (
+								<View key={comment.id}>{renderComment({ item: comment })}</View>
+							))
 						)}
+					</ScrollView>
 
-						<View style={styles.inputContainer}>
-							{user && (
-								<DefaultProfilePicture
-									userId={loggedInUserId || ""}
-									size={36}
-									avatarUrl={user?.avatar_url || null}
-								/>
+					{/* Input section */}
+					<View
+						style={[
+							styles.inputContainer,
+							{ backgroundColor: colors.card, borderTopColor: colors.border },
+						]}
+					>
+						<TextInput
+							ref={textInputRef}
+							style={[
+								styles.textInput,
+								{ color: colors.text, backgroundColor: colors.background },
+							]}
+							placeholder="Add a comment..."
+							placeholderTextColor={colors.textSecondary}
+							value={newComment}
+							onChangeText={setNewComment}
+							multiline
+							maxLength={500}
+							returnKeyType="send"
+							onSubmitEditing={handleAddComment}
+							blurOnSubmit={false}
+						/>
+						<TouchableOpacity
+							onPress={handleAddComment}
+							disabled={!newComment.trim() || submitting}
+							style={[
+								styles.sendButton,
+								{
+									backgroundColor:
+										newComment.trim() && !submitting
+											? colors.tint
+											: colors.textTertiary,
+								},
+							]}
+						>
+							{submitting ? (
+								<ActivityIndicator size="small" color={colors.white} />
+							) : (
+								<Feather name="send" size={16} color={colors.white} />
 							)}
-							<TextInput
-								ref={inputRef}
-								style={styles.input}
-								placeholder="Add a comment..."
-								placeholderTextColor="#999"
-								value={newComment}
-								onChangeText={setNewComment}
-								multiline
-								maxLength={500}
-								returnKeyType="send"
-								onSubmitEditing={handleSubmitComment}
-								blurOnSubmit={true}
-							/>
-							<TouchableOpacity
-								onPress={handleSubmitComment}
-								style={[
-									styles.sendButton,
-									(!newComment.trim() || submitting) &&
-										styles.sendButtonDisabled,
-								]}
-								disabled={!newComment.trim() || submitting}
-							>
-								{submitting ? (
-									<ActivityIndicator size="small" color="#ffffff" />
-								) : (
-									<Feather name="send" size={18} color="#ffffff" />
-								)}
-							</TouchableOpacity>
-						</View>
+						</TouchableOpacity>
 					</View>
 				</View>
-			</KeyboardAvoidingView>
+			</View>
 		</Modal>
 	);
 }
@@ -343,119 +310,125 @@ const styles = StyleSheet.create({
 	modalContainer: {
 		flex: 1,
 		justifyContent: "flex-end",
-	},
-	overlay: {
-		...StyleSheet.absoluteFillObject,
 		backgroundColor: "rgba(0, 0, 0, 0.5)",
 	},
-	popupContainer: {
-		height: "80%",
-		backgroundColor: "#FFFFFF",
+	backdrop: {
+		flex: 1,
+	},
+	modalContent: {
+		height: screenHeight * 0.8,
 		borderTopLeftRadius: 20,
 		borderTopRightRadius: 20,
-		overflow: "hidden",
-		display: "flex",
-		flexDirection: "column",
 	},
 	header: {
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		padding: 16,
+		paddingHorizontal: 20,
+		paddingVertical: 16,
 		borderBottomWidth: 1,
-		borderBottomColor: "#EEEEEE",
-		backgroundColor: "#FFFFFF",
-		zIndex: 10,
 	},
-	title: {
+	headerTitle: {
 		fontSize: 18,
-		fontWeight: "bold",
-		color: "#333333",
+		fontWeight: "600",
 	},
-	closeButton: {
-		padding: 4,
+	commentsContainer: {
+		flex: 1,
+		paddingHorizontal: 20,
+	},
+	scrollContent: {
+		paddingTop: 16,
+		paddingBottom: 20,
 	},
 	loadingContainer: {
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
+		paddingVertical: 40,
 	},
-	flatList: {
+	loadingText: {
+		marginTop: 12,
+		fontSize: 16,
+	},
+	emptyContainer: {
 		flex: 1,
-		width: "100%",
+		justifyContent: "center",
+		alignItems: "center",
+		paddingVertical: 60,
 	},
-	commentsList: {
-		padding: 16,
+	emptyText: {
+		fontSize: 16,
+		fontWeight: "500",
+		marginTop: 16,
+		textAlign: "center",
+	},
+	emptySubtext: {
+		fontSize: 14,
+		textAlign: "center",
+		marginTop: 8,
 	},
 	commentItem: {
 		flexDirection: "row",
-		marginBottom: 16,
-	},
-	commentContent: {
-		flex: 1,
-		marginLeft: 12,
-		backgroundColor: "#F6F6F6",
-		borderRadius: 12,
-		padding: 12,
-	},
-	commentHeader: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginBottom: 4,
-	},
-	commentUserName: {
-		fontWeight: "bold",
-		fontSize: 14,
-		color: "#333333",
-	},
-	commentTime: {
-		fontSize: 12,
-		color: "#999999",
-	},
-	commentText: {
-		fontSize: 14,
-		color: "#333333",
-		lineHeight: 20,
-	},
-	inputContainer: {
-		flexDirection: "row",
-		padding: 16,
-		borderTopWidth: 1,
-		borderTopColor: "#EEEEEE",
-		alignItems: "center",
-	},
-	input: {
-		flex: 1,
-		backgroundColor: "#F6F6F6",
-		borderRadius: 20,
+		paddingVertical: 12,
 		paddingHorizontal: 16,
-		paddingVertical: 10,
-		maxHeight: 100,
-		fontSize: 14,
-		marginLeft: 12,
-		textAlignVertical: "center",
+		marginVertical: 4,
+		borderRadius: 12,
 	},
-	sendButton: {
-		backgroundColor: "#6B2FBC",
+	avatar: {
 		width: 40,
 		height: 40,
 		borderRadius: 20,
 		justifyContent: "center",
 		alignItems: "center",
-		marginLeft: 8,
+		marginRight: 12,
 	},
-	sendButtonDisabled: {
-		backgroundColor: "#CCCCCC",
+	avatarImage: {
+		width: 40,
+		height: 40,
+		borderRadius: 20,
 	},
-	emptyContainer: {
-		padding: 20,
-		alignItems: "center",
+	avatarText: {
+		color: "white",
+		fontSize: 16,
+		fontWeight: "600",
 	},
-	emptyText: {
-		color: "#999999",
-		textAlign: "center",
-	},
-	keyboardAvoidingView: {
+	commentContent: {
 		flex: 1,
+	},
+	displayName: {
+		fontSize: 14,
+		fontWeight: "600",
+		marginBottom: 4,
+	},
+	commentText: {
+		fontSize: 14,
+		lineHeight: 20,
+		marginBottom: 4,
+	},
+	timestamp: {
+		fontSize: 12,
+	},
+	inputContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingHorizontal: 20,
+		paddingVertical: 16,
+		borderTopWidth: 1,
+	},
+	textInput: {
+		flex: 1,
+		borderRadius: 20,
+		paddingHorizontal: 16,
+		paddingVertical: 12,
+		marginRight: 12,
+		maxHeight: 100,
+		fontSize: 16,
+	},
+	sendButton: {
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+		justifyContent: "center",
+		alignItems: "center",
 	},
 });
