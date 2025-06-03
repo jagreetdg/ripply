@@ -517,12 +517,7 @@ export default function SearchScreen() {
 	});
 
 	return (
-		<SafeAreaView
-			style={[
-				styles.container,
-				{ paddingTop: insets.top, backgroundColor: colors.background },
-			]}
-		>
+		<SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
 			{/* Background blocker to prevent unwanted elements from showing through */}
 			<View
 				style={[
@@ -534,9 +529,10 @@ export default function SearchScreen() {
 			<SearchBar
 				value={searchQuery}
 				onChangeText={handleSearchChange}
-				onSubmit={() => performSearch(activeTab, searchQuery)}
 				onClear={handleClearSearch}
-				placeholder="Search or discover..."
+				placeholder="Search users, posts, or hashtags..."
+				containerStyle={{ backgroundColor: colors.background }}
+				inputStyle={{ backgroundColor: isDarkMode ? "#333" : "#F0F0F0" }}
 			/>
 
 			<View
@@ -660,6 +656,7 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+		backgroundColor: "#F8F8F8",
 		position: "relative",
 	},
 	backgroundBlocker: {
@@ -668,7 +665,7 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		bottom: 0,
-		zIndex: -1,
+		zIndex: -1, // Place behind content but above any unwanted background elements
 	},
 	contentContainer: {
 		flex: 1,

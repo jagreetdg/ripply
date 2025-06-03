@@ -125,6 +125,14 @@ export default function SettingsScreen() {
 				{ paddingTop: insets.top, backgroundColor: colors.background },
 			]}
 		>
+			{/* Background blocker to prevent unwanted elements from showing through */}
+			<View
+				style={[
+					styles.backgroundBlocker,
+					{ backgroundColor: colors.background },
+				]}
+			/>
+
 			<View
 				style={[
 					styles.header,
@@ -298,6 +306,15 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+		position: "relative",
+	},
+	backgroundBlocker: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		zIndex: -1, // Place behind content but above any unwanted background elements
 	},
 	header: {
 		paddingHorizontal: 20,
