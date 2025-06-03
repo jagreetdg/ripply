@@ -1,22 +1,148 @@
-import React from "react";
-import { View, StyleSheet, Dimensions, Platform } from "react-native";
+import React, { useEffect, useRef } from "react";
+import {
+	View,
+	StyleSheet,
+	Dimensions,
+	Platform,
+	Animated,
+	Easing,
+} from "react-native";
 
 const { width, height } = Dimensions.get("window");
+
+const RIPPLE_CONFIG = [
+	{
+		id: "1",
+		sizeFactor: 0.9,
+		initialDelay: 0,
+		duration: 3000,
+		styleKey: "ripple1",
+		container: "rippleContainer",
+	},
+	{
+		id: "2",
+		sizeFactor: 0.75,
+		initialDelay: 500,
+		duration: 3500,
+		styleKey: "ripple2",
+		container: "rippleContainer",
+	},
+	{
+		id: "3",
+		sizeFactor: 0.6,
+		initialDelay: 1000,
+		duration: 4000,
+		styleKey: "ripple3",
+		container: "rippleContainer",
+	},
+	{
+		id: "4",
+		sizeFactor: 0.45,
+		initialDelay: 1500,
+		duration: 3000,
+		styleKey: "ripple4",
+		container: "rippleContainer",
+	},
+	{
+		id: "5",
+		sizeFactor: 0.3,
+		initialDelay: 200,
+		duration: 3200,
+		styleKey: "ripple5",
+		container: "rippleContainer2",
+	},
+	{
+		id: "6",
+		sizeFactor: 0.15,
+		initialDelay: 700,
+		duration: 3800,
+		styleKey: "ripple6",
+		container: "rippleContainer2",
+	},
+	{
+		id: "7",
+		sizeFactor: 0.7,
+		initialDelay: 1200,
+		duration: 4500,
+		styleKey: "ripple7",
+		container: "rippleContainer2",
+	},
+	{
+		id: "8",
+		sizeFactor: 0.4,
+		initialDelay: 1700,
+		duration: 2800,
+		styleKey: "ripple8",
+		container: "rippleContainer2",
+	},
+];
+
+const Ripple = ({
+	id,
+	sizeFactor,
+	initialDelay,
+	duration,
+	styleKey,
+}: (typeof RIPPLE_CONFIG)[0]) => {
+	const scaleAnim = useRef(new Animated.Value(0)).current;
+	const opacityAnim = useRef(new Animated.Value(1)).current;
+
+	useEffect(() => {
+		const animation = Animated.loop(
+			Animated.sequence([
+				Animated.delay(initialDelay),
+				Animated.parallel([
+					Animated.timing(scaleAnim, {
+						toValue: 1,
+						duration: duration,
+						easing: Easing.out(Easing.ease),
+						useNativeDriver: true,
+					}),
+					Animated.timing(opacityAnim, {
+						toValue: 0,
+						duration: duration,
+						easing: Easing.in(Easing.ease),
+						useNativeDriver: true,
+					}),
+				]),
+			])
+		);
+		animation.start();
+		return () => animation.stop();
+	}, [scaleAnim, opacityAnim, initialDelay, duration]);
+
+	const dynamicStyle = styles[styleKey as keyof typeof styles];
+
+	return (
+		<Animated.View
+			style={[
+				styles.ripple,
+				dynamicStyle,
+				{
+					transform: [{ scale: scaleAnim }],
+					opacity: opacityAnim,
+				},
+			]}
+		/>
+	);
+};
 
 const BackgroundRippleEffect = () => {
 	return (
 		<View style={styles.backgroundAnimations}>
 			<View style={styles.rippleContainer}>
-				<View style={[styles.ripple, styles.ripple1]} />
-				<View style={[styles.ripple, styles.ripple2]} />
-				<View style={[styles.ripple, styles.ripple3]} />
-				<View style={[styles.ripple, styles.ripple4]} />
+				{RIPPLE_CONFIG.filter((r) => r.container === "rippleContainer").map(
+					(config) => (
+						<Ripple key={config.id} {...config} />
+					)
+				)}
 			</View>
 			<View style={styles.rippleContainer2}>
-				<View style={[styles.ripple, styles.ripple5]} />
-				<View style={[styles.ripple, styles.ripple6]} />
-				<View style={[styles.ripple, styles.ripple7]} />
-				<View style={[styles.ripple, styles.ripple8]} />
+				{RIPPLE_CONFIG.filter((r) => r.container === "rippleContainer2").map(
+					(config) => (
+						<Ripple key={config.id} {...config} />
+					)
+				)}
 			</View>
 		</View>
 	);
@@ -37,7 +163,7 @@ const styles = StyleSheet.create({
 		height: width * 0.9,
 		top: height * 0.05,
 		left: -width * 0.4,
-		opacity: Platform.OS === "web" ? 0.3 : 0.5, // Adjusted for web
+		// opacity: Platform.OS === 'web' ? 0.3 : 0.5, // Opacity now handled by individual ripple animation
 		justifyContent: "center",
 		alignItems: "center",
 	},
@@ -47,17 +173,17 @@ const styles = StyleSheet.create({
 		height: width * 0.7,
 		bottom: height * 0.1,
 		right: -width * 0.3,
-		opacity: Platform.OS === "web" ? 0.3 : 0.5, // Adjusted for web
+		// opacity: Platform.OS === 'web' ? 0.3 : 0.5, // Opacity now handled by individual ripple animation
 		justifyContent: "center",
 		alignItems: "center",
 	},
 	ripple: {
+		// Common style for all ripples, specific dimensions/colors in individual styles
 		position: "absolute",
-		borderWidth: 2,
-		borderColor: "rgba(107, 47, 188, 0.5)", // Base ripple color
-		borderRadius: 1000, // Large value to ensure circular shape
+		borderWidth: 2, // Base borderWidth
+		// borderColor handled by specific ripple styles for variety
+		// borderRadius handled by specific ripple styles (half of width/height)
 	},
-	// Specific ripple styles for variation
 	ripple1: {
 		width: width * 0.9,
 		height: width * 0.9,

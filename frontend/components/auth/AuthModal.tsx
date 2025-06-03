@@ -993,8 +993,9 @@ const styles = StyleSheet.create({
 		marginBottom: 16,
 	},
 	inputLabel: {
-		fontSize: 14,
-		fontWeight: "500",
+		fontSize: 16,
+		fontWeight: "600",
+		marginBottom: 8,
 	},
 	inputWrapper: {
 		flexDirection: "row",
