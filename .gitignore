@@ -36,3 +36,4 @@ backend/.env
 
 # typescript
 *.tsbuildinfo
+.vscode/settings.json
