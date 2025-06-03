@@ -1,5 +1,12 @@
 import React from "react";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
+import {
+	View,
+	Text,
+	StyleSheet,
+	Dimensions,
+	ScrollView,
+	Image,
+} from "react-native";
 // import TestimonialCard from './TestimonialCard'; // Assuming TestimonialCard component exists
 import { testimonials } from "../../constants/landingPageData"; // Adjusted path
 
@@ -10,22 +17,26 @@ const TestimonialsSection = () => {
 	// If you want to render it, uncomment its usage in app/index.tsx and ensure TestimonialCard component is implemented.
 	return (
 		<View style={styles.sectionContainer}>
-			<Text style={styles.sectionTitle}>What Our Users Say</Text>{" "}
-			{/* Example Title */}
-			<View style={styles.testimonialsContainer}>
-				{/* {testimonials.map((testimonial, index) => (
-                    <TestimonialCard 
-                        key={index}
-                        quote={testimonial.quote}
-                        name={testimonial.name}
-                        role={testimonial.role}
-                        style={styles.testimonialCard}
-                    />
-                ))} */}
-				<Text style={{ color: "white" }}>
-					Testimonials would be listed here.
-				</Text>
-			</View>
+			<Text style={styles.sectionTitle}>Loved by Users Worldwide</Text>
+			<ScrollView
+				horizontal
+				showsHorizontalScrollIndicator={false}
+				contentContainerStyle={styles.testimonialsContentContainer}
+			>
+				{testimonials.map((testimonial, index) => (
+					<View key={index} style={styles.testimonialCard}>
+						<Image
+							source={{ uri: testimonial.avatar }}
+							style={styles.testimonialAvatar}
+						/>
+						<Text
+							style={styles.testimonialText}
+						>{`"${testimonial.quote}"`}</Text>
+						<Text style={styles.testimonialName}>{testimonial.name}</Text>
+						<Text style={styles.testimonialRole}>{testimonial.role}</Text>
+					</View>
+				))}
+			</ScrollView>
 		</View>
 	);
 };
@@ -34,31 +45,67 @@ const styles = StyleSheet.create({
 	sectionContainer: {
 		width: "100%",
 		paddingVertical: 40,
-		paddingHorizontal: 20,
+		// paddingHorizontal: 20, // Horizontal padding will be on the ScrollView content
 		alignItems: "center",
-		// backgroundColor: 'rgba(0,0,255,0.1)', // For layout debugging
+		// backgroundColor: 'rgba(255, 255, 255, 0.03)', // Optional: subtle background for the section
+		marginTop: 20,
+		marginBottom: 30,
 	},
 	sectionTitle: {
-		fontSize: 28,
+		fontSize: width > 768 ? 36 : 28,
 		fontWeight: "bold",
 		color: "#FFFFFF",
-		marginBottom: 30,
+		marginBottom: 40,
 		textAlign: "center",
+		paddingHorizontal: 20, // Add padding here if sectionContainer doesn't have it
 	},
-	testimonialsContainer: {
-		flexDirection: width > 768 ? "row" : "column",
-		flexWrap: "wrap",
-		justifyContent: "center",
-		alignItems: "center", // Changed from flex-start to center if cards are centered
-		width: "100%",
-		maxWidth: 1000, // From original styles
+	testimonialsContentContainer: {
+		// For ScrollView
+		flexDirection: "row",
+		paddingHorizontal: 20, // Padding for the first and last items
+		alignItems: "stretch", // Make cards of same height if content varies
 	},
 	testimonialCard: {
-		// Style for individual TestimonialCard container if passed as prop
-		marginBottom: 24,
-		width: width > 768 ? "30%" : "100%", // From original styles
-		maxWidth: 320, // From original styles
-		marginHorizontal: width > 768 ? 10 : 0, // Add some horizontal spacing for row layout
+		backgroundColor: "rgba(255, 255, 255, 0.07)", // Slightly different card background
+		borderRadius: 12,
+		padding: 25,
+		marginHorizontal: 10, // Space between cards
+		width: width * 0.8, // Each card takes up 80% of screen width
+		maxWidth: 320, // Max width for a card, similar to features
+		minHeight: 250, // Min height to give some space
+		justifyContent: "space-between", // Distribute space within card
+		alignItems: "center",
+		shadowColor: "#000",
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.1,
+		shadowRadius: 4,
+		elevation: 3,
+	},
+	testimonialAvatar: {
+		width: 70,
+		height: 70,
+		borderRadius: 35,
+		marginBottom: 15,
+		borderWidth: 2,
+		borderColor: "#AD5EFF",
+	},
+	testimonialText: {
+		fontSize: 15,
+		color: "#E0E0E0",
+		textAlign: "center",
+		marginBottom: 15,
+		fontStyle: "italic",
+		lineHeight: 22,
+	},
+	testimonialName: {
+		fontSize: 16,
+		fontWeight: "600",
+		color: "#FFFFFF",
+		marginBottom: 3,
+	},
+	testimonialRole: {
+		fontSize: 13,
+		color: "#AD5EFF", // Accent color for role
 	},
 	// Add other styles from the original StyleSheet that were for testimonials here
 });

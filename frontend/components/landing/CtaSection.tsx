@@ -1,76 +1,106 @@
 import React from "react";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
+import {
+	View,
+	Text,
+	StyleSheet,
+	Dimensions,
+	TouchableOpacity,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Feather } from "@expo/vector-icons";
 // import AnimatedButton from './AnimatedButton'; // Assuming AnimatedButton component exists
 
 const { width } = Dimensions.get("window");
 
 interface CtaSectionProps {
+	onSignupPress: () => void;
 	// onCtaAction?: () => void; // Example if you had a CTA button
 }
 
-const CtaSection: React.FC<CtaSectionProps> = ({}) => {
+const CtaSection: React.FC<CtaSectionProps> = ({ onSignupPress }) => {
 	// This section is currently not rendered in the main LandingPage.
 	// If you want to render it, uncomment its usage in app/index.tsx.
 	return (
-		<View style={styles.ctaSection}>
-			<View style={styles.ctaContainer}>
-				<Text style={styles.ctaTitle}>Ready to Make Some Waves?</Text>{" "}
-				{/* Example Title */}
+		<View style={styles.ctaSectionContainer}>
+			<LinearGradient
+				colors={["#6B2FBC", "#4B2A89"]}
+				style={styles.ctaGradientContainer}
+				start={{ x: 0, y: 0 }}
+				end={{ x: 1, y: 1 }}
+			>
+				<Text style={styles.ctaTitle}>Ready to Make Some Waves?</Text>
 				<Text style={styles.ctaSubtitle}>
-					Join Ripply today and let your voice be heard.
+					Join Ripply today and let your voice be heard across the digital
+					ocean.
 				</Text>
-				{/* <View style={styles.ctaButtonContainer}>
-                    <AnimatedButton 
-                        text="Get Started Now"
-                        onPress={() => {if(onCtaAction) onCtaAction()}}
-                        primary={true}
-                        style={styles.ctaButton}
-                    />
-                </View> */}
-				<Text style={{ color: "white" }}>CTA would be here.</Text>
-			</View>
+				<TouchableOpacity style={styles.ctaButton} onPress={onSignupPress}>
+					<Text style={styles.ctaButtonText}>Get Started Now</Text>
+					<Feather
+						name="arrow-right-circle"
+						size={22}
+						color="#FFF"
+						style={{ marginLeft: 8 }}
+					/>
+				</TouchableOpacity>
+			</LinearGradient>
 		</View>
 	);
 };
 
 const styles = StyleSheet.create({
-	ctaSection: {
+	ctaSectionContainer: {
 		width: "100%",
 		paddingVertical: 60,
 		paddingHorizontal: 20,
 		alignItems: "center",
-		// backgroundColor: 'rgba(255,255,0,0.1)', // For layout debugging
+		marginTop: 30,
+		marginBottom: 50,
 	},
-	ctaContainer: {
+	ctaGradientContainer: {
 		width: "100%",
-		maxWidth: 800,
+		maxWidth: 850,
 		borderRadius: 20,
-		padding: 40,
-		borderWidth: 1,
-		borderColor: "rgba(255, 255, 255, 0.2)",
+		paddingVertical: 40,
+		paddingHorizontal: 30,
 		alignItems: "center",
-		backgroundColor: "rgba(40, 20, 70, 0.5)", // Added a subtle background for distinction
+		shadowColor: "#6B2FBC",
+		shadowOffset: { width: 0, height: 6 },
+		shadowOpacity: 0.3,
+		shadowRadius: 10,
+		elevation: 8,
 	},
 	ctaTitle: {
-		fontSize: 32,
+		fontSize: width > 768 ? 34 : 28,
 		fontWeight: "bold",
 		color: "#FFFFFF",
-		marginBottom: 12,
+		marginBottom: 15,
 		textAlign: "center",
 	},
 	ctaSubtitle: {
-		fontSize: 18,
+		fontSize: width > 768 ? 18 : 16,
 		color: "#E0D1FF",
 		textAlign: "center",
 		marginBottom: 30,
-	},
-	ctaButtonContainer: {
-		width: "100%",
-		maxWidth: 300,
+		lineHeight: 24,
+		maxWidth: 600,
 	},
 	ctaButton: {
-		height: 56,
-		// Add any specific styling for the CTA button if AnimatedButton needs it
+		flexDirection: "row",
+		alignItems: "center",
+		backgroundColor: "#AD5EFF",
+		paddingVertical: 15,
+		paddingHorizontal: 30,
+		borderRadius: 30,
+		shadowColor: "#AD5EFF",
+		shadowOffset: { width: 0, height: 4 },
+		shadowOpacity: 0.3,
+		shadowRadius: 5,
+		elevation: 6,
+	},
+	ctaButtonText: {
+		color: "#FFFFFF",
+		fontSize: 18,
+		fontWeight: "600",
 	},
 });
 
