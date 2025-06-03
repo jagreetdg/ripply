@@ -27,94 +27,103 @@ export const useAuthHandler = () => {
     }, []);
 
     const handleAuthSuccess = useCallback(async (receivedToken?: string) => {
+        console.log(Date.now(), "[PERF] AuthHandler - handleAuthSuccess started");
         let tokenToUse = receivedToken;
         if (tokenToUse) {
-            console.log("[Auth Flow] Token provided to handleAuthSuccess");
+            console.log(Date.now(), "[PERF] AuthHandler - Token provided to handleAuthSuccess, setting AsyncStorage");
             await AsyncStorage.setItem(TOKEN_KEY, tokenToUse);
+            console.log(Date.now(), "[PERF] AuthHandler - AsyncStorage.setItem done");
         } else {
-            console.log("[Auth Flow] No token provided, attempting to retrieve from storage");
+            console.log(Date.now(), "[PERF] AuthHandler - No token provided, attempting to retrieve from storage");
             tokenToUse = await AsyncStorage.getItem(TOKEN_KEY);
+            console.log(Date.now(), "[PERF] AuthHandler - AsyncStorage.getItem done for stored token");
         }
 
         if (tokenToUse) {
             try {
-                console.log("[DEBUG] AuthHandler - Getting user data with token");
+                console.log(Date.now(), "[PERF] AuthHandler - Getting user data with token (calling getCurrentUser)");
                 const currentUser = await getCurrentUser(); // getCurrentUser should implicitly use the stored token
-                console.log("[DEBUG] AuthHandler - User data retrieved:", !!currentUser);
+                console.log(Date.now(), "[PERF] AuthHandler - getCurrentUser done. User data retrieved:", !!currentUser);
                 if (currentUser) {
                     setUser(currentUser);
-                    // Storing user in AsyncStorage as well, though context is primary
-                    await AsyncStorage.setItem(USER_KEY, JSON.stringify(currentUser)); 
+                    console.log(Date.now(), "[PERF] AuthHandler - User context set. Storing user in AsyncStorage.");
+                    await AsyncStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+                    console.log(Date.now(), "[PERF] AuthHandler - User stored in AsyncStorage. Navigating to home.");
                     router.replace('/(tabs)/home');
-                    console.log("[DEBUG] AuthHandler - Navigation to home triggered");
+                    console.log(Date.now(), "[PERF] AuthHandler - Navigation to home triggered");
                     return true;
                 } else {
-                    console.log("[DEBUG] AuthHandler - No user found with token, clearing token");
+                    console.log(Date.now(), "[PERF] AuthHandler - No user found with token, clearing token");
                     await AsyncStorage.removeItem(TOKEN_KEY);
                     setUser(null);
                     setAuthError("Failed to fetch user data after authentication.");
                 }
             } catch (error) {
-                console.error("[Auth Flow] Error fetching user data:", error);
+                console.error(Date.now(), "[PERF] AuthHandler - Error fetching user data:", error);
                 await AsyncStorage.removeItem(TOKEN_KEY);
                 setUser(null);
                 setAuthError("An error occurred while fetching your profile.");
             }
         }
+        console.log(Date.now(), "[PERF] AuthHandler - handleAuthSuccess finished");
         return false;
     }, [setUser, router, clearUrlParams]);
 
     useEffect(() => {
         const checkAuthStatus = async () => {
+            console.log(Date.now(), "[PERF] AuthHandler - checkAuthStatus effect started");
             setIsLoading(true);
             setAuthError(null);
-            console.log("[DEBUG] AuthHandler - checkAuthStatus started");
-            console.log("[DEBUG] AuthHandler - Current URL:", Platform.OS === 'web' ? window.location.href : 'N/A');
+            console.log(Date.now(), "[PERF] AuthHandler - checkAuthStatus async function started");
+            // console.log("[DEBUG] AuthHandler - Current URL:", Platform.OS === 'web' ? window.location.href : 'N/A'); // Kept for debug
 
             try {
                 if (Platform.OS === 'web') {
+                    console.log(Date.now(), "[PERF] AuthHandler - Platform is web, checking URL params");
                     const urlParams = new URLSearchParams(window.location.search);
                     const tokenFromUrl = urlParams.get("token");
                     const errorFromUrl = urlParams.get("error");
-
-                    console.log("[DEBUG] AuthHandler - Token in URL:", !!tokenFromUrl);
-                    console.log("[DEBUG] AuthHandler - Error in URL:", !!errorFromUrl);
+                    console.log(Date.now(), "[PERF] AuthHandler - URL params parsed. Token in URL:", !!tokenFromUrl, "Error in URL:", !!errorFromUrl);
 
                     if (tokenFromUrl) {
-                        console.log("[Auth Flow] Token found in URL");
+                        console.log(Date.now(), "[PERF] AuthHandler - Token found in URL, calling handleAuthSuccess");
                         await handleAuthSuccess(tokenFromUrl);
-                        clearUrlParams(); 
+                        console.log(Date.now(), "[PERF] AuthHandler - handleAuthSuccess (from URL token) done. Clearing URL params.");
+                        clearUrlParams();
                         setIsLoading(false);
+                        console.log(Date.now(), "[PERF] AuthHandler - setIsLoading(false) after URL token processing. Returning.");
                         return;
                     } else if (errorFromUrl) {
-                        console.error("[Auth Flow] Auth error in URL:", errorFromUrl);
+                        console.error(Date.now(), "[PERF] AuthHandler - Auth error in URL:", errorFromUrl);
                         setAuthError(`Authentication failed: ${errorFromUrl}. Please try again.`);
                         clearUrlParams();
                         setIsLoading(false);
+                        console.log(Date.now(), "[PERF] AuthHandler - setIsLoading(false) after URL error processing. Returning.");
                         return;
                     }
+                    console.log(Date.now(), "[PERF] AuthHandler - No token or error in URL params for web.");
                 }
 
-                // If no URL token/error, or not web, check stored token
-                console.log("[DEBUG] AuthHandler - No token in URL or not web, checking stored token");
+                console.log(Date.now(), "[PERF] AuthHandler - No token in URL or not web, checking stored token");
                 const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
-                console.log("[DEBUG] AuthHandler - Stored token exists:", !!storedToken);
+                console.log(Date.now(), "[PERF] AuthHandler - AsyncStorage.getItem(TOKEN_KEY) done. Stored token exists:", !!storedToken);
 
                 if (storedToken) {
-                    console.log("[DEBUG] AuthHandler - Attempting auth with stored token");
+                    console.log(Date.now(), "[PERF] AuthHandler - Stored token found, calling handleAuthSuccess");
                     await handleAuthSuccess(); // Will use stored token
+                    console.log(Date.now(), "[PERF] AuthHandler - handleAuthSuccess (from stored token) done.");
                 } else {
-                     // No stored token, user is not authenticated
+                    console.log(Date.now(), "[PERF] AuthHandler - No stored token found. Setting user to null.");
                     setUser(null); // Ensure user is cleared if no token
                 }
             } catch (err) {
-                console.error("[Auth Flow] Error checking auth status:", err);
+                console.error(Date.now(), "[PERF] AuthHandler - Error in checkAuthStatus catch block:", err);
                 setAuthError("An unexpected error occurred during authentication check.");
-                await AsyncStorage.removeItem(TOKEN_KEY); // Clear potentially bad token
+                await AsyncStorage.removeItem(TOKEN_KEY); 
                 setUser(null);
             } finally {
                 setIsLoading(false);
-                console.log("[DEBUG] AuthHandler - checkAuthStatus completed");
+                console.log(Date.now(), "[PERF] AuthHandler - setIsLoading(false) in finally block. checkAuthStatus completed.");
             }
         };
 
