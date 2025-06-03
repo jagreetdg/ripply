@@ -469,7 +469,11 @@ export default function AuthModal({
 			onRequestClose={handleClose}
 		>
 			<Pressable
-				style={[styles.overlay, { backgroundColor: colors.modalOverlay }]}
+				style={[
+					styles.overlay,
+					{ backgroundColor: colors.modalOverlay },
+					containerWebStyles,
+				]}
 				onPress={handleClose}
 			>
 				<Pressable
@@ -479,6 +483,7 @@ export default function AuthModal({
 							backgroundColor: colors.card,
 							shadowColor: colors.shadow,
 						},
+						containerWebStyles,
 					]}
 					onPress={(e) => e.stopPropagation()}
 				>
@@ -493,7 +498,7 @@ export default function AuthModal({
 
 					<ScrollView
 						ref={scrollViewRef}
-						style={styles.scrollView}
+						style={[styles.scrollView, containerWebStyles]}
 						contentContainerStyle={styles.scrollViewContent}
 					>
 						{error ? (
@@ -544,6 +549,7 @@ export default function AuthModal({
 											styles.input,
 											{ color: colors.inputText },
 											webStyles,
+											inputWebStyles,
 										]}
 										placeholder="Choose a username"
 										placeholderTextColor={colors.inputPlaceholder}
@@ -621,7 +627,12 @@ export default function AuthModal({
 									style={styles.inputIcon}
 								/>
 								<TextInput
-									style={[styles.input, { color: colors.inputText }, webStyles]}
+									style={[
+										styles.input,
+										{ color: colors.inputText },
+										webStyles,
+										inputWebStyles,
+									]}
 									placeholder="Enter your email"
 									placeholderTextColor={colors.inputPlaceholder}
 									keyboardType="email-address"
@@ -691,7 +702,12 @@ export default function AuthModal({
 									style={styles.inputIcon}
 								/>
 								<TextInput
-									style={[styles.input, { color: colors.inputText }, webStyles]}
+									style={[
+										styles.input,
+										{ color: colors.inputText },
+										webStyles,
+										inputWebStyles,
+									]}
 									placeholder={
 										type === "login"
 											? "Enter your password"
@@ -707,7 +723,7 @@ export default function AuthModal({
 								/>
 								<Pressable
 									onPress={() => setShowPassword(!showPassword)}
-									style={styles.passwordToggle}
+									style={[styles.passwordToggle, buttonWebStyles]}
 								>
 									<Feather
 										name={showPassword ? "eye-off" : "eye"}
@@ -777,6 +793,7 @@ export default function AuthModal({
 											styles.input,
 											{ color: colors.inputText },
 											webStyles,
+											inputWebStyles,
 										]}
 										placeholder="Confirm your password"
 										placeholderTextColor={colors.inputPlaceholder}
@@ -792,7 +809,7 @@ export default function AuthModal({
 									/>
 									<Pressable
 										onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-										style={styles.passwordToggle}
+										style={[styles.passwordToggle, buttonWebStyles]}
 									>
 										<Feather
 											name={showConfirmPassword ? "eye-off" : "eye"}
@@ -816,7 +833,7 @@ export default function AuthModal({
 						)}
 
 						{type === "login" && (
-							<Pressable style={styles.forgotPasswordButton}>
+							<Pressable style={[styles.forgotPasswordButton, buttonWebStyles]}>
 								<Text
 									style={[
 										styles.forgotPasswordText,
@@ -834,15 +851,25 @@ export default function AuthModal({
 									style={[
 										styles.rememberMeContainer,
 										{ backgroundColor: colors.background },
+										checkboxWebStyles,
 									]}
 									onPress={() => setRememberMe(!rememberMe)}
+									accessibilityRole="checkbox"
+									accessibilityState={{ checked: rememberMe }}
+									tabIndex={0}
 								>
-									<Feather
-										name={rememberMe ? "check-square" : "square"}
-										size={20}
-										color={rememberMe ? colors.tint : colors.textSecondary}
-										style={{ marginRight: 8 }}
-									/>
+									<View style={checkboxWebStyles}>
+										<Feather
+											name={rememberMe ? "check-square" : "square"}
+											size={20}
+											color={rememberMe ? colors.tint : colors.textSecondary}
+											style={[
+												{ marginRight: 8 },
+												checkboxWebStyles,
+												{ pointerEvents: "none" },
+											]}
+										/>
+									</View>
 									<Text style={[styles.rememberMeText, { color: colors.text }]}>
 										Remember Me
 									</Text>
@@ -877,6 +904,7 @@ export default function AuthModal({
 								isAuthButtonDisabled() && {
 									backgroundColor: hexToRgba(colors.tint, 0.6),
 								},
+								buttonWebStyles,
 							]}
 							onPress={handleAuth}
 							disabled={isAuthButtonDisabled()}
@@ -923,6 +951,7 @@ export default function AuthModal({
 										onSwitchToLogin();
 									}
 								}}
+								style={buttonWebStyles}
 							>
 								<Text style={[styles.switchLink, { color: colors.tint }]}>
 									{type === "login" ? "Sign Up" : "Log In"}
@@ -949,11 +978,62 @@ const webStyles = Platform.select({
 	default: {},
 });
 
+// Update the Specific style for checkbox
+const checkboxWebStyles = Platform.select({
+	web: {
+		outlineWidth: 0,
+		outlineColor: "transparent",
+		outlineStyle: "none",
+		WebkitTapHighlightColor: "transparent",
+		userSelect: "none",
+		boxShadow: "none",
+		cursor: "pointer",
+		WebkitAppearance: "none", // Additional properties to disable browser styling
+		MozAppearance: "none",
+		appearance: "none",
+		border: "none",
+		backgroundColor: "transparent",
+	},
+	default: {},
+});
+
+// Add cursor default for containers on web
+const containerWebStyles = Platform.select({
+	web: {
+		cursor: "default",
+	},
+	default: {},
+});
+
+// Update the input web styles to ensure text cursor and selection
+const inputWebStyles = Platform.select({
+	web: {
+		outlineWidth: 0,
+		outlineColor: "transparent",
+		outlineStyle: "none",
+		cursor: "text",
+		caretColor: "auto", // Ensure visible text cursor
+		userSelect: "text", // Enable text selection
+	},
+	default: {},
+});
+
+// Add button cursor styles specifically for interactive elements
+const buttonWebStyles = Platform.select({
+	web: {
+		cursor: "pointer",
+		userSelect: "none",
+		WebkitTapHighlightColor: "transparent",
+	},
+	default: {},
+});
+
 const styles = StyleSheet.create({
 	overlay: {
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
+		...(Platform.OS === "web" ? { cursor: "default" } : {}),
 	},
 	modalContent: {
 		width: modalWidth,
@@ -964,6 +1044,7 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.1,
 		shadowRadius: 15,
 		elevation: 10,
+		...(Platform.OS === "web" ? { cursor: "default" } : {}),
 	},
 	header: {
 		flexDirection: "row",
@@ -977,6 +1058,7 @@ const styles = StyleSheet.create({
 	},
 	closeButton: {
 		padding: 4,
+		...(Platform.OS === "web" ? { cursor: "pointer" } : {}),
 	},
 	errorContainer: {
 		flexDirection: "row",
@@ -995,7 +1077,7 @@ const styles = StyleSheet.create({
 	inputLabel: {
 		fontSize: 16,
 		fontWeight: "600",
-		marginBottom: 8,
+		marginBottom: 12,
 	},
 	inputWrapper: {
 		flexDirection: "row",
@@ -1018,14 +1100,17 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		paddingLeft: 8,
 		paddingRight: 8,
+		...(Platform.OS === "web" ? { cursor: "text" } : {}),
 	},
 	passwordToggle: {
 		padding: 8,
 		marginRight: -4,
+		...(Platform.OS === "web" ? { cursor: "pointer" } : {}),
 	},
 	forgotPasswordButton: {
 		alignSelf: "flex-end",
 		marginBottom: 16,
+		...(Platform.OS === "web" ? { cursor: "pointer" } : {}),
 	},
 	forgotPasswordText: {
 		fontSize: 14,
@@ -1038,6 +1123,7 @@ const styles = StyleSheet.create({
 	},
 	termsLink: {
 		fontWeight: "500",
+		...(Platform.OS === "web" ? { cursor: "pointer" } : {}),
 	},
 	authButton: {
 		borderRadius: 8,
@@ -1048,6 +1134,7 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.2,
 		shadowRadius: 8,
 		elevation: 4,
+		...(Platform.OS === "web" ? { cursor: "pointer" } : {}),
 	},
 	authButtonDisabled: {
 		// We'll use inline style
@@ -1081,6 +1168,7 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		fontWeight: "600",
 		marginLeft: 4,
+		...(Platform.OS === "web" ? { cursor: "pointer" } : {}),
 	},
 	checkingIndicator: {
 		marginTop: 4,
@@ -1103,9 +1191,11 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		alignSelf: "center",
 		marginBottom: 16,
+		...(Platform.OS === "web" ? { cursor: "pointer" } : {}),
 	},
 	rememberMeText: {
 		fontSize: 14,
+		...(Platform.OS === "web" ? { cursor: "default", userSelect: "none" } : {}),
 	},
 	scrollView: {
 		flex: 1,
