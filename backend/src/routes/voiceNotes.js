@@ -778,9 +778,12 @@ router.post("/:voiceNoteId/share", authenticateToken, async (req, res) => {
 			// User has not shared it, so share (insert a new record)
 			// Make sure we include all required fields according to our schema
 			const now = new Date().toISOString();
+			const shareId = uuidv4(); // Generate UUID for the record
+
 			const { error: insertError } = await supabase
 				.from("voice_note_shares")
 				.insert({
+					id: shareId, // Explicitly set the ID
 					voice_note_id: voiceNoteId,
 					user_id: userId,
 					shared_at: now,
