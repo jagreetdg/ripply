@@ -125,5 +125,6 @@ export const getStyles = (colors: any, listHeaderComponent: any, isDarkMode: boo
     },
     listContent: {
         paddingBottom: 20,
+        paddingHorizontal: 16,
     },
 }); 

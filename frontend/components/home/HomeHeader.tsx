@@ -30,39 +30,57 @@ export function HomeHeader({ onLogoPress }: HomeHeaderProps) {
 	return (
 		<View style={[styles.outerContainer, { backgroundColor: colors.card }]}>
 			<View style={[styles.container, { backgroundColor: colors.card }]}>
-				<TouchableOpacity
-					onPress={handleProfilePress}
-					style={styles.profileButton}
-				>
-					{user && user.avatar_url ? (
-						<Image
-							source={{ uri: user.avatar_url }}
-							style={styles.profilePicture}
-							resizeMode="cover"
-						/>
-					) : (
-						<DefaultAvatar
-							userId={user?.id || "guest"}
-							size={32}
-							onPress={handleProfilePress}
-						/>
-					)}
-				</TouchableOpacity>
+				{/* Left section - Profile button */}
+				<View style={styles.sideSection}>
+					<TouchableOpacity
+						onPress={handleProfilePress}
+						style={styles.profileButton}
+					>
+						{user && user.avatar_url ? (
+							<Image
+								source={{ uri: user.avatar_url }}
+								style={styles.profilePicture}
+								resizeMode="cover"
+							/>
+						) : (
+							<DefaultAvatar
+								userId={user?.id || "guest"}
+								size={32}
+								onPress={handleProfilePress}
+							/>
+						)}
+					</TouchableOpacity>
+				</View>
 
-				<TouchableOpacity
-					style={styles.logoContainer}
-					onPress={onLogoPress}
-					activeOpacity={0.7}
-				>
-					<Text style={[styles.logoText, { color: colors.tint }]}>Ripply</Text>
-				</TouchableOpacity>
+				{/* Center section - Logo and text */}
+				<View style={styles.centerSection}>
+					<TouchableOpacity
+						style={styles.logoContainer}
+						onPress={onLogoPress}
+						activeOpacity={0.7}
+					>
+						<View style={styles.logoWithTextContainer}>
+							<Image
+								source={require("../../assets/images/logo.png")}
+								style={styles.logo}
+								resizeMode="contain"
+							/>
+							<Text style={[styles.logoText, { color: colors.tint }]}>
+								Ripply
+							</Text>
+						</View>
+					</TouchableOpacity>
+				</View>
 
-				<TouchableOpacity
-					style={styles.notificationButton}
-					onPress={handleNotificationsPress}
-				>
-					<Feather name="bell" size={22} color={colors.text} />
-				</TouchableOpacity>
+				{/* Right section - Notification button */}
+				<View style={styles.sideSection}>
+					<TouchableOpacity
+						style={styles.notificationButton}
+						onPress={handleNotificationsPress}
+					>
+						<Feather name="bell" size={22} color={colors.text} />
+					</TouchableOpacity>
+				</View>
 			</View>
 
 			{/* Simple bottom separator */}
@@ -85,9 +103,18 @@ const styles = StyleSheet.create({
 	container: {
 		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "space-between",
 		paddingHorizontal: 16,
 		height: "100%",
+	},
+	sideSection: {
+		width: 40,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	centerSection: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	separatorContainer: {
 		flexDirection: "row",
@@ -118,6 +145,18 @@ const styles = StyleSheet.create({
 	},
 	logoContainer: {
 		alignItems: "center",
+		justifyContent: "center",
+		transform: [{ translateX: -16 }], // Shift slightly to the left to compensate for visual balance
+	},
+	logoWithTextContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	logo: {
+		width: 24,
+		height: 24,
+		marginRight: 6,
 	},
 	logoText: {
 		fontSize: 20,
