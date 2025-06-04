@@ -166,10 +166,24 @@ export function VoiceNoteCardImpl({
 
 		try {
 			setIsLoadingShareCount(true);
-			const count = await getShareCount(voiceNote.id);
+			const count = await getShareCount(voiceNote.id, true); // Enable debug logging
+			console.log(
+				`Successfully fetched share count for ${voiceNote.id}: ${count}`
+			);
 			setSharesCount(typeof count === "number" ? count : 0);
 		} catch (error) {
 			console.error("Error fetching share count:", error);
+
+			// Check if this is an authentication error
+			if (
+				error instanceof Error &&
+				(error.message.includes("Authentication required") ||
+					error.message.includes("Invalid token") ||
+					error.message.includes("Token expired"))
+			) {
+				console.log("Authentication error when fetching share count");
+				// Do not show alert here as it would be too disruptive for a background operation
+			}
 		} finally {
 			setIsLoadingShareCount(false);
 		}
@@ -308,20 +322,44 @@ export function VoiceNoteCardImpl({
 			return;
 		}
 
+		console.log("Attempting to share/unshare voice note", {
+			voiceNoteId: voiceNote.id,
+			userId: loggedInUserId,
+		});
+
 		setIsLoadingShareCount(true);
 		recordShare(voiceNote.id, loggedInUserId)
 			.then((response: any) => {
-				if (response.error) return;
+				console.log("Share response:", response);
 
-				if (response?.shareCount) {
+				if (response.error) {
+					console.error("Share error response:", response.error);
+
+					// Check if this is an auth error
+					if (
+						response.message === "Authentication required" ||
+						response.message === "Invalid token"
+					) {
+						Alert.alert(
+							"Authentication Error",
+							"Please sign in again to share this voice note.",
+							[{ text: "OK" }]
+						);
+					}
+					return;
+				}
+
+				if (response?.shareCount !== undefined) {
 					setSharesCount(response.shareCount);
 				} else {
+					console.log("No shareCount in response, fetching fresh count");
 					fetchShareCount();
 				}
 
 				if (typeof response?.isShared === "boolean") {
 					setInternalIsShared(response.isShared);
 				} else {
+					console.log("No isShared in response, toggling current value");
 					setInternalIsShared((prev) => !prev);
 				}
 
@@ -340,6 +378,11 @@ export function VoiceNoteCardImpl({
 			})
 			.catch((error) => {
 				console.error("Error toggling share:", error);
+				Alert.alert(
+					"Share Error",
+					"There was a problem sharing this voice note. Please try again.",
+					[{ text: "OK" }]
+				);
 			})
 			.finally(() => {
 				setIsLoadingShareCount(false);

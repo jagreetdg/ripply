@@ -113,7 +113,6 @@ export default function SettingsScreen() {
 	};
 
 	const themeOptions = [
-		{ label: "System", value: "system" },
 		{ label: "Light", value: "light" },
 		{ label: "Dark", value: "dark" },
 	];
@@ -227,9 +226,7 @@ export default function SettingsScreen() {
 											borderColor: colors.tint,
 										},
 									]}
-									onPress={() =>
-										setTheme(option.value as "light" | "dark" | "system")
-									}
+									onPress={() => setTheme(option.value as "light" | "dark")}
 								>
 									<Text
 										style={[

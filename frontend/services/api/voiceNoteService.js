@@ -2,6 +2,7 @@
  * Voice Note service for handling voice note-related API calls
  */
 import { ENDPOINTS, apiRequest } from "./config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 /**
  * Get personalized feed (voice notes from users the current user follows)
@@ -228,13 +229,38 @@ export const checkShareStatus = async (voiceNoteId, userId) => {
 		console.log(
 			`Checking if user ${userId} has shared voice note ${voiceNoteId}`
 		);
+
+		// Check if we have a token
+		const token = await AsyncStorage.getItem("@ripply_auth_token");
+		if (!token) {
+			console.warn("No auth token found for checking share status");
+			return false;
+		}
+
 		const response = await apiRequest(
 			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares/check?userId=${userId}`
 		);
 		return response?.isShared || false;
 	} catch (error) {
 		console.error("Error checking share status:", error);
-		// Return false for 404 errors (endpoint doesn't exist or not found)
+
+		// Check if this is an authentication error
+		if (
+			error.message &&
+			(error.message.includes("Authentication required") ||
+				error.message.includes("Invalid token") ||
+				error.message.includes("Token expired"))
+		) {
+			// Clear the invalid token
+			try {
+				await AsyncStorage.removeItem("@ripply_auth_token");
+				console.log("Cleared invalid auth token during share status check");
+			} catch (clearError) {
+				console.error("Error clearing invalid token:", clearError);
+			}
+		}
+
+		// Return false for any errors (endpoint doesn't exist, not found, auth issues)
 		// This provides graceful degradation
 		return false;
 	}
@@ -293,6 +319,20 @@ export const getUserVoiceNotes = (userId) => {
 export const recordShare = async (voiceNoteId, userId) => {
 	console.log(`Toggle share for voice note: ${voiceNoteId} by user: ${userId}`);
 	try {
+		// Check if we have a token in AsyncStorage before making the request
+		const token = await AsyncStorage.getItem("@ripply_auth_token");
+		if (!token) {
+			console.error("No auth token found for share request");
+			return {
+				shareCount: 0,
+				isShared: false,
+				message: "Authentication required",
+				voiceNoteId,
+				userId,
+				error: "No authentication token found",
+			};
+		}
+
 		// Note: We no longer send userId in the body since the backend uses the authenticated user's ID
 		const response = await apiRequest(
 			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`,
@@ -334,6 +374,22 @@ export const recordShare = async (voiceNoteId, userId) => {
 		};
 	} catch (error) {
 		console.error("Error toggling share:", error);
+		// Check if this is an authentication error
+		if (
+			error.message &&
+			(error.message.includes("Authentication required") ||
+				error.message.includes("Invalid token") ||
+				error.message.includes("Token expired"))
+		) {
+			// Clear the invalid token
+			try {
+				await AsyncStorage.removeItem("@ripply_auth_token");
+				console.log("Cleared invalid auth token");
+			} catch (clearError) {
+				console.error("Error clearing invalid token:", clearError);
+			}
+		}
+
 		// Return a default response instead of throwing to avoid UI freezing
 		return {
 			shareCount: 0,
@@ -341,7 +397,7 @@ export const recordShare = async (voiceNoteId, userId) => {
 			message: "Error toggling share",
 			voiceNoteId,
 			userId,
-			error: error.message,
+			error: error.message || "Unknown error occurred",
 		};
 	}
 };
