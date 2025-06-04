@@ -4,12 +4,8 @@
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// API base URL - use environment variable or fallback
-const API_URL =
-	(typeof process !== "undefined" &&
-		process.env &&
-		process.env.NEXT_PUBLIC_API_URL) ||
-	"https://ripply-backend.onrender.com/api";
+// Base URL for the API - deployed to Render
+const API_URL = "https://ripply-backend.onrender.com";
 
 // Token storage key
 const TOKEN_KEY = "@ripply_auth_token";
@@ -19,15 +15,11 @@ const isPhysicalDevice = Platform.OS === "ios" || Platform.OS === "android";
 
 // API endpoints
 const ENDPOINTS = {
-	AUTH: "/auth",
-	USERS: "/users",
-	VOICE_NOTES: "/voice-notes",
-	AUDIO: "/audio",
-	MEDIA: "/media",
-	TAGS: "/tags",
-	SEARCH: "/search",
-	FEED: "/feed",
-	NOTIFICATIONS: "/notifications",
+	AUTH: "/api/auth",
+	USERS: "/api/users",
+	VOICE_NOTES: "/api/voice-notes",
+	VOICE_BIOS: "/api/voice-bios",
+	HEALTH: "/health",
 };
 
 // Default request headers
@@ -140,32 +132,16 @@ const apiRequest = async (endpoint, options = {}) => {
 						// Clear invalid token
 						try {
 							await AsyncStorage.removeItem(TOKEN_KEY);
-							console.log("[AUTH] Cleared invalid token");
-
-							// If this is a share or like request that failed auth, notify the user (improved UX)
-							if (endpoint.includes("/share") || endpoint.includes("/like")) {
-								throw new Error(
-									"Authentication required. Please sign in again."
-								);
-							}
+							await AsyncStorage.removeItem("@ripply_user");
 						} catch (clearError) {
 							console.warn("[AUTH] Error clearing invalid token:", clearError);
 						}
 					}
 
 					const errorData = await response.json().catch(() => ({}));
-					const errorMessage =
-						errorData.message ||
-						`Request failed with status ${response.status}`;
-
-					// Enhanced logging for API errors
-					console.error(`[API ERROR] ${endpoint} failed:`, {
-						status: response.status,
-						message: errorMessage,
-						details: errorData,
-					});
-
-					throw new Error(errorMessage);
+					throw new Error(
+						errorData.message || `Request failed with status ${response.status}`
+					);
 				}
 
 				// Parse the response as JSON
@@ -191,31 +167,4 @@ const apiRequest = async (endpoint, options = {}) => {
 	throw lastError || new Error("API request failed after all retry attempts");
 };
 
-/**
- * Get the API URL with correct environment handling
- * @returns {string} - The API URL
- */
-export function getApiUrl() {
-	return API_URL;
-}
-
-/**
- * Get the full URL for an API endpoint
- * @param {string} endpoint - The endpoint path
- * @returns {string} - The full URL
- */
-export function getFullApiUrl(endpoint) {
-	return `${API_URL}${endpoint}`;
-}
-
-// Function to log API requests when in development
-const logApiRequest = (endpoint, options = {}) => {
-	if (process.env.NODE_ENV !== "production") {
-		console.log(
-			`🌐 API Request: ${API_URL}${endpoint}`,
-			options.method || "GET"
-		);
-	}
-};
-
-export { ENDPOINTS, apiRequest };
+export { API_URL, ENDPOINTS, apiRequest };
