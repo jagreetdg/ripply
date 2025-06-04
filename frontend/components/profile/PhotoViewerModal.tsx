@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, {
+	useState,
+	useEffect,
+	useMemo,
+	useRef,
+	useCallback,
+} from "react";
 import {
 	View,
 	Text,
@@ -291,14 +297,26 @@ export function PhotoViewerModal({
 	isOwnProfile,
 	onPhotoUpdated,
 }: PhotoViewerModalProps) {
-	const { colors } = useTheme();
-	const { user, refreshUser, setUser } = useUser();
+	const { colors, isDarkMode } = useTheme();
+	const { user, setUser } = useUser();
 	const { showToast } = useGlobalToast();
 	const { showConfirmation, ConfirmationComponent } = useConfirmation();
 	const [isLoading, setIsLoading] = useState(false);
 	const [isImageLoading, setIsImageLoading] = useState(true);
 	const [screenData, setScreenData] = useState(Dimensions.get("window"));
 	const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+	const [mounted, setMounted] = useState(false);
+	const isClosingRef = useRef(false);
+
+	// Set mounted state on component mount
+	useEffect(() => {
+		console.log("PhotoViewerModal MOUNTED");
+		setMounted(true);
+		return () => {
+			console.log("PhotoViewerModal UNMOUNTED");
+			setMounted(false);
+		};
+	}, []);
 
 	// Calculate modal image URL with proper fallbacks
 	const modalImageUrl = useMemo(() => {
@@ -325,35 +343,45 @@ export function PhotoViewerModal({
 
 	// Listen for orientation changes
 	useEffect(() => {
+		if (!mounted) return;
+
 		const subscription = Dimensions.addEventListener("change", ({ window }) => {
-			setScreenData(window);
+			if (mounted) {
+				setScreenData(window);
+			}
 		});
 
-		return () => subscription?.remove();
-	}, []);
+		return () => {
+			subscription?.remove();
+		};
+	}, [mounted]);
 
 	// Only reset loading state when the actual image URL changes
 	useEffect(() => {
+		if (!mounted) return;
+
 		if (imageUrl !== currentImageUrl) {
 			setCurrentImageUrl(imageUrl || null);
 			setIsImageLoading(true);
 		}
-	}, [imageUrl, currentImageUrl]);
+	}, [imageUrl, currentImageUrl, mounted]);
 
 	// Reset image loading state when modal opens/closes or image changes
 	useEffect(() => {
+		if (!mounted) return;
+
 		if (visible && modalImageUrl) {
 			setIsImageLoading(true);
 		}
-	}, [visible, modalImageUrl]);
+	}, [visible, modalImageUrl, mounted]);
 
 	// Handle escape key press to close modal (web only)
 	useEffect(() => {
-		if (!visible) return;
+		if (!visible || !mounted) return;
 
 		const handleKeyPress = (event: KeyboardEvent) => {
 			if (event.key === "Escape") {
-				onClose();
+				handleSafeClose();
 			}
 		};
 
@@ -363,9 +391,26 @@ export function PhotoViewerModal({
 				document.removeEventListener("keydown", handleKeyPress);
 			};
 		}
-	}, [visible, onClose]);
+	}, [visible, mounted]);
 
-	if (!visible || !photoType) {
+	const handleSafeClose = () => {
+		if (isClosingRef.current || !mounted) return;
+
+		console.log("Safely closing photo viewer modal");
+		isClosingRef.current = true;
+
+		onClose();
+
+		// Reset the closing flag after a short delay
+		setTimeout(() => {
+			if (mounted) {
+				isClosingRef.current = false;
+			}
+		}, 100);
+	};
+
+	// If the component is not mounted or visible, don't render anything
+	if (!mounted || !visible || !photoType) {
 		return null;
 	}
 
@@ -601,7 +646,7 @@ export function PhotoViewerModal({
 					} photo updated successfully!`,
 					"success"
 				);
-				onClose();
+				handleSafeClose();
 			} else {
 				showToast("Failed to update photo. Please try again.", "error");
 			}
@@ -697,7 +742,7 @@ export function PhotoViewerModal({
 				);
 
 				// Close modal
-				onClose();
+				handleSafeClose();
 			} else {
 				console.error("[PHOTO VIEWER] Delete failed - no result returned");
 				showToast("Failed to delete photo. Please try again.", "error");
@@ -712,184 +757,187 @@ export function PhotoViewerModal({
 
 	return (
 		<>
-			<Modal
-				visible={visible}
-				transparent
-				animationType="fade"
-				statusBarTranslucent
-			>
-				{Platform.OS === "ios" && <StatusBar barStyle="light-content" />}
+			{mounted && visible && (
+				<Modal
+					visible={visible}
+					transparent
+					animationType="fade"
+					statusBarTranslucent
+					onRequestClose={handleSafeClose}
+				>
+					{Platform.OS === "ios" && <StatusBar barStyle="light-content" />}
 
-				{/* Full screen container */}
-				<View style={styles.container}>
-					{/* Background */}
-					<LinearGradient
-						colors={["rgba(0,0,0,0.9)", "rgba(0,0,0,0.95)"]}
-						style={StyleSheet.absoluteFillObject}
-					/>
+					{/* Full screen container */}
+					<View style={styles.container}>
+						{/* Background */}
+						<LinearGradient
+							colors={["rgba(0,0,0,0.9)", "rgba(0,0,0,0.95)"]}
+							style={StyleSheet.absoluteFillObject}
+						/>
 
-					{/* Backdrop - clickable area that closes modal */}
-					<Pressable style={styles.backdrop} onPress={onClose} />
+						{/* Backdrop - clickable area that closes modal */}
+						<Pressable style={styles.backdrop} onPress={handleSafeClose} />
 
-					{/* Header - Just close button */}
-					<View
-						style={[
-							styles.header,
-							{
-								paddingHorizontal: spacing.headerPadding,
-								paddingTop:
-									Platform.OS === "ios"
-										? isTablet
-											? 80
-											: 60
-										: isTablet
-										? 60
-										: 40,
-								paddingBottom: spacing.headerPadding / 2,
-							},
-						]}
-					>
-						<View style={styles.headerLeft} />
-						<TouchableOpacity
+						{/* Header - Just close button */}
+						<View
 							style={[
-								styles.closeButton,
+								styles.header,
 								{
-									width: sizes.closeButton,
-									height: sizes.closeButton,
-									borderRadius: sizes.closeButton / 2,
+									paddingHorizontal: spacing.headerPadding,
+									paddingTop:
+										Platform.OS === "ios"
+											? isTablet
+												? 80
+												: 60
+											: isTablet
+											? 60
+											: 40,
+									paddingBottom: spacing.headerPadding / 2,
 								},
 							]}
-							onPress={onClose}
 						>
-							<Feather name="x" size={sizes.closeIcon} color="white" />
-						</TouchableOpacity>
-					</View>
-
-					{/* Content */}
-					<View
-						style={[
-							styles.content,
-							{ paddingHorizontal: spacing.contentPadding },
-						]}
-					>
-						{modalImageUrl ? (
-							<View
+							<View style={styles.headerLeft} />
+							<TouchableOpacity
 								style={[
-									styles.imageContainer,
+									styles.closeButton,
 									{
-										borderRadius: isTablet ? 20 : 16,
+										width: sizes.closeButton,
+										height: sizes.closeButton,
+										borderRadius: sizes.closeButton / 2,
 									},
 								]}
+								onPress={handleSafeClose}
 							>
-								<Image
-									source={{ uri: modalImageUrl }}
+								<Feather name="x" size={sizes.closeIcon} color="white" />
+							</TouchableOpacity>
+						</View>
+
+						{/* Content */}
+						<View
+							style={[
+								styles.content,
+								{ paddingHorizontal: spacing.contentPadding },
+							]}
+						>
+							{modalImageUrl ? (
+								<View
 									style={[
-										styles.image,
+										styles.imageContainer,
 										{
-											width: imageDimensions.width,
-											height: imageDimensions.height,
 											borderRadius: isTablet ? 20 : 16,
 										},
 									]}
-									resizeMode="cover"
-									onLoad={() => setIsImageLoading(false)}
-									onError={() => setIsImageLoading(false)}
-								/>
-								{isImageLoading && (
-									<View style={styles.imageLoadingOverlay}>
-										<ActivityIndicator size="large" color="white" />
-									</View>
-								)}
-							</View>
-						) : (
-							<View style={styles.placeholderContainer}>
-								<View
-									style={[
-										styles.placeholderIcon,
-										{
-											width: sizes.placeholderIcon,
-											height: sizes.placeholderIcon,
-											borderRadius: sizes.placeholderIcon / 2,
-											marginBottom: spacing.contentPadding / 2,
-										},
-									]}
 								>
-									<Feather
-										name={photoType === "profile" ? "user" : "image"}
-										size={sizes.placeholderIconSize}
-										color="rgba(255,255,255,0.6)"
+									<Image
+										source={{ uri: modalImageUrl }}
+										style={[
+											styles.image,
+											{
+												width: imageDimensions.width,
+												height: imageDimensions.height,
+												borderRadius: isTablet ? 20 : 16,
+											},
+										]}
+										resizeMode="cover"
+										onLoad={() => setIsImageLoading(false)}
+										onError={() => setIsImageLoading(false)}
 									/>
+									{isImageLoading && (
+										<View style={styles.imageLoadingOverlay}>
+											<ActivityIndicator size="large" color="white" />
+										</View>
+									)}
 								</View>
-								<Text
-									style={[
-										styles.placeholderText,
-										{ fontSize: fontSizes.placeholderText },
-									]}
-								>
-									No {photoType} photo
-								</Text>
-							</View>
-						)}
-					</View>
+							) : (
+								<View style={styles.placeholderContainer}>
+									<View
+										style={[
+											styles.placeholderIcon,
+											{
+												width: sizes.placeholderIcon,
+												height: sizes.placeholderIcon,
+												borderRadius: sizes.placeholderIcon / 2,
+												marginBottom: spacing.contentPadding / 2,
+											},
+										]}
+									>
+										<Feather
+											name={photoType === "profile" ? "user" : "image"}
+											size={sizes.placeholderIconSize}
+											color="rgba(255,255,255,0.6)"
+										/>
+									</View>
+									<Text
+										style={[
+											styles.placeholderText,
+											{ fontSize: fontSizes.placeholderText },
+										]}
+									>
+										No {photoType} photo
+									</Text>
+								</View>
+							)}
+						</View>
 
-					{/* Actions */}
-					{isOwnProfile && (
-						<View
-							style={[
-								styles.actions,
-								{
-									gap: spacing.buttonGap,
-									paddingHorizontal: spacing.contentPadding,
-									paddingBottom: spacing.bottomPadding,
-									flexDirection: "row",
-									justifyContent: "center",
-								},
-							]}
-						>
-							<TouchableOpacity
+						{/* Actions */}
+						{isOwnProfile && (
+							<View
 								style={[
-									styles.circularButton,
-									styles.primaryButton,
+									styles.actions,
 									{
-										width: sizes.actionButtonHeight,
-										height: sizes.actionButtonHeight,
-										borderRadius: sizes.actionButtonHeight / 2,
+										gap: spacing.buttonGap,
+										paddingHorizontal: spacing.contentPadding,
+										paddingBottom: spacing.bottomPadding,
+										flexDirection: "row",
+										justifyContent: "center",
 									},
 								]}
-								onPress={handleImagePicker}
-								disabled={isLoading}
 							>
-								{isLoading ? (
-									<ActivityIndicator size="small" color="white" />
-								) : (
-									<Feather name="camera" size={24} color="white" />
-								)}
-							</TouchableOpacity>
-
-							{modalImageUrl && (
 								<TouchableOpacity
 									style={[
 										styles.circularButton,
-										styles.secondaryButton,
+										styles.primaryButton,
 										{
 											width: sizes.actionButtonHeight,
 											height: sizes.actionButtonHeight,
 											borderRadius: sizes.actionButtonHeight / 2,
 										},
 									]}
-									onPress={handleDeletePhoto}
+									onPress={handleImagePicker}
 									disabled={isLoading}
 								>
-									<Feather name="trash-2" size={24} color="#ff4757" />
+									{isLoading ? (
+										<ActivityIndicator size="small" color="white" />
+									) : (
+										<Feather name="camera" size={24} color="white" />
+									)}
 								</TouchableOpacity>
-							)}
-						</View>
-					)}
-				</View>
-			</Modal>
+
+								{modalImageUrl && (
+									<TouchableOpacity
+										style={[
+											styles.circularButton,
+											styles.secondaryButton,
+											{
+												width: sizes.actionButtonHeight,
+												height: sizes.actionButtonHeight,
+												borderRadius: sizes.actionButtonHeight / 2,
+											},
+										]}
+										onPress={handleDeletePhoto}
+										disabled={isLoading}
+									>
+										<Feather name="trash-2" size={24} color="#ff4757" />
+									</TouchableOpacity>
+								)}
+							</View>
+						)}
+					</View>
+				</Modal>
+			)}
 
 			{/* Confirmation Modal */}
-			<ConfirmationComponent />
+			{mounted && <ConfirmationComponent />}
 		</>
 	);
 }

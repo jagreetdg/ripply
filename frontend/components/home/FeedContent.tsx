@@ -30,6 +30,7 @@ interface FeedContentProps {
 	scrollViewRef: React.RefObject<ScrollView>;
 	onScroll: any; // Animated.event type
 	diagnosticData: any;
+	contentInsetTop?: number; // Add optional prop for content inset
 }
 
 export function FeedContent({
@@ -43,6 +44,7 @@ export function FeedContent({
 	scrollViewRef,
 	onScroll,
 	diagnosticData,
+	contentInsetTop, // Add to props
 }: FeedContentProps) {
 	const { colors } = useTheme();
 	const router = useRouter();
@@ -50,7 +52,11 @@ export function FeedContent({
 	const { height } = useWindowDimensions();
 
 	// Calculate the padding needed to account for the header
-	const headerPadding = HEADER_HEIGHT + insets.top;
+	// Use contentInsetTop if provided, otherwise calculate default
+	const headerPadding =
+		contentInsetTop !== undefined
+			? contentInsetTop
+			: HEADER_HEIGHT + insets.top;
 
 	// Render content with appropriate padding
 	const renderContent = () => {
