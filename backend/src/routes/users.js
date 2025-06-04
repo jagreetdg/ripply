@@ -3,6 +3,25 @@ const router = express.Router();
 const supabase = require("../config/supabase");
 const { authenticateToken } = require("../middleware/auth");
 
+// Get current authenticated user - REQUIRES AUTHENTICATION
+router.get("/me", authenticateToken, async (req, res) => {
+	try {
+		// Since the authenticateToken middleware has already attached the user to req.user,
+		// we can simply return it
+		console.log("[DEBUG] Returning authenticated user info from /me endpoint");
+
+		// The user is already attached to the request by the authenticateToken middleware
+		if (!req.user) {
+			return res.status(401).json({ message: "User not authenticated" });
+		}
+
+		res.status(200).json(req.user);
+	} catch (error) {
+		console.error("[ERROR] Error fetching current user:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
+
 // Search for users based on username or display name - REQUIRES AUTHENTICATION
 router.get("/search", authenticateToken, async (req, res) => {
 	try {
