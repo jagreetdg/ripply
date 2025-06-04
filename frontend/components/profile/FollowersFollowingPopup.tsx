@@ -12,6 +12,7 @@ import {
 	Platform,
 	TouchableWithoutFeedback,
 	Image,
+	useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -63,11 +64,16 @@ export function FollowersFollowingPopup({
 	const { user: currentUser } = useUser();
 	const { colors, isDarkMode } = useTheme();
 	const screenHeight = Dimensions.get("window").height;
+	const { width: windowWidth } = useWindowDimensions();
 	const [mounted, setMounted] = useState(false);
 	const isClosingRef = useRef(false);
 	const hasRenderedOnceRef = useRef(false);
 	const preventAutoCloseRef = useRef(false);
 	const [renderKey, setRenderKey] = useState(0);
+
+	// Determine responsiveness based on window width
+	const isNarrowScreen = windowWidth < 500;
+	const isVeryNarrowScreen = windowWidth < 350;
 
 	// Log mount/unmount for debugging
 	useEffect(() => {
@@ -297,17 +303,29 @@ export function FollowersFollowingPopup({
 	const renderUserItem = ({ item }: { item: UserType }) => {
 		if (!item || !item.id) return null;
 
+		// Check if this is the current user (for follow button display)
+		const isCurrentUser = currentUser && item.id === currentUser.id;
+
 		return (
 			<View style={[styles.userItem, { borderBottomColor: colors.border }]}>
 				<TouchableOpacity
-					style={styles.userInfo}
+					style={[
+						styles.userInfo,
+						// Adjust flex based on screen size
+						isVeryNarrowScreen && !isCurrentUser ? { flex: 0.7 } : { flex: 1 },
+					]}
 					onPress={() => handleProfilePress(item.username)}
 				>
 					<View style={styles.userInfoLeft}>
 						<UserAvatar user={item} />
 						<View style={styles.userInfoText}>
 							<View style={styles.nameContainer}>
-								<Text style={[styles.displayName, { color: colors.text }]}>
+								{/* Name truncation for very narrow screens */}
+								<Text
+									style={[styles.displayName, { color: colors.text }]}
+									numberOfLines={1}
+									ellipsizeMode="tail"
+								>
 									{item.display_name || item.username}
 								</Text>
 								{item.is_verified && (
@@ -319,20 +337,29 @@ export function FollowersFollowingPopup({
 									/>
 								)}
 							</View>
-							<Text style={[styles.username, { color: colors.textSecondary }]}>
+							<Text
+								style={[styles.username, { color: colors.textSecondary }]}
+								numberOfLines={1}
+								ellipsizeMode="tail"
+							>
 								@{item.username}
 							</Text>
 						</View>
 					</View>
 				</TouchableOpacity>
 
-				{currentUser && item.id && currentUser.id !== item.id && (
+				{currentUser && item.id && !isCurrentUser && (
 					<FollowButton
 						userId={item.id}
 						onFollowChange={(isFollowing, updatedCount) =>
 							handleFollowChange(item.id, isFollowing, updatedCount)
 						}
-						style={styles.followButton}
+						style={[
+							styles.followButton,
+							// Adjust styles for narrow screens
+							isNarrowScreen && { paddingHorizontal: 8, minWidth: 70 },
+							isVeryNarrowScreen && { minWidth: 60 },
+						]}
 					/>
 				)}
 			</View>
@@ -359,6 +386,14 @@ export function FollowersFollowingPopup({
 		loading,
 	});
 
+	// Get adaptive modal width based on screen size
+	const getModalWidth = () => {
+		if (windowWidth < 400) return "95%";
+		if (windowWidth < 768) return "80%";
+		if (windowWidth < 1024) return "60%";
+		return "50%";
+	};
+
 	// Simplified modal implementation to avoid the ModalPortal errors
 	// Using absolute positioning instead of fixed to avoid removal by security mechanisms
 	return (
@@ -384,6 +419,7 @@ export function FollowersFollowingPopup({
 					{
 						maxHeight: screenHeight * 0.7,
 						backgroundColor: colors.background,
+						width: getModalWidth(),
 					},
 				]}
 			>
@@ -454,7 +490,6 @@ const styles = StyleSheet.create({
 		zIndex: 9999,
 	},
 	modalContainer: {
-		width: "70%",
 		borderRadius: 12,
 		overflow: "hidden",
 		elevation: 5,
@@ -465,6 +500,7 @@ const styles = StyleSheet.create({
 		},
 		shadowOpacity: 0.25,
 		shadowRadius: 3.84,
+		maxWidth: 600, // Maximum width for larger screens
 	},
 	container: {
 		flex: 1,
@@ -515,29 +551,36 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		paddingVertical: 12,
 		borderBottomWidth: 1,
+		flexWrap: "nowrap", // Prevent wrapping
 	},
 	userInfo: {
 		flexDirection: "row",
 		alignItems: "center",
-		flex: 1,
+		marginRight: 8, // Add margin to separate from the follow button
 	},
 	userInfoLeft: {
 		flexDirection: "row",
 		alignItems: "center",
+		flexShrink: 1, // Allow shrinking when needed
 	},
 	userInfoText: {
 		marginLeft: 12,
+		flexShrink: 1, // Allow text to shrink if needed
+		minWidth: 0, // Required for text truncation to work properly
 	},
 	nameContainer: {
 		flexDirection: "row",
 		alignItems: "center",
+		flexWrap: "nowrap", // Keep name and verification icon on same line
 	},
 	displayName: {
 		fontSize: 16,
 		fontWeight: "bold",
+		flexShrink: 1, // Allow text to shrink
 	},
 	verifiedIcon: {
 		marginLeft: 4,
+		flexShrink: 0, // Don't shrink the icon
 	},
 	username: {
 		fontSize: 14,
@@ -546,5 +589,6 @@ const styles = StyleSheet.create({
 	followButton: {
 		height: 36,
 		paddingHorizontal: 12,
+		flexShrink: 0, // Don't shrink the button
 	},
 });

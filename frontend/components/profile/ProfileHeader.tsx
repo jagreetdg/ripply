@@ -358,7 +358,6 @@ export function ProfileHeader({
 			shadowOffset: { width: 0, height: 3 },
 			shadowOpacity: 0.25,
 			shadowRadius: 6,
-			elevation: 6,
 			// Center the avatar inside
 			alignItems: "center",
 			justifyContent: "center",
@@ -546,10 +545,11 @@ export function ProfileHeader({
 			alignItems: "center",
 			flex: 1,
 			justifyContent: "center", // Center the content
+			transform: [{ translateX: -8 }], // Small adjustment for visual balance
 		},
 		collapsedInfo: {
 			marginLeft: 12,
-			alignItems: "center", // Center the text
+			alignItems: "flex-start", // Keep text left-aligned within its container
 		},
 		avatarSmallContainer: {
 			width: 44, // Slightly larger than the avatar
@@ -657,7 +657,7 @@ export function ProfileHeader({
 					</View>
 				</TouchableOpacity>
 
-				{/* Removed post count from collapsed header as requested */}
+				{/* Right space to balance the layout */}
 				<View style={styles.collapsedRightSpace} />
 			</BlurView>
 		);
