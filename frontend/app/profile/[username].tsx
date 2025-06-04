@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import {
 	View,
@@ -128,6 +128,9 @@ export default function ProfileByUsernameScreen() {
 	// No longer need tab state as we're combining voice notes and shared notes
 
 	// Removed tab container as we're combining voice notes and shared notes
+
+	// Add a reference to track if we've just opened a modal
+	const recentlyOpenedModalRef = useRef(false);
 
 	// Handler for pull-to-refresh
 	const handleRefresh = async () => {
@@ -431,14 +434,81 @@ export default function ProfileByUsernameScreen() {
 		}
 	};
 
-	// Update handlers for showing followers and following popups
-	const handleFollowersPress = () => {
-		setShowFollowersPopup(true);
-	};
+	// Update handlers for showing followers and following popups with better safety
+	const handleFollowersPress = useCallback(() => {
+		// Prevent repeated opening attempts
+		if (recentlyOpenedModalRef.current) {
+			console.log("[PROFILE] Ignoring rapid follower modal open attempt");
+			return;
+		}
 
-	const handleFollowingPress = () => {
-		setShowFollowingPopup(true);
-	};
+		console.log("[PROFILE] Opening followers popup");
+		recentlyOpenedModalRef.current = true;
+
+		// Clear followers first to ensure a clean render
+		if (mounted.current && showFollowingPopup) {
+			setShowFollowingPopup(false);
+		}
+
+		// Use setTimeout to ensure clean state updates
+		setTimeout(() => {
+			if (mounted.current) {
+				setShowFollowersPopup(true);
+
+				// Reset the recently opened flag after a delay
+				setTimeout(() => {
+					recentlyOpenedModalRef.current = false;
+				}, 1000);
+			}
+		}, 50);
+	}, [showFollowingPopup]);
+
+	const handleFollowingPress = useCallback(() => {
+		// Prevent repeated opening attempts
+		if (recentlyOpenedModalRef.current) {
+			console.log("[PROFILE] Ignoring rapid following modal open attempt");
+			return;
+		}
+
+		console.log("[PROFILE] Opening following popup");
+		recentlyOpenedModalRef.current = true;
+
+		// Clear followers first to ensure a clean render
+		if (mounted.current && showFollowersPopup) {
+			setShowFollowersPopup(false);
+		}
+
+		// Use setTimeout to ensure clean state updates
+		setTimeout(() => {
+			if (mounted.current) {
+				setShowFollowingPopup(true);
+
+				// Reset the recently opened flag after a delay
+				setTimeout(() => {
+					recentlyOpenedModalRef.current = false;
+				}, 1000);
+			}
+		}, 50);
+	}, [showFollowersPopup]);
+
+	const handleCloseFollowersPopup = useCallback(() => {
+		console.log("[PROFILE] Closing followers popup");
+		setShowFollowersPopup(false);
+	}, []);
+
+	const handleCloseFollowingPopup = useCallback(() => {
+		console.log("[PROFILE] Closing following popup");
+		setShowFollowingPopup(false);
+	}, []);
+
+	// Add a mounted ref to track component lifecycle
+	const mounted = useRef(true);
+	useEffect(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+		};
+	}, []);
 
 	// Add a handler for the header click that scrolls to top
 	const handleHeaderPress = () => {
@@ -717,22 +787,24 @@ export default function ProfileByUsernameScreen() {
 				<Feather name="mic" size={24} color={colors.white} />
 			</TouchableOpacity>
 
-			{/* Add the followers/following popups */}
-			{userProfile && (
-				<>
-					<FollowersFollowingPopup
-						visible={showFollowersPopup}
-						userId={userProfile.id}
-						onClose={() => setShowFollowersPopup(false)}
-						initialTab="followers"
-					/>
-					<FollowersFollowingPopup
-						visible={showFollowingPopup}
-						userId={userProfile.id}
-						onClose={() => setShowFollowingPopup(false)}
-						initialTab="following"
-					/>
-				</>
+			{/* Render modals only when they are needed */}
+			{userProfile && showFollowersPopup && (
+				<FollowersFollowingPopup
+					key={`followers-popup-${userProfile.id}`}
+					visible={showFollowersPopup}
+					userId={userProfile.id}
+					onClose={handleCloseFollowersPopup}
+					initialTab="followers"
+				/>
+			)}
+			{userProfile && showFollowingPopup && (
+				<FollowersFollowingPopup
+					key={`following-popup-${userProfile.id}`}
+					visible={showFollowingPopup}
+					userId={userProfile.id}
+					onClose={handleCloseFollowingPopup}
+					initialTab="following"
+				/>
 			)}
 		</View>
 	);

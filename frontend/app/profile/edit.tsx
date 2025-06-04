@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
 	View,
 	Text,
@@ -73,6 +73,10 @@ export default function EditProfileScreen() {
 	const { user, refreshUser, setUser } = useUser();
 	const { colors, isDarkMode } = useTheme();
 	const { showToast } = useGlobalToast();
+	const [mounted, setMounted] = useState(false);
+	const [renderKey, setRenderKey] = useState(0);
+	// This is always the user's own profile in edit mode
+	const isOwnProfile = true;
 
 	// Dynamic styles that need theme context
 	const dynamicStyles = StyleSheet.create({
@@ -131,61 +135,74 @@ export default function EditProfileScreen() {
 	const [scaleAnim] = useState(new Animated.Value(0.95));
 	const [animationStarted, setAnimationStarted] = useState(false);
 
+	// Add a reference to track if we've just opened a modal
+	const recentlyOpenedModalRef = useRef(false);
+
+	// Set mounted state on component mount
+	useEffect(() => {
+		setMounted(true);
+		return () => {
+			setMounted(false);
+		};
+	}, []);
+
 	// Initialize form with user data
 	useEffect(() => {
-		if (user) {
-			setDisplayName(user.display_name || "");
-			setBio(user.bio || "");
-			setUsername(user.username || "");
-			setOriginalUsername(user.username || "");
-			setAvatarUrl(user.avatar_url);
-			// Access cover_photo_url from the User interface
-			setCoverPhotoUrl(user.cover_photo_url || null);
+		if (!mounted || !user) return;
 
-			// Start entrance animation only on first load
-			if (!animationStarted) {
-				setAnimationStarted(true);
-				Animated.parallel([
-					Animated.timing(fadeAnim, {
-						toValue: 1,
-						duration: 400,
-						useNativeDriver: true,
-					}),
-					Animated.timing(scaleAnim, {
-						toValue: 1,
-						duration: 400,
-						useNativeDriver: true,
-					}),
-				]).start();
-			}
+		setDisplayName(user.display_name || "");
+		setBio(user.bio || "");
+		setUsername(user.username || "");
+		setOriginalUsername(user.username || "");
+		setAvatarUrl(user.avatar_url);
+		// Access cover_photo_url from the User interface
+		setCoverPhotoUrl(user.cover_photo_url || null);
+
+		// Start entrance animation only on first load
+		if (!animationStarted) {
+			setAnimationStarted(true);
+			Animated.parallel([
+				Animated.timing(fadeAnim, {
+					toValue: 1,
+					duration: 400,
+					useNativeDriver: true,
+				}),
+				Animated.timing(scaleAnim, {
+					toValue: 1,
+					duration: 400,
+					useNativeDriver: true,
+				}),
+			]).start();
 		}
-	}, [user]);
+	}, [user, mounted, animationStarted]);
 
 	// Sync local photo state when user context changes (e.g., from PhotoViewerModal)
 	useEffect(() => {
-		if (user) {
-			// Only update if the URLs are different to avoid unnecessary re-renders
-			if (user.avatar_url !== avatarUrl) {
-				console.log(
-					"[EDIT PROFILE] Syncing avatar URL from user context:",
-					user.avatar_url
-				);
-				setAvatarUrl(user.avatar_url);
-			}
+		if (!mounted || !user) return;
 
-			const userCoverPhoto = user.cover_photo_url;
-			if (userCoverPhoto !== coverPhotoUrl) {
-				console.log(
-					"[EDIT PROFILE] Syncing cover photo URL from user context:",
-					userCoverPhoto
-				);
-				setCoverPhotoUrl(userCoverPhoto || null);
-			}
+		// Only update if the URLs are different to avoid unnecessary re-renders
+		if (user.avatar_url !== avatarUrl) {
+			console.log(
+				"[EDIT PROFILE] Syncing avatar URL from user context:",
+				user.avatar_url
+			);
+			setAvatarUrl(user.avatar_url);
 		}
-	}, [user?.avatar_url, user?.cover_photo_url]);
+
+		const userCoverPhoto = user.cover_photo_url;
+		if (userCoverPhoto !== coverPhotoUrl) {
+			console.log(
+				"[EDIT PROFILE] Syncing cover photo URL from user context:",
+				userCoverPhoto
+			);
+			setCoverPhotoUrl(userCoverPhoto || null);
+		}
+	}, [user?.avatar_url, user?.cover_photo_url, mounted]);
 
 	// Validate username with debounce
 	useEffect(() => {
+		if (!mounted) return;
+
 		// Skip validation if username hasn\'t changed
 		if (username === originalUsername) {
 			setUsernameError("");
@@ -224,32 +241,41 @@ export default function EditProfileScreen() {
 
 		// Debounce the API call
 		const timer = setTimeout(async () => {
-			if (username.length >= 3) {
-				setIsCheckingUsername(true);
-				try {
-					const response = (await checkUsernameAvailability(
-						username
-					)) as UsernameAvailabilityResponse;
+			if (!mounted || username.length < 3) return;
+
+			setIsCheckingUsername(true);
+			try {
+				const response = (await checkUsernameAvailability(
+					username
+				)) as UsernameAvailabilityResponse;
+
+				if (mounted) {
 					if (response && !response.available) {
 						setUsernameError("Username is already taken");
 					} else {
 						// Set as valid only if backend confirms availability
 						setIsUsernameValid(true);
 					}
-				} catch (error) {
+				}
+			} catch (error) {
+				if (mounted) {
 					console.error("Error checking username:", error);
 					setUsernameError("Error checking username availability");
-				} finally {
+				}
+			} finally {
+				if (mounted) {
 					setIsCheckingUsername(false);
 				}
 			}
 		}, 500); // 500ms debounce
 
 		return () => clearTimeout(timer);
-	}, [username, originalUsername]);
+	}, [username, originalUsername, mounted]);
 
 	// Handle profile image selection
 	const handleSelectImage = async () => {
+		if (!mounted) return;
+
 		try {
 			const permissionResult =
 				await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -269,25 +295,58 @@ export default function EditProfileScreen() {
 				quality: 0.8,
 			});
 
+			if (!mounted) return;
+
 			if (!result.canceled && result.assets && result.assets.length > 0) {
 				setAvatarUrl(result.assets[0].uri);
 			}
 		} catch (error) {
 			console.error("Error selecting image:", error);
-			Alert.alert("Error", "Failed to select image");
+			if (mounted) {
+				Alert.alert("Error", "Failed to select image");
+			}
 		}
 	};
 
-	// Handle opening photo viewer
+	// Handle modal opening and closing safely
 	const handleOpenPhotoViewer = (type: "profile" | "cover") => {
+		if (!mounted) return;
+
+		// Prevent repeated opening attempts
+		if (recentlyOpenedModalRef.current) {
+			console.log("[EDIT PROFILE] Ignoring rapid photo viewer open attempt");
+			return;
+		}
+
+		console.log(`[EDIT PROFILE] Opening photo viewer for ${type}`);
+		recentlyOpenedModalRef.current = true;
+
 		setPhotoViewerType(type);
-		setPhotoViewerVisible(true);
+		// Small delay to ensure state updates before showing modal
+		setTimeout(() => {
+			if (mounted) {
+				setPhotoViewerVisible(true);
+
+				// Reset the recently opened flag after a delay
+				setTimeout(() => {
+					recentlyOpenedModalRef.current = false;
+				}, 1000);
+			}
+		}, 50);
 	};
 
-	// Handle closing photo viewer
 	const handleClosePhotoViewer = () => {
+		if (!mounted) return;
+		console.log("[EDIT PROFILE] Closing photo viewer");
+
+		// First hide the modal
 		setPhotoViewerVisible(false);
-		setPhotoViewerType(null);
+		// Then clear the type after a delay
+		setTimeout(() => {
+			if (mounted) {
+				setPhotoViewerType(null);
+			}
+		}, 100);
 	};
 
 	// Handle photo updated from viewer
@@ -295,6 +354,8 @@ export default function EditProfileScreen() {
 		type: "profile" | "cover",
 		newUrl: string | null
 	) => {
+		if (!mounted) return;
+
 		if (type === "profile") {
 			setAvatarUrl(newUrl);
 		} else if (type === "cover") {
@@ -304,6 +365,8 @@ export default function EditProfileScreen() {
 
 	// Handle cover photo selection
 	const handleSelectCoverPhoto = async () => {
+		if (!mounted) return;
+
 		try {
 			const permissionResult =
 				await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -323,17 +386,23 @@ export default function EditProfileScreen() {
 				quality: 0.8,
 			});
 
+			if (!mounted) return;
+
 			if (!result.canceled && result.assets && result.assets.length > 0) {
 				setCoverPhotoUrl(result.assets[0].uri);
 			}
 		} catch (error) {
 			console.error("Error selecting cover photo:", error);
-			Alert.alert("Error", "Failed to select cover photo");
+			if (mounted) {
+				Alert.alert("Error", "Failed to select cover photo");
+			}
 		}
 	};
 
 	// Update user in AsyncStorage to maintain consistent state
 	const updateLocalUserData = async (updatedUser: any) => {
+		if (!mounted) return;
+
 		console.log("[EDIT PROFILE] updateLocalUserData called with:", updatedUser);
 		try {
 			const USER_KEY = "@ripply_user";
@@ -348,6 +417,8 @@ export default function EditProfileScreen() {
 			);
 
 			// Verify the save by reading it back
+			if (!mounted) return;
+
 			const savedData = await AsyncStorage.getItem(USER_KEY);
 			const parsedData = savedData ? JSON.parse(savedData) : null;
 			console.log(
@@ -364,6 +435,8 @@ export default function EditProfileScreen() {
 
 	// Handle form submission
 	const handleSave = async () => {
+		if (!mounted) return;
+
 		console.log("[EDIT PROFILE] === SAVE PROCESS STARTED ===");
 		console.log(
 			"[EDIT PROFILE] Current user:",
@@ -426,6 +499,8 @@ export default function EditProfileScreen() {
 			// Call API to update profile
 			const result = (await updateUserProfile(user.id, userData)) as any;
 
+			if (!mounted) return;
+
 			console.log("[EDIT PROFILE] API response received:", result);
 
 			// Check if the API call was successful
@@ -457,6 +532,9 @@ export default function EditProfileScreen() {
 				// Update AsyncStorage first
 				console.log("[EDIT PROFILE] Updating AsyncStorage...");
 				await updateLocalUserData(updatedUserData);
+
+				if (!mounted) return;
+
 				console.log("[EDIT PROFILE] ✅ AsyncStorage updated");
 
 				// Update the user context immediately
@@ -472,6 +550,8 @@ export default function EditProfileScreen() {
 				// Navigate back to profile page with updated username after brief delay
 				// This gives the toast time to appear before navigation
 				setTimeout(() => {
+					if (!mounted) return;
+
 					console.log("[EDIT PROFILE] Setting up navigation...");
 					if (usernameChanged) {
 						console.log(
@@ -496,29 +576,23 @@ export default function EditProfileScreen() {
 					console.log("[EDIT PROFILE] ✅ Navigation initiated");
 				}, 100); // Brief delay to let toast appear before navigation
 			} else {
+				if (!mounted) return;
+
 				console.log(
-					"[EDIT PROFILE] ❌ API call failed - invalid response:",
+					"[EDIT PROFILE] ⚠️ API call returned unexpected response:",
 					result
 				);
-				// Show error message and stay on edit screen
-				const errorMessage = "Failed to update profile - invalid response";
-				console.log("[EDIT PROFILE] Showing error toast:", errorMessage);
-				showToast(errorMessage, "error");
+				showToast("Failed to update profile. Please try again.", "error");
 			}
-		} catch (error: any) {
-			console.log("[EDIT PROFILE] ❌ Exception during save:", error);
-			console.error("[EDIT PROFILE] Full error object:", error);
-			console.log("[EDIT PROFILE] Error message:", error.message);
-			console.log("[EDIT PROFILE] Error stack:", error.stack);
+		} catch (error) {
+			if (!mounted) return;
 
-			const errorMessage =
-				error.message || "An error occurred while updating your profile";
-			console.log("[EDIT PROFILE] Showing error toast:", errorMessage);
-			showToast(errorMessage, "error");
+			console.error("[EDIT PROFILE] ❌ Error updating profile:", error);
+			showToast("Failed to update profile. Please try again.", "error");
 		} finally {
-			console.log("[EDIT PROFILE] Setting loading to false");
-			setIsLoading(false);
-			console.log("[EDIT PROFILE] === SAVE PROCESS COMPLETED ===");
+			if (mounted) {
+				setIsLoading(false);
+			}
 		}
 	};
 
@@ -534,6 +608,9 @@ export default function EditProfileScreen() {
 		router.replace("/auth/login");
 		return null;
 	}
+
+	// If not mounted, don't render anything
+	if (!mounted) return null;
 
 	return (
 		<KeyboardAvoidingView
@@ -790,16 +867,19 @@ export default function EditProfileScreen() {
 				</Animated.View>
 			</ScrollView>
 
-			{/* Photo Viewer Modal */}
-			<PhotoViewerModal
-				visible={photoViewerVisible}
-				onClose={handleClosePhotoViewer}
-				photoType={photoViewerType}
-				imageUrl={photoViewerType === "profile" ? avatarUrl : coverPhotoUrl}
-				userId={user.id}
-				isOwnProfile={true}
-				onPhotoUpdated={handlePhotoUpdated}
-			/>
+			{/* Render PhotoViewerModal only when needed */}
+			{mounted && photoViewerVisible && photoViewerType && (
+				<PhotoViewerModal
+					key={`photo-viewer-${photoViewerType}-${renderKey}`}
+					visible={photoViewerVisible}
+					onClose={handleClosePhotoViewer}
+					photoType={photoViewerType}
+					imageUrl={photoViewerType === "profile" ? avatarUrl : coverPhotoUrl}
+					userId={user?.id || ""}
+					isOwnProfile={true}
+					onPhotoUpdated={handlePhotoUpdated}
+				/>
+			)}
 		</KeyboardAvoidingView>
 	);
 }

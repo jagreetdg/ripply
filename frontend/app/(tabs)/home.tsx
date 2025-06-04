@@ -107,24 +107,24 @@ export default function HomeScreen() {
 				]}
 			/>
 
-			{/* Animated Header */}
+			{/* Animated Header - now stays fixed */}
 			<Animated.View
 				style={[
 					styles.headerContainer,
 					{
 						height: HEADER_HEIGHT + insets.top,
 						paddingTop: insets.top,
-						transform: [{ translateY: headerTranslateY }],
 						backgroundColor: colors.card,
 						borderBottomColor: colors.border,
 						borderBottomWidth: 1,
+						// Remove transform to keep header fixed
 					},
 				]}
 			>
 				<HomeHeader onLogoPress={scrollToTop} />
 			</Animated.View>
 
-			{/* Main Content */}
+			{/* Main Content - now with top padding for fixed header */}
 			<FeedContent
 				feedItems={feedItems}
 				loading={loading}
@@ -136,6 +136,7 @@ export default function HomeScreen() {
 				scrollViewRef={scrollViewRef}
 				onScroll={handleScroll}
 				diagnosticData={diagnosticData}
+				contentInsetTop={HEADER_HEIGHT + insets.top} // Add this prop to adjust content padding
 			/>
 
 			{/* Floating Action Button */}
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
 		top: 0,
 		left: 0,
 		right: 0,
-		zIndex: 1,
+		zIndex: 10, // Increase z-index to ensure header stays on top
 		borderBottomWidth: 1,
 	},
 	backgroundBlocker: {
