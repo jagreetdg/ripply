@@ -311,6 +311,29 @@ export const getUserVoiceNotes = (userId) => {
 };
 
 /**
+ * Check if the voice_note_shares table exists in the database
+ * This is helpful for debugging issues with the Render backend
+ * @returns {Promise<boolean>} - True if table exists
+ */
+export const checkVoiceSharesTableExists = async () => {
+	try {
+		console.log("[RENDER DEBUG] Checking if voice_note_shares table exists");
+		const response = await apiRequest(
+			`${ENDPOINTS.VOICE_NOTES}/debug/check-shares-table`,
+			{
+				method: "GET",
+			}
+		);
+
+		console.log("[RENDER DEBUG] Table check response:", response);
+		return response?.exists || false;
+	} catch (error) {
+		console.error("[RENDER DEBUG] Error checking if table exists:", error);
+		return false;
+	}
+};
+
+/**
  * Record a share for a voice note (toggle share/unshare)
  * @param {string} voiceNoteId - ID of voice note to share
  * @param {string} userId - ID of user sharing the voice note (not used anymore, kept for compatibility)
@@ -333,45 +356,145 @@ export const recordShare = async (voiceNoteId, userId) => {
 			};
 		}
 
-		// Note: We no longer send userId in the body since the backend uses the authenticated user's ID
-		const response = await apiRequest(
-			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`,
-			{
-				method: "POST",
-				body: JSON.stringify({}), // Empty body since backend uses authenticated user
-			}
-		);
-
-		console.log(`Share toggle response:`, JSON.stringify(response));
-
-		// Make sure we have valid data in the response
-		let shareCount =
-			typeof response.shareCount === "number" ? response.shareCount : 0;
-		const isShared =
-			typeof response.isShared === "boolean" ? response.isShared : false;
-
-		// Try to get a more accurate share count directly
+		// First check if the table exists - useful for debugging Render issues
 		try {
-			const accurateShareCount = await getShareCount(voiceNoteId, true);
-			if (typeof accurateShareCount === "number") {
-				console.log(
-					`Updating share count from ${shareCount} to more accurate ${accurateShareCount}`
-				);
-				shareCount = accurateShareCount;
+			const tableExists = await checkVoiceSharesTableExists();
+			if (!tableExists) {
+				console.error("[RENDER DEBUG] voice_note_shares table does not exist!");
+				return {
+					shareCount: 0,
+					isShared: false,
+					message: "Database table missing",
+					voiceNoteId,
+					userId,
+					error: "The voice_note_shares table does not exist in the database",
+				};
 			}
-		} catch (error) {
-			console.error("Error getting accurate share count:", error);
-			// Keep the original share count if this fails
+			console.log(
+				"[RENDER DEBUG] voice_note_shares table exists, proceeding with share"
+			);
+		} catch (tableCheckError) {
+			// Continue even if the check fails - it's just for debugging
+			console.error(
+				"[RENDER DEBUG] Error checking table existence:",
+				tableCheckError
+			);
 		}
 
-		// Return the response with shareCount and isShared flag
-		return {
-			shareCount: shareCount,
-			isShared: isShared,
-			message: response.message || "",
-			voiceNoteId,
-			userId: response.userId || userId, // Use response userId if available
-		};
+		// Note: We no longer send userId in the body since the backend uses the authenticated user's ID
+		// Add detailed debugging for the Render backend
+		console.log(
+			"[RENDER DEBUG] About to send share request to:",
+			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`
+		);
+
+		try {
+			// Make a direct fetch call with more detailed error handling for debugging
+			const fullUrl = `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`;
+			console.log("[RENDER DEBUG] Full URL:", fullUrl);
+
+			const fetchResponse = await fetch(fullUrl, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({}),
+			});
+
+			// Log the full response details before parsing
+			console.log(
+				"[RENDER DEBUG] Share response status:",
+				fetchResponse.status
+			);
+			console.log(
+				"[RENDER DEBUG] Share response statusText:",
+				fetchResponse.statusText
+			);
+
+			// Get the response text first to avoid parsing errors
+			const responseText = await fetchResponse.text();
+			console.log("[RENDER DEBUG] Share response text:", responseText);
+
+			// Parse the JSON response if possible
+			let debugResponse;
+			try {
+				debugResponse = JSON.parse(responseText);
+			} catch (parseError) {
+				console.error("[RENDER DEBUG] Error parsing response:", parseError);
+				debugResponse = {
+					error: "Invalid JSON response",
+					rawResponse: responseText,
+				};
+			}
+
+			if (!fetchResponse.ok) {
+				console.error("[RENDER DEBUG] Server error response:", debugResponse);
+				return {
+					shareCount: 0,
+					isShared: false,
+					message: debugResponse.message || "Error sharing voice note",
+					voiceNoteId,
+					userId,
+					error: debugResponse.error || responseText,
+					status: fetchResponse.status,
+					serverDetails: debugResponse,
+				};
+			}
+
+			// Regular request via apiRequest for consistent behavior
+			const apiResponse = await apiRequest(
+				`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`,
+				{
+					method: "POST",
+					body: JSON.stringify({}), // Empty body since backend uses authenticated user
+				}
+			);
+
+			console.log(`Share toggle response:`, JSON.stringify(apiResponse));
+
+			// Make sure we have valid data in the response
+			let shareCount =
+				typeof apiResponse.shareCount === "number" ? apiResponse.shareCount : 0;
+			const isShared =
+				typeof apiResponse.isShared === "boolean"
+					? apiResponse.isShared
+					: false;
+
+			// Try to get a more accurate share count directly
+			try {
+				const accurateShareCount = await getShareCount(voiceNoteId, true);
+				if (typeof accurateShareCount === "number") {
+					console.log(
+						`Updating share count from ${shareCount} to more accurate ${accurateShareCount}`
+					);
+					shareCount = accurateShareCount;
+				}
+			} catch (error) {
+				console.error("Error getting accurate share count:", error);
+				// Keep the original share count if this fails
+			}
+
+			// Return the response with shareCount and isShared flag
+			return {
+				shareCount: shareCount,
+				isShared: isShared,
+				message: apiResponse.message || "",
+				voiceNoteId,
+				userId: apiResponse.userId || userId, // Use response userId if available
+			};
+		} catch (fetchError) {
+			console.error("[RENDER DEBUG] Fetch error:", fetchError);
+			return {
+				shareCount: 0,
+				isShared: false,
+				message: "Network error while sharing",
+				voiceNoteId,
+				userId,
+				error: fetchError.message || "Unknown fetch error occurred",
+				fetchErrorDetails: fetchError,
+			};
+		}
 	} catch (error) {
 		console.error("Error toggling share:", error);
 		// Check if this is an authentication error
@@ -398,6 +521,7 @@ export const recordShare = async (voiceNoteId, userId) => {
 			voiceNoteId,
 			userId,
 			error: error.message || "Unknown error occurred",
+			errorDetails: error,
 		};
 	}
 };

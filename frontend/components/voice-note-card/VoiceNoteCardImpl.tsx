@@ -28,6 +28,7 @@ import {
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import Colors, { hexToRgba, opacityValues } from "../../constants/Colors";
+import { getApiUrl } from "../../services/api/config";
 
 // Import types
 import {
@@ -48,6 +49,18 @@ import { VoiceNoteProgressBar } from "./VoiceNoteProgressBar"; // Path becomes .
 import { VoiceNoteInteractions } from "./VoiceNoteInteractions"; // Path becomes ./
 import { VoiceNoteUserInfo } from "./VoiceNoteUserInfo"; // Path becomes ./
 import { VoiceNoteTags } from "./VoiceNoteTags"; // Path becomes ./
+
+// Import debounce from lodash if available, or define a simple version
+const debounce = (func: Function, wait: number) => {
+	let timeout: NodeJS.Timeout;
+	return function (...args: any[]) {
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func.apply(this, args), wait);
+	};
+};
+
+// Debug mode - set to false in production
+const DEBUG_MODE = true;
 
 export function VoiceNoteCardImpl({
 	voiceNote,
@@ -345,6 +358,54 @@ export function VoiceNoteCardImpl({
 							"Please sign in again to share this voice note.",
 							[{ text: "OK" }]
 						);
+						return;
+					}
+
+					// Enhanced error display for debugging Render backend
+					let errorDetails = response.error;
+
+					// If we have server details, add them to the error message
+					if (response.serverDetails) {
+						const serverMsg =
+							response.serverDetails.error ||
+							response.serverDetails.message ||
+							"";
+						errorDetails = `${errorDetails}\n\nServer details: ${serverMsg}`;
+
+						if (response.serverDetails.code) {
+							errorDetails += `\nCode: ${response.serverDetails.code}`;
+						}
+					}
+
+					// If there's a status code, show it
+					if (response.status) {
+						errorDetails += `\n\nStatus: ${response.status}`;
+					}
+
+					// If we're in debug mode and there's a database table issue, offer to fix it
+					if (
+						DEBUG_MODE &&
+						(response.message === "Database table missing" ||
+							(response.serverDetails &&
+								response.serverDetails.code === "TABLE_MISSING"))
+					) {
+						Alert.alert(
+							"Share Error",
+							`There was a problem with the database tables:\n\n${errorDetails}`,
+							[
+								{ text: "Cancel", style: "cancel" },
+								{
+									text: "Repair Database",
+									onPress: () => attemptDatabaseRepair(response),
+								},
+							]
+						);
+					} else {
+						Alert.alert(
+							"Share Error",
+							`There was a problem sharing this voice note:\n\n${errorDetails}`,
+							[{ text: "OK" }]
+						);
 					}
 					return;
 				}
@@ -394,6 +455,105 @@ export function VoiceNoteCardImpl({
 		fetchShareCount,
 		shareScale,
 	]);
+
+	// Debug function to attempt to repair the database issue
+	const attemptDatabaseRepair = async (errorResponse: any) => {
+		try {
+			console.log("[RENDER DEBUG] Attempting to repair database issue");
+
+			// Get the API base URL from the environment or a constant
+			const API_URL = getApiUrl();
+
+			// First check database health
+			const healthResponse = await fetch(
+				`${API_URL}/voice-notes/debug/db-health`
+			);
+			const healthData = await healthResponse.json();
+			console.log("[RENDER DEBUG] Database health:", healthData);
+
+			// If the voice_note_shares table doesn't exist, attempt to create it
+			if (healthData?.tables?.voice_note_shares?.exists === false) {
+				console.log(
+					"[RENDER DEBUG] Attempting to create voice_note_shares table"
+				);
+
+				const fixResponse = await fetch(
+					`${API_URL}/voice-notes/debug/fix-shares-table`,
+					{
+						method: "POST",
+					}
+				);
+
+				const fixData = await fixResponse.json();
+				console.log("[RENDER DEBUG] Fix response:", fixData);
+
+				if (fixData.message === "Fix applied successfully") {
+					Alert.alert(
+						"Database Repaired",
+						"The database issue has been fixed. Please try sharing again.",
+						[{ text: "OK" }]
+					);
+					return;
+				}
+			}
+
+			// If that didn't work, try running specific migrations
+			console.log("[RENDER DEBUG] Attempting to run migrations");
+			const migrations = [
+				"create_migration_function",
+				"create_voice_note_shares",
+				"create_shares_function",
+				"create_shares_view",
+			];
+
+			let success = false;
+
+			for (const migration of migrations) {
+				console.log(`[RENDER DEBUG] Running migration: ${migration}`);
+				const migrationResponse = await fetch(
+					`${API_URL}/voice-notes/debug/run-migration`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ migration }),
+					}
+				);
+
+				const migrationData = await migrationResponse.json();
+				console.log(
+					`[RENDER DEBUG] Migration '${migration}' response:`,
+					migrationData
+				);
+
+				if (migrationData.message === "Migration successful") {
+					success = true;
+				}
+			}
+
+			if (success) {
+				Alert.alert(
+					"Database Repaired",
+					"The database tables have been created. Please try sharing again.",
+					[{ text: "OK" }]
+				);
+			} else {
+				Alert.alert(
+					"Repair Failed",
+					"Unable to repair the database issue. Please contact support.",
+					[{ text: "OK" }]
+				);
+			}
+		} catch (error) {
+			console.error("[RENDER DEBUG] Error repairing database:", error);
+			Alert.alert(
+				"Repair Failed",
+				"An error occurred while attempting to repair the database.",
+				[{ text: "OK" }]
+			);
+		}
+	};
 
 	// Handle native share button long press
 	const handleShareCountLongPress = useCallback(() => {
