@@ -3,7 +3,6 @@ const router = express.Router();
 const supabase = require("../config/supabase");
 const uuidv4 = require("uuid").v4;
 const { authenticateToken } = require("../middleware/auth");
-const dbTools = require("../utils/dbTools");
 
 // Search for voice notes by title or tags - PUBLIC (no auth required)
 router.get("/search", async (req, res) => {
@@ -725,35 +724,6 @@ router.post("/:voiceNoteId/share", authenticateToken, async (req, res) => {
 			`[DEBUG] Share/Unshare request: voiceNoteId=${voiceNoteId}, userId=${userId}`
 		);
 
-		// First check if the voice_note_shares table exists to provide better error messages
-		try {
-			const { data, error } = await supabase
-				.from("pg_catalog.pg_tables")
-				.select("tablename")
-				.eq("tablename", "voice_note_shares")
-				.eq("schemaname", "public");
-
-			if (error) {
-				console.error("[ERROR] Error checking table existence:", error);
-			} else if (!data || data.length === 0) {
-				console.error(
-					"[ERROR] voice_note_shares table does not exist in the database"
-				);
-				return res.status(500).json({
-					message: "Share functionality not available",
-					error: "Required database table does not exist",
-					code: "TABLE_MISSING",
-					detail: "The voice_note_shares table is missing from the database",
-				});
-			}
-		} catch (tableCheckError) {
-			console.error(
-				"[ERROR] Unexpected error checking table existence:",
-				tableCheckError
-			);
-			// Continue even if this check fails
-		}
-
 		// 1. Check if the voice note exists to ensure we're acting on a valid entity
 		const { data: voiceNote, error: voiceNoteError } = await supabase
 			.from("voice_notes")
@@ -766,12 +736,7 @@ router.post("/:voiceNoteId/share", authenticateToken, async (req, res) => {
 				`[ERROR] Voice note not found for ID: ${voiceNoteId}`,
 				voiceNoteError
 			);
-			return res.status(404).json({
-				message: "Voice note not found",
-				error: voiceNoteError?.message || "Voice note does not exist",
-				code: "VOICE_NOTE_NOT_FOUND",
-				detail: `No voice note found with ID: ${voiceNoteId}`,
-			});
+			return res.status(404).json({ message: "Voice note not found" });
 		}
 
 		// 2. Check if the user has already shared this voice note
@@ -785,24 +750,9 @@ router.post("/:voiceNoteId/share", authenticateToken, async (req, res) => {
 		if (selectError) {
 			// An actual error, not just "not found"
 			console.error("[ERROR] Error checking for existing share:", selectError);
-
-			// Check if this is a relation-does-not-exist error
-			if (selectError.code === "42P01") {
-				// PostgreSQL code for undefined_table
-				console.error("[ERROR] voice_note_shares table does not exist");
-				return res.status(500).json({
-					message: "Share functionality not available",
-					error: "Required database table does not exist",
-					code: "TABLE_MISSING",
-					detail: selectError.message,
-				});
-			}
-
 			return res.status(500).json({
 				message: "Error checking share status",
 				error: selectError.message,
-				code: selectError.code,
-				detail: "Unable to check if you've already shared this voice note",
 			});
 		}
 
@@ -820,52 +770,29 @@ router.post("/:voiceNoteId/share", authenticateToken, async (req, res) => {
 				return res.status(500).json({
 					message: "Error unsharing voice note",
 					error: deleteError.message,
-					code: deleteError.code,
-					detail: "Unable to remove your existing share",
 				});
 			}
 			isNowShared = false;
 			console.log(`[DEBUG] User ${userId} unshared voice note ${voiceNoteId}`);
 		} else {
 			// User has not shared it, so share (insert a new record)
-			// created_at is handled by defaultValue in DB schema
+			// Make sure we include all required fields according to our schema
+			const now = new Date().toISOString();
 			const { error: insertError } = await supabase
 				.from("voice_note_shares")
 				.insert({
 					voice_note_id: voiceNoteId,
 					user_id: userId,
+					shared_at: now,
+					created_at: now,
+					updated_at: now,
 				});
 
 			if (insertError) {
 				console.error("[ERROR] Error inserting share:", insertError);
-
-				// Check for foreign key constraint violations
-				if (insertError.code === "23503") {
-					// PostgreSQL foreign key violation code
-					return res.status(400).json({
-						message: "Error sharing voice note",
-						error: insertError.message,
-						code: "FOREIGN_KEY_VIOLATION",
-						detail: "The voice note or user no longer exists",
-					});
-				}
-
-				// Check for unique constraint violations
-				if (insertError.code === "23505") {
-					// PostgreSQL unique violation code
-					return res.status(400).json({
-						message: "Error sharing voice note",
-						error: insertError.message,
-						code: "ALREADY_SHARED",
-						detail: "You have already shared this voice note",
-					});
-				}
-
 				return res.status(500).json({
 					message: "Error sharing voice note",
 					error: insertError.message,
-					code: insertError.code,
-					detail: "Unable to add your share record to the database",
 				});
 			}
 			isNowShared = true;
@@ -894,13 +821,7 @@ router.post("/:voiceNoteId/share", authenticateToken, async (req, res) => {
 		});
 	} catch (error) {
 		console.error("[ERROR] Unexpected error in /share route:", error);
-		res.status(500).json({
-			message: "Server error",
-			error: error.message,
-			stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
-			detail:
-				"An unexpected error occurred while processing your share request",
-		});
+		res.status(500).json({ message: "Server error", error: error.message });
 	}
 });
 
@@ -1596,166 +1517,6 @@ router.get("/discovery/users/:userId", authenticateToken, async (req, res) => {
 	} catch (error) {
 		console.error("Error fetching discovery users:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
-	}
-});
-
-// Debug endpoint to check if voice_note_shares table exists
-router.get("/debug/check-shares-table", async (req, res) => {
-	try {
-		console.log("[DEBUG] Checking if voice_note_shares table exists");
-
-		// Check if the table exists by querying the PostgreSQL catalog
-		const { data, error } = await supabase
-			.from("pg_catalog.pg_tables")
-			.select("tablename")
-			.eq("tablename", "voice_note_shares")
-			.eq("schemaname", "public");
-
-		if (error) {
-			console.error("[ERROR] Error checking if table exists:", error);
-			return res.status(500).json({
-				message: "Error checking table existence",
-				exists: false,
-				error: error.message,
-			});
-		}
-
-		// If no rows returned, table doesn't exist
-		const exists = data && data.length > 0;
-
-		// Log detailed info
-		if (exists) {
-			console.log("[DEBUG] voice_note_shares table exists");
-
-			// Get the structure of the table
-			const { data: structureData, error: structureError } = await supabase
-				.from("information_schema.columns")
-				.select("column_name, data_type, is_nullable")
-				.eq("table_name", "voice_note_shares")
-				.eq("table_schema", "public");
-
-			if (structureError) {
-				console.error("[ERROR] Error getting table structure:", structureError);
-			} else {
-				console.log("[DEBUG] voice_note_shares structure:", structureData);
-			}
-
-			// Get number of rows in the table
-			const { count, error: countError } = await supabase
-				.from("voice_note_shares")
-				.select("*", { count: "exact", head: true });
-
-			if (countError) {
-				console.error("[ERROR] Error counting rows:", countError);
-			} else {
-				console.log(`[DEBUG] voice_note_shares has ${count || 0} rows`);
-			}
-		} else {
-			console.log("[DEBUG] voice_note_shares table does NOT exist");
-		}
-
-		return res.status(200).json({
-			exists: exists,
-			message: exists ? "Table exists" : "Table does not exist",
-		});
-	} catch (error) {
-		console.error("[ERROR] Unexpected error checking if table exists:", error);
-		return res.status(500).json({
-			message: "Server error",
-			exists: false,
-			error: error.message,
-		});
-	}
-});
-
-// Debug endpoint for database health check
-router.get("/debug/db-health", async (req, res) => {
-	try {
-		console.log("[DEBUG] Running database health check");
-		const results = await dbTools.runDatabaseHealthCheck();
-		return res.status(200).json(results);
-	} catch (error) {
-		console.error("[ERROR] Error in database health check endpoint:", error);
-		return res.status(500).json({
-			message: "Error running health check",
-			error: error.message,
-		});
-	}
-});
-
-// Debug endpoint to fix voice_note_shares table issues
-router.post("/debug/fix-shares-table", async (req, res) => {
-	try {
-		console.log("[DEBUG] Attempting to fix voice_note_shares table");
-
-		// Check if table exists
-		const tableExists = await dbTools.checkVoiceSharesTableExists();
-
-		if (tableExists) {
-			return res.status(200).json({
-				message: "No fixes needed",
-				details: "voice_note_shares table already exists",
-			});
-		}
-
-		// Try to create the table
-		const result = await dbTools.createVoiceSharesTable();
-
-		if (result.success) {
-			return res.status(200).json({
-				message: "Fix applied successfully",
-				details: "voice_note_shares table created",
-			});
-		} else {
-			return res.status(500).json({
-				message: "Failed to fix issue",
-				error: result.error,
-			});
-		}
-	} catch (error) {
-		console.error("[ERROR] Error fixing table issues:", error);
-		return res.status(500).json({
-			message: "Error applying fixes",
-			error: error.message,
-		});
-	}
-});
-
-// Debug endpoint to run specific migrations
-router.post("/debug/run-migration", async (req, res) => {
-	try {
-		const { migration } = req.body;
-
-		if (!migration) {
-			return res.status(400).json({
-				message: "Migration name is required",
-				error: "Missing 'migration' field in request body",
-			});
-		}
-
-		console.log(`[DEBUG] Running migration: ${migration}`);
-
-		const result = await dbTools.runMigration(migration);
-
-		if (result.success) {
-			return res.status(200).json({
-				message: "Migration successful",
-				details: result.message,
-				migration,
-			});
-		} else {
-			return res.status(500).json({
-				message: "Migration failed",
-				error: result.error,
-				migration,
-			});
-		}
-	} catch (error) {
-		console.error("[ERROR] Error running migration:", error);
-		return res.status(500).json({
-			message: "Error running migration",
-			error: error.message,
-		});
 	}
 });
 
