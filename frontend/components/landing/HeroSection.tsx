@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
 	View,
 	Text,
@@ -9,7 +9,9 @@ import {
 	Platform,
 	ViewStyle,
 	TextStyle,
+	Image,
 } from "react-native";
+import * as Font from "expo-font";
 import AnimatedButton from "./AnimatedButton"; // Assuming AnimatedButton is in the same folder
 import SocialAuthButton from "./SocialAuthButton"; // Assuming SocialAuthButton is in the same folder
 import AudioWaveform from "./AudioWaveform"; // Assuming AudioWaveform is in the same folder
@@ -33,6 +35,11 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 	onAppleSignIn,
 	isAuthLoading,
 }) => {
+	// State to track if fonts are loaded
+	const [fontsLoaded, setFontsLoaded] = useState(false);
+	// Add state for logo animation
+	const logoAnim = useRef(new Animated.Value(0)).current;
+
 	// Animation values - kept from original LandingPage
 	const fadeAnim = useRef(new Animated.Value(0)).current;
 	const slideAnim = useRef(new Animated.Value(30)).current;
@@ -41,9 +48,54 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 	const buttonAnim = useRef(new Animated.Value(0)).current;
 	const waveAnim = useRef(new Animated.Value(0)).current;
 
+	// Add web-specific font style
 	useEffect(() => {
+		const loadFonts = async () => {
+			if (Platform.OS === "web") {
+				try {
+					// Check if running in a browser environment
+					if (typeof document !== "undefined") {
+						const style = document.createElement("style");
+						style.textContent = `
+							@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
+						`;
+						document.head.append(style);
+					}
+					setFontsLoaded(true);
+				} catch (error) {
+					console.error("Error setting up web fonts:", error);
+					setFontsLoaded(true);
+				}
+			} else {
+				// Load fonts for native platforms
+				try {
+					await Font.loadAsync({
+						DancingScript: require("../../assets/fonts/DancingScript.ttf"),
+					});
+					setFontsLoaded(true);
+				} catch (error) {
+					console.error("Error loading native fonts:", error);
+					setFontsLoaded(true);
+				}
+			}
+		};
+
+		loadFonts();
+	}, []);
+
+	useEffect(() => {
+		// Only start animations once fonts are loaded
+		if (!fontsLoaded) return;
+
 		// Staggered entrance animations - kept from original LandingPage
 		Animated.sequence([
+			// Start with logo animation
+			Animated.timing(logoAnim, {
+				toValue: 1,
+				duration: 800,
+				useNativeDriver: true,
+				easing: Easing.out(Easing.cubic),
+			}),
 			Animated.timing(titleAnim, {
 				toValue: 1,
 				duration: 800,
@@ -83,7 +135,21 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 				easing: Easing.out(Easing.cubic),
 			}),
 		]).start();
-	}, [titleAnim, subtitleAnim, waveAnim, fadeAnim, slideAnim, buttonAnim]);
+	}, [
+		titleAnim,
+		subtitleAnim,
+		waveAnim,
+		fadeAnim,
+		slideAnim,
+		buttonAnim,
+		logoAnim,
+		fontsLoaded,
+	]);
+
+	// If fonts aren't loaded yet, don't render anything visible
+	if (!fontsLoaded) {
+		return <View style={styles.heroSection} />;
+	}
 
 	return (
 		<View style={styles.heroSection}>
@@ -96,12 +162,22 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 					},
 				]}
 			>
+				{/* Logo Image */}
+				<Animated.View style={[styles.logoContainer, { opacity: logoAnim }]}>
+					<Image
+						source={require("../../assets/images/logo_transparent.png")}
+						style={styles.logo}
+						resizeMode="contain"
+					/>
+				</Animated.View>
+
 				<Animated.Text style={[styles.heroTitle, { opacity: titleAnim }]}>
-					Your Voice. Your Vibe. Your Ripple.
+					Your Voice. Your Vibe.
 				</Animated.Text>
 
 				<Animated.Text style={[styles.heroSubtitle, { opacity: subtitleAnim }]}>
-					Turn your thoughts into Ripples & let them echo across the world !
+					Some words can't type, Some voices glow <br />
+					No more filters, Let Ripply show !
 				</Animated.Text>
 
 				<Animated.View
@@ -180,8 +256,17 @@ const styles = StyleSheet.create({
 		// opacity: fadeAnim, // This was part of Animated.View style prop directly
 		// transform: [{ translateY: slideAnim }], // This was part of Animated.View style prop directly
 	},
+	logoContainer: {
+		marginBottom: 20,
+		alignItems: "center",
+	},
+	logo: {
+		width: 120,
+		height: 120,
+	},
 	heroTitle: {
-		fontSize: width < 380 ? 32 : 42,
+		fontSize: width < 380 ? 32 : 48,
+		fontFamily: "Dancing Script, DancingScript, cursive",
 		fontWeight: "bold",
 		color: "#FFFFFF",
 		marginBottom: 16,
@@ -189,10 +274,11 @@ const styles = StyleSheet.create({
 		textShadowColor: "rgba(138, 79, 209, 0.6)",
 		textShadowOffset: { width: 0, height: 2 },
 		textShadowRadius: 10,
+		letterSpacing: 1,
 		// opacity: titleAnim, // This was part of Animated.Text style prop directly
 	},
 	heroSubtitle: {
-		fontSize: 18,
+		fontSize: 16,
 		color: "#E0D1FF",
 		textAlign: "center",
 		fontWeight: "500",

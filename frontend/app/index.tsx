@@ -13,7 +13,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import AuthModal from "../components/auth/AuthModal";
 import { useAuthHandler } from "../hooks/useAuthHandler";
 import HeroSection from "../components/landing/HeroSection";
-import Footer from "../components/landing/Footer";
 import BackgroundRippleEffect from "../components/landing/BackgroundRippleEffect";
 
 export default function LandingPage() {
@@ -79,8 +78,6 @@ export default function LandingPage() {
 						/>
 					</ScrollView>
 				</SafeAreaView>
-
-				<Footer />
 			</LinearGradient>
 
 			<AuthModal
