@@ -132,16 +132,32 @@ const apiRequest = async (endpoint, options = {}) => {
 						// Clear invalid token
 						try {
 							await AsyncStorage.removeItem(TOKEN_KEY);
-							await AsyncStorage.removeItem("@ripply_user");
+							console.log("[AUTH] Cleared invalid token");
+
+							// If this is a share or like request that failed auth, notify the user (improved UX)
+							if (endpoint.includes("/share") || endpoint.includes("/like")) {
+								throw new Error(
+									"Authentication required. Please sign in again."
+								);
+							}
 						} catch (clearError) {
 							console.warn("[AUTH] Error clearing invalid token:", clearError);
 						}
 					}
 
 					const errorData = await response.json().catch(() => ({}));
-					throw new Error(
-						errorData.message || `Request failed with status ${response.status}`
-					);
+					const errorMessage =
+						errorData.message ||
+						`Request failed with status ${response.status}`;
+
+					// Enhanced logging for API errors
+					console.error(`[API ERROR] ${endpoint} failed:`, {
+						status: response.status,
+						message: errorMessage,
+						details: errorData,
+					});
+
+					throw new Error(errorMessage);
 				}
 
 				// Parse the response as JSON
