@@ -23,10 +23,13 @@ import {
 	getVoiceNoteStats,
 	recordPlay,
 } from "../../services/api/voiceNoteService";
-import { getRepostCount } from "../../services/api/repostService";
+import {
+	hasUserRepostedVoiceNote,
+	toggleRepost,
+	getRepostCount,
+} from "../../services/api/repostService";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
-import { useRepostStatus } from "../../hooks/useRepostStatus";
 import Colors, { hexToRgba, opacityValues } from "../../constants/Colors";
 
 // Import types
@@ -71,52 +74,51 @@ export function VoiceNoteCardImpl({
 	voiceNoteUsers,
 }: VoiceNoteCardProps) {
 	const router = useRouter();
-	const { colors, isDarkMode } = useTheme();
 	const { user } = useUser();
+	const { colors, isDarkMode } = useTheme();
+	const progressContainerRef = useRef<View>(null);
 
-	// Get logged in user ID
-	const loggedInUserId = user?.id || currentUserId || null;
+	// Get user ID from context or props
+	const loggedInUserId = user?.id || currentUserId;
 
-	// User avatar is null by default
-	const effectiveAvatarUrl =
-		userAvatarUrl || voiceNoteUsers?.avatar_url || null;
+	// Check if this voice note has a background image
+	const hasBackgroundImage = !!voiceNote.backgroundImage;
 
-	// Username fallbacks
+	// For voice notes with background images, always use light mode colors
+	// This ensures consistent appearance in both light and dark mode
+	const effectiveColors = hasBackgroundImage ? Colors.light : colors;
+	const effectiveIsDarkMode = hasBackgroundImage ? false : isDarkMode;
+
+	// Get styles based on effective theme and background image presence
+	const styles = getStyles(
+		effectiveColors,
+		effectiveIsDarkMode,
+		hasBackgroundImage
+	);
+
+	// Determine overlay intensity based on theme
+	const overlayIntensity = isDarkMode
+		? opacityValues.heavy
+		: opacityValues.semitransparent;
+
+	// Combine username sources with fallbacks
 	const effectiveUsername = username || voiceNoteUsers?.username || "user";
 	const effectiveDisplayName =
 		displayName || voiceNoteUsers?.display_name || "User";
+	const effectiveAvatarUrl =
+		userAvatarUrl || voiceNoteUsers?.avatar_url || null;
 
-	// Determine if we have a background image
-	const hasBackgroundImage = !!voiceNote.backgroundImage;
+	// State for repost status - use the prop if available, otherwise track locally
+	const [internalRepostedState, setInternalRepostedState] = useState<boolean>(
+		isRepostedProp !== undefined ? Boolean(isRepostedProp) : false
+	);
 
-	// Use adaptive theme based on background image
-	const effectiveIsDarkMode = hasBackgroundImage ? true : isDarkMode;
-	const effectiveColors = hasBackgroundImage
-		? {
-				...colors,
-				text: "#FFFFFF", // Use white text on image backgrounds
-				textSecondary: "rgba(255, 255, 255, 0.8)", // Slightly transparent white
-				tabIconDefault: "rgba(255, 255, 255, 0.6)", // Even more transparent white
-				border: "rgba(255, 255, 255, 0.2)",
-		  }
-		: colors;
-
-	// Overlay intensity based on theme
-	const overlayIntensity = effectiveIsDarkMode ? 0.5 : 0.2;
-
-	// Use our new hook for repost status management
-	const {
-		isReposted: internalRepostedState,
-		isLoading: internalRepostLoading,
-		toggleRepostStatus,
-	} = useRepostStatus(voiceNote.id);
-
-	// Determine the effective repost status, prioritizing the prop over the hook state
-	const isRepostedEffective =
-		isRepostedProp !== undefined ? isRepostedProp : internalRepostedState;
-
-	// Determine the effective loading state, prioritizing the prop
-	const isRepostLoading = isLoadingRepostStatus || internalRepostLoading;
+	// Determine effective repost status (prop takes precedence)
+	const isRepostedEffective = isLoadingRepostStatus
+		? false // Don't show as reposted while loading
+		: Boolean(
+				isRepostedProp !== undefined ? isRepostedProp : internalRepostedState
+		  );
 
 	// State management
 	const [isPlaying, setIsPlaying] = useState(false);
@@ -151,15 +153,12 @@ export function VoiceNoteCardImpl({
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const shareScale = useRef(new Animated.Value(1)).current;
 
-	// Progress container ref for seek functionality
-	const progressContainerRef = useRef<View>(null);
-
 	// Theme-specific colors for repost attribution
 	const repostAttributionBackgroundColor = hasBackgroundImage
 		? hexToRgba(colors.black, opacityValues.heavy) // Darker background for image voice notes
 		: effectiveIsDarkMode
 		? hexToRgba(colors.black, opacityValues.nearsolid) // Darker, more opaque background for dark mode
-		: hexToRgba(colors.lightGrey, opacityValues.nearsolid);
+		: hexToRgba(colors.lightGrey, opacityValues.nearsolid); // Lighter background for light mode
 	const repostAttributionTextColor = hasBackgroundImage
 		? colors.white // Brighter text for image backgrounds
 		: effectiveIsDarkMode
@@ -178,11 +177,8 @@ export function VoiceNoteCardImpl({
 			setIsLoadingShareCount(true);
 			const count = await getRepostCount(voiceNote.id);
 			setSharesCount(typeof count === "number" ? count : 0);
-			console.log(
-				`[VoiceNoteCardImpl] Fetched repost count for ${voiceNote.id}: ${count}`
-			);
 		} catch (error) {
-			console.error("[VoiceNoteCardImpl] Error fetching repost count:", error);
+			console.error("Error fetching repost count:", error);
 		} finally {
 			setIsLoadingShareCount(false);
 		}
@@ -310,8 +306,18 @@ export function VoiceNoteCardImpl({
 		console.log("Plays button pressed");
 	}, []);
 
+	// Update internal state when the prop changes
+	useEffect(() => {
+		if (
+			isRepostedProp !== undefined &&
+			internalRepostedState !== isRepostedProp
+		) {
+			setInternalRepostedState(isRepostedProp);
+		}
+	}, [isRepostedProp]);
+
 	// Handle repost button press using our new repost service
-	const handleRepostPress = useCallback(async () => {
+	const handleRepostPress = useCallback(() => {
 		if (!loggedInUserId) {
 			Alert.alert("Sign In Required", "Please sign in to repost voice notes.");
 			return;
@@ -322,38 +328,35 @@ export function VoiceNoteCardImpl({
 		}
 
 		setIsLoadingShareCount(true);
-		console.log(
-			`[VoiceNoteCardImpl] Toggling repost for voice note ${voiceNote.id}`
-		);
+		console.log(`Reposting voice note ${voiceNote.id}`);
 
-		try {
-			// Use our new hook to toggle repost status
-			const result = await toggleRepostStatus();
-
-			if (result?.success) {
-				// Update share count
-				if (typeof result.repostCount === "number") {
-					setSharesCount(result.repostCount);
+		toggleRepost(voiceNote.id, loggedInUserId)
+			.then((response) => {
+				// Update share count and internal state based on response
+				if (typeof response.repostCount === "number") {
+					setSharesCount(response.repostCount);
 				} else {
 					// Fallback to fetching the count
 					fetchShareCount();
 				}
 
-				// The final reposted state after toggle
-				const isNowReposted = result.isReposted;
+				// Update repost state
+				const wasReposted = internalRepostedState;
+				const isNowReposted = response.isReposted;
 
-				console.log(`[VoiceNoteCardImpl] Repost toggled: ${isNowReposted}`);
+				console.log(
+					`Repost status changed from ${wasReposted} to ${isNowReposted}`
+				);
+				setInternalRepostedState(isNowReposted);
 
-				// Call callback with the new status if provided
+				// Call callback with the new status
 				if (onShareStatusChanged) {
 					onShareStatusChanged(voiceNote.id, isNowReposted);
 				}
 
 				// Call unshared callback if the note was unreposted
-				if (!isNowReposted && onVoiceNoteUnshared) {
-					console.log(
-						`[VoiceNoteCardImpl] Calling onVoiceNoteUnshared for ${voiceNote.id}`
-					);
+				if (wasReposted && !isNowReposted && onVoiceNoteUnshared) {
+					console.log(`Calling onVoiceNoteUnshared for ${voiceNote.id}`);
 					onVoiceNoteUnshared(voiceNote.id);
 				}
 
@@ -370,14 +373,13 @@ export function VoiceNoteCardImpl({
 						useNativeDriver: true,
 					}),
 				]).start();
-			} else {
-				console.error("[VoiceNoteCardImpl] Failed to toggle repost status");
-			}
-		} catch (error) {
-			console.error("[VoiceNoteCardImpl] Error toggling repost:", error);
-		} finally {
-			setIsLoadingShareCount(false);
-		}
+			})
+			.catch((error) => {
+				console.error("Error toggling repost:", error);
+			})
+			.finally(() => {
+				setIsLoadingShareCount(false);
+			});
 	}, [
 		voiceNote.id,
 		loggedInUserId,
@@ -386,7 +388,7 @@ export function VoiceNoteCardImpl({
 		shareScale,
 		onVoiceNoteUnshared,
 		onShareStatusChanged,
-		toggleRepostStatus,
+		internalRepostedState,
 	]);
 
 	// Handle native share button long press
@@ -642,20 +644,25 @@ export function VoiceNoteCardImpl({
 
 			{/* Interaction buttons */}
 			<VoiceNoteInteractions
-				isReposted={isRepostedEffective}
+				styles={styles}
+				colors={effectiveColors}
+				hasBackgroundImage={hasBackgroundImage}
 				isLiked={isLiked}
-				isLoadingLike={isLoadingLike}
-				isLoadingComments={isLoadingComments}
-				isLoadingRepostStatus={isRepostLoading}
+				likeScale={likeScale}
 				likesCount={likesCount}
 				commentsCount={commentsCount}
+				playsCount={playsCount}
+				isReposted={isRepostedEffective}
+				shareScale={shareScale}
 				sharesCount={sharesCount}
-				useOnImageStyles={hasBackgroundImage}
-				handleCommentPress={handleCommentPress}
+				isLoadingShareCount={isLoadingShareCount}
+				isLoadingStats={isLoadingStats}
 				handleLikePress={handleLikePress}
+				handleCommentPress={handleCommentPress}
+				handlePlaysPress={handlePlaysPress}
 				handleRepostPress={handleRepostPress}
 				handleShareCountLongPress={handleShareCountLongPress}
-				voiceNoteId={voiceNote.id}
+				isLoadingRepostStatus={isLoadingRepostStatus}
 			/>
 		</View>
 	);
