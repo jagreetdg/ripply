@@ -119,19 +119,39 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 			throw followingError;
 		}
 
+		// Extract the IDs of users being followed
+		const followingIds = followingData.map((follow) => follow.following_id);
+		console.log(`[DEBUG] User ${userId} follows ${followingIds.length} users`);
+		console.log(`[DEBUG] Following IDs: ${JSON.stringify(followingIds)}`);
+
 		// If the user doesn't follow anyone, return an empty array
-		if (!followingData || followingData.length === 0) {
+		if (!followingIds || followingIds.length === 0) {
 			console.log(
 				`[DEBUG] User ${userId} doesn't follow anyone, returning empty feed`
 			);
 			return res.status(200).json([]);
 		}
 
-		// Extract the IDs of users being followed
-		const followingIds = followingData.map((follow) => follow.following_id);
-		console.log(`[DEBUG] User ${userId} follows ${followingIds.length} users`);
+		// VERIFICATION: Check if users being followed have any voice notes
+		const { count: postCount, error: countError } = await supabase
+			.from("voice_notes")
+			.select("*", { count: "exact", head: true })
+			.in("user_id", followingIds);
+
+		if (countError) {
+			console.error("[ERROR] Error counting original posts:", countError);
+		} else {
+			console.log(
+				`[DEBUG] Database confirms ${postCount} original posts from followed users`
+			);
+		}
 
 		// Get voice notes from followed users
+		console.log(
+			`[DEBUG] Fetching original posts for followed users: ${followingIds.join(
+				", "
+			)}`
+		);
 		const { data: originalPosts, error: originalError } = await supabase
 			.from("voice_notes")
 			.select(
@@ -151,6 +171,43 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 			console.error("[ERROR] Error fetching original posts:", originalError);
 			throw originalError;
 		}
+
+		console.log(
+			`[DEBUG] Retrieved ${originalPosts?.length || 0} original posts`
+		);
+		if (originalPosts && originalPosts.length > 0) {
+			console.log(
+				`[DEBUG] First original post user_id: ${originalPosts[0].user_id}`
+			);
+			console.log(
+				`[DEBUG] Original post user_ids: ${originalPosts
+					.map((p) => p.user_id)
+					.join(", ")}`
+			);
+
+			// CRITICAL: Verify if the posts are actually from users we're following
+			const postCreators = originalPosts.map((p) => p.user_id);
+			const areAllPostsFromFollowedUsers = postCreators.every((id) =>
+				followingIds.includes(id)
+			);
+			console.log(
+				`[DEBUG] All posts from followed users? ${areAllPostsFromFollowedUsers}`
+			);
+		} else {
+			console.log(`[DEBUG] No original posts found for followed users`);
+		}
+
+		// Process original posts
+		const processedOriginalPosts = originalPosts.map((note) => {
+			// Extract tags from the nested structure
+			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
+			return {
+				...note,
+				tags,
+				is_shared: false, // IMPORTANT: Explicitly mark as not shared
+			};
+		});
 
 		// Get shared voice notes from followed users
 		const { data: sharedData, error: sharedError } = await supabase
@@ -216,27 +273,29 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 				return {
 					...note,
 					tags,
-					is_shared: true,
+					is_shared: true, // IMPORTANT: Explicitly mark as shared
 					shared_at: shareRecord?.shared_at || new Date().toISOString(),
 					shared_by: shareRecord?.sharer || null,
 				};
 			});
 		}
 
-		// Process original posts
-		const processedOriginalPosts = originalPosts.map((note) => {
-			// Extract tags from the nested structure
-			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
-
-			return {
-				...note,
-				tags,
-				is_shared: false,
-			};
-		});
-
 		// Combine both types of posts
 		const allPosts = [...processedOriginalPosts, ...processedSharedPosts];
+		console.log(
+			`[DEBUG] Combined ${processedOriginalPosts.length} original posts with ${processedSharedPosts.length} shared posts`
+		);
+
+		// Print type breakdown
+		const originalCount = allPosts.filter(
+			(post) => post.is_shared !== true
+		).length;
+		const sharedCount = allPosts.filter(
+			(post) => post.is_shared === true
+		).length;
+		console.log(
+			`[DEBUG] Final feed breakdown - Original: ${originalCount}, Shared: ${sharedCount}`
+		);
 
 		// Sort by created_at or shared_at (newest first)
 		allPosts.sort((a, b) => {
@@ -255,6 +314,19 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 		console.log(
 			`[DEBUG] Returning ${paginatedPosts.length} personalized feed items for user ${userId}`
 		);
+
+		// Final check of what we're returning
+		if (paginatedPosts.length > 0) {
+			const finalOriginalCount = paginatedPosts.filter(
+				(post) => post.is_shared !== true
+			).length;
+			const finalSharedCount = paginatedPosts.filter(
+				(post) => post.is_shared === true
+			).length;
+			console.log(
+				`[DEBUG] Paginated feed - Original: ${finalOriginalCount}, Shared: ${finalSharedCount}`
+			);
+		}
 
 		// Return in the same format as the regular voice notes endpoint
 		res.status(200).json(paginatedPosts);

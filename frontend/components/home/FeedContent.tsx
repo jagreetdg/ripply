@@ -54,6 +54,44 @@ export function FeedContent({
 	const { height } = useWindowDimensions();
 	const { user: currentUser } = useUser();
 
+	// Add logging to debug feed items
+	useEffect(() => {
+		if (feedItems.length > 0) {
+			console.log(`[DEBUG] FeedContent received ${feedItems.length} items`);
+
+			// Check for original vs shared posts
+			const sharedItems = feedItems.filter((item) => item.isShared === true);
+			const originalItems = feedItems.filter((item) => item.isShared === false);
+
+			console.log(
+				`[DEBUG] Feed breakdown - Original: ${originalItems.length}, Shared: ${sharedItems.length}`
+			);
+
+			if (originalItems.length === 0) {
+				console.log("[DEBUG] WARNING: No original posts in feed!");
+			}
+
+			// Log a sample of each type if available
+			if (originalItems.length > 0) {
+				console.log(
+					"[DEBUG] Sample original post:",
+					originalItems[0].id,
+					originalItems[0].userId,
+					originalItems[0].isShared
+				);
+			}
+
+			if (sharedItems.length > 0) {
+				console.log(
+					"[DEBUG] Sample shared post:",
+					sharedItems[0].id,
+					sharedItems[0].userId,
+					sharedItems[0].isShared
+				);
+			}
+		}
+	}, [feedItems]);
+
 	// Add state to track which voice notes the current user has shared
 	const [sharedStatusMap, setSharedStatusMap] = useState<
 		Record<string, boolean>
@@ -193,7 +231,7 @@ export function FeedContent({
 							timePosted={item.timePosted}
 							isShared={sharedStatusMap[item.voiceNote.id] || false}
 							sharedBy={item.sharedBy}
-							showRepostAttribution={item.isShared}
+							showRepostAttribution={item.isShared === true}
 							onUserProfilePress={() =>
 								onUserProfilePress(item.userId, item.username)
 							}
