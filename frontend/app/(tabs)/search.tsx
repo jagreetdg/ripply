@@ -29,6 +29,7 @@ import {
 	getDiscoveryPosts,
 	getTrendingUsers,
 } from "../../services/api/searchService";
+import { checkShareStatus } from "../../services/api/voiceNoteService";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -73,6 +74,11 @@ export default function SearchScreen() {
 		posts: false,
 		users: false,
 	});
+
+	// Add state to track which voice notes the current user has shared
+	const [sharedStatusMap, setSharedStatusMap] = useState<
+		Record<string, boolean>
+	>({});
 
 	// Animations
 	const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -379,6 +385,34 @@ export default function SearchScreen() {
 		return showAllPosts ? posts : posts.slice(0, PREVIEW_COUNT);
 	};
 
+	// Fetch share status for all displayed posts
+	useEffect(() => {
+		const checkShareStatuses = async () => {
+			if (!currentUser?.id || !postResults.length) return;
+
+			console.log(
+				`Checking share status for ${postResults.length} search results`
+			);
+			const statusMap: Record<string, boolean> = {};
+
+			// Check each post
+			for (const post of postResults) {
+				try {
+					const isShared = await checkShareStatus(post.id, currentUser.id);
+					statusMap[post.id] = isShared;
+					console.log(`Post ${post.id} is shared by current user: ${isShared}`);
+				} catch (error) {
+					console.error(`Error checking share status for ${post.id}:`, error);
+					statusMap[post.id] = false;
+				}
+			}
+
+			setSharedStatusMap(statusMap);
+		};
+
+		checkShareStatuses();
+	}, [postResults, currentUser?.id]);
+
 	// Render user item
 	const renderUserItem = ({ item }: { item: any }) => {
 		return <UserSearchResult user={item} />;
@@ -411,6 +445,7 @@ export default function SearchScreen() {
 					username={userData.username}
 					userAvatarUrl={userData.avatar_url}
 					currentUserId={currentUser?.id}
+					isShared={sharedStatusMap[item.id] || false}
 				/>
 			</View>
 		);

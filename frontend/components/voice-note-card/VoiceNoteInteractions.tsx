@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, TouchableOpacity, Animated, ActivityIndicator } from "react-native";
+import {
+	View,
+	Text,
+	TouchableOpacity,
+	Animated,
+	ActivityIndicator,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { formatNumber } from "./VoiceNoteCardUtils"; // Path remains ./
 
@@ -12,11 +18,12 @@ interface VoiceNoteInteractionsProps {
 	likesCount: number;
 	commentsCount: number;
 	playsCount: number;
-	isShared: boolean;
+	isReposted: boolean; // Renamed from isShared for clarity
 	shareScale: Animated.Value;
 	sharesCount: number;
 	isLoadingShareCount: boolean;
 	isLoadingStats?: boolean; // Add loading state for all stats
+	isLoadingRepostStatus?: boolean; // Renamed from isLoadingShareStatus
 	handleLikePress: () => void;
 	handleCommentPress: () => void;
 	handlePlaysPress: () => void;
@@ -36,11 +43,12 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 	likesCount,
 	commentsCount,
 	playsCount,
-	isShared,
+	isReposted, // Renamed from isShared
 	shareScale,
 	sharesCount,
 	isLoadingShareCount,
 	isLoadingStats = false,
+	isLoadingRepostStatus = false, // Renamed from isLoadingShareStatus
 	handleLikePress,
 	handleCommentPress,
 	handlePlaysPress,
@@ -57,7 +65,9 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 			? colors.likedOnImage
 			: colors.liked
 		: iconColor;
-	const repostedColor = isShared
+
+	// Calculate repost color - use Boolean type for consistency
+	const repostColor = Boolean(isReposted)
 		? useOnImageStyles
 			? colors.repostedOnImage
 			: colors.reposted
@@ -91,9 +101,9 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 						/>
 					</Animated.View>
 					{isLoadingStats ? (
-						<ActivityIndicator 
-							size={loadingIndicatorSize} 
-							color={loadingIndicatorColor} 
+						<ActivityIndicator
+							size={loadingIndicatorSize}
+							color={loadingIndicatorColor}
 							style={{ marginLeft: 5 }}
 						/>
 					) : (
@@ -123,9 +133,9 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 						<Feather name="message-circle" size={18} color={iconColor} />
 					</View>
 					{isLoadingStats ? (
-						<ActivityIndicator 
-							size={loadingIndicatorSize} 
-							color={loadingIndicatorColor} 
+						<ActivityIndicator
+							size={loadingIndicatorSize}
+							color={loadingIndicatorColor}
 							style={{ marginLeft: 5 }}
 						/>
 					) : (
@@ -155,9 +165,9 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 						<Feather name="headphones" size={18} color={iconColor} />
 					</View>
 					{isLoadingStats ? (
-						<ActivityIndicator 
-							size={loadingIndicatorSize} 
-							color={loadingIndicatorColor} 
+						<ActivityIndicator
+							size={loadingIndicatorSize}
+							color={loadingIndicatorColor}
 							style={{ marginLeft: 5 }}
 						/>
 					) : (
@@ -181,21 +191,30 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 				activeOpacity={0.7}
 				onPress={handleRepostPress}
 				onLongPress={handleShareCountLongPress}
-				disabled={isLoadingShareCount || isLoadingStats}
+				disabled={
+					isLoadingShareCount || isLoadingStats || isLoadingRepostStatus
+				}
 			>
 				<View style={styles.interactionContent}>
 					<Animated.View style={[{ transform: [{ scale: shareScale }] }]}>
-						<Feather
-							name={"repeat"}
-							size={18}
-							color={repostedColor}
-							style={isShared ? { transform: [{ scale: 1.05 }] } : {}}
-						/>
+						{isLoadingRepostStatus ? (
+							<ActivityIndicator
+								size={loadingIndicatorSize}
+								color={loadingIndicatorColor}
+							/>
+						) : (
+							<Feather
+								name={"repeat"}
+								size={18}
+								color={repostColor}
+								style={isReposted ? { transform: [{ scale: 1.05 }] } : {}}
+							/>
+						)}
 					</Animated.View>
-					{isLoadingStats || isLoadingShareCount ? (
-						<ActivityIndicator 
-							size={loadingIndicatorSize} 
-							color={loadingIndicatorColor} 
+					{isLoadingStats || isLoadingShareCount || isLoadingRepostStatus ? (
+						<ActivityIndicator
+							size={loadingIndicatorSize}
+							color={loadingIndicatorColor}
 							style={{ marginLeft: 5 }}
 						/>
 					) : (
@@ -205,7 +224,7 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 									? styles.interactionTextOnImage
 									: styles.interactionCount,
 								{
-									color: repostedColor,
+									color: repostColor,
 								},
 							]}
 						>

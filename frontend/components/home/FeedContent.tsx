@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
 	View,
 	Text,
@@ -15,6 +15,8 @@ import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "../voice-note-card/VoiceNoteCard";
 import { useTheme } from "../../context/ThemeContext";
 import { FeedItem } from "../../hooks/useFeedData";
+import { checkShareStatus } from "../../services/api/voiceNoteService";
+import { useUser } from "../../context/UserContext";
 
 // Define a constant for header height to match the one in home.tsx
 const HEADER_HEIGHT = 60;
@@ -50,6 +52,46 @@ export function FeedContent({
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const { height } = useWindowDimensions();
+	const { user: currentUser } = useUser();
+
+	// Add state to track which voice notes the current user has shared
+	const [sharedStatusMap, setSharedStatusMap] = useState<
+		Record<string, boolean>
+	>({});
+
+	// Fetch share status for all voice notes
+	useEffect(() => {
+		const checkShareStatuses = async () => {
+			if (!currentUser?.id || feedItems.length === 0) return;
+
+			console.log(`Checking share status for ${feedItems.length} feed items`);
+			const statusMap: Record<string, boolean> = {};
+
+			// Check each voice note
+			for (const item of feedItems) {
+				try {
+					const isShared = await checkShareStatus(
+						item.voiceNote.id,
+						currentUser.id
+					);
+					statusMap[item.voiceNote.id] = isShared;
+					console.log(
+						`Voice note ${item.voiceNote.id} is shared by current user: ${isShared}`
+					);
+				} catch (error) {
+					console.error(
+						`Error checking share status for ${item.voiceNote.id}:`,
+						error
+					);
+					statusMap[item.voiceNote.id] = false;
+				}
+			}
+
+			setSharedStatusMap(statusMap);
+		};
+
+		checkShareStatuses();
+	}, [feedItems, currentUser?.id]);
 
 	// Calculate the padding needed to account for the header
 	// Use contentInsetTop if provided, otherwise calculate default
@@ -149,9 +191,9 @@ export function FeedContent({
 							username={item.username}
 							userAvatarUrl={item.userAvatar}
 							timePosted={item.timePosted}
-							isShared={item.isShared}
+							isShared={sharedStatusMap[item.voiceNote.id] || false}
 							sharedBy={item.sharedBy}
-							showRepostAttribution={true}
+							showRepostAttribution={item.isShared}
 							onUserProfilePress={() =>
 								onUserProfilePress(item.userId, item.username)
 							}

@@ -21,6 +21,7 @@ import {
 	getVoiceNoteById,
 	getVoiceNoteStats,
 	deleteVoiceNote,
+	checkShareStatus,
 } from "../../../services/api/voiceNoteService";
 import {
 	getUserVoiceNotes as getVoiceNotesForUser,
@@ -313,7 +314,7 @@ export function VoiceNotesList({
 			});
 	};
 
-	// Handle share voice note
+	// Handle share voice note (Native share dialog)
 	const handleShare = async (voiceNoteId: string) => {
 		try {
 			// Fetch the voice note details if needed, or construct URL directly
@@ -345,6 +346,53 @@ export function VoiceNotesList({
 			Alert.alert("Share Error", error.message);
 		}
 	};
+
+	// Update the voice note's share status in our local state when changed
+	const updateVoiceNoteShareStatus = useCallback(
+		(voiceNoteId: string, isShared: boolean) => {
+			console.log(
+				`Updating local share status for ${voiceNoteId} to ${isShared}`
+			);
+			setLocalVoiceNotes((prevNotes) =>
+				prevNotes.map((note) =>
+					note.id === voiceNoteId
+						? { ...note, currentUserHasShared: isShared }
+						: note
+				)
+			);
+		},
+		[]
+	);
+
+	// Handle unshare event (remove the voice note from the list if in shared tab)
+	const handleUnshare = useCallback(
+		(voiceNoteId: string) => {
+			console.log(
+				`Voice note unshared: ${voiceNoteId}, activeTab: ${activeTab}`
+			);
+
+			// Update the voice note's share status
+			updateVoiceNoteShareStatus(voiceNoteId, false);
+
+			// Only remove from list if we're in the shared tab
+			if (activeTab === "shared" || isSharedList) {
+				console.log(`Removing voice note ${voiceNoteId} from shared list`);
+				setLocalVoiceNotes((prev) =>
+					prev.filter((note) => note.id !== voiceNoteId)
+				);
+			}
+		},
+		[activeTab, isSharedList, updateVoiceNoteShareStatus]
+	);
+
+	// Function to handle post-sharing status update
+	const handleAfterShare = useCallback(
+		(voiceNoteId: string, isShared: boolean) => {
+			console.log(`handleAfterShare: ${voiceNoteId}, isShared: ${isShared}`);
+			updateVoiceNoteShareStatus(voiceNoteId, isShared);
+		},
+		[updateVoiceNoteShareStatus]
+	);
 
 	// Handle navigation to user profile
 	const handleUserProfilePress = (profileUsername?: string) => {
@@ -484,21 +532,83 @@ export function VoiceNotesList({
 		console.log(`Play voice note: ${voiceNoteId}`);
 	};
 
+	useEffect(() => {
+		// Add debug logs to help diagnose the issue
+		console.log("Current user ID:", currentUser?.id);
+		console.log(
+			"Voice notes with share status:",
+			localVoiceNotes.map((note) => ({
+				id: note.id,
+				is_shared: note.is_shared,
+				shared_by_id: note.shared_by?.id || note.sharer_id,
+			}))
+		);
+	}, [localVoiceNotes, currentUser]);
+
+	// Check if the current user has shared each voice note
+	useEffect(() => {
+		const checkUserSharedStatus = async () => {
+			if (!currentUser?.id || localVoiceNotes.length === 0) return;
+
+			console.log(
+				`Checking share status for ${localVoiceNotes.length} voice notes`
+			);
+
+			// Create a new array to store updated notes with share status
+			const updatedNotes = [...localVoiceNotes];
+			let hasStatusChanges = false;
+
+			// Check share status for each note
+			for (let i = 0; i < updatedNotes.length; i++) {
+				const note = updatedNotes[i];
+				try {
+					// Skip if we already have the share status
+					if (note.currentUserHasShared !== undefined) continue;
+
+					const isShared = await checkShareStatus(note.id, currentUser.id);
+					console.log(
+						`Voice note ${note.id} is shared by current user: ${isShared}`
+					);
+
+					// Update the share status in our local copy
+					if (updatedNotes[i].currentUserHasShared !== isShared) {
+						updatedNotes[i] = {
+							...updatedNotes[i],
+							currentUserHasShared: isShared,
+						};
+						hasStatusChanges = true;
+					}
+				} catch (error) {
+					console.error(
+						`Error checking share status for note ${note.id}:`,
+						error
+					);
+				}
+			}
+
+			// Only update state if any status changed
+			if (hasStatusChanges) {
+				console.log("Updating voice notes with share status");
+				setLocalVoiceNotes(updatedNotes);
+			}
+		};
+
+		checkUserSharedStatus();
+	}, [currentUser?.id, localVoiceNotes.length]);
+
 	const renderItem = ({ item }: { item: VoiceNote }) => {
 		// Determine if the card represents a shared/reposted item
-		const isSharedItem = !!item.is_shared;
+		const isRepostedItem = !!item.is_shared;
 
-		// Log the shared item details for debugging
-		if (isSharedItem) {
-			console.log(`Rendering shared item:`, {
-				id: item.id,
-				isShared: item.is_shared,
-				sharedBy: item.shared_by,
-				sharerId: item.sharer_id,
-				sharerUsername: item.sharer_username,
-				sharerDisplayName: item.sharer_display_name,
-			});
-		}
+		// Use the resolved share status from our API call
+		const isRepostedByCurrentUser = !!item.currentUserHasShared;
+
+		console.log(`Voice note ${item.id} status:`, {
+			isRepostedItem,
+			isRepostedByCurrentUser,
+			currentUserHasShared: item.currentUserHasShared,
+			currentUserId: currentUser?.id,
+		});
 
 		// Prepare the voiceNote prop to match VoiceNoteCardTypes.VoiceNote
 		const cardVoiceNote = {
@@ -529,7 +639,7 @@ export function VoiceNotesList({
 		// Create sharedBy prop from either shared_by object or individual sharer fields
 		let sharedByProp = null;
 
-		if (isSharedItem) {
+		if (isRepostedItem) {
 			if (item.shared_by) {
 				sharedByProp = {
 					id: item.shared_by.id,
@@ -549,12 +659,24 @@ export function VoiceNotesList({
 		}
 
 		// Log sharedByProp for debugging
-		if (isSharedItem) {
+		if (isRepostedItem) {
 			console.log("Created sharedByProp:", sharedByProp);
 		}
 
 		// Determine if the current user is the owner of the note
 		const isOwnerOfDisplayedNote = item.user_id === currentUser?.id;
+
+		// Determine if this note is reposted by the current user
+		const useIsReposted = isRepostedByCurrentUser;
+
+		console.log(
+			`Rendering voice note ${item.id} with isReposted=${useIsReposted}`,
+			{
+				isRepostedByCurrentUser,
+				isRepostedItem,
+				isOwnProfile,
+			}
+		);
 
 		return (
 			<VoiceNoteCard
@@ -570,16 +692,23 @@ export function VoiceNotesList({
 					)
 				)}
 				onPlayPress={() => handlePlayVoiceNote(item.id)}
-				onShare={() => handleShare(item.id)}
+				onShare={(voiceNoteId) => {
+					handleShare(voiceNoteId);
+					// For native share, we don't update internal sharing status
+				}}
+				onShareStatusChanged={(voiceNoteId, isShared) =>
+					handleAfterShare(voiceNoteId, isShared)
+				}
 				onUserProfilePress={
 					item.users?.username
 						? () => handleUserProfilePress(item.users?.username)
 						: undefined
 				}
 				currentUserId={currentUser?.id}
-				isShared={isSharedItem}
+				isReposted={useIsReposted}
 				sharedBy={sharedByProp}
-				showRepostAttribution={true}
+				showRepostAttribution={isRepostedItem}
+				onVoiceNoteUnshared={handleUnshare}
 			/>
 		);
 	};

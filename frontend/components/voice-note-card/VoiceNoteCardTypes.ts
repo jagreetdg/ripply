@@ -62,8 +62,11 @@ export interface VoiceNoteCardProps {
 	onProfilePress?: () => void;
 	onUserProfilePress?: () => void; // Alternative name for onProfilePress
 	onShare?: (voiceNoteId: string) => void;
+	onShareStatusChanged?: (voiceNoteId: string, isShared: boolean) => void; // Callback when a voice note share status changes
+	onVoiceNoteUnshared?: (voiceNoteId: string) => void; // Callback when a voice note is unshared
 	currentUserId?: string;
-	isShared?: boolean; // Whether this post is a shared/reposted voice note
+	isReposted?: boolean; // Whether the current user has reposted this voice note
+	isLoadingRepostStatus?: boolean; // Whether the repost status is still loading
 	sharedBy?: {
 		// Info about who shared the voice note
 		id: string;

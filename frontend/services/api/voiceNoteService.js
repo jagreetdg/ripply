@@ -226,14 +226,49 @@ export const checkLikeStatus = async (voiceNoteId, userId) => {
 export const checkShareStatus = async (voiceNoteId, userId) => {
 	try {
 		console.log(
-			`Checking if user ${userId} has shared voice note ${voiceNoteId}`
+			`[DIAGNOSTIC] Checking if user ${userId} has shared voice note ${voiceNoteId}`
 		);
 		const response = await apiRequest(
 			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares/check?userId=${userId}`
 		);
-		return response?.isShared || false;
+
+		console.log(`[DIAGNOSTIC] checkShareStatus raw response:`, response);
+		console.log(`[DIAGNOSTIC] response type:`, typeof response);
+
+		if (response === null || response === undefined) {
+			console.log("[DIAGNOSTIC] Response is null/undefined, returning false");
+			return false;
+		}
+
+		// Standardized return handling - always return a boolean
+		let result = false;
+
+		// First check if response itself is a boolean
+		if (typeof response === "boolean") {
+			console.log(`[DIAGNOSTIC] Response is boolean: ${response}`);
+			result = response;
+		}
+		// Then check for the isShared property
+		else if (response && typeof response.isShared === "boolean") {
+			console.log(
+				`[DIAGNOSTIC] Response has isShared property: ${response.isShared}`
+			);
+			result = response.isShared;
+		}
+		// For backward compatibility, try to interpret any truthy value
+		else {
+			result = Boolean(response?.isShared || response);
+			console.log(`[DIAGNOSTIC] Converting response to boolean: ${result}`);
+		}
+
+		// Final safety check to ensure we're returning a boolean
+		const finalResult = !!result;
+		console.log(
+			`[DIAGNOSTIC] Final standardized result (boolean): ${finalResult}`
+		);
+		return finalResult;
 	} catch (error) {
-		console.error("Error checking share status:", error);
+		console.error("[DIAGNOSTIC] Error checking share status:", error);
 		// Return false for 404 errors (endpoint doesn't exist or not found)
 		// This provides graceful degradation
 		return false;

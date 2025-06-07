@@ -48,6 +48,13 @@ const apiRequest = async (endpoint, options = {}) => {
 	// Debug log for API request
 	console.log(`Making API request to: ${API_URL}${endpoint}`, options);
 
+	// Special debugging for share check endpoints
+	if (endpoint.includes("/shares/check")) {
+		console.log(
+			`[NETWORK DIAGNOSTIC] Share check request to: ${API_URL}${endpoint}`
+		);
+	}
+
 	// Try multiple times with the Render backend URL
 	for (let attempt = 0; attempt <= NETWORK_CONFIG.retries; attempt++) {
 		try {
@@ -118,10 +125,16 @@ const apiRequest = async (endpoint, options = {}) => {
 
 						// For likes/check and shares/check endpoints, return a default response
 						if (endpoint.includes("/likes/check")) {
+							console.log(
+								"[NETWORK DIAGNOSTIC] 404 for likes/check, returning default isLiked: false"
+							);
 							return { isLiked: false };
 						}
 
 						if (endpoint.includes("/shares/check")) {
+							console.log(
+								"[NETWORK DIAGNOSTIC] 404 for shares/check, returning default isShared: false"
+							);
 							return { isShared: false };
 						}
 					}
@@ -146,6 +159,22 @@ const apiRequest = async (endpoint, options = {}) => {
 
 				// Parse the response as JSON
 				const data = await response.json();
+
+				// Special logging for share check responses
+				if (endpoint.includes("/shares/check")) {
+					console.log("[NETWORK DIAGNOSTIC] Share check response:", data);
+					console.log(
+						"[NETWORK DIAGNOSTIC] Share check response type:",
+						typeof data
+					);
+					if (typeof data === "object") {
+						console.log(
+							"[NETWORK DIAGNOSTIC] Share check response keys:",
+							Object.keys(data)
+						);
+					}
+				}
+
 				return data;
 			} catch (innerError) {
 				clearTimeout(timeoutId); // Make sure to clear the timeout
