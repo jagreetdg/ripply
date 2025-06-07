@@ -24,6 +24,36 @@ export const getPersonalizedFeed = async (userId, params = {}) => {
 		console.log("[DIAGNOSTIC] Response type:", typeof response);
 		console.log("[DIAGNOSTIC] Response is array:", Array.isArray(response));
 		console.log("[DIAGNOSTIC] Response keys:", Object.keys(response || {}));
+
+		// Count shared vs non-shared posts to diagnose the issue
+		if (Array.isArray(response)) {
+			const sharedPosts = response.filter((item) => item.is_shared === true);
+			const originalPosts = response.filter((item) => item.is_shared !== true);
+			console.log(
+				`[DIAGNOSTIC] FEED BREAKDOWN - Total: ${response.length}, Shared: ${sharedPosts.length}, Original: ${originalPosts.length}`
+			);
+
+			if (originalPosts.length === 0) {
+				console.log(
+					"[DIAGNOSTIC] WARNING: No original posts in feed response!"
+				);
+			}
+
+			if (originalPosts.length > 0) {
+				console.log(
+					"[DIAGNOSTIC] First original post:",
+					JSON.stringify(originalPosts[0], null, 2)
+				);
+			}
+
+			if (sharedPosts.length > 0) {
+				console.log(
+					"[DIAGNOSTIC] First shared post:",
+					JSON.stringify(sharedPosts[0], null, 2)
+				);
+			}
+		}
+
 		if (response && response.data) {
 			console.log("[DIAGNOSTIC] Response.data type:", typeof response.data);
 			console.log(
@@ -39,6 +69,7 @@ export const getPersonalizedFeed = async (userId, params = {}) => {
 		// If response contains data, log the first item to see structure
 		if (Array.isArray(response) && response.length > 0) {
 			console.log("[DIAGNOSTIC] First item user_id:", response[0].user_id);
+			console.log("[DIAGNOSTIC] First item is_shared:", response[0].is_shared);
 			// Extract unique user IDs to see which users' posts we're getting
 			const userIds = [...new Set(response.map((item) => item.user_id))];
 			console.log("[DIAGNOSTIC] Unique user IDs in feed:", userIds);
@@ -48,6 +79,10 @@ export const getPersonalizedFeed = async (userId, params = {}) => {
 			response.data.length > 0
 		) {
 			console.log("[DIAGNOSTIC] First item user_id:", response.data[0].user_id);
+			console.log(
+				"[DIAGNOSTIC] First item is_shared:",
+				response.data[0].is_shared
+			);
 			// Extract unique user IDs to see which users' posts we're getting
 			const userIds = [...new Set(response.data.map((item) => item.user_id))];
 			console.log("[DIAGNOSTIC] Unique user IDs in feed:", userIds);

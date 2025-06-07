@@ -228,37 +228,45 @@ export const useFeedData = () => {
             (f: { id: string }) => f.id
           ) || [];
 
-        // Check if any posts are from users not followed
-        const unfollowedPosts = data.filter((item) => {
-          // For regular posts, check if the creator is followed
-          if (!item.is_shared) {
-            return !followingIds.includes(item.user_id);
-          }
-
-          // For shared posts, check if the sharer is followed
-          // If shared_by exists and has an id field, use that to check
-          if (item.shared_by && item.shared_by.id) {
-            return !followingIds.includes(item.shared_by.id);
-          }
-
-          // If we can't determine the sharer, treat as unfollowed
-          return true;
-        });
-
-        if (unfollowedPosts.length > 0) {
-          console.error(
-            "[DIAGNOSTIC] CRITICAL ERROR: Found posts from unfollowed users!",
-            unfollowedPosts.map((p) => ({
-              id: p.id,
-              user_id: p.user_id,
-              is_shared: p.is_shared,
-              shared_by_id: p.shared_by?.id,
-            }))
+        // Skip unfollowed check if user doesn't follow anyone
+        if (followingIds.length === 0) {
+          console.log(
+            "[DIAGNOSTIC] User doesn't follow anyone, skipping unfollowed posts check"
           );
         } else {
-          console.log(
-            "[DIAGNOSTIC] All posts are from followed users, as expected"
-          );
+          // Check if any posts are from users not followed
+          const unfollowedPosts = data.filter((item) => {
+            // For regular posts (not shared), check if the creator is followed
+            if (item.is_shared !== true) {
+              return !followingIds.includes(item.user_id);
+            }
+
+            // For shared posts, check if the sharer is followed
+            // Only if shared_by exists and has a valid id field
+            if (item.shared_by && item.shared_by.id && isUUID(item.shared_by.id)) {
+              return !followingIds.includes(item.shared_by.id);
+            }
+
+            // Skip posts with invalid sharer data in diagnostics
+            console.log("[DIAGNOSTIC] Skipping shared post with invalid sharer data:", item.id);
+            return false; // Don't count posts with missing sharer data as unfollowed
+          });
+
+          if (unfollowedPosts.length > 0) {
+            console.error(
+              "[DIAGNOSTIC] CRITICAL ERROR: Found posts from unfollowed users!",
+              unfollowedPosts.map((p) => ({
+                id: p.id,
+                user_id: p.user_id,
+                is_shared: p.is_shared,
+                shared_by_id: p.shared_by?.id,
+              }))
+            );
+          } else {
+            console.log(
+              "[DIAGNOSTIC] All posts are from followed users, as expected"
+            );
+          }
         }
       }
 
@@ -269,9 +277,26 @@ export const useFeedData = () => {
           index === self.findIndex((t) => t.id === item.id)
       );
 
+      console.log('[DEBUG] Before transform - Data sample:', uniqueData.length > 0 ? {
+        id: uniqueData[0].id,
+        is_shared: uniqueData[0].is_shared,
+        user_id: uniqueData[0].user_id,
+        shared_by: uniqueData[0].shared_by
+      } : 'No data');
+
+      // Log the breakdown of original vs shared posts in API response
+      const originalFromAPI = uniqueData.filter(item => item.is_shared !== true);
+      const sharedFromAPI = uniqueData.filter(item => item.is_shared === true);
+      console.log(`[DEBUG] API response breakdown - Original: ${originalFromAPI.length}, Shared: ${sharedFromAPI.length}`);
+
+      if (originalFromAPI.length === 0 && sharedFromAPI.length > 0) {
+        console.log('[DEBUG] WARNING: Only shared posts in API response, no original posts!');
+      }
+
       const transformedData = uniqueData.map((item) => {
         // Determine if this is a shared voice note (repost)
-        const isShared = !!item.is_shared;
+        // Explicitly check for true to handle null/undefined properly
+        const isShared = item.is_shared === true;
 
         // Get sharer info if available
         const sharerInfo =
@@ -283,8 +308,9 @@ export const useFeedData = () => {
                 avatarUrl: item.shared_by.avatar_url,
               }
             : null;
-
-        return {
+            
+        // Create the transformed item
+        const transformedItem = {
           id: item.id,
           userId: item.user_id,
           displayName: item.users?.display_name || "User",
@@ -310,7 +336,30 @@ export const useFeedData = () => {
             users: item.users,
           },
         };
+        
+        // Debug log if this is the first item, to see what's happening
+        if (item === uniqueData[0]) {
+          console.log('[DEBUG] First item transformation:', {
+            original: {
+              id: item.id,
+              is_shared: item.is_shared,
+              user_id: item.user_id,
+            },
+            transformed: {
+              id: transformedItem.id,
+              isShared: transformedItem.isShared,
+              userId: transformedItem.userId,
+            }
+          });
+        }
+        
+        return transformedItem;
       });
+
+      // Log the breakdown after transformation
+      const originalTransformed = transformedData.filter(item => !item.isShared);
+      const sharedTransformed = transformedData.filter(item => item.isShared);
+      console.log(`[DEBUG] After transform breakdown - Original: ${originalTransformed.length}, Shared: ${sharedTransformed.length}`);
 
       setFeedItems(transformedData);
       setError(null);
