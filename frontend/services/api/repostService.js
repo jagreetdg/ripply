@@ -4,9 +4,6 @@
  */
 import { ENDPOINTS, apiRequest } from "./config";
 
-// Cache to store repost status for quick access
-const repostStatusCache = new Map();
-
 /**
  * Check if the current user has reposted a voice note
  * @param {string} voiceNoteId - Voice note ID
@@ -46,221 +43,81 @@ export const hasUserRepostedVoiceNote = async (voiceNoteId, userId) => {
 };
 
 /**
- * Checks if a voice note has been reposted by the current user
- *
- * @param {string} voiceNoteId - The ID of the voice note
- * @param {string} userId - The ID of the current user
- * @returns {Promise<boolean>} - Whether the user has reposted this voice note
+ * Toggle repost status for a voice note (repost or unrepost)
+ * @param {string} voiceNoteId - Voice note ID
+ * @param {string} userId - Current user ID
+ * @returns {Promise<{isReposted: boolean, repostCount: number}>} - New repost status and count
  */
-export const checkRepostStatus = async (voiceNoteId, userId) => {
-	if (!voiceNoteId || !userId) {
-		console.log("[REPOST] Missing voiceNoteId or userId, returning false");
-		return false;
-	}
-
-	// Create a cache key
-	const cacheKey = `${voiceNoteId}:${userId}`;
-
-	// Check cache first
-	if (repostStatusCache.has(cacheKey)) {
-		const cachedResult = repostStatusCache.get(cacheKey);
-		console.log(
-			`[REPOST] Using cached status for ${voiceNoteId}: ${cachedResult}`
-		);
-		return cachedResult;
-	}
-
-	try {
-		console.log(
-			`[REPOST] Checking if user ${userId} has reposted voice note ${voiceNoteId}`
-		);
-
-		const response = await apiRequest(
-			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares/check?userId=${userId}`
-		);
-
-		// Parse the response to ensure a boolean value
-		const isReposted =
-			typeof response === "boolean" ? response : response?.isShared === true;
-
-		// Update cache
-		repostStatusCache.set(cacheKey, isReposted);
-
-		console.log(
-			`[REPOST] User ${userId} has${
-				isReposted ? "" : " not"
-			} reposted voice note ${voiceNoteId}`
-		);
-		return isReposted;
-	} catch (error) {
-		console.error("[REPOST] Error checking repost status:", error);
-		return false;
-	}
-};
-
-/**
- * Performs a repost action on a voice note
- *
- * @param {string} voiceNoteId - The ID of the voice note to repost
- * @param {string} userId - The ID of the current user
- * @returns {Promise<{success: boolean, isReposted: boolean, repostCount: number}>} - Result of the repost operation
- */
-export const repostVoiceNote = async (voiceNoteId, userId) => {
+export const toggleRepost = async (voiceNoteId, userId) => {
 	if (!voiceNoteId || !userId) {
 		console.error("[REPOST] Missing voiceNoteId or userId");
-		return { success: false, isReposted: false, repostCount: 0 };
+		return { isReposted: false, repostCount: 0 };
 	}
 
 	try {
 		console.log(
-			`[REPOST] Reposting voice note ${voiceNoteId} by user ${userId}`
+			`[REPOST] Toggling repost for voice note ${voiceNoteId} by user ${userId}`
 		);
-
-		// Call the API to repost
 		const response = await apiRequest(
 			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`,
 			{
 				method: "POST",
-				body: JSON.stringify({ user_id: userId }),
+				body: JSON.stringify({}), // Backend uses authenticated user
 			}
 		);
 
-		// Extract values from response
+		console.log(`[REPOST] Toggle response:`, response);
+
+		// Extract repost status and count
 		const isReposted = response?.isShared === true;
 		const repostCount =
-			typeof response?.shareCount === "number" ? response.shareCount : 0;
-
-		// Update cache
-		const cacheKey = `${voiceNoteId}:${userId}`;
-		repostStatusCache.set(cacheKey, isReposted);
-
-		console.log(
-			`[REPOST] Voice note ${voiceNoteId} repost status: ${isReposted}, count: ${repostCount}`
-		);
+			typeof response?.shareCount === "number"
+				? response.shareCount
+				: await getRepostCount(voiceNoteId);
 
 		return {
-			success: true,
 			isReposted,
 			repostCount,
+			voiceNoteId,
 		};
-	} catch (error) {
-		console.error("[REPOST] Error reposting voice note:", error);
-		return { success: false, isReposted: false, repostCount: 0 };
-	}
-};
-
-/**
- * Performs an unrepost action on a voice note
- *
- * @param {string} voiceNoteId - The ID of the voice note to unrepost
- * @param {string} userId - The ID of the current user
- * @returns {Promise<{success: boolean, isReposted: boolean, repostCount: number}>} - Result of the unrepost operation
- */
-export const unrepostVoiceNote = async (voiceNoteId, userId) => {
-	if (!voiceNoteId || !userId) {
-		console.error("[REPOST] Missing voiceNoteId or userId");
-		return { success: false, isReposted: true, repostCount: 0 };
-	}
-
-	try {
-		console.log(
-			`[REPOST] Unreposting voice note ${voiceNoteId} by user ${userId}`
-		);
-
-		// Call the API to unrepost
-		const response = await apiRequest(
-			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/unshare`,
-			{
-				method: "POST",
-				body: JSON.stringify({ user_id: userId }),
-			}
-		);
-
-		// Extract values from response
-		const isReposted = response?.isShared === true;
-		const repostCount =
-			typeof response?.shareCount === "number" ? response.shareCount : 0;
-
-		// Update cache
-		const cacheKey = `${voiceNoteId}:${userId}`;
-		repostStatusCache.set(cacheKey, isReposted);
-
-		console.log(
-			`[REPOST] Voice note ${voiceNoteId} unrepost status: ${isReposted}, count: ${repostCount}`
-		);
-
-		return {
-			success: true,
-			isReposted,
-			repostCount,
-		};
-	} catch (error) {
-		console.error("[REPOST] Error unreposting voice note:", error);
-		return { success: false, isReposted: true, repostCount: 0 };
-	}
-};
-
-/**
- * Toggles the repost status of a voice note
- *
- * @param {string} voiceNoteId - The ID of the voice note
- * @param {string} userId - The ID of the current user
- * @returns {Promise<{success: boolean, isReposted: boolean, repostCount: number}>} - Result of the toggle operation
- */
-export const toggleRepost = async (voiceNoteId, userId) => {
-	if (!voiceNoteId || !userId) {
-		console.error("[REPOST] Missing voiceNoteId or userId for toggle");
-		return { success: false, isReposted: false, repostCount: 0 };
-	}
-
-	try {
-		// First check the current status
-		const isCurrentlyReposted = await checkRepostStatus(voiceNoteId, userId);
-
-		// Based on current status, perform the opposite action
-		if (isCurrentlyReposted) {
-			return await unrepostVoiceNote(voiceNoteId, userId);
-		} else {
-			return await repostVoiceNote(voiceNoteId, userId);
-		}
 	} catch (error) {
 		console.error("[REPOST] Error toggling repost:", error);
-		return { success: false, isReposted: false, repostCount: 0 };
+		return {
+			isReposted: false,
+			repostCount: 0,
+			error: error.message,
+		};
 	}
 };
 
 /**
- * Gets the number of reposts for a voice note
- *
- * @param {string} voiceNoteId - The ID of the voice note
- * @returns {Promise<number>} - The number of reposts
+ * Get the number of reposts for a voice note
+ * @param {string} voiceNoteId - Voice note ID
+ * @returns {Promise<number>} - Repost count
  */
 export const getRepostCount = async (voiceNoteId) => {
 	if (!voiceNoteId) {
-		console.error("[REPOST] Missing voiceNoteId for count");
+		console.error("[REPOST] Missing voiceNoteId");
 		return 0;
 	}
 
 	try {
 		console.log(`[REPOST] Getting repost count for voice note ${voiceNoteId}`);
-
 		const response = await apiRequest(
-			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares/count`
+			`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`
 		);
 
 		// Extract count from different possible response formats
 		let count = 0;
 
-		if (typeof response === "number") {
-			count = response;
-		} else if (typeof response?.shareCount === "number") {
+		if (typeof response?.shareCount === "number") {
 			count = response.shareCount;
-		} else if (typeof response?.count === "number") {
-			count = response.count;
-		} else if (Array.isArray(response)) {
-			count = response.length;
+		} else if (typeof response?.data?.shareCount === "number") {
+			count = response.data.shareCount;
 		} else if (Array.isArray(response?.data)) {
 			count = response.data.length;
+		} else if (typeof response === "number") {
+			count = response;
 		}
 
 		console.log(`[REPOST] Voice note ${voiceNoteId} has ${count} reposts`);
@@ -337,50 +194,4 @@ export const getReposterInfo = (voiceNote) => {
 	}
 
 	return null;
-};
-
-/**
- * Clears the cache for a specific voice note or user, or the entire cache
- *
- * @param {string} [voiceNoteId] - Optional voice note ID to clear from cache
- * @param {string} [userId] - Optional user ID to clear from cache
- */
-export const clearRepostCache = (voiceNoteId, userId) => {
-	if (voiceNoteId && userId) {
-		// Clear specific voice note/user combination
-		const cacheKey = `${voiceNoteId}:${userId}`;
-		repostStatusCache.delete(cacheKey);
-		console.log(
-			`[REPOST] Cleared cache for voice note ${voiceNoteId} and user ${userId}`
-		);
-	} else if (voiceNoteId) {
-		// Clear all entries for this voice note
-		let count = 0;
-		repostStatusCache.forEach((_, key) => {
-			if (key.startsWith(`${voiceNoteId}:`)) {
-				repostStatusCache.delete(key);
-				count++;
-			}
-		});
-		console.log(
-			`[REPOST] Cleared cache for ${count} entries related to voice note ${voiceNoteId}`
-		);
-	} else if (userId) {
-		// Clear all entries for this user
-		let count = 0;
-		repostStatusCache.forEach((_, key) => {
-			if (key.endsWith(`:${userId}`)) {
-				repostStatusCache.delete(key);
-				count++;
-			}
-		});
-		console.log(
-			`[REPOST] Cleared cache for ${count} entries related to user ${userId}`
-		);
-	} else {
-		// Clear entire cache
-		const size = repostStatusCache.size;
-		repostStatusCache.clear();
-		console.log(`[REPOST] Cleared entire repost cache (${size} entries)`);
-	}
 };

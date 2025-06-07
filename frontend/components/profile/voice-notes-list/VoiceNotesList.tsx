@@ -29,7 +29,6 @@ import {
 } from "../../../services/api/userService";
 import { useTheme } from "../../../context/ThemeContext";
 import { useUser } from "../../../context/UserContext";
-import { useBatchRepostStatus } from "../../../hooks/useRepostStatus";
 
 // Import decoupled types, utils, and styles
 import { VoiceNote, VoiceNotesListProps } from "./VoiceNotesListTypes";
@@ -533,54 +532,79 @@ export function VoiceNotesList({
 		console.log(`Play voice note: ${voiceNoteId}`);
 	};
 
-	// Load voice notes data when userId changes
 	useEffect(() => {
-		if (userId) {
-			fetchVoiceNotes();
-		}
-	}, [userId, activeTab]);
+		// Add debug logs to help diagnose the issue
+		console.log("Current user ID:", currentUser?.id);
+		console.log(
+			"Voice notes with share status:",
+			localVoiceNotes.map((note) => ({
+				id: note.id,
+				is_shared: note.is_shared,
+				shared_by_id: note.shared_by?.id || note.sharer_id,
+			}))
+		);
+	}, [localVoiceNotes, currentUser]);
 
-	// Refresh the voice notes list when onRefresh is called
-	const refreshVoiceNotes = useCallback(async () => {
-		setRefreshing(true);
-		await fetchVoiceNotes(true);
-		setRefreshing(false);
-	}, [fetchVoiceNotes]);
-
-	// Extract all voice note IDs for batch status check
-	const voiceNoteIds = localVoiceNotes.map((note) => note.id);
-
-	// Use batch hook to efficiently check repost status for all voice notes
-	const { statusMap: repostStatusMap, isLoading: repostStatusLoading } =
-		useBatchRepostStatus(voiceNoteIds);
-
-	// Log the batch status results
+	// Check if the current user has shared each voice note
 	useEffect(() => {
-		if (!repostStatusLoading) {
+		const checkUserSharedStatus = async () => {
+			if (!currentUser?.id || localVoiceNotes.length === 0) return;
+
 			console.log(
-				`[VoiceNotesList] Loaded repost status for ${
-					Object.keys(repostStatusMap).length
-				} voice notes`
+				`[VoiceNotesList] Checking shared status for ${localVoiceNotes.length} voice notes for user ${currentUser.id}`
 			);
-			// Log a few examples for debugging
-			const examples = Object.entries(repostStatusMap).slice(0, 3);
-			if (examples.length > 0) {
-				console.log(`[VoiceNotesList] Sample repost statuses:`, examples);
+
+			let hasStatusChanges = false;
+			const updatedNotes = await Promise.all(
+				localVoiceNotes.map(async (note) => {
+					// Skip if already has this property set
+					if (note.currentUserHasShared !== undefined) {
+						return note;
+					}
+
+					try {
+						// Get the share status from the API
+						const isShared = await checkShareStatus(note.id, currentUser.id);
+
+						// Log for debugging
+						console.log(
+							`[VoiceNotesList] Voice note ${note.id} shared by current user: ${isShared}`
+						);
+
+						// Only mark as changed if we actually had to make an API call
+						hasStatusChanges = true;
+						return { ...note, currentUserHasShared: isShared };
+					} catch (error) {
+						console.error(
+							`[VoiceNotesList] Error checking share status for ${note.id}:`,
+							error
+						);
+						return note;
+					}
+				})
+			);
+
+			if (hasStatusChanges) {
+				console.log("Updating voice notes with share status");
+				setLocalVoiceNotes(updatedNotes);
 			}
-		}
-	}, [repostStatusMap, repostStatusLoading]);
+		};
+
+		checkUserSharedStatus();
+	}, [currentUser?.id, localVoiceNotes.length]);
 
 	const renderItem = ({ item }: { item: VoiceNote }) => {
 		// Determine if the card represents a shared/reposted item
 		const isRepostedItem = !!item.is_shared;
 
-		// Use the repost status from our batch hook
-		const isRepostedByCurrentUser = repostStatusMap[item.id] || false;
+		// Use the resolved share status from our API call - this indicates if the CURRENT USER
+		// has reposted this voice note, which is what determines the green highlight
+		const isRepostedByCurrentUser = !!item.currentUserHasShared;
 
-		console.log(`[VoiceNotesList] Voice note ${item.id} status:`, {
+		console.log(`Voice note ${item.id} status:`, {
 			isRepostedItem, // Whether the voice note itself is a repost (used for attribution)
 			isRepostedByCurrentUser, // Whether current user has reposted this (determines green highlight)
-			statusFromMap: repostStatusMap[item.id],
+			currentUserHasShared: item.currentUserHasShared,
 			currentUserId: currentUser?.id,
 		});
 
@@ -632,6 +656,26 @@ export function VoiceNotesList({
 			}
 		}
 
+		// Log sharedByProp for debugging
+		if (isRepostedItem) {
+			console.log("Created sharedByProp:", sharedByProp);
+		}
+
+		// Determine if the current user is the owner of the note
+		const isOwnerOfDisplayedNote = item.user_id === currentUser?.id;
+
+		// Determine if this note is reposted by the current user
+		const useIsReposted = isRepostedByCurrentUser;
+
+		console.log(
+			`Rendering voice note ${item.id} with isReposted=${useIsReposted}`,
+			{
+				isRepostedByCurrentUser,
+				isRepostedItem,
+				isOwnProfile,
+			}
+		);
+
 		return (
 			<VoiceNoteCard
 				key={item.id}
@@ -659,11 +703,10 @@ export function VoiceNotesList({
 						: undefined
 				}
 				currentUserId={currentUser?.id}
-				isReposted={isRepostedByCurrentUser}
+				isReposted={useIsReposted}
 				sharedBy={sharedByProp}
 				showRepostAttribution={isRepostedItem}
 				onVoiceNoteUnshared={handleUnshare}
-				isLoadingRepostStatus={repostStatusLoading}
 			/>
 		);
 	};
