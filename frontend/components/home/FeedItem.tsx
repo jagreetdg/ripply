@@ -1,11 +1,11 @@
-import React, { useCallback, memo, useState, useEffect } from "react";
+import React, { useCallback, memo } from "react";
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "../voice-note-card/VoiceNoteCard";
 import { useTheme } from "../../context/ThemeContext";
 import { useUser } from "../../context/UserContext";
-import { hasUserRepostedVoiceNote } from "../../services/api/repostService";
+import { useRepostStatus } from "../../hooks/useRepostStatus";
 
 interface FeedItemProps {
 	item: {
@@ -41,54 +41,18 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 	const { colors, isDarkMode } = useTheme();
 	const { user } = useUser();
 
-	// Track if the current user has reposted this voice note
-	const [isRepostedByCurrentUser, setIsRepostedByCurrentUser] =
-		useState<boolean>(false);
-	// Add loading state for repost status
-	const [isLoadingRepostStatus, setIsLoadingRepostStatus] =
-		useState<boolean>(true);
+	// Use our new hook to get repost status
+	const {
+		isReposted: isRepostedByCurrentUser,
+		isLoading: isLoadingRepostStatus,
+	} = useRepostStatus(item.voiceNote.id);
 
-	// Check if the current user has reposted this voice note
-	useEffect(() => {
-		const checkCurrentUserRepostStatus = async () => {
-			if (!user?.id) {
-				console.log(
-					`[FEED] No user ID, skipping repost status check for ${item.voiceNote.id}`
-				);
-				setIsLoadingRepostStatus(false);
-				return;
-			}
-
-			setIsLoadingRepostStatus(true);
-
-			try {
-				console.log(`[FEED] Checking repost status for ${item.voiceNote.id}`);
-
-				// Get the repost status from the API
-				const repostStatus = await hasUserRepostedVoiceNote(
-					item.voiceNote.id,
-					user.id
-				);
-
-				console.log(
-					`[FEED] Repost status for voice note ${item.voiceNote.id}: ${repostStatus}`
-				);
-
-				setIsRepostedByCurrentUser(repostStatus);
-			} catch (error) {
-				console.error(
-					`[FEED] Error checking repost status for ${item.voiceNote.id}:`,
-					error
-				);
-				// Default to false if there's an error
-				setIsRepostedByCurrentUser(false);
-			} finally {
-				setIsLoadingRepostStatus(false);
-			}
-		};
-
-		checkCurrentUserRepostStatus();
-	}, [item.voiceNote.id, user?.id]);
+	// Log the repost status for debugging
+	console.log(`[FeedItem] Repost status for ${item.voiceNote.id}:`, {
+		isRepostedByCurrentUser,
+		isLoadingRepostStatus,
+		currentUserId: user?.id,
+	});
 
 	// Use proper expo-router navigation
 	const handleProfilePress = useCallback(() => {
@@ -113,8 +77,16 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 		}
 	}, [item.sharedBy, router]);
 
-	// Determine if this is a reposted item
+	// Determine if this is a reposted item (for attribution display)
 	const isRepostedItem = !!item.isShared;
+
+	// Log the current state for debugging
+	console.log(`[FeedItem] Rendering voice note ${item.voiceNote.id}:`, {
+		isRepostedItem, // Whether this post is a repost by someone (for attribution)
+		isRepostedByCurrentUser, // Whether current user has reposted this (determines green highlight)
+		currentUserId: user?.id,
+		isShared: item.isShared,
+	});
 
 	return (
 		<View
