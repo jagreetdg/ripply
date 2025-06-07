@@ -65,7 +65,12 @@ export interface VoiceNoteCardProps {
 	onShareStatusChanged?: (voiceNoteId: string, isShared: boolean) => void; // Callback when a voice note share status changes
 	onVoiceNoteUnshared?: (voiceNoteId: string) => void; // Callback when a voice note is unshared
 	currentUserId?: string;
-	isReposted?: boolean; // Whether the current user has reposted this voice note
+	/**
+	 * Whether the CURRENT LOGGED-IN USER has reposted this voice note.
+	 * This determines if the repost icon should be highlighted green.
+	 * This should ONLY be true if the current user has reposted this voice note.
+	 */
+	isReposted?: boolean;
 	isLoadingRepostStatus?: boolean; // Whether the repost status is still loading
 	sharedBy?: {
 		// Info about who shared the voice note
@@ -74,7 +79,12 @@ export interface VoiceNoteCardProps {
 		displayName: string;
 		avatarUrl: string | null;
 	} | null;
-	showRepostAttribution?: boolean; // Whether to show repost attribution
+	/**
+	 * Whether to show the "Reposted by @username" attribution banner.
+	 * This should be true when displaying a voice note that has been reposted
+	 * by SOMEONE ELSE (not necessarily the current user).
+	 */
+	showRepostAttribution?: boolean;
 	voiceNoteUsers?: {
 		id: string;
 		username: string;

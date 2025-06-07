@@ -29,6 +29,7 @@ interface VoiceNoteInteractionsProps {
 	handlePlaysPress: () => void;
 	handleRepostPress: () => void;
 	handleShareCountLongPress?: () => void;
+	voiceNoteId: string;
 }
 
 /**
@@ -54,6 +55,7 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 	handlePlaysPress,
 	handleRepostPress,
 	handleShareCountLongPress,
+	voiceNoteId,
 }) => {
 	// Determine if we should use the "OnImage" variants
 	const useOnImageStyles = hasBackgroundImage;
@@ -66,12 +68,20 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 			: colors.liked
 		: iconColor;
 
-	// Calculate repost color - use Boolean type for consistency
-	const repostColor = Boolean(isReposted)
+	// Calculate repost color based on status
+	const repostColor = isReposted
 		? useOnImageStyles
 			? colors.repostedOnImage
 			: colors.reposted
 		: iconColor;
+
+	// Log to debug repost status - show the source of truth for highlighting
+	console.log("[VoiceNoteInteractions]", {
+		voiceNoteId,
+		isReposted: Boolean(isReposted),
+		repostColor: isReposted ? "GREEN" : "DEFAULT",
+		isLoadingRepostStatus,
+	});
 
 	// Loading indicator styles
 	const loadingIndicatorColor = useOnImageStyles ? colors.white : colors.tint;
