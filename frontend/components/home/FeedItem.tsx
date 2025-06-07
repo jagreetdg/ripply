@@ -1,10 +1,11 @@
-import React, { useCallback, memo } from "react";
+import React, { useCallback, memo, useState, useEffect } from "react";
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "../voice-note-card/VoiceNoteCard";
 import { useTheme } from "../../context/ThemeContext";
 import { useUser } from "../../context/UserContext";
+import { hasUserRepostedVoiceNote } from "../../services/api/repostService";
 
 interface FeedItemProps {
 	item: {
@@ -40,6 +41,55 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 	const { colors, isDarkMode } = useTheme();
 	const { user } = useUser();
 
+	// Track if the current user has reposted this voice note
+	const [isRepostedByCurrentUser, setIsRepostedByCurrentUser] =
+		useState<boolean>(false);
+	// Add loading state for repost status
+	const [isLoadingRepostStatus, setIsLoadingRepostStatus] =
+		useState<boolean>(true);
+
+	// Check if the current user has reposted this voice note
+	useEffect(() => {
+		const checkCurrentUserRepostStatus = async () => {
+			if (!user?.id) {
+				console.log(
+					`[FEED] No user ID, skipping repost status check for ${item.voiceNote.id}`
+				);
+				setIsLoadingRepostStatus(false);
+				return;
+			}
+
+			setIsLoadingRepostStatus(true);
+
+			try {
+				console.log(`[FEED] Checking repost status for ${item.voiceNote.id}`);
+
+				// Get the repost status from the API
+				const repostStatus = await hasUserRepostedVoiceNote(
+					item.voiceNote.id,
+					user.id
+				);
+
+				console.log(
+					`[FEED] Repost status for voice note ${item.voiceNote.id}: ${repostStatus}`
+				);
+
+				setIsRepostedByCurrentUser(repostStatus);
+			} catch (error) {
+				console.error(
+					`[FEED] Error checking repost status for ${item.voiceNote.id}:`,
+					error
+				);
+				// Default to false if there's an error
+				setIsRepostedByCurrentUser(false);
+			} finally {
+				setIsLoadingRepostStatus(false);
+			}
+		};
+
+		checkCurrentUserRepostStatus();
+	}, [item.voiceNote.id, user?.id]);
+
 	// Use proper expo-router navigation
 	const handleProfilePress = useCallback(() => {
 		if (onProfilePress) {
@@ -53,8 +103,8 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 		}
 	}, [item.userId, item.userName, onProfilePress, router]);
 
-	// Handle navigation to sharer's profile
-	const handleSharerProfilePress = useCallback(() => {
+	// Handle navigation to reposter's profile
+	const handleReposterProfilePress = useCallback(() => {
 		if (item.sharedBy) {
 			router.push({
 				pathname: "/profile/[username]",
@@ -62,6 +112,9 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 			});
 		}
 	}, [item.sharedBy, router]);
+
+	// Determine if this is a reposted item
+	const isRepostedItem = !!item.isShared;
 
 	return (
 		<View
@@ -74,17 +127,25 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 			]}
 		>
 			{/* Show repost attribution if needed */}
-			{item.isShared && item.sharedBy && (
+			{isRepostedItem && item.sharedBy && (
 				<View style={styles.repostAttribution}>
-					<Text style={[styles.repostText, { color: colors.textSecondary }]}>
-						<Text style={styles.repostIcon}>↻</Text> Reposted by{" "}
-						<Text
-							style={[styles.repostUsername, { color: colors.tint }]}
-							onPress={handleSharerProfilePress}
-						>
-							@{item.sharedBy.username}
+					<View style={styles.repostRow}>
+						<Feather
+							name="repeat"
+							size={14}
+							color={colors.textSecondary}
+							style={{ marginRight: 4 }}
+						/>
+						<Text style={[styles.repostText, { color: colors.textSecondary }]}>
+							Reposted by{" "}
+							<Text
+								style={[styles.repostUsername, { color: colors.tint }]}
+								onPress={handleReposterProfilePress}
+							>
+								@{item.sharedBy.username}
+							</Text>
 						</Text>
-					</Text>
+					</View>
 				</View>
 			)}
 
@@ -129,6 +190,10 @@ function FeedItemComponent({ item, onProfilePress }: FeedItemProps) {
 					username={item.userName}
 					currentUserId={user?.id}
 					onProfilePress={handleProfilePress}
+					isReposted={isRepostedByCurrentUser}
+					showRepostAttribution={isRepostedItem}
+					sharedBy={item.sharedBy}
+					isLoadingRepostStatus={isLoadingRepostStatus}
 				/>
 			</View>
 		</View>
@@ -194,11 +259,12 @@ const styles = StyleSheet.create({
 		paddingTop: 8,
 		paddingBottom: 0,
 	},
+	repostRow: {
+		flexDirection: "row",
+		alignItems: "center",
+	},
 	repostText: {
 		fontSize: 13,
-	},
-	repostIcon: {
-		fontWeight: "bold",
 	},
 	repostUsername: {
 		fontWeight: "bold",

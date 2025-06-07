@@ -16,15 +16,18 @@ import { useRouter } from "expo-router";
 import { BlurView } from "expo-blur";
 import { CommentPopup } from "../comments/CommentPopup";
 import {
-	recordShare,
 	likeVoiceNote,
 	unlikeVoiceNote,
 	getComments,
 	checkLikeStatus,
-	checkShareStatus,
-	getShareCount,
 	getVoiceNoteStats,
+	recordPlay,
 } from "../../services/api/voiceNoteService";
+import {
+	hasUserRepostedVoiceNote,
+	toggleRepost,
+	getRepostCount,
+} from "../../services/api/repostService";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import Colors, { hexToRgba, opacityValues } from "../../constants/Colors";
@@ -61,8 +64,11 @@ export function VoiceNoteCardImpl({
 	onProfilePress,
 	onUserProfilePress,
 	onShare,
+	onShareStatusChanged,
+	onVoiceNoteUnshared,
 	currentUserId,
-	isShared: isSharedProp,
+	isReposted: isRepostedProp,
+	isLoadingRepostStatus = false,
 	sharedBy,
 	showRepostAttribution,
 	voiceNoteUsers,
@@ -102,14 +108,17 @@ export function VoiceNoteCardImpl({
 	const effectiveAvatarUrl =
 		userAvatarUrl || voiceNoteUsers?.avatar_url || null;
 
-	// Handle duplicate isShared identifier by using the prop value or defaulting to the state
-	const [internalIsShared, setInternalIsShared] = useState<boolean>(
-		isSharedProp !== undefined ? isSharedProp : false
+	// State for repost status - use the prop if available, otherwise track locally
+	const [internalRepostedState, setInternalRepostedState] = useState<boolean>(
+		isRepostedProp !== undefined ? Boolean(isRepostedProp) : false
 	);
 
-	// Use the prop if provided, otherwise use the state
-	const isSharedEffective =
-		isSharedProp !== undefined ? isSharedProp : internalIsShared;
+	// Determine effective repost status (prop takes precedence)
+	const isRepostedEffective = isLoadingRepostStatus
+		? false // Don't show as reposted while loading
+		: Boolean(
+				isRepostedProp !== undefined ? isRepostedProp : internalRepostedState
+		  );
 
 	// State management
 	const [isPlaying, setIsPlaying] = useState(false);
@@ -166,10 +175,10 @@ export function VoiceNoteCardImpl({
 
 		try {
 			setIsLoadingShareCount(true);
-			const count = await getShareCount(voiceNote.id);
+			const count = await getRepostCount(voiceNote.id);
 			setSharesCount(typeof count === "number" ? count : 0);
 		} catch (error) {
-			console.error("Error fetching share count:", error);
+			console.error("Error fetching repost count:", error);
 		} finally {
 			setIsLoadingShareCount(false);
 		}
@@ -297,7 +306,17 @@ export function VoiceNoteCardImpl({
 		console.log("Plays button pressed");
 	}, []);
 
-	// Handle repost (share) button press
+	// Update internal state when the prop changes
+	useEffect(() => {
+		if (
+			isRepostedProp !== undefined &&
+			internalRepostedState !== isRepostedProp
+		) {
+			setInternalRepostedState(isRepostedProp);
+		}
+	}, [isRepostedProp]);
+
+	// Handle repost button press using our new repost service
 	const handleRepostPress = useCallback(() => {
 		if (!loggedInUserId) {
 			Alert.alert("Sign In Required", "Please sign in to repost voice notes.");
@@ -309,22 +328,39 @@ export function VoiceNoteCardImpl({
 		}
 
 		setIsLoadingShareCount(true);
-		recordShare(voiceNote.id, loggedInUserId)
-			.then((response: any) => {
-				if (response.error) return;
+		console.log(`Reposting voice note ${voiceNote.id}`);
 
-				if (response?.shareCount) {
-					setSharesCount(response.shareCount);
+		toggleRepost(voiceNote.id, loggedInUserId)
+			.then((response) => {
+				// Update share count and internal state based on response
+				if (typeof response.repostCount === "number") {
+					setSharesCount(response.repostCount);
 				} else {
+					// Fallback to fetching the count
 					fetchShareCount();
 				}
 
-				if (typeof response?.isShared === "boolean") {
-					setInternalIsShared(response.isShared);
-				} else {
-					setInternalIsShared((prev) => !prev);
+				// Update repost state
+				const wasReposted = internalRepostedState;
+				const isNowReposted = response.isReposted;
+
+				console.log(
+					`Repost status changed from ${wasReposted} to ${isNowReposted}`
+				);
+				setInternalRepostedState(isNowReposted);
+
+				// Call callback with the new status
+				if (onShareStatusChanged) {
+					onShareStatusChanged(voiceNote.id, isNowReposted);
 				}
 
+				// Call unshared callback if the note was unreposted
+				if (wasReposted && !isNowReposted && onVoiceNoteUnshared) {
+					console.log(`Calling onVoiceNoteUnshared for ${voiceNote.id}`);
+					onVoiceNoteUnshared(voiceNote.id);
+				}
+
+				// Animate the repost button
 				Animated.sequence([
 					Animated.timing(shareScale, {
 						toValue: 1.2,
@@ -339,7 +375,7 @@ export function VoiceNoteCardImpl({
 				]).start();
 			})
 			.catch((error) => {
-				console.error("Error toggling share:", error);
+				console.error("Error toggling repost:", error);
 			})
 			.finally(() => {
 				setIsLoadingShareCount(false);
@@ -350,6 +386,9 @@ export function VoiceNoteCardImpl({
 		isLoadingShareCount,
 		fetchShareCount,
 		shareScale,
+		onVoiceNoteUnshared,
+		onShareStatusChanged,
+		internalRepostedState,
 	]);
 
 	// Handle native share button long press
@@ -414,7 +453,9 @@ export function VoiceNoteCardImpl({
 
 	// Load initial data on mount
 	useEffect(() => {
-		if (!voiceNote.id || !loggedInUserId || statsLoaded) return;
+		if (!voiceNote.id || !loggedInUserId || statsLoaded) {
+			return;
+		}
 
 		const loadInitialData = async () => {
 			// Check like status
@@ -425,15 +466,16 @@ export function VoiceNoteCardImpl({
 				console.error("Error checking like status:", error);
 			}
 
-			// Check share status
+			// Check repost status
 			try {
-				const shareStatus = await checkShareStatus(
+				const repostStatus = await hasUserRepostedVoiceNote(
 					voiceNote.id,
 					loggedInUserId
 				);
-				setInternalIsShared(shareStatus);
+				setInternalRepostedState(repostStatus);
 			} catch (error) {
-				console.error("Error checking share status:", error);
+				console.error("Error checking repost status:", error);
+				setInternalRepostedState(false);
 			}
 
 			// Fetch share count
@@ -473,9 +515,10 @@ export function VoiceNoteCardImpl({
 	// Determine text style based on background image
 	const titleStyle = hasBackgroundImage ? styles.titleOnImage : styles.title;
 
-	// Repost attribution component
+	// Repost attribution component - refactored for clarity
 	const RepostAttribution = () => {
-		if (!showRepostAttribution || !isSharedEffective || !sharedBy) {
+		// Only show repost attribution if explicitly requested, there's a reposter, and showRepostAttribution is true
+		if (!showRepostAttribution || !sharedBy) {
 			return null;
 		}
 
@@ -609,7 +652,7 @@ export function VoiceNoteCardImpl({
 				likesCount={likesCount}
 				commentsCount={commentsCount}
 				playsCount={playsCount}
-				isShared={isSharedEffective}
+				isReposted={isRepostedEffective}
 				shareScale={shareScale}
 				sharesCount={sharesCount}
 				isLoadingShareCount={isLoadingShareCount}
@@ -619,6 +662,7 @@ export function VoiceNoteCardImpl({
 				handlePlaysPress={handlePlaysPress}
 				handleRepostPress={handleRepostPress}
 				handleShareCountLongPress={handleShareCountLongPress}
+				isLoadingRepostStatus={isLoadingRepostStatus}
 			/>
 		</View>
 	);
@@ -651,9 +695,8 @@ export function VoiceNoteCardImpl({
 						]}
 					/>
 
-					{isSharedEffective && showRepostAttribution ? (
-						<RepostAttribution />
-					) : null}
+					{/* Always render the repost attribution component and let it decide whether to show */}
+					<RepostAttribution />
 					<CardContent />
 				</ImageBackground>
 			) : (
@@ -663,9 +706,8 @@ export function VoiceNoteCardImpl({
 						!hasBackgroundImage && styles.plainContainer,
 					]}
 				>
-					{isSharedEffective && showRepostAttribution ? (
-						<RepostAttribution />
-					) : null}
+					{/* Always render the repost attribution component and let it decide whether to show */}
+					<RepostAttribution />
 					<CardContent />
 				</View>
 			)}

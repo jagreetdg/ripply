@@ -351,13 +351,17 @@ export default function ProfileByUsernameScreen() {
 
 					// Combine both types of voice notes
 					const combinedNotes = [
+						// Regular voice notes (original posts)
 						...(voiceNotesResponse || []).map((note: any) => ({
 							...note,
 							is_shared: false,
+							currentUserHasShared: false,
 						})),
+						// Reposted voice notes
 						...(sharedVoiceNotesResponse || []).map((note: any) => ({
 							...note,
-							is_shared: true,
+							is_shared: true, // Mark as a repost
+							currentUserHasShared: true, // If it's in the shared list, the user has reposted it
 						})),
 					];
 

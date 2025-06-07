@@ -38,6 +38,7 @@ export interface VoiceNote {
 	sharer_display_name?: string;
 	sharer_avatar_url?: string | null;
 	originalVoiceNote?: VoiceNote; // Nested original voice note details
+	currentUserHasShared?: boolean; // Whether the currently logged in user has shared this note
 }
 
 export interface VoiceNotesListProps {
