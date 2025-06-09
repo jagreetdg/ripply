@@ -229,6 +229,7 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 		});
 
 		// Get shared voice notes from followed users
+		// FIX: Simplified the foreign key reference to avoid potential issues
 		const { data: sharedData, error: sharedError } = await supabase
 			.from("voice_note_shares")
 			.select(
@@ -236,8 +237,7 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 	id,
 	voice_note_id,
 	user_id,
-	shared_at,
-	sharer:users!voice_note_shares_user_id_fkey (id, username, display_name, avatar_url)
+	shared_at
 `
 			)
 			.in("user_id", followingIds)
@@ -248,12 +248,17 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 			throw sharedError;
 		}
 
+		console.log(`[DEBUG] Retrieved ${sharedData?.length || 0} share records`);
+
 		let processedSharedPosts = [];
 
 		// If there are shared posts and the table exists
 		if (sharedData && sharedData.length > 0) {
 			// Get the voice note IDs from the shares
 			const sharedVoiceNoteIds = sharedData.map((share) => share.voice_note_id);
+			console.log(
+				`[DEBUG] Shared voice note IDs: ${sharedVoiceNoteIds.join(", ")}`
+			);
 
 			// Fetch the actual voice notes
 			const { data: sharedVoiceNotes, error: sharedVoiceNotesError } =
@@ -280,10 +285,37 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 				throw sharedVoiceNotesError;
 			}
 
+			console.log(
+				`[DEBUG] Retrieved ${
+					sharedVoiceNotes?.length || 0
+				} shared voice note details`
+			);
+
+			// Get sharer information separately to avoid foreign key issues
+			const sharersData = await Promise.all(
+				sharedData.map(async (share) => {
+					const { data: sharerInfo, error: sharerError } = await supabase
+						.from("users")
+						.select("id, username, display_name, avatar_url")
+						.eq("id", share.user_id)
+						.single();
+
+					if (sharerError) {
+						console.error(
+							`[ERROR] Error fetching sharer info for user ${share.user_id}:`,
+							sharerError
+						);
+						return { ...share, sharer: null };
+					}
+
+					return { ...share, sharer: sharerInfo };
+				})
+			);
+
 			// Process each shared voice note to include sharer info
 			processedSharedPosts = sharedVoiceNotes.map((note) => {
-				// Find the corresponding share record
-				const shareRecord = sharedData.find(
+				// Find the corresponding share record with sharer info
+				const shareRecord = sharersData.find(
 					(share) => share.voice_note_id === note.id
 				);
 
@@ -299,6 +331,13 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 				};
 			});
 		}
+
+		console.log(
+			`[DEBUG] Processed ${processedOriginalPosts.length} original posts`
+		);
+		console.log(
+			`[DEBUG] Processed ${processedSharedPosts.length} shared posts`
+		);
 
 		// Combine both types of posts
 		const allPosts = [...processedOriginalPosts, ...processedSharedPosts];
