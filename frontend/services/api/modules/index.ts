@@ -27,5 +27,5 @@ export * from './voiceBioApi';
 export * from './repostApi';
 
 // Export all types
-export * from './types/userTypes';
+export * from './types/userTypes'; 
 export * from './types/voiceNoteTypes'; 

@@ -26,25 +26,43 @@ export const hasUserRepostedVoiceNote = async (
   userId: string
 ): Promise<boolean> => {
   if (!voiceNoteId || !userId) {
-    console.log("[REPOST] Missing voiceNoteId or userId, returning false");
+    console.error("[SHARE DEBUG] hasUserRepostedVoiceNote - Missing parameters:", { voiceNoteId, userId });
     return false;
   }
 
   try {
-    console.log(
-      `[REPOST] Checking if user ${userId} has reposted voice note ${voiceNoteId}`
-    );
+    console.log("[SHARE DEBUG] hasUserRepostedVoiceNote - Starting check:", { voiceNoteId, userId });
+    console.log("[SHARE DEBUG] hasUserRepostedVoiceNote - API endpoint:", ENDPOINTS.CHECK_SHARE_STATUS(voiceNoteId));
+    
     const response = await apiRequest(
-      `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares/check?userId=${userId}`
+      ENDPOINTS.CHECK_SHARE_STATUS(voiceNoteId),
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
     );
 
-    const isReposted = typeof response === "boolean" ? response : response?.isShared === true;
-    console.log(
-      `[REPOST] User ${userId} has${isReposted ? "" : " not"} reposted voice note ${voiceNoteId}`
-    );
-    return isReposted;
+    console.log("[SHARE DEBUG] hasUserRepostedVoiceNote - Raw API response:", JSON.stringify(response, null, 2));
+    
+    const hasReposted = Boolean(response?.isShared || response?.shared);
+    console.log("[SHARE DEBUG] hasUserRepostedVoiceNote - Processed result:", { 
+      voiceNoteId, 
+      userId, 
+      hasReposted,
+      responseIsShared: response?.isShared,
+      responseShared: response?.shared
+    });
+    
+    return hasReposted;
   } catch (error) {
-    console.error("[REPOST] Error checking repost status:", error);
+    console.error("[SHARE DEBUG] hasUserRepostedVoiceNote - API Error:", {
+      voiceNoteId,
+      userId,
+      error: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
     return false;
   }
 };
@@ -57,39 +75,53 @@ export const toggleRepost = async (
   userId: string
 ): Promise<RepostResponse> => {
   if (!voiceNoteId || !userId) {
-    console.error("[REPOST] Missing voiceNoteId or userId");
+    console.error("[SHARE DEBUG] toggleRepost - Missing parameters:", { voiceNoteId, userId });
     return { isReposted: false, repostCount: 0 };
   }
 
   try {
-    console.log(
-      `[REPOST] Toggling repost for voice note ${voiceNoteId} by user ${userId}`
-    );
+    console.log("[SHARE DEBUG] toggleRepost - Starting toggle:", { voiceNoteId, userId });
+    console.log("[SHARE DEBUG] toggleRepost - API endpoint:", ENDPOINTS.VOICE_NOTE_REPOST(voiceNoteId));
+    console.log("[SHARE DEBUG] toggleRepost - Request body:", JSON.stringify({ user_id: userId }));
+    
     const response = await apiRequest(
-      `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`,
+      ENDPOINTS.VOICE_NOTE_REPOST(voiceNoteId),
       {
         method: "POST",
-        body: JSON.stringify({}), // Backend uses authenticated user
+        body: JSON.stringify({ user_id: userId }),
       }
     );
 
-    const isReposted = response?.isShared === true;
-    const repostCount = typeof response?.shareCount === "number"
-      ? response.shareCount
-      : await getRepostCount(voiceNoteId);
+    console.log("[SHARE DEBUG] toggleRepost - Raw API response:", JSON.stringify(response, null, 2));
 
-    return {
+    const isReposted = response?.isShared === true;
+    let repostCount = 0;
+    
+    if (typeof response?.shareCount === "number") {
+      repostCount = response.shareCount;
+      console.log("[SHARE DEBUG] toggleRepost - Share count from response:", repostCount);
+    } else {
+      console.log("[SHARE DEBUG] toggleRepost - No share count in response, fetching separately");
+      repostCount = await getRepostCount(voiceNoteId);
+      console.log("[SHARE DEBUG] toggleRepost - Share count from separate call:", repostCount);
+    }
+
+    const result = {
       isReposted,
       repostCount,
       voiceNoteId,
     };
+    
+    console.log("[SHARE DEBUG] toggleRepost - Final result:", result);
+    return result;
   } catch (error) {
-    console.error("[REPOST] Error toggling repost:", error);
-    return {
-      isReposted: false,
-      repostCount: 0,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    console.error("[SHARE DEBUG] toggleRepost - API Error:", {
+      voiceNoteId,
+      userId,
+      error: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
+    throw error;
   }
 };
 
@@ -98,33 +130,38 @@ export const toggleRepost = async (
  */
 export const getRepostCount = async (voiceNoteId: string): Promise<number> => {
   if (!voiceNoteId) {
-    console.error("[REPOST] Missing voiceNoteId");
+    console.error("[SHARE DEBUG] getRepostCount - Missing voiceNoteId");
     return 0;
   }
 
   try {
-    console.log(`[REPOST] Getting repost count for voice note ${voiceNoteId}`);
-    const response = await apiRequest(
-      `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`
-    );
+    const endpoint = `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`;
+    console.log("[SHARE DEBUG] getRepostCount - Starting request:", { voiceNoteId, endpoint });
+    
+    const response = await apiRequest(endpoint);
 
-    // Extract count from different possible response formats
-    let count = 0;
+    console.log("[SHARE DEBUG] getRepostCount - Raw API response:", JSON.stringify(response, null, 2));
 
-    if (typeof response?.shareCount === "number") {
-      count = response.shareCount;
-    } else if (typeof response?.data?.shareCount === "number") {
-      count = response.data.shareCount;
-    } else if (Array.isArray(response?.data)) {
-      count = response.data.length;
-    } else if (typeof response === "number") {
-      count = response;
-    }
-
-    console.log(`[REPOST] Voice note ${voiceNoteId} has ${count} reposts`);
+    // Backend returns { shareCount: number }
+    const count = response?.shareCount || 0;
+    console.log("[SHARE DEBUG] getRepostCount - Final count:", { voiceNoteId, count });
     return count;
-  } catch (error) {
-    console.error("[REPOST] Error getting repost count:", error);
+  } catch (error: any) {
+    console.error("[SHARE DEBUG] getRepostCount - API Error:", {
+      voiceNoteId,
+      error: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Handle specific backend errors gracefully
+    if (error?.message?.includes('Shares table not found') || 
+        error?.message?.includes('Error fetching share count')) {
+      console.log("[SHARE DEBUG] getRepostCount - Known error, returning 0:", { voiceNoteId });
+      return 0;
+    }
+    
+    // For any other error, return 0 instead of throwing
+    console.log("[SHARE DEBUG] getRepostCount - Unknown error, returning 0:", { voiceNoteId });
     return 0;
   }
 };
@@ -134,15 +171,17 @@ export const getRepostCount = async (voiceNoteId: string): Promise<number> => {
  */
 export const getReposters = async (voiceNoteId: string): Promise<any[]> => {
   if (!voiceNoteId) {
-    console.error("[REPOST] Missing voiceNoteId");
+    console.error("[SHARE DEBUG] getReposters - Missing voiceNoteId");
     return [];
   }
 
   try {
-    console.log(`[REPOST] Getting reposters for voice note ${voiceNoteId}`);
-    const response = await apiRequest(
-      `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`
-    );
+    const endpoint = `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`;
+    console.log("[SHARE DEBUG] getReposters - Starting request:", { voiceNoteId, endpoint });
+    
+    const response = await apiRequest(endpoint);
+
+    console.log("[SHARE DEBUG] getReposters - Raw API response:", JSON.stringify(response, null, 2));
 
     let reposters = [];
 
@@ -152,12 +191,18 @@ export const getReposters = async (voiceNoteId: string): Promise<any[]> => {
       reposters = response.data;
     }
 
-    console.log(
-      `[REPOST] Found ${reposters.length} reposters for voice note ${voiceNoteId}`
-    );
+    console.log("[SHARE DEBUG] getReposters - Final result:", { 
+      voiceNoteId, 
+      repostersCount: reposters.length,
+      reposters: reposters.map(r => ({ id: r.id, username: r.username }))
+    });
     return reposters;
   } catch (error) {
-    console.error("[REPOST] Error getting reposters:", error);
+    console.error("[SHARE DEBUG] getReposters - API Error:", {
+      voiceNoteId,
+      error: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
     return [];
   }
 };
@@ -166,28 +211,43 @@ export const getReposters = async (voiceNoteId: string): Promise<any[]> => {
  * Get the reposter information for a voice note if it's a repost
  */
 export const getReposterInfo = (voiceNote: any): ReposterInfo | null => {
+  console.log("[SHARE DEBUG] getReposterInfo - Input voice note:", {
+    id: voiceNote?.id,
+    isShared: voiceNote?.is_shared,
+    hasSharedBy: !!voiceNote?.shared_by,
+    hasSharerData: !!voiceNote?.sharer_id
+  });
+
   // Not a repost
-  if (!voiceNote?.is_shared) return null;
+  if (!voiceNote?.is_shared) {
+    console.log("[SHARE DEBUG] getReposterInfo - Not a shared voice note, returning null");
+    return null;
+  }
 
   // Extract reposter info from the voice note
   if (voiceNote.shared_by) {
-    return {
+    const reposterInfo = {
       id: voiceNote.shared_by.id,
       username: voiceNote.shared_by.username,
       displayName: voiceNote.shared_by.display_name,
       avatarUrl: voiceNote.shared_by.avatar_url,
     };
+    console.log("[SHARE DEBUG] getReposterInfo - Found reposter info from shared_by:", reposterInfo);
+    return reposterInfo;
   }
 
   // Alternative fields for reposter info
   if (voiceNote.sharer_id) {
-    return {
+    const reposterInfo = {
       id: voiceNote.sharer_id,
       username: voiceNote.sharer_username || "user",
       displayName: voiceNote.sharer_display_name || voiceNote.sharer_username || "User",
       avatarUrl: voiceNote.sharer_avatar_url || null,
     };
+    console.log("[SHARE DEBUG] getReposterInfo - Found reposter info from sharer fields:", reposterInfo);
+    return reposterInfo;
   }
 
+  console.log("[SHARE DEBUG] getReposterInfo - No reposter info found despite is_shared=true");
   return null;
 }; 

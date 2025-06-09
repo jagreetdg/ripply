@@ -4,6 +4,20 @@ const supabase = require("../config/supabase");
 const uuidv4 = require("uuid").v4;
 const { authenticateToken } = require("../middleware/auth");
 
+// Helper function to process voice note counts from Supabase aggregation format
+const processVoiceNoteCounts = (note) => {
+	if (!note) return note;
+
+	return {
+		...note,
+		// Extract count values from Supabase aggregation arrays
+		likes: note.likes?.[0]?.count || 0,
+		comments: note.comments?.[0]?.count || 0,
+		plays: note.plays?.[0]?.count || 0,
+		shares: note.shares?.[0]?.count || 0,
+	};
+};
+
 // Search for voice notes by title or tags - PUBLIC (no auth required)
 router.get("/search", async (req, res) => {
 	try {
@@ -29,6 +43,7 @@ router.get("/search", async (req, res) => {
 			likes:voice_note_likes (count),
 			comments:voice_note_comments (count),
 			plays:voice_note_plays (count),
+			shares:voice_note_shares (count),
 			tags:voice_note_tags (tag_name)
 		`,
 			{ count: "exact" }
@@ -65,33 +80,36 @@ router.get("/search", async (req, res) => {
 			query = query.in("id", voiceNoteIds);
 		} else {
 			// Search in title by default
+			console.log(`[DEBUG] Searching in titles for "${term}"`);
 			query = query.ilike("title", searchTerm);
 		}
 
-		// Add pagination and execute the query
-		const { data, error, count } = await query
+		// Apply pagination and ordering
+		query = query
 			.order("created_at", { ascending: false })
 			.range(offset, offset + parseInt(limit) - 1);
+
+		const { data, error, count } = await query;
 
 		if (error) {
 			console.error("[ERROR] Error searching voice notes:", error);
 			throw error;
 		}
 
-		// Process the data to format tags properly
-		const processedData = data.map((note) => {
+		console.log(`[DEBUG] Found ${data?.length || 0} voice notes for "${term}"`);
+
+		// Process the data to format tags and counts
+		const processedData = (data || []).map((note) => {
 			// Extract tags from the nested structure
 			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
+			// Process counts and add tags
 			return {
-				...note,
+				...processVoiceNoteCounts(note),
 				tags,
 			};
 		});
 
-		console.log(
-			`[DEBUG] Found ${processedData.length} voice notes matching "${term}"`
-		);
 		res.status(200).json(processedData);
 	} catch (error) {
 		console.error("Error searching voice notes:", error);
@@ -161,6 +179,7 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
         likes:voice_note_likes (count),
         comments:voice_note_comments (count),
         plays:voice_note_plays (count),
+        shares:voice_note_shares (count),
         tags:voice_note_tags (tag_name)
       `
 			)
@@ -203,7 +222,7 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
 			return {
-				...note,
+				...processVoiceNoteCounts(note),
 				tags,
 				is_shared: false, // IMPORTANT: Explicitly mark as not shared
 			};
@@ -247,6 +266,7 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 					likes:voice_note_likes (count),
 					comments:voice_note_comments (count),
 					plays:voice_note_plays (count),
+					shares:voice_note_shares (count),
 					tags:voice_note_tags (tag_name)
 				`
 					)
@@ -271,7 +291,7 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 				const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
 				return {
-					...note,
+					...processVoiceNoteCounts(note),
 					tags,
 					is_shared: true, // IMPORTANT: Explicitly mark as shared
 					shared_at: shareRecord?.shared_at || new Date().toISOString(),
@@ -355,6 +375,7 @@ router.get("/", authenticateToken, async (req, res) => {
         likes:voice_note_likes (count),
         comments:voice_note_comments (count),
         plays:voice_note_plays (count),
+        shares:voice_note_shares (count),
         tags:voice_note_tags (tag_name)
       `,
 				{ count: "exact" }
@@ -374,13 +395,13 @@ router.get("/", authenticateToken, async (req, res) => {
 			throw error;
 		}
 
-		// Process the data to format tags
+		// Process the data to format tags and counts
 		const processedData = data.map((note) => {
 			// Extract tags from the nested structure
 			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
 			return {
-				...note,
+				...processVoiceNoteCounts(note),
 				tags,
 			};
 		});
@@ -441,6 +462,7 @@ router.get("/:id", async (req, res) => {
         likes:voice_note_likes (count),
         comments:voice_note_comments (count),
         plays:voice_note_plays (count),
+        shares:voice_note_shares (count),
         tags:voice_note_tags (tag_name)
       `
 			)
@@ -450,10 +472,10 @@ router.get("/:id", async (req, res) => {
 		if (!data) {
 			return res.status(404).json({ message: "Voice note not found" });
 		}
-		// Process tags
+		// Process tags and counts
 		const tags = data.tags ? data.tags.map((tag) => tag.tag_name) : [];
 		const responseData = {
-			...data,
+			...processVoiceNoteCounts(data),
 			tags,
 		};
 		res.status(200).json(responseData);

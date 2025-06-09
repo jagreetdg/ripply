@@ -1,263 +1,146 @@
-import React, {
-	useEffect,
-	useRef,
-	createContext,
-	useContext,
-	useState,
-} from "react";
-import {
-	View,
-	Text,
-	StyleSheet,
-	Animated,
-	Platform,
-	ToastAndroid,
-} from "react-native";
-import { useTheme } from "../../context/ThemeContext";
+import React, { useEffect, useRef } from "react";
+import { View, Text, Animated, TouchableOpacity } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useTheme } from "@react-navigation/native";
+
+export type ToastType = "success" | "error" | "info" | "warning";
 
 interface ToastProps {
-	message: string;
-	type?: "success" | "error" | "info";
 	visible: boolean;
-	onHide: () => void;
+	message: string;
+	type: ToastType;
 	duration?: number;
+	onHide: () => void;
 }
 
 export const Toast: React.FC<ToastProps> = ({
-	message,
-	type = "info",
 	visible,
-	onHide,
+	message,
+	type,
 	duration = 3000,
+	onHide,
 }) => {
 	const { colors } = useTheme();
-	const fadeAnim = useRef(new Animated.Value(0)).current;
-	const translateY = useRef(new Animated.Value(50)).current;
-
-	console.log("[TOAST COMPONENT] Rendered with:", {
-		message,
-		type,
-		visible,
-		duration,
-	});
+	const slideAnim = useRef(new Animated.Value(-100)).current;
+	const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	useEffect(() => {
-		console.log("[TOAST COMPONENT] useEffect triggered, visible:", visible);
 		if (visible) {
-			// For Android, use native toast
-			if (Platform.OS === "android") {
-				console.log("[TOAST COMPONENT] Using Android native toast");
-				ToastAndroid.show(message, ToastAndroid.SHORT);
-				onHide();
-				return;
+			// Clear any existing timeout
+			if (hideTimeoutRef.current) {
+				clearTimeout(hideTimeoutRef.current);
 			}
 
-			console.log("[TOAST COMPONENT] Using custom animated toast for iOS/web");
-			// For iOS and web, use custom animated toast
-			Animated.parallel([
-				Animated.timing(fadeAnim, {
-					toValue: 1,
-					duration: 300,
-					useNativeDriver: true,
-				}),
-				Animated.timing(translateY, {
-					toValue: 0,
-					duration: 300,
-					useNativeDriver: true,
-				}),
-			]).start(() => {
-				console.log("[TOAST COMPONENT] ✅ Show animation completed");
-			});
+			// Slide in
+			Animated.spring(slideAnim, {
+				toValue: 50,
+				useNativeDriver: true,
+				tension: 100,
+				friction: 8,
+			}).start();
 
 			// Auto hide after duration
-			const timer = setTimeout(() => {
-				console.log("[TOAST COMPONENT] Auto-hide timer triggered");
-				Animated.parallel([
-					Animated.timing(fadeAnim, {
-						toValue: 0,
-						duration: 300,
-						useNativeDriver: true,
-					}),
-					Animated.timing(translateY, {
-						toValue: 50,
-						duration: 300,
-						useNativeDriver: true,
-					}),
-				]).start(() => {
-					console.log("[TOAST COMPONENT] ✅ Hide animation completed");
-					onHide();
-				});
+			hideTimeoutRef.current = setTimeout(() => {
+				hideToast();
 			}, duration);
-
-			return () => {
-				console.log("[TOAST COMPONENT] Cleanup timer");
-				clearTimeout(timer);
-			};
 		}
-	}, [visible, message, duration, fadeAnim, translateY, onHide]);
 
-	// Don't render anything on Android (uses native toast)
-	if (Platform.OS === "android" || !visible) {
-		console.log(
-			"[TOAST COMPONENT] Not rendering:",
-			Platform.OS === "android" ? "Android platform" : "Not visible"
-		);
-		return null;
-	}
+		return () => {
+			if (hideTimeoutRef.current) {
+				clearTimeout(hideTimeoutRef.current);
+			}
+		};
+	}, [visible, duration]);
 
-	console.log("[TOAST COMPONENT] Rendering custom toast");
+	const hideToast = () => {
+		Animated.timing(slideAnim, {
+			toValue: -100,
+			duration: 300,
+			useNativeDriver: true,
+		}).start(() => {
+			onHide();
+		});
+	};
 
-	const getBackgroundColor = () => {
+	const getToastStyles = () => {
 		switch (type) {
 			case "success":
-				return "#4CAF50";
+				return {
+					backgroundColor: "#4CAF50",
+					iconName: "check-circle" as const,
+				};
 			case "error":
-				return "#F44336";
+				return {
+					backgroundColor: "#F44336",
+					iconName: "error" as const,
+				};
+			case "warning":
+				return {
+					backgroundColor: "#FF9800",
+					iconName: "warning" as const,
+				};
+			case "info":
 			default:
-				return colors.tint;
+				return {
+					backgroundColor: "#2196F3",
+					iconName: "info" as const,
+				};
 		}
 	};
+
+	const toastStyles = getToastStyles();
+
+	if (!visible) return null;
 
 	return (
 		<Animated.View
-			style={[
-				styles.container,
-				{
-					opacity: fadeAnim,
-					transform: [{ translateY }],
-					backgroundColor: getBackgroundColor(),
-				},
-			]}
+			style={{
+				position: "absolute",
+				top: 0,
+				left: 20,
+				right: 20,
+				zIndex: 9999,
+				transform: [{ translateY: slideAnim }],
+			}}
 		>
-			<Text style={styles.message}>{message}</Text>
+			<TouchableOpacity
+				onPress={hideToast}
+				style={{
+					backgroundColor: toastStyles.backgroundColor,
+					padding: 16,
+					borderRadius: 8,
+					flexDirection: "row",
+					alignItems: "center",
+					shadowColor: "#000",
+					shadowOffset: {
+						width: 0,
+						height: 2,
+					},
+					shadowOpacity: 0.25,
+					shadowRadius: 3.84,
+					elevation: 5,
+				}}
+			>
+				<MaterialIcons
+					name={toastStyles.iconName}
+					size={24}
+					color="white"
+					style={{ marginRight: 12 }}
+				/>
+				<Text
+					style={{
+						color: "white",
+						fontSize: 16,
+						fontWeight: "500",
+						flex: 1,
+					}}
+				>
+					{message}
+				</Text>
+				<TouchableOpacity onPress={hideToast}>
+					<MaterialIcons name="close" size={20} color="white" />
+				</TouchableOpacity>
+			</TouchableOpacity>
 		</Animated.View>
 	);
-};
-
-const styles = StyleSheet.create({
-	container: {
-		position: "absolute",
-		bottom: 100,
-		maxWidth: 300,
-		width: "80%",
-		alignSelf: "center",
-		left: 0,
-		right: 0,
-		marginHorizontal: "auto",
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-		borderRadius: 8,
-		zIndex: 1000,
-		elevation: 10,
-		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.25,
-		shadowRadius: 3.84,
-	},
-	message: {
-		color: "#fff",
-		fontSize: 14,
-		fontWeight: "500",
-		textAlign: "center",
-	},
-});
-
-// Global Toast Context
-interface GlobalToastContextType {
-	showToast: (message: string, type?: "success" | "error" | "info") => void;
-}
-
-const GlobalToastContext = createContext<GlobalToastContextType | undefined>(
-	undefined
-);
-
-export const GlobalToastProvider: React.FC<{ children: React.ReactNode }> = ({
-	children,
-}) => {
-	const [toast, setToast] = useState<{
-		message: string;
-		type: "success" | "error" | "info";
-		visible: boolean;
-	}>({
-		message: "",
-		type: "info",
-		visible: false,
-	});
-
-	const showToast = (
-		message: string,
-		type: "success" | "error" | "info" = "info"
-	) => {
-		console.log("[GLOBAL TOAST] showToast called:", { message, type });
-		setToast({ message, type, visible: true });
-		console.log("[GLOBAL TOAST] Toast state updated to visible");
-	};
-
-	const hideToast = () => {
-		console.log("[GLOBAL TOAST] hideToast called");
-		setToast((prev) => ({ ...prev, visible: false }));
-		console.log("[GLOBAL TOAST] Toast state updated to hidden");
-	};
-
-	return (
-		<GlobalToastContext.Provider value={{ showToast }}>
-			{children}
-			<Toast
-				message={toast.message}
-				type={toast.type}
-				visible={toast.visible}
-				onHide={hideToast}
-			/>
-		</GlobalToastContext.Provider>
-	);
-};
-
-export const useGlobalToast = () => {
-	const context = useContext(GlobalToastContext);
-	if (context === undefined) {
-		throw new Error("useGlobalToast must be used within a GlobalToastProvider");
-	}
-	return context;
-};
-
-// Hook for using toast (keeping for backward compatibility)
-export const useToast = () => {
-	const [toast, setToast] = React.useState<{
-		message: string;
-		type: "success" | "error" | "info";
-		visible: boolean;
-	}>({
-		message: "",
-		type: "info",
-		visible: false,
-	});
-
-	const showToast = (
-		message: string,
-		type: "success" | "error" | "info" = "info"
-	) => {
-		console.log("[TOAST] showToast called:", { message, type });
-		setToast({ message, type, visible: true });
-		console.log("[TOAST] Toast state updated to visible");
-	};
-
-	const hideToast = () => {
-		console.log("[TOAST] hideToast called");
-		setToast((prev) => ({ ...prev, visible: false }));
-		console.log("[TOAST] Toast state updated to hidden");
-	};
-
-	const ToastComponent = () => (
-		<Toast
-			message={toast.message}
-			type={toast.type}
-			visible={toast.visible}
-			onHide={hideToast}
-		/>
-	);
-
-	return { showToast, ToastComponent };
 };

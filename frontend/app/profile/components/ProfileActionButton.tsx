@@ -10,7 +10,7 @@ interface ProfileActionButtonProps {
 	onFollowChange: (isFollowing: boolean, updatedCount?: number) => void;
 }
 
-export const ProfileActionButton: React.FC<ProfileActionButtonProps> = ({
+const ProfileActionButton: React.FC<ProfileActionButtonProps> = ({
 	isOwnProfile,
 	userId,
 	onFollowChange,
@@ -64,3 +64,5 @@ const styles = StyleSheet.create({
 		fontWeight: "600",
 	},
 });
+
+export default ProfileActionButton;

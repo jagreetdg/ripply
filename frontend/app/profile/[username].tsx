@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useState, useEffect } from "react";
 import { useLocalSearchParams, Stack } from "expo-router";
 import {
 	View,
@@ -15,23 +15,155 @@ import { UserNotFound } from "../../components/common/UserNotFound";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
 import { FollowersFollowingPopup } from "../../components/profile/FollowersFollowingPopup";
-import { useProfileData } from "./hooks/useProfileData";
-import { useProfileAnimations } from "./hooks/useProfileAnimations";
+import { useUser } from "../../context/UserContext";
 import {
-	ProfileStats,
-	ProfileActionButton,
-	ProfileFloatingActionButton,
-} from "./components";
+	getUserProfileByUsername,
+	getUserVoiceNotes,
+	getUserSharedVoiceNotes,
+} from "../../services/api";
+import ProfileStats from "./components/ProfileStats";
+import ProfileActionButton from "./components/ProfileActionButton";
+import ProfileFloatingActionButton from "./components/ProfileFloatingActionButton";
 
 export default function ProfileByUsernameScreen() {
 	const { colors } = useTheme();
 	const params = useLocalSearchParams<{ username: string }>();
 	const insets = useSafeAreaInsets();
 	const scrollViewRef = useRef<ScrollView>(null);
+	const { user: currentUser } = useUser();
 
-	// Use custom hooks for data and animations
-	const profileData = useProfileData(params.username || "");
-	const animations = useProfileAnimations(profileData.setIsHeaderCollapsed);
+	// Profile data state
+	const [userProfile, setUserProfile] = useState<any>(null);
+	const [voiceNotes, setVoiceNotes] = useState<any[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [refreshing, setRefreshing] = useState(false);
+	const [userNotFound, setUserNotFound] = useState(false);
+	const [followerCount, setFollowerCount] = useState(0);
+	const [followingCount, setFollowingCount] = useState(0);
+	const [showFollowersPopup, setShowFollowersPopup] = useState(false);
+	const [showFollowingPopup, setShowFollowingPopup] = useState(false);
+	const [loadingVoiceNotes, setLoadingVoiceNotes] = useState(false);
+
+	// Animation state
+	const scrollY = useRef(new Animated.Value(0)).current;
+	const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+
+	// Animation values
+	const headerOpacity = scrollY.interpolate({
+		inputRange: [0, 100],
+		outputRange: [1, 0],
+		extrapolate: "clamp",
+	});
+
+	const collapsedHeaderOpacity = scrollY.interpolate({
+		inputRange: [0, 100],
+		outputRange: [0, 1],
+		extrapolate: "clamp",
+	});
+
+	// Computed values
+	const isOwnProfile = currentUser?.username === params.username;
+	const combinedVoiceNotes = voiceNotes;
+
+	// Load profile data
+	const loadProfileData = useCallback(
+		async (isRefreshing = false) => {
+			if (!params.username) return;
+
+			try {
+				if (!isRefreshing) setLoading(true);
+
+				// Load user profile
+				const profile = await getUserProfileByUsername(params.username);
+				if (!profile) throw new Error("Profile not found");
+				setUserProfile(profile);
+				setFollowerCount((profile as any).follower_count || 0);
+				setFollowingCount((profile as any).following_count || 0);
+
+				// Load voice notes and shared notes
+				setLoadingVoiceNotes(true);
+				const [notes, sharedNotes] = await Promise.all([
+					getUserVoiceNotes(profile.id),
+					getUserSharedVoiceNotes(profile.id),
+				]);
+
+				// Combine and sort by creation time (shared notes by shared_at, regular by created_at)
+				const allNotes = [...notes, ...sharedNotes].sort((a, b) => {
+					const dateA =
+						a.is_shared && a.shared_at
+							? new Date(a.shared_at)
+							: new Date(a.created_at);
+					const dateB =
+						b.is_shared && b.shared_at
+							? new Date(b.shared_at)
+							: new Date(b.created_at);
+					return dateB.getTime() - dateA.getTime(); // Newest first
+				});
+
+				setVoiceNotes(allNotes);
+				setLoadingVoiceNotes(false);
+
+				setUserNotFound(false);
+			} catch (error) {
+				console.error("Error loading profile:", error);
+				setUserNotFound(true);
+			} finally {
+				setLoading(false);
+				setRefreshing(false);
+			}
+		},
+		[params.username]
+	);
+
+	// Handle refresh
+	const handleRefresh = useCallback(async () => {
+		setRefreshing(true);
+		await loadProfileData(true);
+	}, [loadProfileData]);
+
+	// Update follower count
+	const updateFollowerCount = useCallback(
+		(isFollowing: boolean, updatedCount?: number) => {
+			if (updatedCount !== undefined) {
+				setFollowerCount(updatedCount);
+			} else {
+				setFollowerCount((prev) => (isFollowing ? prev + 1 : prev - 1));
+			}
+		},
+		[]
+	);
+
+	// Load data on mount
+	useEffect(() => {
+		loadProfileData();
+	}, [loadProfileData]);
+
+	// Create profileData and animations objects for compatibility
+	const profileData = {
+		userProfile,
+		voiceNotes,
+		loading,
+		refreshing,
+		userNotFound,
+		followerCount,
+		followingCount,
+		showFollowersPopup,
+		showFollowingPopup,
+		loadingVoiceNotes,
+		isOwnProfile,
+		combinedVoiceNotes,
+		handleRefresh,
+		updateFollowerCount,
+		setShowFollowersPopup,
+		setShowFollowingPopup,
+		setIsHeaderCollapsed,
+	};
+
+	const animations = {
+		scrollY,
+		headerOpacity,
+		collapsedHeaderOpacity,
+	};
 
 	// Handler for the header click that scrolls to top
 	const handleHeaderPress = useCallback(() => {

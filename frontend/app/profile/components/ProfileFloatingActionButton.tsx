@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../../context/ThemeContext";
 
-export const ProfileFloatingActionButton: React.FC = () => {
+const ProfileFloatingActionButton: React.FC = () => {
 	const { colors } = useTheme();
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
@@ -46,3 +46,5 @@ const styles = StyleSheet.create({
 		shadowRadius: 4.65,
 	},
 });
+
+export default ProfileFloatingActionButton;

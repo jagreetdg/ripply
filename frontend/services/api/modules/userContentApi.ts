@@ -17,30 +17,13 @@ import {
  * @param userId - User ID
  * @returns List of voice notes
  */
-export const getUserVoiceNotes = async (userId: string): Promise<VoiceNote[]> => {
-  const response = await apiRequest<{ data: VoiceNote[] } | VoiceNote[]>(
-    `${ENDPOINTS.USERS}/${userId}/voice-notes`
-  );
-
-  // Extract just the voice notes array from the response
-  const voiceNotes = 'data' in response ? response.data : response || [];
-
-  // Get the user data to attach to each voice note
+export const getUserVoiceNotes = async (userId: string, page: number = 1, limit: number = 10): Promise<VoiceNote[]> => {
   try {
-    const userData = await getUserProfile(userId);
-
-    // Attach the user data to each voice note
-    return voiceNotes.map((note) => ({
-      ...note,
-      users: {
-        id: userData.id,
-        username: userData.username,
-        display_name: userData.display_name,
-        avatar_url: userData.avatar_url,
-      },
-    }));
+    const data = await apiRequest(ENDPOINTS.USER_VOICE_NOTES(userId) + `?page=${page}&limit=${limit}`);
+    return data;
   } catch (error) {
-    return voiceNotes;
+    console.error("Error fetching user voice notes:", error);
+    throw error;
   }
 };
 
@@ -49,22 +32,14 @@ export const getUserVoiceNotes = async (userId: string): Promise<VoiceNote[]> =>
  * @param userId - User ID
  * @returns List of shared voice notes
  */
-export const getUserSharedVoiceNotes = async (userId: string): Promise<VoiceNote[]> => {
-  const response = await apiRequest<{ data: VoiceNote[] } | VoiceNote[]>(
-    `${ENDPOINTS.USERS}/${userId}/shared-voice-notes`
-  );
-
-  // Extract just the voice notes array from the response
-  const voiceNotes = 'data' in response ? response.data : response || [];
-
-  // The backend now provides complete shared_by objects, so we can just ensure
-  // all notes have the is_shared flag set to true and return them
-  return voiceNotes.map((note) => ({
-    ...note,
-    is_shared: true,
-    // Make sure shared_at exists
-    shared_at: note.shared_at || new Date().toISOString(),
-  }));
+export const getUserSharedVoiceNotes = async (userId: string, page: number = 1, limit: number = 10): Promise<VoiceNote[]> => {
+  try {
+    const data = await apiRequest(ENDPOINTS.USER_SHARED_VOICE_NOTES(userId) + `?page=${page}&limit=${limit}`);
+    return data;
+  } catch (error) {
+    console.error("Error fetching user shared voice notes:", error);
+    throw error;
+  }
 };
 
 /**
@@ -74,11 +49,7 @@ export const getUserSharedVoiceNotes = async (userId: string): Promise<VoiceNote
  */
 export const debugFollowsSchema = async (userId: string): Promise<any> => {
   try {
-    console.log(`DEBUG: Checking follows schema for user ${userId}`);
-    
     // Use imported functions
-
-    // Collect debug information
     const debugInfo: any = {
       user: userId,
       followersData: null,
@@ -147,13 +118,70 @@ export const debugFollowsSchema = async (userId: string): Promise<any> => {
       debugInfo.errors.push({ type: "counts", error: String(error) });
     }
 
-    console.log(
-      "DEBUG follows schema results:",
-      JSON.stringify(debugInfo, null, 2)
-    );
     return debugInfo;
   } catch (error) {
     console.error("DEBUG schema test error:", error);
     return { error: String(error) };
+  }
+};
+
+export const createFollowsSchema = async (userId: string): Promise<void> => {
+  try {
+    const response = await apiRequest(
+      ENDPOINTS.USER_VERIFY(userId),
+      {
+        method: "POST",
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error creating follows schema for user ${userId}:`, error);
+    throw error;
+  }
+};
+
+export const getUserReposts = async (userId: string): Promise<any[]> => {
+  try {
+    const response = await apiRequest(
+      ENDPOINTS.USER_SHARED_VOICE_NOTES(userId)
+    );
+
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    if (response?.data && Array.isArray(response.data)) {
+      return response.data;
+    }
+
+    return [];
+  } catch (error) {
+    console.error(`Error fetching reposts for user ${userId}:`, error);
+    return [];
+  }
+};
+
+// Get user's voice bio
+export const getUserVoiceBio = async (userId: string) => {
+  try {
+    const data = await apiRequest(ENDPOINTS.VOICE_BIO(userId));
+    return data;
+  } catch (error) {
+    console.error("Error fetching user voice bio:", error);
+    throw error;
+  }
+};
+
+// Update user profile
+export const updateUserProfile = async (userId: string, profileData: any) => {
+  try {
+    const data = await apiRequest(ENDPOINTS.USER_PROFILE(userId), {
+      method: "PUT",
+      body: profileData,
+    });
+    return data;
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw error;
   }
 }; 

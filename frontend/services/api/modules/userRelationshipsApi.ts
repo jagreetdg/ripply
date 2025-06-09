@@ -11,63 +11,62 @@ import {
 } from "./types/userTypes";
 import { getUserProfile } from "./userProfileApi";
 
+export interface UserSearchResult {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  is_verified: boolean;
+}
+
+/**
+ * Search for users
+ * @param query - Search query
+ * @returns List of user search results
+ */
+export const searchUsers = async (query: string): Promise<UserSearchResult[]> => {
+  try {
+    const data = await apiRequest<UserSearchResult[]>(
+      `${ENDPOINTS.SEARCH_USERS}?query=${encodeURIComponent(query)}`
+    );
+    return data || [];
+  } catch (error) {
+    console.error("Error searching users:", error);
+    return [];
+  }
+};
+
 /**
  * Follow a user
  * @param userId - ID of user to follow
- * @param followerId - ID of follower
- * @returns Follow relationship data
+ * @returns Whether the follow was successful
  */
-export const followUser = async (
-  userId: string, 
-  followerId: string
-): Promise<FollowResponse> => {
+export const followUser = async (userId: string): Promise<boolean> => {
   try {
-    console.log(
-      `Attempting to follow user: ${userId} by follower: ${followerId}`
-    );
-    const response = await apiRequest<FollowResponse>(
-      `${ENDPOINTS.USERS}/${userId}/follow`, 
-      {
-        method: "POST",
-        body: JSON.stringify({ followerId }),
-      }
-    );
-
-    console.log("Follow user response:", JSON.stringify(response));
-    return response;
+    await apiRequest(ENDPOINTS.FOLLOW_USER(userId), {
+      method: "POST",
+    });
+    return true;
   } catch (error) {
     console.error("Error following user:", error);
-    throw error;
+    return false;
   }
 };
 
 /**
  * Unfollow a user
  * @param userId - ID of user to unfollow
- * @param followerId - ID of follower
- * @returns Response data
+ * @returns Whether the unfollow was successful
  */
-export const unfollowUser = async (
-  userId: string, 
-  followerId: string
-): Promise<FollowResponse> => {
+export const unfollowUser = async (userId: string): Promise<boolean> => {
   try {
-    console.log(
-      `Attempting to unfollow user: ${userId} by follower: ${followerId}`
-    );
-    const response = await apiRequest<FollowResponse>(
-      `${ENDPOINTS.USERS}/${userId}/unfollow`, 
-      {
-        method: "POST",
-        body: JSON.stringify({ followerId }),
-      }
-    );
-
-    console.log("Unfollow user response:", JSON.stringify(response));
-    return response;
+    await apiRequest(ENDPOINTS.UNFOLLOW_USER(userId), {
+      method: "DELETE",
+    });
+    return true;
   } catch (error) {
     console.error("Error unfollowing user:", error);
-    throw error;
+    return false;
   }
 };
 
@@ -76,25 +75,14 @@ export const unfollowUser = async (
  * @param userId - User ID
  * @returns List of followers
  */
-export const getUserFollowers = async (userId: string): Promise<FollowRelationship[]> => {
+export const getUserFollowers = async (userId: string): Promise<UserSearchResult[]> => {
   try {
-    console.log(`Fetching followers for user: ${userId}`);
-    const response = await apiRequest<FollowRelationship[] | { data: FollowRelationship[] }>(
-      `${ENDPOINTS.USERS}/${userId}/followers`
+    const data = await apiRequest<UserSearchResult[]>(
+      ENDPOINTS.USER_FOLLOWERS(userId)
     );
-    console.log(`Followers API response:`, JSON.stringify(response));
-
-    // Make sure we always return an array
-    if (!response || (!('data' in response) && !Array.isArray(response))) {
-      console.log("No followers data found, returning empty array");
-      return [];
-    }
-
-    const followers = 'data' in response ? response.data : response;
-    console.log(`Found ${followers.length} followers`);
-    return followers;
+    return data || [];
   } catch (error) {
-    console.error("Error fetching followers:", error);
+    console.error("Error fetching user followers:", error);
     return [];
   }
 };
@@ -104,25 +92,14 @@ export const getUserFollowers = async (userId: string): Promise<FollowRelationsh
  * @param userId - User ID
  * @returns List of followed users
  */
-export const getUserFollowing = async (userId: string): Promise<FollowRelationship[]> => {
+export const getUserFollowing = async (userId: string): Promise<UserSearchResult[]> => {
   try {
-    console.log(`Fetching following users for user: ${userId}`);
-    const response = await apiRequest<FollowRelationship[] | { data: FollowRelationship[] }>(
-      `${ENDPOINTS.USERS}/${userId}/following`
+    const data = await apiRequest<UserSearchResult[]>(
+      ENDPOINTS.USER_FOLLOWING(userId)
     );
-    console.log("getUserFollowing raw response:", JSON.stringify(response));
-
-    // Make sure we always return an array
-    if (!response || (!('data' in response) && !Array.isArray(response))) {
-      console.log("No following data found, returning empty array");
-      return [];
-    }
-
-    const following = 'data' in response ? response.data : response;
-    console.log(`Found ${following.length} following users`);
-    return following;
+    return data || [];
   } catch (error) {
-    console.error("Error fetching following:", error);
+    console.error("Error fetching user following:", error);
     return [];
   }
 };
@@ -134,21 +111,13 @@ export const getUserFollowing = async (userId: string): Promise<FollowRelationsh
  */
 export const getFollowerCount = async (userId: string): Promise<number> => {
   try {
-    console.log(`Getting follower count for user: ${userId}`);
-    const response = await apiRequest<CountResponse>(
-      `${ENDPOINTS.USERS}/${userId}/follower-count`
+    const data = await apiRequest<{ count: number }>(
+      ENDPOINTS.FOLLOWER_COUNT(userId)
     );
-    console.log("Follower count response:", JSON.stringify(response));
-
-    // Return the count from the response
-    return response && typeof response.count === "number" ? response.count : 0;
+    return data?.count || 0;
   } catch (error) {
-    console.error("Error getting follower count:", error);
-
-    // Fallback to the old method if the new endpoint fails
-    console.log("Falling back to counting followers array");
-    const followers = await getUserFollowers(userId);
-    return followers.length;
+    console.error("Error fetching follower count:", error);
+    return 0;
   }
 };
 
@@ -159,69 +128,31 @@ export const getFollowerCount = async (userId: string): Promise<number> => {
  */
 export const getFollowingCount = async (userId: string): Promise<number> => {
   try {
-    console.log(`Getting following count for user: ${userId}`);
-    const response = await apiRequest<CountResponse>(
-      `${ENDPOINTS.USERS}/${userId}/following-count`
+    const data = await apiRequest<{ count: number }>(
+      ENDPOINTS.FOLLOWING_COUNT(userId)
     );
-    console.log("Following count response:", JSON.stringify(response));
-
-    // Return the count from the response
-    return response && typeof response.count === "number" ? response.count : 0;
+    return data?.count || 0;
   } catch (error) {
-    console.error("Error getting following count:", error);
-
-    // Fallback to the old method if the new endpoint fails
-    console.log("Falling back to counting following array");
-    const following = await getUserFollowing(userId);
-    return following.length;
+    console.error("Error fetching following count:", error);
+    return 0;
   }
 };
 
 /**
  * Check if a user is following another user
- * @param followerId - ID of the potential follower
  * @param userId - ID of the user to check if being followed
- * @returns Whether followerId is following userId
+ * @param followerId - ID of the potential follower
+ * @returns Whether userId is following followerId
  */
-export const isFollowing = async (followerId: string, userId: string): Promise<boolean> => {
+export const isFollowing = async (
+  userId: string,
+  followerId: string
+): Promise<boolean> => {
   try {
-    console.log(
-      `Checking if user ${followerId} is following ${userId} (direct API call)`
+    const data = await apiRequest<{ isFollowing: boolean }>(
+      ENDPOINTS.IS_FOLLOWING(userId, followerId)
     );
-
-    // Use the dedicated endpoint to check follow status
-    const response = await apiRequest<IsFollowingResponse>(
-      `${ENDPOINTS.USERS}/${userId}/is-following/${followerId}`
-    );
-    console.log("isFollowing direct API response:", JSON.stringify(response));
-
-    if (response && typeof response.isFollowing === "boolean") {
-      return response.isFollowing;
-    }
-
-    // Fallback to the old method if the new endpoint fails
-    console.log("Falling back to checking follow status using following list");
-    const following = await getUserFollowing(followerId);
-    console.log(
-      "isFollowing check - following data:",
-      JSON.stringify(following)
-    );
-
-    // Check different possible data structures
-    // Some API responses might include nested user objects
-    return following.some((follow) => {
-      // Check for direct following_id property
-      if (follow.followee_id === userId) {
-        return true;
-      }
-
-      // Check for possibly nested user object
-      if (follow.users && follow.users.id === userId) {
-        return true;
-      }
-
-      return false;
-    });
+    return data?.isFollowing || false;
   } catch (error) {
     console.error("Error checking follow status:", error);
     return false;

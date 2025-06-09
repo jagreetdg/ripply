@@ -268,6 +268,20 @@ router.post("/:userId/unfollow", authenticateToken, async (req, res) => {
 	}
 });
 
+// Helper function to process voice note counts from Supabase aggregation format
+const processVoiceNoteCounts = (note) => {
+	if (!note) return note;
+
+	return {
+		...note,
+		// Extract count values from Supabase aggregation arrays
+		likes: note.likes?.[0]?.count || 0,
+		comments: note.comments?.[0]?.count || 0,
+		plays: note.plays?.[0]?.count || 0,
+		shares: note.shares?.[0]?.count || 0,
+	};
+};
+
 // Get voice notes by user - REQUIRES AUTHENTICATION
 router.get("/:userId/voice-notes", authenticateToken, async (req, res) => {
 	try {
@@ -283,6 +297,7 @@ router.get("/:userId/voice-notes", authenticateToken, async (req, res) => {
         likes:voice_note_likes (count),
         comments:voice_note_comments (count),
         plays:voice_note_plays (count),
+        shares:voice_note_shares (count),
         tags:voice_note_tags (tag_name)
       `,
 				{ count: "exact" }
@@ -293,13 +308,13 @@ router.get("/:userId/voice-notes", authenticateToken, async (req, res) => {
 
 		if (error) throw error;
 
-		// Process the data to format tags
+		// Process the data to format tags and counts
 		const processedData = data.map((note) => {
 			// Extract tags from the nested structure
 			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
 			return {
-				...note,
+				...processVoiceNoteCounts(note),
 				tags,
 			};
 		});
@@ -591,6 +606,7 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
         likes:voice_note_likes (count),
         comments:voice_note_comments (count),
         plays:voice_note_plays (count),
+        shares:voice_note_shares (count),
         tags:voice_note_tags (tag_name)
       `
 			)
@@ -614,7 +630,7 @@ router.get("/:userId/shared-voice-notes", async (req, res) => {
 			// note.users is the original creator of the voice note
 			// shareInfo.sharer_details is the user who shared this note (the profile owner, in this context)
 			return {
-				...note, // original voice note data, including original creator (note.users)
+				...processVoiceNoteCounts(note), // Process counts and original voice note data
 				tags,
 				is_shared: true,
 				shared_at: shareInfo ? shareInfo.created_at : null, // Timestamp of the share

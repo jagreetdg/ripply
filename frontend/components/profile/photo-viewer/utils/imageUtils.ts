@@ -27,18 +27,27 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
 	});
 };
 
-// Utility function to convert blob URL to data URI if needed
+// Utility function to convert blob URL or remote URL to data URI if needed
 export const ensureDataUri = async (uri: string): Promise<string> => {
 	try {
-		if (Platform.OS === "web" && uri.startsWith("blob:")) {
-			const response = await fetch(uri);
-			const blob = await response.blob();
-			const base64Data = await blobToBase64(blob);
-			const dataUri = `data:${blob.type};base64,${base64Data}`;
-			return dataUri;
+		if (Platform.OS === "web") {
+			// If it's already a data URI, return as-is
+			if (uri.startsWith("data:")) {
+				return uri;
+			}
+			
+			// Convert blob URLs or remote URLs to data URI
+			if (uri.startsWith("blob:") || uri.startsWith("http")) {
+				const response = await fetch(uri);
+				const blob = await response.blob();
+				const base64Data = await blobToBase64(blob);
+				const dataUri = `data:${blob.type};base64,${base64Data}`;
+				return dataUri;
+			}
 		}
 		return uri;
 	} catch (error) {
+		console.warn("[IMAGE UTILS] Failed to convert URI to data URI:", error);
 		return uri; // Return original URI as fallback
 	}
 };
@@ -127,6 +136,12 @@ export const compressImageIfNeeded = async (
 	}
 
 	try {
+		// Convert image to data-URI format for web platforms to prevent manipulateAsync failures
+		let processUri = uri;
+		if (Platform.OS === "web") {
+			processUri = await ensureDataUri(uri);
+		}
+
 		// Determine compression settings based on photo type
 		const isProfile = photoType === "profile";
 		let maxWidth = isProfile ? MAX_PROFILE_DIMENSION : MAX_COVER_WIDTH;
@@ -159,7 +174,7 @@ export const compressImageIfNeeded = async (
 				];
 
 				const result = await ImageManipulator.manipulateAsync(
-					uri,
+					processUri,
 					manipulateActions,
 					{
 						compress: compressionQuality,

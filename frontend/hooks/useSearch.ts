@@ -8,6 +8,8 @@ import {
   getTrendingSearches,
 } from '../services/api';
 import { checkShareStatus } from '../services/api';
+import { UserSearchResult } from "../services/api/modules/userRelationshipsApi";
+import { VoiceNote } from "../components/voice-note-card/VoiceNoteCardTypes";
 
 export type SearchTab = 'users' | 'posts';
 
@@ -16,6 +18,11 @@ interface UseSearchProps {
   initialTab?: SearchTab;
   userId?: string;
   onSearchComplete?: () => void;
+}
+
+export interface SearchResult {
+  type: "user" | "voiceNote";
+  data: UserSearchResult | VoiceNote;
 }
 
 export const useSearch = ({
@@ -39,6 +46,8 @@ export const useSearch = ({
     users: false,
   });
   const [sharedStatusMap, setSharedStatusMap] = useState<Record<string, boolean>>({});
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Load discovery content for empty search state
   const loadDiscoveryContent = async (tab: SearchTab, forceReload = false) => {
@@ -92,6 +101,7 @@ export const useSearch = ({
     }
 
     setIsLoading(true);
+    setError(null);
 
     try {
       if (tab === 'users') {
@@ -103,8 +113,18 @@ export const useSearch = ({
         const posts = await searchVoiceNotes(query);
         setPostResults(posts);
       }
-    } catch (error) {
-      console.error('Search error:', error);
+
+      // Combine results
+      const combinedResults: SearchResult[] = [
+        ...(tab === 'users' ? users : []).map(user => ({ type: "user" as const, data: user })),
+        ...(tab === 'posts' ? posts : []).map(voiceNote => ({ type: "voiceNote" as const, data: voiceNote }))
+      ];
+
+      setResults(combinedResults);
+    } catch (err) {
+      console.error("Search error:", err);
+      setError(err instanceof Error ? err.message : "Search failed");
+      setResults([]);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -179,7 +199,6 @@ export const useSearch = ({
     const checkShareStatuses = async () => {
       if (!userId || !postResults.length) return;
 
-      console.log(`Checking share status for ${postResults.length} search results`);
       const statusMap: Record<string, boolean> = {};
 
       // Check each post
@@ -217,5 +236,7 @@ export const useSearch = ({
     handleRefresh,
     performSearch,
     loadDiscoveryContent,
+    results,
+    error,
   };
 }; 

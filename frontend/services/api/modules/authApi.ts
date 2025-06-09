@@ -1,7 +1,7 @@
 /**
  * Authentication API functions
  */
-import { apiRequest } from '../config';
+import { apiRequest, ENDPOINTS, setAuthToken, removeAuthToken } from '../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
@@ -41,6 +41,28 @@ export interface AuthResponse {
 export interface AvailabilityResponse {
   available: boolean;
   message?: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  username: string;
+  display_name: string;
+}
+
+export interface CheckUsernameResponse {
+  available: boolean;
+  message: string;
+}
+
+export interface CheckEmailResponse {
+  available: boolean;
+  message: string;
 }
 
 /**
@@ -87,12 +109,6 @@ export const registerUser = async (userData: RegisterData): Promise<AuthResponse
  */
 export const loginUser = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
-    console.log('Login attempt with credentials:', { 
-      email: credentials.email, 
-      passwordLength: credentials.password?.length, 
-      rememberMe: credentials.rememberMe 
-    });
-    
     const secureCredentials = { ...credentials };
     
     if (secureCredentials.password) {
@@ -180,7 +196,7 @@ export const verifyToken = async () => {
     }
     
     const response = await apiRequest(AUTH_ENDPOINTS.VERIFY_TOKEN, {
-      method: 'POST',
+      method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     });
     
@@ -214,5 +230,107 @@ export const isAuthenticated = async (): Promise<boolean> => {
   } catch (error) {
     console.error('Error checking authentication status:', error);
     return false;
+  }
+};
+
+// Login user
+export const login = async (loginData: LoginRequest): Promise<AuthResponse> => {
+  try {
+    const data = await apiRequest<AuthResponse>(
+      ENDPOINTS.LOGIN,
+      {
+        method: "POST",
+        body: loginData,
+        requiresAuth: false,
+      }
+    );
+
+    // Store the token
+    if (data.token) {
+      await setAuthToken(data.token);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error during login:", error);
+    throw error;
+  }
+};
+
+// Register user
+export const register = async (registerData: RegisterRequest): Promise<AuthResponse> => {
+  try {
+    const data = await apiRequest<AuthResponse>(
+      ENDPOINTS.REGISTER,
+      {
+        method: "POST",
+        body: registerData,
+        requiresAuth: false,
+      }
+    );
+
+    // Store the token
+    if (data.token) {
+      await setAuthToken(data.token);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error during registration:", error);
+    throw error;
+  }
+};
+
+// Logout user
+export const logout = async (): Promise<void> => {
+  try {
+    await apiRequest(ENDPOINTS.LOGOUT, {
+      method: "POST",
+    });
+  } catch (error) {
+    console.error("Error during logout:", error);
+    // Continue with local cleanup even if server logout fails
+  } finally {
+    // Always remove the token locally
+    await removeAuthToken();
+  }
+};
+
+// Verify token
+export const verifyToken = async (): Promise<AuthResponse> => {
+  try {
+    const data = await apiRequest<AuthResponse>(ENDPOINTS.VERIFY_TOKEN);
+    return data;
+  } catch (error) {
+    console.error("Error verifying token:", error);
+    throw error;
+  }
+};
+
+// Check username availability
+export const checkUsername = async (username: string): Promise<CheckUsernameResponse> => {
+  try {
+    const data = await apiRequest<CheckUsernameResponse>(
+      `${ENDPOINTS.CHECK_USERNAME}?username=${encodeURIComponent(username)}`,
+      { requiresAuth: false }
+    );
+    return data;
+  } catch (error) {
+    console.error("Error checking username:", error);
+    throw error;
+  }
+};
+
+// Check email availability
+export const checkEmail = async (email: string): Promise<CheckEmailResponse> => {
+  try {
+    const data = await apiRequest<CheckEmailResponse>(
+      `${ENDPOINTS.CHECK_EMAIL}?email=${encodeURIComponent(email)}`,
+      { requiresAuth: false }
+    );
+    return data;
+  } catch (error) {
+    console.error("Error checking email:", error);
+    throw error;
   }
 }; 

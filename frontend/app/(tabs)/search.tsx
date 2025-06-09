@@ -71,7 +71,7 @@ export default function SearchScreen() {
 		loadDiscoveryContent,
 	} = useSearch({
 		initialSearchQuery: initialTag ? `#${initialTag}` : "",
-		initialTab: initialSearchType === "tag" ? "posts" : "posts",
+		initialTab: initialSearchType === "tag" ? "posts" : "users",
 		userId: currentUser?.id || "",
 	});
 

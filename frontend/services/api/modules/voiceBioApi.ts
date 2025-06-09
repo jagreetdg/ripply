@@ -26,7 +26,15 @@ export const getVoiceBio = async (userId: string): Promise<VoiceBio | null> => {
   try {
     const response = await apiRequest(ENDPOINTS.VOICE_BIO(userId));
     return response;
-  } catch (error) {
+  } catch (error: any) {
+    // If it's a 404 or "Voice bio not found", that's expected - user doesn't have a voice bio
+    if (error?.message?.includes('Voice bio not found') || 
+        error?.message?.includes('404') ||
+        error?.status === 404) {
+      return null;
+    }
+    
+    // For other errors, log but still return null to prevent breaking the UI
     console.error('Error fetching voice bio:', error);
     return null;
   }

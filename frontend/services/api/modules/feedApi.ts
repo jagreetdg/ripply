@@ -2,63 +2,41 @@
  * Feed API functions
  */
 import { ENDPOINTS, apiRequest } from "../config";
+import { VoiceNote } from './types/voiceNoteTypes';
+
+export interface FeedResponse {
+  data: VoiceNote[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    hasNext: boolean;
+  };
+}
 
 /**
  * Get personalized feed (voice notes from users the current user follows)
  */
-export const getPersonalizedFeed = async (
-  userId: string, 
-  params: Record<string, any> = {}
-) => {
-  console.log("[DIAGNOSTIC] Starting getPersonalizedFeed for user:", userId);
-  const queryString = new URLSearchParams(params).toString();
-  const endpoint = queryString
-    ? `${ENDPOINTS.VOICE_NOTES}/feed/${userId}?${queryString}`
-    : `${ENDPOINTS.VOICE_NOTES}/feed/${userId}`;
-  console.log("[DIAGNOSTIC] Endpoint being called:", endpoint);
-
+export const getPersonalizedFeed = async (userId: string): Promise<VoiceNote[]> => {
   try {
-    const response = await apiRequest(endpoint);
+    const endpoint = ENDPOINTS.PERSONALIZED_FEED(userId);
+    
+    const response = await apiRequest<FeedResponse>(endpoint);
 
-    // Log the entire response structure for diagnosis
-    console.log("[DIAGNOSTIC] Response type:", typeof response);
-    console.log("[DIAGNOSTIC] Response is array:", Array.isArray(response));
-    console.log("[DIAGNOSTIC] Response keys:", Object.keys(response || {}));
-
-    // Count shared vs non-shared posts to diagnose the issue
+    // Handle different response formats
     if (Array.isArray(response)) {
-      const sharedPosts = response.filter((item) => item.is_shared === true);
-      const originalPosts = response.filter((item) => item.is_shared !== true);
-      console.log(
-        `[DIAGNOSTIC] FEED BREAKDOWN - Total: ${response.length}, Shared: ${sharedPosts.length}, Original: ${originalPosts.length}`
-      );
-
-      if (originalPosts.length === 0) {
-        console.log(
-          "[DIAGNOSTIC] WARNING: No original posts in feed response!"
-        );
-      }
-
-      // Extract unique user IDs to see which users' posts we're getting
-      const userIds = [...new Set(response.map((item) => item.user_id))];
-      console.log("[DIAGNOSTIC] Unique user IDs in feed:", userIds);
-
-      // The backend now returns a direct array of voice notes
       return response;
-    } else if (response && Array.isArray(response.data)) {
-      console.log(
-        `[DIAGNOSTIC] Returning array of ${response.data.length} items from response.data`
-      );
-      return response.data;
-    } else {
-      console.log(
-        "[DIAGNOSTIC] Unexpected response format for personalized feed:",
-        response
-      );
-      return [];
     }
+
+    if (response?.data && Array.isArray(response.data)) {
+      return response.data;
+    }
+
+    // Log unexpected formats for debugging
+    console.error("[FEED ERROR] Unexpected response format:", response);
+    return [];
   } catch (error) {
-    console.error("[DIAGNOSTIC] Error in getPersonalizedFeed:", error);
+    console.error("[FEED ERROR] Error fetching personalized feed:", error);
     return [];
   }
 };
@@ -66,78 +44,163 @@ export const getPersonalizedFeed = async (
 /**
  * Get diagnostic information about a user's feed
  */
-export const runFeedDiagnostics = async (userId: string) => {
+export const runFeedDiagnostics = async (userId?: string): Promise<FeedDiagnosticData | null> => {
   if (!userId) {
-    console.log("[DIAGNOSTIC] Cannot run diagnostics, no user logged in");
     return null;
   }
 
   try {
-    console.log(
-      "[DIAGNOSTIC] Running feed diagnostics for user:",
-      userId
-    );
+    const startTime = Date.now();
+    const feed = await getPersonalizedFeed(userId);
+    const endTime = Date.now();
 
-    // Call the diagnostic endpoints
-    const followResponse = await apiRequest(
-      `${ENDPOINTS.VOICE_NOTES}/diagnostic/follows/${userId}`
-    );
-    const feedTraceResponse = await apiRequest(
-      `${ENDPOINTS.VOICE_NOTES}/diagnostic/feed/${userId}`
-    );
-
-    // Check if user is following anyone
-    const isFollowingAnyone = followResponse?.follows?.length > 0;
-    console.log(
-      `[DIAGNOSTIC] User is following anyone: ${isFollowingAnyone}`
-    );
-    console.log(
-      `[DIAGNOSTIC] User follows ${
-        followResponse?.follows?.length || 0
-      } users`
-    );
-
-    // Check if feed correctly filters by followed users
-    const totalPosts = feedTraceResponse?.totalPostsCount || 0;
-    const filteredPosts = feedTraceResponse?.filteredPostsCount || 0;
-    console.log(
-      `[DIAGNOSTIC] Total posts: ${totalPosts}, Filtered posts: ${filteredPosts}`
-    );
-
-    // Compile diagnostic data
-    const diagnoseResult = {
-      userCheck: {
-        userId,
-        isLoggedIn: true,
-      },
-      followData: followResponse,
-      feedTrace: feedTraceResponse,
-      summary: {
-        isFollowingAnyone,
-        shouldHaveEmptyFeed: !isFollowingAnyone,
-        followingCount: followResponse?.follows?.length || 0,
-        postsAvailable: totalPosts,
-        postsFromFollowedUsers: filteredPosts,
-        potentialIssues: [] as string[],
-      },
+    const diagnosticData: FeedDiagnosticData = {
+      requestTime: `${endTime - startTime}ms`,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'React Native',
+      userId,
+      isPersonalized: true,
+      feedLength: feed.length,
+      hasRecommendations: feed.length > 0,
+      cacheStatus: 'no-cache'
     };
 
-    // Identify potential issues
-    if (isFollowingAnyone && filteredPosts === 0) {
-      (diagnoseResult.summary.potentialIssues as string[]).push(
-        "User follows people but no posts from them are available"
-      );
-    }
-
-    if (!isFollowingAnyone && filteredPosts > 0) {
-      (diagnoseResult.summary.potentialIssues as string[]).push(
-        "User doesn't follow anyone but still gets filtered posts"
-      );
-    }
-
-    return diagnoseResult;
+    return diagnosticData;
   } catch (error) {
-    console.error("[DIAGNOSTIC] Error running diagnostics:", error);
+    console.error("Error running feed diagnostics:", error);
     return null;
+  }
+};
+
+// Diagnostic function for feed issues - can be called manually when needed
+export const diagnoseFeedIssues = async (userId?: string) => {
+  if (!userId) {
+    console.error("[DIAGNOSTIC] Cannot run diagnostics, no user logged in");
+    return;
+  }
+
+  try {
+    const feed = await getPersonalizedFeed(userId);
+    
+    // Extract unique user IDs from feed
+    const userIds = [...new Set(feed.map(note => note.user_id))];
+    
+    console.log("[DIAGNOSTIC] Feed diagnostic results:", {
+      feedLength: feed.length,
+      uniqueUsers: userIds.length,
+      userIds: userIds,
+    });
+    
+  } catch (error) {
+    console.error("[DIAGNOSTIC] Error during feed diagnosis:", error);
+  }
+};
+
+export const getAllVoiceNotes = async (params?: {
+  page?: number;
+  limit?: number;
+  tag?: string;
+  search?: string;
+}): Promise<VoiceNote[]> => {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.tag) queryParams.append('tag', params.tag);
+    if (params?.search) queryParams.append('search', params.search);
+    
+    const endpoint = `${ENDPOINTS.VOICE_NOTES}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    
+    const response = await apiRequest<FeedResponse>(endpoint);
+
+    // Handle different response formats
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    if (response?.data && Array.isArray(response.data)) {
+      return response.data;
+    }
+
+    console.error("[FEED ERROR] Unexpected response format for voice notes:", response);
+    return [];
+  } catch (error) {
+    console.error("[FEED ERROR] Error fetching all voice notes:", error);
+    return [];
+  }
+};
+
+// Feed diagnostic data structure
+interface FeedDiagnosticData {
+  requestTime: string;
+  userAgent: string;
+  userId?: string;
+  isPersonalized: boolean;
+  feedLength: number;
+  hasRecommendations: boolean;
+  cacheStatus?: string;
+}
+
+// Fetch feed data with optional user ID for personalized feeds
+export const fetchFeed = async (
+  userId?: string,
+  page: number = 1,
+  limit: number = 10,
+  diagnosticData?: FeedDiagnosticData
+): Promise<VoiceNote[]> => {
+  try {
+    let endpoint: string;
+    let requiresAuth = false;
+
+    if (userId) {
+      // Personalized feed requires authentication
+      endpoint = `${ENDPOINTS.PERSONALIZED_FEED(userId)}?page=${page}&limit=${limit}`;
+      requiresAuth = true;
+    } else {
+      // Public feed doesn't require authentication
+      endpoint = `${ENDPOINTS.FEED}?page=${page}&limit=${limit}`;
+      requiresAuth = false;
+    }
+
+    // Use diagnostic data if available for logging
+    if (diagnosticData) {
+      // Only log if truly needed for critical debugging
+    }
+
+    const data = await apiRequest<VoiceNote[]>(endpoint, {
+      method: "GET",
+      requiresAuth,
+    });
+
+    // Validate response format
+    if (Array.isArray(data)) {
+      return data;
+    } else {
+      console.error("Unexpected data format from API:", data);
+      return [];
+    }
+  } catch (error) {
+    console.error("Error fetching feed:", error);
+    throw error;
+  }
+};
+
+// Fetch recommended voice notes for a user
+export const fetchRecommendedVoiceNotes = async (
+  userId: string,
+  limit: number = 5
+): Promise<VoiceNote[]> => {
+  try {
+    const endpoint = `${ENDPOINTS.VOICE_NOTES}/recommended?userId=${userId}&limit=${limit}`;
+    
+    const data = await apiRequest<VoiceNote[]>(endpoint, {
+      method: "GET",
+      requiresAuth: true,
+    });
+
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error("Error fetching recommended voice notes:", error);
+    return [];
   }
 }; 

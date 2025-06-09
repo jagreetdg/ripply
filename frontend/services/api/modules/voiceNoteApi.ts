@@ -8,17 +8,17 @@ import {
   UpdateVoiceNoteData,
   FeedParams 
 } from "./types/voiceNoteTypes";
+import { Comment } from "../../../components/voice-note-card/VoiceNoteCardTypes";
 
 /**
  * Get a voice note by ID
  */
-export const getVoiceNoteById = async (voiceNoteId: string) => {
+export const getVoiceNoteById = async (voiceNoteId: string): Promise<any> => {
   try {
-    console.log(`Fetching voice note by ID: ${voiceNoteId}`);
     const response = await apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`);
     return response;
   } catch (error) {
-    console.error(`Error fetching voice note ${voiceNoteId}:`, error);
+    console.error("Error fetching voice note by ID:", error);
     throw error;
   }
 };
@@ -55,27 +55,187 @@ export const deleteVoiceNote = (voiceNoteId: string) => {
 /**
  * Get all voice notes (feed)
  */
-export const getVoiceNotes = async (params: Record<string, any> = {}) => {
-  console.log("Fetching all voice notes with params:", params);
-  const queryString = new URLSearchParams(params).toString();
-  const endpoint = queryString
-    ? `${ENDPOINTS.VOICE_NOTES}?${queryString}`
-    : ENDPOINTS.VOICE_NOTES;
-
+export const getAllVoiceNotes = async (params?: {
+  page?: number;
+  limit?: number;
+  user_id?: string;
+  tag?: string;
+  search?: string;
+}): Promise<VoiceNote[]> => {
   try {
-    const response = await apiRequest(endpoint);
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.user_id) queryParams.append('user_id', params.user_id);
+    if (params?.tag) queryParams.append('tag', params.tag);
+    if (params?.search) queryParams.append('search', params.search);
+    
+    const endpoint = `${ENDPOINTS.VOICE_NOTES}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    
+    const response = await apiRequest<VoiceNote[] | FeedResponse>(endpoint);
 
-    // The backend returns a direct array of voice notes
+    // Handle different response formats
     if (Array.isArray(response)) {
       return response;
-    } else if (response && Array.isArray(response.data)) {
-      return response.data;
-    } else {
-      console.log("Unexpected response format for voice notes:", response);
-      return [];
     }
+
+    if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+      return response.data;
+    }
+
+    console.error("Unexpected response format for voice notes:", response);
+    return [];
   } catch (error) {
-    console.error("Error fetching all voice notes:", error);
+    console.error("Error fetching voice notes:", error);
+    return [];
+  }
+};
+
+export interface LikeResponse {
+  message: string;
+  isLiked: boolean;
+  likesCount: number;
+}
+
+export interface LikeCheckResponse {
+  isLiked: boolean;
+}
+
+export interface VoiceNoteStatsResponse {
+  likes: number;
+  comments: number;
+  plays: number;
+  shares: number;
+}
+
+export interface PlayResponse {
+  message: string;
+  playsCount: number;
+}
+
+// Get voice note stats
+export const getVoiceNoteStats = async (voiceNoteId: string): Promise<VoiceNoteStatsResponse> => {
+  try {
+    const data = await apiRequest<VoiceNoteStatsResponse>(
+      `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/stats`
+    );
+    return data;
+  } catch (error) {
+    console.error("Error fetching voice note stats:", error);
+    // Return default stats if API fails
+    return {
+      likes: 0,
+      comments: 0,
+      plays: 0,
+      shares: 0
+    };
+  }
+};
+
+// Like a voice note
+export const likeVoiceNote = async (voiceNoteId: string, userId: string): Promise<LikeResponse> => {
+  try {
+    const data = await apiRequest<LikeResponse>(
+      ENDPOINTS.VOICE_NOTE_LIKE(voiceNoteId),
+      {
+        method: "POST",
+        body: { userId },
+      }
+    );
+    return data;
+  } catch (error) {
+    console.error("Error liking voice note:", error);
+    throw error;
+  }
+};
+
+// Unlike a voice note
+export const unlikeVoiceNote = async (voiceNoteId: string, userId: string): Promise<LikeResponse> => {
+  try {
+    const data = await apiRequest<LikeResponse>(
+      ENDPOINTS.VOICE_NOTE_UNLIKE(voiceNoteId),
+      {
+        method: "DELETE",
+        body: { userId },
+      }
+    );
+    return data;
+  } catch (error) {
+    console.error("Error unliking voice note:", error);
+    throw error;
+  }
+};
+
+// Check if user has liked a voice note
+export const checkLikeStatus = async (voiceNoteId: string, userId: string): Promise<LikeCheckResponse> => {
+  try {
+    const data = await apiRequest<LikeCheckResponse>(
+      `${ENDPOINTS.CHECK_LIKE_STATUS(voiceNoteId)}?userId=${userId}`
+    );
+    return data;
+  } catch (error) {
+    console.error("Error checking like status:", error);
+    return { isLiked: false };
+  }
+};
+
+// Get comments for a voice note
+export const getComments = async (voiceNoteId: string): Promise<Comment[]> => {
+  try {
+    const data = await apiRequest<Comment[]>(
+      ENDPOINTS.VOICE_NOTE_COMMENTS(voiceNoteId)
+    );
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    return [];
+  }
+};
+
+// Add a comment to a voice note
+export const addComment = async (voiceNoteId: string, userId: string, content: string): Promise<Comment> => {
+  try {
+    const data = await apiRequest<Comment>(
+      ENDPOINTS.VOICE_NOTE_COMMENTS(voiceNoteId),
+      {
+        method: "POST",
+        body: { userId, content },
+      }
+    );
+    return data;
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    throw error;
+  }
+};
+
+// Record a play for a voice note
+export const recordPlay = async (voiceNoteId: string, userId: string): Promise<PlayResponse> => {
+  try {
+    const data = await apiRequest<PlayResponse>(
+      ENDPOINTS.VOICE_NOTE_PLAY(voiceNoteId),
+      {
+        method: "POST",
+        body: { userId },
+      }
+    );
+    return data;
+  } catch (error) {
+    console.error("Error recording play:", error);
+    throw error;
+  }
+};
+
+// Search voice notes
+export const searchVoiceNotes = async (query: string): Promise<VoiceNote[]> => {
+  try {
+    const data = await apiRequest<VoiceNote[]>(
+      `${ENDPOINTS.SEARCH_VOICE_NOTES}?term=${encodeURIComponent(query)}`
+    );
+    return data || [];
+  } catch (error) {
+    console.error("Error searching voice notes:", error);
     return [];
   }
 };

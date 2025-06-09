@@ -156,10 +156,10 @@ export const useAuthForm = (type: AuthType) => {
   }, [formData, isLoading, type, validationState]);
 
   // Handle authentication
-  const handleAuth = useCallback(async () => {
+  const handleAuth = useCallback(async (): Promise<boolean> => {
     if (!validateForm()) {
       scrollToTop();
-      return;
+      return false;
     }
 
     setIsLoading(true);
@@ -185,8 +185,10 @@ export const useAuthForm = (type: AuthType) => {
       if (response.user && response.token) {
         setUser(response.user);
         router.replace('/(tabs)/home');
+        return true;
       } else {
         setError('Authentication failed. Please try again.');
+        return false;
       }
     } catch (err: any) {
       console.error('Authentication error:', err);
@@ -200,6 +202,7 @@ export const useAuthForm = (type: AuthType) => {
       }
       
       scrollToTop();
+      return false;
     } finally {
       setIsLoading(false);
     }

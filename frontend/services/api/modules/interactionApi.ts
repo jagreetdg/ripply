@@ -7,7 +7,7 @@ import { ENDPOINTS, apiRequest } from "../config";
  * Like a voice note
  */
 export const likeVoiceNote = (voiceNoteId: string, userId: string) => {
-  return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/like`, {
+  return apiRequest(ENDPOINTS.VOICE_NOTE_LIKE(voiceNoteId), {
     method: "POST",
     body: JSON.stringify({ user_id: userId }),
   });
@@ -17,7 +17,7 @@ export const likeVoiceNote = (voiceNoteId: string, userId: string) => {
  * Unlike a voice note
  */
 export const unlikeVoiceNote = (voiceNoteId: string, userId: string) => {
-  return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/unlike`, {
+  return apiRequest(ENDPOINTS.VOICE_NOTE_UNLIKE(voiceNoteId), {
     method: "POST",
     body: JSON.stringify({ user_id: userId }),
   });
@@ -29,7 +29,7 @@ export const unlikeVoiceNote = (voiceNoteId: string, userId: string) => {
 export const checkLikeStatus = async (voiceNoteId: string, userId: string) => {
   try {
     const response = await apiRequest(
-      `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/like-status/${userId}`
+      `${ENDPOINTS.CHECK_LIKE_STATUS(voiceNoteId)}?userId=${userId}`
     );
     
     // Normalize response format
@@ -51,7 +51,7 @@ export const checkLikeStatus = async (voiceNoteId: string, userId: string) => {
  * Add a comment to a voice note
  */
 export const addComment = (voiceNoteId: string, commentData: any) => {
-  return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/comment`, {
+  return apiRequest(ENDPOINTS.VOICE_NOTE_COMMENTS(voiceNoteId), {
     method: "POST",
     body: JSON.stringify(commentData),
   });
@@ -61,14 +61,14 @@ export const addComment = (voiceNoteId: string, commentData: any) => {
  * Get comments for a voice note
  */
 export const getComments = (voiceNoteId: string) => {
-  return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/comments`);
+  return apiRequest(ENDPOINTS.VOICE_NOTE_COMMENTS(voiceNoteId));
 };
 
 /**
  * Record a play for a voice note
  */
 export const recordPlay = (voiceNoteId: string, userId: string) => {
-  return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/play`, {
+  return apiRequest(ENDPOINTS.VOICE_NOTE_PLAY(voiceNoteId), {
     method: "POST",
     body: JSON.stringify({ user_id: userId }),
   });
@@ -79,7 +79,7 @@ export const recordPlay = (voiceNoteId: string, userId: string) => {
  */
 export const recordShare = async (voiceNoteId: string, userId: string) => {
   try {
-    const response = await apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share`, {
+    const response = await apiRequest(ENDPOINTS.VOICE_NOTE_SHARE(voiceNoteId), {
       method: "POST",
       body: JSON.stringify({ user_id: userId }),
     });
@@ -97,7 +97,7 @@ export const recordShare = async (voiceNoteId: string, userId: string) => {
 export const checkShareStatus = async (voiceNoteId: string, userId: string) => {
   try {
     const response = await apiRequest(
-      `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share-status/${userId}`
+      `${ENDPOINTS.CHECK_SHARE_STATUS(voiceNoteId)}?userId=${userId}`
     );
     
     // Normalize response format
@@ -116,21 +116,24 @@ export const checkShareStatus = async (voiceNoteId: string, userId: string) => {
 };
 
 /**
- * Get share count for a voice note
+ * Get share count for a voice note (using the shares endpoint)
  */
 export const getShareCount = async (voiceNoteId: string) => {
   try {
     const response = await apiRequest(
-      `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/share-count`
+      `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`
     );
     
-    // Normalize response format
-    if (response && typeof response.count === "number") {
-      return response.count;
-    } else if (response && response.data && typeof response.data.count === "number") {
-      return response.data.count;
+    // Backend returns { shareCount: number }
+    if (response && typeof response.shareCount === "number") {
+      return response.shareCount;
+    } else if (response && response.data && typeof response.data.shareCount === "number") {
+      return response.data.shareCount;
+    } else if (typeof response === "number") {
+      return response;
     }
     
+    console.warn(`[SHARE] Unexpected response format for ${voiceNoteId}:`, response);
     return 0;
   } catch (error) {
     console.error(`Error getting share count for ${voiceNoteId}:`, error);
@@ -143,7 +146,9 @@ export const getShareCount = async (voiceNoteId: string) => {
  */
 export const getVoiceNoteStats = async (voiceNoteId: string) => {
   try {
-    const response = await apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/stats`);
+    // Since there's no single stats endpoint, fetch the voice note directly
+    // which includes likes, comments, plays, and shares counts
+    const response = await apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`);
     
     // Normalize stats to numbers
     const normalizeCount = (value: any): number => {
@@ -156,10 +161,10 @@ export const getVoiceNoteStats = async (voiceNoteId: string) => {
     
     if (response) {
       return {
-        likes: normalizeCount(response.likes),
-        comments: normalizeCount(response.comments),
-        plays: normalizeCount(response.plays),
-        shares: normalizeCount(response.shares),
+        likes: normalizeCount(response.likes) || 0,
+        comments: normalizeCount(response.comments) || 0,
+        plays: normalizeCount(response.plays) || 0,
+        shares: normalizeCount(response.shares) || 0,
       };
     }
     

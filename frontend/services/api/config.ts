@@ -1,56 +1,81 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 // API Configuration
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+export const API_BASE_URL = 
+  process.env.EXPO_PUBLIC_API_URL || 
+  Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 
+  'https://ripply-backend.onrender.com';
 
 // Storage keys
-export const TOKEN_KEY = 'auth_token';
+export const TOKEN_KEY = '@ripply_auth_token';
 
 // API Endpoints
 export const ENDPOINTS = {
   // Auth endpoints
-  LOGIN: '/auth/login',
-  REGISTER: '/auth/register',
-  LOGOUT: '/auth/logout',
-  REFRESH_TOKEN: '/auth/refresh',
-  CURRENT_USER: '/auth/me',
-  CHECK_USERNAME: '/auth/check-username',
-  CHECK_EMAIL: '/auth/check-email',
+  LOGIN: '/api/auth/login',
+  REGISTER: '/api/auth/register',
+  LOGOUT: '/api/auth/logout',
+  CURRENT_USER: '/api/users/me',
+  VERIFY_TOKEN: '/api/auth/verify-token',
+  CHECK_USERNAME: '/api/auth/check-username',
+  CHECK_EMAIL: '/api/auth/check-email',
 
   // User endpoints
-  USERS: '/users',
-  USER_PROFILE: (userId: string) => `/users/${userId}`,
-  USER_VOICE_NOTES: (userId: string) => `/users/${userId}/voice-notes`,
-  USER_FOLLOWERS: (userId: string) => `/users/${userId}/followers`,
-  USER_FOLLOWING: (userId: string) => `/users/${userId}/following`,
-  FOLLOW_USER: (userId: string) => `/users/${userId}/follow`,
-  UNFOLLOW_USER: (userId: string) => `/users/${userId}/unfollow`,
+  USERS: '/api/users',
+  USER_PROFILE: (userId: string) => `/api/users/${userId}`,
+  USER_VOICE_NOTES: (userId: string) => `/api/users/${userId}/voice-notes`,
+  USER_FOLLOWERS: (userId: string) => `/api/users/${userId}/followers`,
+  USER_FOLLOWING: (userId: string) => `/api/users/${userId}/following`,
+  FOLLOW_USER: (userId: string) => `/api/users/${userId}/follow`,
+  UNFOLLOW_USER: (userId: string) => `/api/users/${userId}/unfollow`,
 
   // Voice Note endpoints
-  VOICE_NOTES: '/voice-notes',
-  VOICE_NOTE: (id: string) => `/voice-notes/${id}`,
-  VOICE_NOTE_STATS: (id: string) => `/voice-notes/${id}/stats`,
-  VOICE_NOTE_LIKE: (id: string) => `/voice-notes/${id}/like`,
-  VOICE_NOTE_UNLIKE: (id: string) => `/voice-notes/${id}/unlike`,
-  VOICE_NOTE_COMMENTS: (id: string) => `/voice-notes/${id}/comments`,
-  VOICE_NOTE_PLAY: (id: string) => `/voice-notes/${id}/play`,
-  VOICE_NOTE_SHARE: (id: string) => `/voice-notes/${id}/share`,
-  VOICE_NOTE_REPOST: (id: string) => `/voice-notes/${id}/repost`,
-  CHECK_LIKE_STATUS: (id: string) => `/voice-notes/${id}/like-status`,
-  CHECK_SHARE_STATUS: (id: string) => `/voice-notes/${id}/share-status`,
+  VOICE_NOTES: '/api/voice-notes',
+  VOICE_NOTE: (id: string) => `/api/voice-notes/${id}`,
+  VOICE_NOTE_LIKE: (id: string) => `/api/voice-notes/${id}/like`,
+  VOICE_NOTE_UNLIKE: (id: string) => `/api/voice-notes/${id}/unlike`,
+  VOICE_NOTE_COMMENTS: (id: string) => `/api/voice-notes/${id}/comments`,
+  VOICE_NOTE_PLAY: (id: string) => `/api/voice-notes/${id}/play`,
+  VOICE_NOTE_SHARE: (id: string) => `/api/voice-notes/${id}/share`,
+  VOICE_NOTE_REPOST: (id: string) => `/api/voice-notes/${id}/share`,
+  CHECK_LIKE_STATUS: (id: string) => `/api/voice-notes/${id}/likes/check`,
+  CHECK_SHARE_STATUS: (id: string) => `/api/voice-notes/${id}/shares/check`,
 
   // Feed endpoints
-  FEED: '/feed',
-  PERSONALIZED_FEED: (userId: string) => `/feed/personalized/${userId}`,
+  FEED: '/api/voice-notes',
+  PERSONALIZED_FEED: (userId: string) => `/api/voice-notes/feed/${userId}`,
 
   // Search endpoints
-  SEARCH: '/search',
-  SEARCH_USERS: '/search/users',
-  SEARCH_VOICE_NOTES: '/search/voice-notes',
+  SEARCH: '/api/users/search',
+  SEARCH_USERS: '/api/users/search',
+  SEARCH_VOICE_NOTES: '/api/voice-notes/search',
 
   // Voice Bio endpoints
-  VOICE_BIO: (userId: string) => `/users/${userId}/voice-bio`,
-  UPLOAD_VOICE_BIO: (userId: string) => `/users/${userId}/voice-bio/upload`,
+  VOICE_BIO: (userId: string) => `/api/voice-bios/${userId}`,
+
+  // Password Reset endpoints
+  REQUEST_PASSWORD_RESET: '/api/password-reset/request-reset',
+  RESET_PASSWORD: '/api/password-reset/reset-password',
+
+  // Email Verification endpoints
+  REQUEST_EMAIL_VERIFICATION: '/api/verification/request-verification',
+  VERIFY_EMAIL: '/api/verification/verify-email',
+
+  // Additional User endpoints
+  USER_PHOTOS: (userId: string) => `/api/users/${userId}/photos`,
+  USER_VERIFY: (userId: string) => `/api/users/${userId}/verify`,
+  IS_FOLLOWING: (userId: string, followerId: string) => `/api/users/${userId}/is-following/${followerId}`,
+  FOLLOWER_COUNT: (userId: string) => `/api/users/${userId}/follower-count`,
+  FOLLOWING_COUNT: (userId: string) => `/api/users/${userId}/following-count`,
+  USER_SHARED_VOICE_NOTES: (userId: string) => `/api/users/${userId}/shared-voice-notes`,
+  USER_BY_USERNAME: (username: string) => `/api/users/username/${username}`,
+
+  // Additional Voice Note endpoints  
+  VOICE_NOTE_LIKES: (id: string) => `/api/voice-notes/${id}/likes`,
+  VOICE_NOTE_TAGS: (id: string) => `/api/voice-notes/${id}/tags`,
+  VOICE_NOTES_BY_TAG: (tagName: string) => `/api/voice-notes/tags/${tagName}`,
+  VOICE_NOTE_SHARES: (id: string) => `/api/voice-notes/${id}/shares`,
 };
 
 // Request configuration
@@ -103,6 +128,15 @@ export const apiRequest = async <T = any>(
 
   const url = `${API_BASE_URL}${endpoint}`;
   
+  // Log share-related requests for debugging
+  const isShareRelated = endpoint.includes('/share') || endpoint.includes('/repost');
+  if (isShareRelated) {
+    console.log(`[SHARE DEBUG] API Request - ${method} ${url}`);
+    if (body) {
+      console.log(`[SHARE DEBUG] API Request Body:`, JSON.stringify(body, null, 2));
+    }
+  }
+  
   // Prepare headers
   const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -114,6 +148,11 @@ export const apiRequest = async <T = any>(
     const token = await getAuthToken();
     if (token) {
       requestHeaders.Authorization = `Bearer ${token}`;
+      if (isShareRelated) {
+        console.log(`[SHARE DEBUG] API Request - Auth token present: ${token.substring(0, 20)}...`);
+      }
+    } else if (isShareRelated) {
+      console.log(`[SHARE DEBUG] API Request - No auth token found`);
     }
   }
 
@@ -129,27 +168,51 @@ export const apiRequest = async <T = any>(
   }
 
   try {
-    console.log(`[API] ${method} ${url}`);
-    
     const response = await fetch(url, requestOptions);
+    
+    if (isShareRelated) {
+      console.log(`[SHARE DEBUG] API Response - Status: ${response.status} ${response.statusText}`);
+    }
     
     // Handle non-JSON responses
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       if (!response.ok) {
+        const errorText = await response.text();
+        if (isShareRelated) {
+          console.error(`[SHARE DEBUG] API Error - Non-JSON response:`, errorText);
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return response.text() as unknown as T;
+      const responseText = await response.text();
+      if (isShareRelated) {
+        console.log(`[SHARE DEBUG] API Response - Text:`, responseText);
+      }
+      return responseText as unknown as T;
     }
 
     const data = await response.json();
+    
+    if (isShareRelated) {
+      console.log(`[SHARE DEBUG] API Response - Data:`, JSON.stringify(data, null, 2));
+    }
 
     if (!response.ok) {
+      if (isShareRelated) {
+        console.error(`[SHARE DEBUG] API Error - HTTP ${response.status}:`, data);
+      }
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
     }
 
     return data;
   } catch (error) {
+    if (isShareRelated) {
+      console.error(`[SHARE DEBUG] API Request Failed:`, {
+        method,
+        url,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
     console.error(`[API Error] ${method} ${url}:`, error);
     throw error;
   }

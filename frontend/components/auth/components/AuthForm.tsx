@@ -61,9 +61,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type, onAuth }) => {
 		}
 	}, [formData.email, checkEmail]);
 
-	const handleSubmit = () => {
-		handleAuth();
-		onAuth();
+	const handleSubmit = async () => {
+		const success = await handleAuth();
+		if (success) {
+			onAuth();
+		}
 	};
 
 	return (

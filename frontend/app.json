@@ -36,6 +36,9 @@
 		"developmentClient": {
 			"silentLaunch": true,
 			"hideDevTools": true
+		},
+		"extra": {
+			"EXPO_PUBLIC_API_URL": "https://ripply-backend.onrender.com"
 		}
 	}
 }

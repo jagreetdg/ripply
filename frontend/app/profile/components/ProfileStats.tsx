@@ -10,7 +10,7 @@ interface ProfileStatsProps {
 	onFollowersPress: () => void;
 }
 
-export const ProfileStats: React.FC<ProfileStatsProps> = ({
+const ProfileStats: React.FC<ProfileStatsProps> = ({
 	followingCount,
 	voiceNotesCount,
 	followerCount,
@@ -77,3 +77,5 @@ const styles = StyleSheet.create({
 		height: 30,
 	},
 });
+
+export default ProfileStats;
