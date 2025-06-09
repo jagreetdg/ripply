@@ -20,6 +20,9 @@ export * from './authApi';
 // Export Search modules
 export * from './searchApi';
 
+// Export Discovery modules
+export * from './discoveryApi';
+
 // Export Voice Bio modules
 export * from './voiceBioApi';
 

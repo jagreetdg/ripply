@@ -22,7 +22,7 @@ import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 
 // Constants
-const PREVIEW_COUNT = 5;
+const PREVIEW_COUNT = 10;
 
 export default function SearchScreen() {
 	const insets = useSafeAreaInsets();
@@ -71,14 +71,25 @@ export default function SearchScreen() {
 		loadDiscoveryContent,
 	} = useSearch({
 		initialSearchQuery: initialTag ? `#${initialTag}` : "",
-		initialTab: initialSearchType === "tag" ? "posts" : "users",
+		initialTab: "posts", // Always default to posts tab
 		userId: currentUser?.id || "",
 	});
 
 	// Handle tab change with animation
 	const handleTabChangeWithAnimation = (tab: SearchTab) => {
+		console.log("Tab change requested:", {
+			from: activeTab,
+			to: tab,
+			isEqual: tab === activeTab,
+		});
+
 		// Don't do anything if it's already the active tab
-		if (tab === activeTab) return;
+		if (tab === activeTab) {
+			console.log("Tab change cancelled - already active tab");
+			return;
+		}
+
+		console.log("Processing tab change...");
 
 		// Start fade out animation
 		Animated.timing(fadeAnim, {
@@ -86,27 +97,36 @@ export default function SearchScreen() {
 			duration: 150,
 			useNativeDriver: true,
 		}).start(() => {
+			console.log("Fade out complete, changing tab...");
+
 			// Reset show all states
 			setShowAllUsers(false);
 			setShowAllPosts(false);
 
-			// Change tab
+			// Change tab (this will trigger handleTabChange from useSearch)
 			handleTabChange(tab);
 
 			// Animate the tab indicator
+			const targetPosition = tab === "posts" ? 0 : 1;
+			console.log("Animating tab indicator to position:", targetPosition);
+
 			Animated.spring(tabIndicatorPosition, {
-				toValue: tab === "posts" ? 0 : 1,
+				toValue: targetPosition,
 				useNativeDriver: true,
 				speed: 12,
 				bounciness: 4,
-			}).start();
+			}).start(() => {
+				console.log("Tab indicator animation complete");
+			});
 
 			// Start fade in animation
 			Animated.timing(fadeAnim, {
 				toValue: 1,
 				duration: 150,
 				useNativeDriver: true,
-			}).start();
+			}).start(() => {
+				console.log("Fade in complete, tab change finished");
+			});
 		});
 	};
 
@@ -151,6 +171,42 @@ export default function SearchScreen() {
 			loadDiscoveryContent(activeTab, false);
 		}
 	}, [initialTag, initialSearchType, timestamp]);
+
+	// Effect to load discovery content when component mounts and user is available
+	useEffect(() => {
+		if (currentUser?.id && !initialTag && searchQuery.trim() === "") {
+			console.log("Loading initial discovery content for tab:", activeTab);
+			loadDiscoveryContent(activeTab, false);
+		}
+	}, [currentUser?.id, activeTab]);
+
+	// Effect to initialize tab indicator position
+	useEffect(() => {
+		// Set initial tab indicator position based on activeTab
+		const initialPosition = activeTab === "posts" ? 0 : 1;
+		tabIndicatorPosition.setValue(initialPosition);
+		console.log("Initialized tab indicator position:", {
+			activeTab,
+			initialPosition,
+		});
+	}, []); // Only run once on mount
+
+	// Effect to sync tab indicator position when activeTab changes
+	useEffect(() => {
+		const targetPosition = activeTab === "posts" ? 0 : 1;
+		console.log("ActiveTab changed, syncing indicator:", {
+			activeTab,
+			targetPosition,
+		});
+
+		// Use a spring animation to smoothly move to the correct position
+		Animated.spring(tabIndicatorPosition, {
+			toValue: targetPosition,
+			useNativeDriver: true,
+			speed: 20,
+			bounciness: 6,
+		}).start();
+	}, [activeTab]);
 
 	// Use useFocusEffect to detect when the screen is focused
 	useFocusEffect(

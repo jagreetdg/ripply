@@ -46,7 +46,7 @@ export function FollowButton({
 
 		try {
 			console.log(`Checking if user ${user.id} is following ${userId}`);
-			const isUserFollowing = await isFollowing(user.id, userId);
+			const isUserFollowing = await isFollowing(userId, user.id);
 			console.log(`Follow status check result: ${isUserFollowing}`);
 			setFollowing(isUserFollowing);
 		} catch (error) {
@@ -69,10 +69,10 @@ export function FollowButton({
 			let newFollowStatus: boolean;
 
 			if (following) {
-				await unfollowUser(userId, user.id);
+				await unfollowUser(userId);
 				newFollowStatus = false;
 			} else {
-				await followUser(userId, user.id);
+				await followUser(userId);
 				newFollowStatus = true;
 			}
 

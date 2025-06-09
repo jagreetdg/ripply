@@ -3,6 +3,7 @@ import { apiRequest, ENDPOINTS, setAuthToken, removeAuthToken } from "../config"
 export interface LoginRequest {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface RegisterRequest {
@@ -146,4 +147,10 @@ export const checkEmail = async (email: string): Promise<CheckEmailResponse> => 
     console.error("Error checking email:", error);
     throw error;
   }
-}; 
+};
+
+// Backward compatibility aliases
+export const loginUser = login;
+export const registerUser = register;
+export const checkUsernameAvailability = checkUsername;
+export const checkEmailAvailability = checkEmail; 

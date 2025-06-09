@@ -178,7 +178,7 @@ export const useAuthForm = (type: AuthType) => {
           username: formData.username,
           email: formData.email,
           password: formData.password,
-          displayName: formData.username // Use username as default display name
+          display_name: formData.username // Use username as default display name
         }) as AuthResponse;
       }
 

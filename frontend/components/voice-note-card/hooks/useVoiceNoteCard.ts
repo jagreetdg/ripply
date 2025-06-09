@@ -444,8 +444,12 @@ export const useVoiceNoteCard = ({
 	// Handle tag press
 	const handleTagPress = useCallback((tag: string) => {
 		router.push({
-			pathname: "/search",
-			params: { query: `#${tag}` },
+			pathname: "/(tabs)/search",
+			params: { 
+				tag: tag,
+				searchType: "tag",
+				timestamp: Date.now().toString()
+			},
 		});
 	}, [router]);
 

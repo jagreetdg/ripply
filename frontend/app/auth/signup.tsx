@@ -213,7 +213,7 @@ export default function SignupScreen() {
 				username,
 				email,
 				password,
-				displayName: displayName || username,
+				display_name: displayName || username,
 			};
 
 			const response = (await registerUser(userData)) as ApiResponse;

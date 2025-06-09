@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { VoiceNoteCard } from "../../../voice-note-card/VoiceNoteCard";
 import { VoiceNote } from "../VoiceNotesListTypes";
-import { formatRelativeTime } from "../VoiceNotesListUtils";
+import { formatTimeAgo } from "../../../../utils/timeUtils";
 import { hasUserRepostedVoiceNote } from "../../../../services/api";
 
 interface VoiceNotesListItemProps {
@@ -125,10 +125,8 @@ export const VoiceNotesListItem: React.FC<VoiceNotesListItemProps> = ({
 			displayName={item.users?.display_name || userDisplayName}
 			username={item.users?.username || username || ""}
 			userAvatarUrl={item.users?.avatar_url || null}
-			timePosted={formatRelativeTime(
-				new Date(
-					item.is_shared && item.shared_at ? item.shared_at : item.created_at
-				)
+			timePosted={formatTimeAgo(
+				item.is_shared && item.shared_at ? item.shared_at : item.created_at
 			)}
 			onPlayPress={() => onPlayPress(item.id)}
 			onShare={(voiceNoteId) => {

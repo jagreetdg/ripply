@@ -11,6 +11,7 @@ import { Feather } from "@expo/vector-icons";
 import { SearchTab } from "../../hooks/useSearch";
 import { UserSearchResult } from "./UserSearchResult";
 import { VoiceNoteCard } from "../voice-note-card/VoiceNoteCard";
+import { formatTimeAgo } from "../../utils/timeUtils";
 
 interface SearchResultsListProps {
 	type: SearchTab;
@@ -135,6 +136,7 @@ export const SearchResultsList = ({
 					displayName={userData.display_name}
 					username={userData.username}
 					userAvatarUrl={userData.avatar_url}
+					timePosted={formatTimeAgo(item.created_at)}
 					currentUserId={currentUserId}
 					isShared={sharedStatusMap[item.id] || false}
 				/>

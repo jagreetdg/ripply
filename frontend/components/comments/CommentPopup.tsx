@@ -131,10 +131,11 @@ export function CommentPopup({
 
 		setSubmitting(true);
 		try {
-			const response = await addComment(voiceNoteId, {
-				user_id: loggedInUserId,
-				content: newComment.trim(),
-			});
+			const response = await addComment(
+				voiceNoteId,
+				loggedInUserId,
+				newComment.trim()
+			);
 			if (response) {
 				const newCommentData = response as Comment;
 				setComments((prev) => [newCommentData, ...prev]);

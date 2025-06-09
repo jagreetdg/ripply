@@ -26,12 +26,19 @@ export interface UserSearchResult {
  */
 export const searchUsers = async (query: string): Promise<UserSearchResult[]> => {
   try {
-    const data = await apiRequest<UserSearchResult[]>(
-      `${ENDPOINTS.SEARCH_USERS}?query=${encodeURIComponent(query)}`
-    );
+    const url = `${ENDPOINTS.SEARCH_USERS}?term=${encodeURIComponent(query)}`;
+    console.log("[SEARCH DEBUG] Searching users:", { query, url });
+    
+    const data = await apiRequest<UserSearchResult[]>(url);
+    console.log("[SEARCH DEBUG] Users search response:", { 
+      query, 
+      resultCount: data?.length || 0,
+      results: data?.slice(0, 3) // First 3 results for debugging
+    });
+    
     return data || [];
   } catch (error) {
-    console.error("Error searching users:", error);
+    console.error("[SEARCH DEBUG] Error searching users:", { query, error });
     return [];
   }
 };

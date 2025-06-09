@@ -6,6 +6,8 @@ import {
   searchUsers,
   searchVoiceNotes,
   getTrendingSearches,
+  getDiscoveryPosts,
+  getDiscoveryUsers,
 } from '../services/api';
 import { checkShareStatus } from '../services/api';
 import { UserSearchResult } from "../services/api/modules/userRelationshipsApi";
@@ -51,29 +53,43 @@ export const useSearch = ({
 
   // Load discovery content for empty search state
   const loadDiscoveryContent = async (tab: SearchTab, forceReload = false) => {
-    if (!userId) return;
+    console.log('loadDiscoveryContent called', { tab, forceReload, userId, isLoadingDiscovery, discoveryContentLoaded });
+    
+    if (!userId) {
+      console.log('loadDiscoveryContent: No userId, returning');
+      return;
+    }
 
     // Check if content is already loaded and we're not forcing a reload
     if (!forceReload && discoveryContentLoaded[tab]) {
+      console.log('loadDiscoveryContent: Content already loaded for tab', tab);
       return;
     }
 
     // Prevent multiple simultaneous loads
     if (isLoadingDiscovery) {
+      console.log('loadDiscoveryContent: Already loading, returning');
       return;
     }
 
+    console.log('loadDiscoveryContent: Starting to load content for tab', tab);
     setIsLoadingDiscovery(true);
     setIsLoading(true);
+    
     try {
       if (tab === 'posts') {
-        // Load discovery posts (for you feed) - placeholder for now
-        setDiscoveryPosts([]);
+        // Load discovery posts (personalized popular posts)
+        console.log('loadDiscoveryContent: Fetching discovery posts');
+        const posts = await getDiscoveryPosts(userId);
+        console.log('loadDiscoveryContent: Received discovery posts', posts?.length || 0);
+        setDiscoveryPosts(posts || []);
         setDiscoveryContentLoaded((prev) => ({ ...prev, posts: true }));
       } else if (tab === 'users') {
-        // Load trending searches as placeholder for trending users
-        const trending = await getTrendingSearches();
-        setTrendingUsers(trending || []);
+        // Load discovery users (trending creators)
+        console.log('loadDiscoveryContent: Fetching discovery users');
+        const users = await getDiscoveryUsers(userId);
+        console.log('loadDiscoveryContent: Received discovery users', users?.length || 0);
+        setTrendingUsers(users || []);
         setDiscoveryContentLoaded((prev) => ({ ...prev, users: true }));
       }
     } catch (error) {
@@ -92,7 +108,10 @@ export const useSearch = ({
 
   // Handle search
   const performSearch = async (tab: SearchTab, query: string) => {
+    console.log('[SEARCH DEBUG] performSearch called:', { tab, query, userId });
+    
     if (query.trim() === '') {
+      console.log('[SEARCH DEBUG] Empty query, clearing results and loading discovery content');
       setUserResults([]);
       setPostResults([]);
       setResults([]);
@@ -101,6 +120,7 @@ export const useSearch = ({
       return;
     }
 
+    console.log('[SEARCH DEBUG] Starting search...');
     setIsLoading(true);
     setError(null);
 
@@ -109,13 +129,17 @@ export const useSearch = ({
       let posts: any[] = [];
 
       if (tab === 'users') {
+        console.log('[SEARCH DEBUG] Searching users...');
         users = await searchUsers(query);
         setUserResults(users);
+        console.log('[SEARCH DEBUG] User search completed:', users.length, 'results');
       }
 
       if (tab === 'posts') {
+        console.log('[SEARCH DEBUG] Searching posts...');
         posts = await searchVoiceNotes(query);
         setPostResults(posts);
+        console.log('[SEARCH DEBUG] Post search completed:', posts.length, 'results');
       }
 
       // Combine results
@@ -124,9 +148,10 @@ export const useSearch = ({
         ...(tab === 'posts' ? posts : []).map(voiceNote => ({ type: "voiceNote" as const, data: voiceNote }))
       ];
 
+      console.log('[SEARCH DEBUG] Combined results:', combinedResults.length, 'total');
       setResults(combinedResults);
     } catch (err) {
-      console.error("Search error:", err);
+      console.error("[SEARCH DEBUG] Search error:", err);
       setError(err instanceof Error ? err.message : "Search failed");
       setResults([]);
     } finally {
@@ -168,13 +193,16 @@ export const useSearch = ({
     // Don't do anything if it's already the active tab
     if (tab === activeTab) return;
 
+    console.log('useSearch: Tab change', { from: activeTab, to: tab, searchQuery, userId });
     setActiveTab(tab);
 
     // If search query exists, perform search
     if (searchQuery.trim().length > 0) {
+      console.log('useSearch: Performing search for new tab', { tab, searchQuery });
       performSearch(tab, searchQuery);
     } else {
       // Load discovery content when no search query - only if not already loaded
+      console.log('useSearch: Loading discovery content for new tab', { tab, userId });
       loadDiscoveryContent(tab, false);
     }
   };

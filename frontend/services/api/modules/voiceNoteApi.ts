@@ -232,12 +232,32 @@ export const recordPlay = async (voiceNoteId: string, userId: string): Promise<P
 // Search voice notes
 export const searchVoiceNotes = async (query: string): Promise<VoiceNote[]> => {
   try {
-    const data = await apiRequest<VoiceNote[]>(
-      `${ENDPOINTS.SEARCH_VOICE_NOTES}?term=${encodeURIComponent(query)}`
-    );
+    // Check if this is a tag search (starts with #)
+    const isTagSearch = query.startsWith('#');
+    const searchTerm = isTagSearch ? query.slice(1) : query; // Remove # for tag searches
+    const searchType = isTagSearch ? 'tag' : 'title';
+    
+    const url = `${ENDPOINTS.SEARCH_VOICE_NOTES}?term=${encodeURIComponent(searchTerm)}&searchType=${searchType}`;
+    console.log("[SEARCH DEBUG] Searching voice notes:", { 
+      originalQuery: query, 
+      searchTerm, 
+      searchType, 
+      isTagSearch,
+      url 
+    });
+    
+    const data = await apiRequest<VoiceNote[]>(url);
+    console.log("[SEARCH DEBUG] Voice notes search response:", { 
+      originalQuery: query,
+      searchTerm,
+      searchType,
+      resultCount: data?.length || 0,
+      results: data?.slice(0, 3) // First 3 results for debugging
+    });
+    
     return data || [];
   } catch (error) {
-    console.error("Error searching voice notes:", error);
+    console.error("[SEARCH DEBUG] Error searching voice notes:", { query, error });
     return [];
   }
 };

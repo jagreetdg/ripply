@@ -23,7 +23,7 @@ export const useAuthHandler = () => {
         window.history.replaceState({}, document.title, newUrl);
       }
 
-      let token = tokenFromUrl;
+      let token: string | null = tokenFromUrl || null;
       if (!token) {
         token = await AsyncStorage.getItem(TOKEN_KEY);
       } else {
@@ -65,7 +65,12 @@ export const useAuthHandler = () => {
         // Try to verify existing token
         const authData = await verifyToken();
         if (authData?.user) {
-          setUser(authData.user);
+          // Fix avatar_url type mismatch (undefined -> null)
+          const userWithCorrectTypes = {
+            ...authData.user,
+            avatar_url: authData.user.avatar_url || null
+          };
+          setUser(userWithCorrectTypes);
           setIsAuthenticated(true);
         } else {
           setIsAuthenticated(false);

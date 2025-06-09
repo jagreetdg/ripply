@@ -3,7 +3,7 @@
  * Handles all API calls related to feed data
  */
 import {
-  getVoiceNotes,
+  getAllVoiceNotes,
   getPersonalizedFeed,
   recordPlay
 } from '../../services/api';
@@ -44,7 +44,7 @@ export const fetchFeedData = async (
     } else {
       // Fetch public feed for guests
       console.log("Fetching public feed for guest");
-      data = await getVoiceNotes();
+      data = await getAllVoiceNotes();
     }
 
     if (data && Array.isArray(data)) {

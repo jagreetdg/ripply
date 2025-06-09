@@ -45,6 +45,10 @@ export const ENDPOINTS = {
   // Feed endpoints
   FEED: '/api/voice-notes',
   PERSONALIZED_FEED: (userId: string) => `/api/voice-notes/feed/${userId}`,
+  
+  // Discovery endpoints
+  DISCOVERY_POSTS: (userId: string) => `/api/voice-notes/discovery/posts/${userId}`,
+  DISCOVERY_USERS: (userId: string) => `/api/voice-notes/discovery/users/${userId}`,
 
   // Search endpoints
   SEARCH: '/api/users/search',

@@ -2,6 +2,7 @@
  * Utility functions for feed data
  */
 import { FeedItem, VoiceNote } from './types';
+import { formatTimeAgo } from '../../utils/timeUtils';
 
 /**
  * Check if a string is a UUID
@@ -29,7 +30,7 @@ export const formatVoiceNote = (item: any): FeedItem => {
     displayName: userData.display_name || 'Unknown',
     username: userData.username || 'user',
     userAvatar: userData.avatar_url,
-    timePosted: item.created_at || new Date().toISOString(),
+    timePosted: formatTimeAgo(item.created_at || new Date().toISOString()),
     isShared: item.is_shared || false,
     sharedBy: item.shared_by ? {
       id: item.shared_by.id,
