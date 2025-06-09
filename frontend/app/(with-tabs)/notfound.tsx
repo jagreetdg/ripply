@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
+import Colors from "../../constants/Colors";
 
 /**
  * Custom 404 Not Found page for handling all unmatched routes
@@ -60,7 +61,7 @@ export default function NotFoundScreen() {
 			width: 300,
 			height: 300,
 			borderRadius: 150,
-			backgroundColor: `${colors.tint}${colors.opacity.light}`,
+			backgroundColor: `${colors.tint}${Colors.opacity.light}`,
 			zIndex: -1,
 		},
 		patternBottom: {
@@ -70,7 +71,7 @@ export default function NotFoundScreen() {
 			width: 250,
 			height: 250,
 			borderRadius: 125,
-			backgroundColor: `${colors.tint}${colors.opacity.medium}`,
+			backgroundColor: `${colors.tint}${Colors.opacity.medium}`,
 			zIndex: -1,
 		},
 		iconContainer: {
@@ -80,11 +81,11 @@ export default function NotFoundScreen() {
 			width: 160,
 			height: 160,
 			borderRadius: 80,
-			backgroundColor: `${colors.tint}${colors.opacity.light}`,
+			backgroundColor: `${colors.tint}${Colors.opacity.light}`,
 			justifyContent: "center",
 			alignItems: "center",
 			borderWidth: 2,
-			borderColor: `${colors.tint}${colors.opacity.medium}`,
+			borderColor: `${colors.tint}${Colors.opacity.medium}`,
 			borderStyle: "dashed",
 		},
 		title: {
@@ -97,7 +98,7 @@ export default function NotFoundScreen() {
 		divider: {
 			width: 60,
 			height: 4,
-			backgroundColor: `${colors.tint}${colors.opacity.strong}`,
+			backgroundColor: `${colors.tint}${Colors.opacity.strong}`,
 			borderRadius: 2,
 			marginBottom: 20,
 		},

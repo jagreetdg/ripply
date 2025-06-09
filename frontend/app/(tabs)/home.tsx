@@ -48,7 +48,6 @@ export default function HomeScreen() {
 		error,
 		refreshing,
 		handleRefresh,
-		isUUID,
 		handlePlayVoiceNote,
 		diagnosticData,
 	} = useFeedData();
@@ -74,7 +73,7 @@ export default function HomeScreen() {
 					pathname: "/profile/[username]",
 					params: { username },
 				});
-			} else if (userId && isUUID(userId)) {
+			} else if (userId) {
 				// Fallback to userId if username is not available
 				console.log("Navigating to user profile with UUID:", userId);
 				router.push({
@@ -87,7 +86,7 @@ export default function HomeScreen() {
 				router.push("/profile/user");
 			}
 		},
-		[router, isUUID]
+		[router]
 	);
 
 	// Compute header translation based on scroll position

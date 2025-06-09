@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "../voice-note-card/VoiceNoteCard";
 import { useTheme } from "../../context/ThemeContext";
 import { useUser } from "../../context/UserContext";
-import { hasUserRepostedVoiceNote } from "../../services/api/repostService";
+import { hasUserRepostedVoiceNote } from "../../services/api";
 
 interface FeedItemProps {
 	item: {

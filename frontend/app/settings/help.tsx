@@ -258,13 +258,13 @@ export default function HelpSupportScreen() {
 					]}
 				>
 					<HelpItem
-						icon="bug"
+						icon="alert-circle"
 						title="Report a Bug"
 						description="Help us fix issues you've encountered"
 						onPress={handleReportBug}
 					/>
 					<HelpItem
-						icon="lightbulb"
+						icon="zap"
 						title="Feature Request"
 						description="Suggest new features for Ripply"
 						onPress={handleFeatureRequest}

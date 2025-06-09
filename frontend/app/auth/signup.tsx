@@ -17,7 +17,7 @@ import {
 	registerUser,
 	checkUsernameAvailability,
 	checkEmailAvailability,
-} from "../../services/api/authService";
+} from "../../services/api";
 import { useUser } from "../../context/UserContext";
 
 interface ApiResponse {

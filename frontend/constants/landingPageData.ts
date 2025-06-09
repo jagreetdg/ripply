@@ -37,20 +37,20 @@ export const testimonials = [
       "Ripply has completely changed how I share my thoughts online. It's so much more personal than text.",
     name: "Alex Johnson",
     role: "Content Creator",
-    // avatar: "https://randomuser.me/api/portraits/men/32.jpg" // Example avatar
+    avatar: "https://randomuser.me/api/portraits/men/32.jpg"
   },
   {
     quote:
       "As a musician, I use Ripply to share song snippets and get instant feedback from fans.",
     name: "Maya Williams",
     role: "Indie Artist",
-    // avatar: "https://randomuser.me/api/portraits/women/44.jpg" // Example avatar
+    avatar: "https://randomuser.me/api/portraits/women/44.jpg"
   },
   {
     quote:
       "The voice-first approach makes social media feel human again. I'm addicted!",
     name: "Jamal Thompson",
     role: "Podcast Host",
-    // avatar: "https://randomuser.me/api/portraits/men/56.jpg" // Example avatar
+    avatar: "https://randomuser.me/api/portraits/men/56.jpg"
   },
 ]; 

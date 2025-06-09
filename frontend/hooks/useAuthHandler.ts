@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../context/UserContext'; // Assuming this path is correct
-import { getCurrentUser } from '../services/api/authService'; // Assuming this path is correct
+import { getCurrentUser } from '../services/api';
 
 const API_URL = "https://ripply-backend.onrender.com"; // Consider moving to a config file
 const TOKEN_KEY = "@ripply_auth_token";
@@ -35,7 +35,7 @@ export const useAuthHandler = () => {
             console.log(Date.now(), "[PERF] AuthHandler - AsyncStorage.setItem done");
         } else {
             console.log(Date.now(), "[PERF] AuthHandler - No token provided, attempting to retrieve from storage");
-            tokenToUse = await AsyncStorage.getItem(TOKEN_KEY);
+            tokenToUse = await AsyncStorage.getItem(TOKEN_KEY) || undefined;
             console.log(Date.now(), "[PERF] AuthHandler - AsyncStorage.getItem done for stored token");
         }
 

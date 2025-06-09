@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "../voice-note-card/VoiceNoteCard";
 import { useTheme } from "../../context/ThemeContext";
 import { FeedItem } from "../../hooks/useFeedData";
-import { checkShareStatus } from "../../services/api/voiceNoteService";
+import { checkShareStatus } from "../../services/api";
 import { useUser } from "../../context/UserContext";
 
 // Define a constant for header height to match the one in home.tsx

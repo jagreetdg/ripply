@@ -1,7 +1,7 @@
 /**
- * Authentication service for the Ripply app
+ * Authentication API functions
  */
-import { apiRequest } from './config';
+import { apiRequest } from '../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
@@ -19,15 +19,34 @@ const AUTH_ENDPOINTS = {
   CHECK_EMAIL: '/api/auth/check-email',
 };
 
+export interface LoginCredentials {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
+}
+
+export interface RegisterData {
+  username: string;
+  email: string;
+  password: string;
+  displayName?: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: any;
+  message?: string;
+}
+
+export interface AvailabilityResponse {
+  available: boolean;
+  message?: string;
+}
+
 /**
  * Hash a password client-side before sending to server
- * This adds an extra layer of security during transmission
- * @param {string} password - The plain text password
- * @returns {Promise<string>} - The hashed password
  */
-async function hashPasswordForTransport(password) {
-  // Create a SHA-256 hash of the password for transport security
-  // Note: This is in addition to the bcrypt hashing done on the server
+async function hashPasswordForTransport(password: string): Promise<string> {
   const hashBuffer = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
     password
@@ -37,33 +56,20 @@ async function hashPasswordForTransport(password) {
 
 /**
  * Register a new user
- * @param {Object} userData - User registration data
- * @param {string} userData.username - Username
- * @param {string} userData.email - Email
- * @param {string} userData.password - Password
- * @param {string} userData.displayName - Display name (optional)
- * @returns {Promise<Object>} - Registered user data
  */
-const registerUser = async (userData) => {
+export const registerUser = async (userData: RegisterData): Promise<AuthResponse> => {
   try {
-    // Create a copy of userData to avoid modifying the original
     const secureUserData = { ...userData };
     
-    // Hash the password before sending
     if (secureUserData.password) {
       secureUserData.password = await hashPasswordForTransport(secureUserData.password);
     }
     
-    // Add a timestamp to prevent replay attacks
-    secureUserData.timestamp = Date.now();
-    
     const response = await apiRequest(AUTH_ENDPOINTS.REGISTER, {
       method: 'POST',
-      body: JSON.stringify(secureUserData),
-      credentials: 'include', // Include cookies in the request
+      body: JSON.stringify({ ...secureUserData, timestamp: Date.now() }),
     });
     
-    // Store token and user data in AsyncStorage
     if (response.token) {
       await AsyncStorage.setItem(TOKEN_KEY, response.token);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.user));
@@ -78,44 +84,29 @@ const registerUser = async (userData) => {
 
 /**
  * Login a user
- * @param {Object} credentials - Login credentials
- * @param {string} credentials.email - Email
- * @param {string} credentials.password - Password
- * @param {boolean} credentials.rememberMe - Whether to remember the user
- * @returns {Promise<Object>} - Logged in user data
  */
-const loginUser = async (credentials) => {
+export const loginUser = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
-    console.log('Login attempt with credentials:', { email: credentials.email, passwordLength: credentials.password?.length, rememberMe: credentials.rememberMe });
-    
-    // Create a copy of credentials to avoid modifying the original
-    const secureCredentials = { ...credentials };
-    
-    // Hash the password before sending
-    if (secureCredentials.password) {
-      secureCredentials.password = await hashPasswordForTransport(secureCredentials.password);
-      console.log('Password hashed for transport');
-    }
-    
-    // Add a timestamp to prevent replay attacks
-    secureCredentials.timestamp = Date.now();
-    
-    console.log('Sending login request to:', AUTH_ENDPOINTS.LOGIN);
-    const response = await apiRequest(AUTH_ENDPOINTS.LOGIN, {
-      method: 'POST',
-      body: JSON.stringify(secureCredentials),
-      credentials: 'include', // Include cookies in the request
+    console.log('Login attempt with credentials:', { 
+      email: credentials.email, 
+      passwordLength: credentials.password?.length, 
+      rememberMe: credentials.rememberMe 
     });
     
-    console.log('Login response received:', response ? 'success' : 'empty');
+    const secureCredentials = { ...credentials };
     
-    // Store token and user data in AsyncStorage
+    if (secureCredentials.password) {
+      secureCredentials.password = await hashPasswordForTransport(secureCredentials.password);
+    }
+    
+    const response = await apiRequest(AUTH_ENDPOINTS.LOGIN, {
+      method: 'POST',
+      body: JSON.stringify({ ...secureCredentials, timestamp: Date.now() }),
+    });
+    
     if (response && response.token) {
       await AsyncStorage.setItem(TOKEN_KEY, response.token);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.user));
-      console.log('User data stored in AsyncStorage');
-    } else {
-      console.warn('Login response missing token or user data');
     }
     
     return response;
@@ -127,10 +118,8 @@ const loginUser = async (credentials) => {
 
 /**
  * Check if a username is available
- * @param {string} username - Username to check
- * @returns {Promise<Object>} - Availability status
  */
-const checkUsernameAvailability = async (username) => {
+export const checkUsernameAvailability = async (username: string): Promise<AvailabilityResponse> => {
   try {
     const response = await apiRequest(`${AUTH_ENDPOINTS.CHECK_USERNAME}/${username}`);
     return response;
@@ -142,10 +131,8 @@ const checkUsernameAvailability = async (username) => {
 
 /**
  * Check if an email is available
- * @param {string} email - Email to check
- * @returns {Promise<Object>} - Availability status
  */
-const checkEmailAvailability = async (email) => {
+export const checkEmailAvailability = async (email: string): Promise<AvailabilityResponse> => {
   try {
     const response = await apiRequest(`${AUTH_ENDPOINTS.CHECK_EMAIL}/${email}`);
     return response;
@@ -157,20 +144,16 @@ const checkEmailAvailability = async (email) => {
 
 /**
  * Logout the current user
- * @returns {Promise<Object>} - Logout response
  */
-const logoutUser = async () => {
+export const logoutUser = async () => {
   try {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     
-    // Call the logout endpoint
     const response = await apiRequest(AUTH_ENDPOINTS.LOGOUT, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
-      credentials: 'include', // Include cookies in the request
     });
     
-    // Clear local storage
     await AsyncStorage.removeItem(TOKEN_KEY);
     await AsyncStorage.removeItem(USER_KEY);
     
@@ -178,7 +161,6 @@ const logoutUser = async () => {
   } catch (error) {
     console.error('Error logging out:', error);
     
-    // Still clear local storage even if the API call fails
     await AsyncStorage.removeItem(TOKEN_KEY);
     await AsyncStorage.removeItem(USER_KEY);
     
@@ -188,9 +170,8 @@ const logoutUser = async () => {
 
 /**
  * Verify the current auth token
- * @returns {Promise<Object>} - User data if token is valid
  */
-const verifyToken = async () => {
+export const verifyToken = async () => {
   try {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     
@@ -199,8 +180,8 @@ const verifyToken = async () => {
     }
     
     const response = await apiRequest(AUTH_ENDPOINTS.VERIFY_TOKEN, {
+      method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-      credentials: 'include', // Include cookies in the request
     });
     
     return response;
@@ -211,13 +192,12 @@ const verifyToken = async () => {
 };
 
 /**
- * Get the current authenticated user
- * @returns {Promise<Object|null>} - User data or null if not authenticated
+ * Get the current user from storage
  */
-const getCurrentUser = async () => {
+export const getCurrentUser = async () => {
   try {
-    const userJson = await AsyncStorage.getItem(USER_KEY);
-    return userJson ? JSON.parse(userJson) : null;
+    const userString = await AsyncStorage.getItem(USER_KEY);
+    return userString ? JSON.parse(userString) : null;
   } catch (error) {
     console.error('Error getting current user:', error);
     return null;
@@ -226,25 +206,13 @@ const getCurrentUser = async () => {
 
 /**
  * Check if user is authenticated
- * @returns {Promise<boolean>} - True if authenticated
  */
-const isAuthenticated = async () => {
+export const isAuthenticated = async (): Promise<boolean> => {
   try {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     return !!token;
   } catch (error) {
-    console.error('Error checking authentication:', error);
+    console.error('Error checking authentication status:', error);
     return false;
   }
-};
-
-export {
-  registerUser,
-  loginUser,
-  logoutUser,
-  verifyToken,
-  getCurrentUser,
-  isAuthenticated,
-  checkUsernameAvailability,
-  checkEmailAvailability,
-};
+}; 

@@ -9,10 +9,7 @@ import {
 	ScrollView,
 } from "react-native";
 import { FeedItem } from "./FeedItem";
-import {
-	getVoiceNotes,
-	getPersonalizedFeed,
-} from "../../services/api/voiceNoteService";
+import { getVoiceNotes, getPersonalizedFeed } from "../../services/api";
 import { useRouter } from "expo-router";
 import { useUser } from "../../context/UserContext";
 import { Feather } from "@expo/vector-icons";

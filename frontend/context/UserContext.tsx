@@ -5,11 +5,7 @@ import React, {
 	useContext,
 	ReactNode,
 } from "react";
-import {
-	getCurrentUser,
-	verifyToken,
-	logoutUser,
-} from "../services/api/authService";
+import { getCurrentUser, verifyToken, logoutUser } from "../services/api";
 
 // Define the User interface
 export interface User {

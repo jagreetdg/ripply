@@ -71,6 +71,11 @@ export interface VoiceNoteCardProps {
 	 * This should ONLY be true if the current user has reposted this voice note.
 	 */
 	isReposted?: boolean;
+	/**
+	 * Whether the current user has shared this voice note.
+	 * Used to determine the share button state.
+	 */
+	isShared?: boolean;
 	isLoadingRepostStatus?: boolean; // Whether the repost status is still loading
 	sharedBy?: {
 		// Info about who shared the voice note
