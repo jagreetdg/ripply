@@ -398,11 +398,18 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 			// Extract tags from the nested structure
 			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
-			return {
+			const processed = {
 				...processVoiceNoteCounts(note),
 				tags,
 				is_shared: false, // IMPORTANT: Explicitly mark as not shared
 			};
+
+			// CRITICAL DEBUG: Log each original post processing
+			console.log(
+				`[DEBUG] Processing ORIGINAL post ${note.id}: title="${note.title}", is_shared=${processed.is_shared}`
+			);
+
+			return processed;
 		});
 
 		// Get shared voice notes from followed users
@@ -499,13 +506,20 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 				// Extract tags
 				const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
-				return {
+				const processed = {
 					...processVoiceNoteCounts(note),
 					tags,
 					is_shared: true, // IMPORTANT: Explicitly mark as shared
 					shared_at: shareRecord?.shared_at || new Date().toISOString(),
 					shared_by: shareRecord?.sharer || null,
 				};
+
+				// CRITICAL DEBUG: Log each shared post processing
+				console.log(
+					`[DEBUG] Processing SHARED post ${note.id}: title="${note.title}", is_shared=${processed.is_shared}, shared_by=${shareRecord?.sharer?.username}`
+				);
+
+				return processed;
 			});
 		}
 
@@ -562,6 +576,23 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 			console.log(
 				`[DEBUG] Paginated feed - Original: ${finalOriginalCount}, Shared: ${finalSharedCount}`
 			);
+
+			// CRITICAL DEBUG: Log the first few posts being returned
+			console.log(
+				`[DEBUG] FINAL RESPONSE - First ${Math.min(
+					3,
+					paginatedPosts.length
+				)} posts:`
+			);
+			paginatedPosts.slice(0, 3).forEach((post, index) => {
+				console.log(
+					`[DEBUG] Post ${index + 1}: ID=${post.id}, title="${
+						post.title
+					}", is_shared=${post.is_shared}, user=${
+						post.users?.username
+					}, shared_by=${post.shared_by?.username || "N/A"}`
+				);
+			});
 		}
 
 		// Return in the same format as the regular voice notes endpoint
