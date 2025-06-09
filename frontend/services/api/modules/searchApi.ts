@@ -37,45 +37,7 @@ export const search = async (params: SearchParams): Promise<SearchResults> => {
   }
 };
 
-/**
- * Search for users only
- */
-export const searchUsers = async (query: string, limit = 20, offset = 0) => {
-  try {
-    const params = new URLSearchParams({
-      query,
-      type: 'users',
-      limit: limit.toString(),
-      offset: offset.toString()
-    });
-    
-    const response = await apiRequest(`/api/search?${params}`);
-    return response.users || [];
-  } catch (error) {
-    console.error('Error searching users:', error);
-    return [];
-  }
-};
 
-/**
- * Search for voice notes only
- */
-export const searchVoiceNotes = async (query: string, limit = 20, offset = 0) => {
-  try {
-    const params = new URLSearchParams({
-      query,
-      type: 'voice_notes',
-      limit: limit.toString(),
-      offset: offset.toString()
-    });
-    
-    const response = await apiRequest(`/api/search?${params}`);
-    return response.voice_notes || [];
-  } catch (error) {
-    console.error('Error searching voice notes:', error);
-    return [];
-  }
-};
 
 /**
  * Get trending searches

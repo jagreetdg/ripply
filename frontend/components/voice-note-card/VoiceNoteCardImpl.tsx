@@ -77,8 +77,14 @@ export function VoiceNoteCardImpl({
 		isRepostedEffective,
 		loggedInUserId,
 		progressContainerRef,
+		// Animation values
 		likeScale,
 		shareScale,
+		commentScale,
+		likePulse,
+		sharePulse,
+		commentPulse,
+		// Handlers
 		handlePlayPress,
 		handleProfilePress,
 		handleLikePress,
@@ -166,11 +172,15 @@ export function VoiceNoteCardImpl({
 						progressContainerRef={progressContainerRef}
 						isLiked={isLiked}
 						likeScale={likeScale}
+						shareScale={shareScale}
+						commentScale={commentScale}
+						likePulse={likePulse}
+						sharePulse={sharePulse}
+						commentPulse={commentPulse}
 						likesCount={likesCount}
 						commentsCount={commentsCount}
 						playsCount={playsCount}
 						isReposted={isRepostedEffective}
-						shareScale={shareScale}
 						sharesCount={sharesCount}
 						isLoadingShareCount={isLoadingShareCount}
 						isLoadingStats={isLoadingStats}
@@ -222,11 +232,15 @@ export function VoiceNoteCardImpl({
 						progressContainerRef={progressContainerRef}
 						isLiked={isLiked}
 						likeScale={likeScale}
+						shareScale={shareScale}
+						commentScale={commentScale}
+						likePulse={likePulse}
+						sharePulse={sharePulse}
+						commentPulse={commentPulse}
 						likesCount={likesCount}
 						commentsCount={commentsCount}
 						playsCount={playsCount}
 						isReposted={isRepostedEffective}
-						shareScale={shareScale}
 						sharesCount={sharesCount}
 						isLoadingShareCount={isLoadingShareCount}
 						isLoadingStats={isLoadingStats}

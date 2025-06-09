@@ -12,6 +12,7 @@ export const useAuthHandler = () => {
   const { user, setUser, logout: contextLogout } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleAuthSuccess = async (tokenFromUrl?: string) => {
@@ -83,6 +84,7 @@ export const useAuthHandler = () => {
 
   const signInWithOAuth = async (provider: 'google' | 'apple' = 'google') => {
     try {
+      setAuthError(null);
       const authUrl = `https://ripply-backend.onrender.com/api/auth/${provider}`;
       
       if (Platform.OS === 'web') {
@@ -109,9 +111,13 @@ export const useAuthHandler = () => {
       }
     } catch (error) {
       console.error('OAuth sign-in error:', error);
+      setAuthError(error instanceof Error ? error.message : 'Authentication failed');
       throw error;
     }
   };
+
+  // Alias for backward compatibility
+  const initiateSocialAuth = signInWithOAuth;
 
   const logout = async () => {
     try {
@@ -126,7 +132,9 @@ export const useAuthHandler = () => {
     user,
     isLoading,
     isAuthenticated,
+    authError,
     signInWithOAuth,
+    initiateSocialAuth,
     logout,
     handleAuthSuccess,
   };

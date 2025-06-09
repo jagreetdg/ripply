@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	StyleSheet,
 	View,
@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import AuthModal from "../components/auth/AuthModal";
 import { useAuthHandler } from "../hooks/useAuthHandler";
 import HeroSection from "../components/landing/HeroSection";
@@ -18,13 +19,25 @@ import BackgroundRippleEffect from "../components/landing/BackgroundRippleEffect
 export default function LandingPage() {
 	const [loginModalVisible, setLoginModalVisible] = useState(false);
 	const [signupModalVisible, setSignupModalVisible] = useState(false);
+	const router = useRouter();
 
 	const {
 		user,
 		isLoading: isAuthLoading,
+		isAuthenticated,
 		authError,
 		initiateSocialAuth,
 	} = useAuthHandler();
+
+	// Redirect authenticated users to home page
+	useEffect(() => {
+		if (!isAuthLoading && isAuthenticated && user) {
+			console.log(
+				"[DEBUG] LandingPage - User is authenticated, redirecting to home"
+			);
+			router.replace("/(tabs)/home");
+		}
+	}, [isAuthLoading, isAuthenticated, user, router]);
 
 	const handleLoginModalOpen = () => {
 		setLoginModalVisible(true);
@@ -34,10 +47,21 @@ export default function LandingPage() {
 		setSignupModalVisible(true);
 	};
 
+	// Show loading while checking authentication
 	if (isAuthLoading) {
 		return (
 			<View style={styles.container}>
 				<Text style={styles.loadingText}>Loading...</Text>
+			</View>
+		);
+	}
+
+	// Don't render landing page if user is authenticated
+	// (they should be redirected to home)
+	if (isAuthenticated && user) {
+		return (
+			<View style={styles.container}>
+				<Text style={styles.loadingText}>Redirecting...</Text>
 			</View>
 		);
 	}

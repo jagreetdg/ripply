@@ -2,12 +2,12 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Animated, Alert, Share, Platform, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useUser } from "../../../context/UserContext";
+import { useToast } from "../../../components/common/Toast";
 import {
 	likeVoiceNote,
 	unlikeVoiceNote,
 	getComments,
 	checkLikeStatus,
-	getVoiceNoteStats,
 	recordPlay,
 } from "../../../services/api";
 import {
@@ -38,20 +38,22 @@ export const useVoiceNoteCard = ({
 >) => {
 	const router = useRouter();
 	const { user } = useUser();
+	const { showToast } = useToast();
 	const progressContainerRef = useRef<View>(null);
 
-	// Get user ID from context or props
-	const loggedInUserId = user?.id || currentUserId;
+	// Get user ID from context first, then props
+	const loggedInUserId = user?.id || currentUserId || userId;
 
-	// State for repost status
-	const [internalRepostedState, setInternalRepostedState] = useState<boolean>(
-		isRepostedProp !== undefined ? Boolean(isRepostedProp) : false
-	);
+	// Internal state for repost status (when user interacts)
+	const [internalRepostedState, setInternalRepostedState] = useState<boolean>(false);
+	const [hasUserInteracted, setHasUserInteracted] = useState<boolean>(false);
 
-	// Determine effective repost status
+	// Determine effective repost status - prioritize user interactions
 	const isRepostedEffective = isLoadingRepostStatus
 		? false
-		: Boolean(isRepostedProp !== undefined ? isRepostedProp : internalRepostedState);
+		: hasUserInteracted 
+			? internalRepostedState
+			: Boolean(isRepostedProp !== undefined ? isRepostedProp : internalRepostedState);
 
 	// State management
 	const [isPlaying, setIsPlaying] = useState(false);
@@ -77,6 +79,12 @@ export const useVoiceNoteCard = ({
 	// Animation refs
 	const likeScale = useRef(new Animated.Value(1)).current;
 	const shareScale = useRef(new Animated.Value(1)).current;
+	const commentScale = useRef(new Animated.Value(1)).current;
+	
+	// Pulse animation for state changes
+	const likePulse = useRef(new Animated.Value(1)).current;
+	const sharePulse = useRef(new Animated.Value(1)).current;
+	const commentPulse = useRef(new Animated.Value(1)).current;
 
 	// Add comprehensive state logging for debugging
 	const logShareState = useCallback((context: string) => {
@@ -87,6 +95,7 @@ export const useVoiceNoteCard = ({
 			isLoadingShareCount,
 			isRepostedEffective,
 			internalRepostedState,
+			hasUserInteracted,
 			// Props
 			isRepostedProp,
 			isLoadingRepostStatus,
@@ -94,20 +103,34 @@ export const useVoiceNoteCard = ({
 			loggedInUserId,
 			// Voice note data
 			voiceNoteShares: voiceNote.shares,
-			voiceNoteIsShared: voiceNote.is_shared
+			voiceNoteIsShared: (voiceNote as any).is_shared
 		});
 	}, [
 		voiceNote.id, 
 		voiceNote.shares, 
-		voiceNote.is_shared,
+		(voiceNote as any).is_shared,
 		sharesCount,
 		isLoadingShareCount,
 		isRepostedEffective,
 		internalRepostedState,
+		hasUserInteracted,
 		isRepostedProp,
 		isLoadingRepostStatus,
 		loggedInUserId
 	]);
+
+	// Sync with props when user hasn't interacted yet
+	useEffect(() => {
+		if (!hasUserInteracted && isRepostedProp !== undefined) {
+			setInternalRepostedState(Boolean(isRepostedProp));
+		}
+	}, [isRepostedProp, hasUserInteracted]);
+
+	// Reset interaction flag when voice note changes
+	useEffect(() => {
+		setHasUserInteracted(false);
+		setInternalRepostedState(Boolean(isRepostedProp));
+	}, [voiceNote.id, isRepostedProp]);
 
 	// Log state changes for debugging
 	useEffect(() => {
@@ -161,55 +184,127 @@ export const useVoiceNoteCard = ({
 		}
 	}, [onProfilePress, onUserProfilePress]);
 
-	// Handle like press
+	// Handle like press with optimistic updates
 	const handleLikePress = useCallback(async () => {
 		if (!loggedInUserId) {
 			Alert.alert("Please log in", "You need to be logged in to like voice notes.");
 			return;
 		}
 
-		// Animate the like button
-		Animated.sequence([
-			Animated.timing(likeScale, {
-				toValue: 1.2,
-				duration: 100,
-				useNativeDriver: true,
-			}),
-			Animated.timing(likeScale, {
-				toValue: 1,
-				duration: 100,
-				useNativeDriver: true,
-			}),
-		]).start();
+		// Store original values for potential rollback
+		const originalIsLiked = isLiked;
+		const originalLikesCount = likesCount;
 
+		// OPTIMISTIC UPDATE: Immediately update UI
+		const newIsLiked = !isLiked;
+		const newLikesCount = newIsLiked ? likesCount + 1 : Math.max(0, likesCount - 1);
+		
+		setIsLiked(newIsLiked);
+		setLikesCount(newLikesCount);
+
+		// Enhanced like button animation with scale and pulse effects
+		const scaleAnimation = Animated.sequence([
+			Animated.timing(likeScale, {
+				toValue: 1.3,
+				duration: 150,
+				useNativeDriver: true,
+			}),
+			Animated.spring(likeScale, {
+				toValue: 1,
+				tension: 200,
+				friction: 8,
+				useNativeDriver: true,
+			}),
+		]);
+
+		// Pulse effect for state change
+		const pulseAnimation = Animated.sequence([
+			Animated.timing(likePulse, {
+				toValue: 1.15,
+				duration: 100,
+				useNativeDriver: true,
+			}),
+			Animated.timing(likePulse, {
+				toValue: 1,
+				duration: 200,
+				useNativeDriver: true,
+			}),
+		]);
+
+		// Start animations immediately
+		Animated.parallel([scaleAnimation, pulseAnimation]).start();
+
+		// API request in background
 		try {
-			if (isLiked) {
+			if (originalIsLiked) {
 				const result = await unlikeVoiceNote(voiceNote.id, loggedInUserId);
-				setIsLiked(false);
-				setLikesCount(result.likesCount);
+				// Update with server response if different
+				if (typeof result.likesCount === 'number' && result.likesCount !== newLikesCount) {
+					setLikesCount(result.likesCount);
+				}
 			} else {
 				const result = await likeVoiceNote(voiceNote.id, loggedInUserId);
-				setIsLiked(true);
-				setLikesCount(result.likesCount);
+				// Update with server response if different
+				if (typeof result.likesCount === 'number' && result.likesCount !== newLikesCount) {
+					setLikesCount(result.likesCount);
+				}
 			}
 		} catch (error) {
 			console.error("Error toggling like:", error);
-			Alert.alert("Error", "Failed to update like status. Please try again.");
+			
+			// ROLLBACK: Revert optimistic update
+			setIsLiked(originalIsLiked);
+			setLikesCount(originalLikesCount);
+			
+			// Show user-friendly error message
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+			showToast(`Failed to ${originalIsLiked ? 'unlike' : 'like'}: ${errorMessage}`, 'error');
 		}
-	}, [loggedInUserId, likeScale, voiceNote.id, isLiked]);
+	}, [loggedInUserId, likeScale, likePulse, voiceNote.id, isLiked, likesCount, showToast]);
 
 	// Handle comment press
 	const handleCommentPress = useCallback(() => {
+		// Animate comment button press
+		const scaleAnimation = Animated.sequence([
+			Animated.timing(commentScale, {
+				toValue: 1.2,
+				duration: 120,
+				useNativeDriver: true,
+			}),
+			Animated.spring(commentScale, {
+				toValue: 1,
+				tension: 180,
+				friction: 6,
+				useNativeDriver: true,
+			}),
+		]);
+
+		// Pulse effect
+		const pulseAnimation = Animated.sequence([
+			Animated.timing(commentPulse, {
+				toValue: 1.1,
+				duration: 80,
+				useNativeDriver: true,
+			}),
+			Animated.timing(commentPulse, {
+				toValue: 1,
+				duration: 150,
+				useNativeDriver: true,
+			}),
+		]);
+
+		Animated.parallel([scaleAnimation, pulseAnimation]).start();
+
 		setShowCommentPopup(true);
 		fetchComments();
-	}, [fetchComments]);
+	}, [fetchComments, commentScale, commentPulse]);
 
 	// Handle plays press
 	const handlePlaysPress = useCallback(() => {
 		// Show plays information or navigate to plays list
 	}, []);
 
-	// Handle repost press
+	// Handle repost press with optimistic updates
 	const handleRepostPress = useCallback(async () => {
 		if (!loggedInUserId) {
 			console.log("[SHARE DEBUG] handleRepostPress - No logged in user, showing alert");
@@ -217,65 +312,99 @@ export const useVoiceNoteCard = ({
 			return;
 		}
 
-		logShareState("Before handleRepostPress");
+		// Store original values for potential rollback
+		const originalRepostedState = isRepostedEffective;
+		const originalSharesCount = sharesCount;
+		const originalHasUserInteracted = hasUserInteracted;
 
-		console.log("[SHARE DEBUG] handleRepostPress - Starting repost toggle:", {
+		// OPTIMISTIC UPDATE: Immediately update UI
+		const newRepostedState = !isRepostedEffective;
+		const newSharesCount = newRepostedState ? sharesCount + 1 : Math.max(0, sharesCount - 1);
+		
+		setHasUserInteracted(true);
+		setInternalRepostedState(newRepostedState);
+		setSharesCount(newSharesCount);
+
+		logShareState("Optimistic Update Applied");
+
+		console.log("[SHARE DEBUG] handleRepostPress - Optimistic update:", {
 			voiceNoteId: voiceNote.id,
 			userId: loggedInUserId,
-			currentRepostState: isRepostedEffective
+			oldState: originalRepostedState,
+			newState: newRepostedState,
+			oldCount: originalSharesCount,
+			newCount: newSharesCount
 		});
 
-		// Animate the repost button
-		Animated.sequence([
+		// Enhanced share button animation with scale and pulse effects
+		const scaleAnimation = Animated.sequence([
 			Animated.timing(shareScale, {
-				toValue: 1.2,
-				duration: 100,
+				toValue: 1.35,
+				duration: 160,
 				useNativeDriver: true,
 			}),
-			Animated.timing(shareScale, {
+			Animated.spring(shareScale, {
 				toValue: 1,
-				duration: 100,
+				tension: 220,
+				friction: 9,
 				useNativeDriver: true,
 			}),
-		]).start();
+		]);
 
+		// Pulse effect for state change
+		const pulseAnimation = Animated.sequence([
+			Animated.timing(sharePulse, {
+				toValue: 1.2,
+				duration: 120,
+				useNativeDriver: true,
+			}),
+			Animated.timing(sharePulse, {
+				toValue: 1,
+				duration: 250,
+				useNativeDriver: true,
+			}),
+		]);
+
+		// Start animations immediately
+		Animated.parallel([scaleAnimation, pulseAnimation]).start();
+
+		// API request in background
 		try {
 			console.log("[SHARE DEBUG] handleRepostPress - Calling toggleRepost API");
 			const result = await toggleRepost(voiceNote.id, loggedInUserId);
 			console.log("[SHARE DEBUG] handleRepostPress - toggleRepost result:", result);
 			
-			const newRepostedState = result.isReposted;
-			console.log("[SHARE DEBUG] handleRepostPress - New repost state:", {
-				oldState: isRepostedEffective,
-				newState: newRepostedState
-			});
+			const serverRepostedState = result.isReposted;
 			
-			// Update internal state immediately
-			setInternalRepostedState(newRepostedState);
-			console.log("[SHARE DEBUG] handleRepostPress - Internal repost state updated");
+			// Update with server response if different from optimistic update
+			if (serverRepostedState !== newRepostedState) {
+				console.log("[SHARE DEBUG] handleRepostPress - Server state differs, updating:", {
+					optimistic: newRepostedState,
+					server: serverRepostedState
+				});
+				setInternalRepostedState(serverRepostedState);
+			}
 			
-			// Update share count if provided in result
-			if (typeof result.repostCount === "number") {
-				console.log("[SHARE DEBUG] handleRepostPress - Updating share count from result:", result.repostCount);
+			// Update share count from API response (this is the authoritative count)
+			if (typeof result.repostCount === "number" && result.repostCount !== newSharesCount) {
+				console.log("[SHARE DEBUG] handleRepostPress - Server count differs, updating:", {
+					optimistic: newSharesCount,
+					server: result.repostCount
+				});
 				setSharesCount(result.repostCount);
 			}
 			
 			if (onShareStatusChanged) {
 				console.log("[SHARE DEBUG] handleRepostPress - Calling onShareStatusChanged callback");
-				onShareStatusChanged(voiceNote.id, newRepostedState);
-			} else {
-				console.log("[SHARE DEBUG] handleRepostPress - No onShareStatusChanged callback provided");
+				onShareStatusChanged(voiceNote.id, serverRepostedState);
 			}
 
-			if (!newRepostedState && onVoiceNoteUnshared) {
+			if (!serverRepostedState && onVoiceNoteUnshared) {
 				console.log("[SHARE DEBUG] handleRepostPress - Voice note unshared, calling callback");
 				onVoiceNoteUnshared(voiceNote.id);
 			}
 
-			console.log("[SHARE DEBUG] handleRepostPress - Fetching updated share count");
-			await fetchShareCount();
-			console.log("[SHARE DEBUG] handleRepostPress - Share count fetch completed");
-			
+			console.log("[SHARE DEBUG] handleRepostPress - Share toggle completed successfully");
 			logShareState("After handleRepostPress");
 		} catch (error) {
 			console.error("[SHARE DEBUG] handleRepostPress - Error:", {
@@ -284,9 +413,19 @@ export const useVoiceNoteCard = ({
 				error: error instanceof Error ? error.message : String(error),
 				errorStack: error instanceof Error ? error.stack : undefined
 			});
-			Alert.alert("Error", "Failed to update repost status. Please try again.");
+			
+			// ROLLBACK: Revert optimistic update
+			setHasUserInteracted(originalHasUserInteracted);
+			setInternalRepostedState(originalRepostedState);
+			setSharesCount(originalSharesCount);
+			
+			// Show user-friendly error message
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+			showToast(`Failed to ${originalRepostedState ? 'unshare' : 'share'}: ${errorMessage}`, 'error');
+			
+			logShareState("After Rollback");
 		}
-	}, [loggedInUserId, shareScale, voiceNote.id, isRepostedEffective, onShareStatusChanged, onVoiceNoteUnshared, logShareState]);
+	}, [loggedInUserId, shareScale, sharePulse, voiceNote.id, isRepostedEffective, sharesCount, hasUserInteracted, onShareStatusChanged, onVoiceNoteUnshared, logShareState, showToast]);
 
 	// Handle share count long press
 	const handleShareCountLongPress = useCallback(() => {
@@ -384,41 +523,7 @@ export const useVoiceNoteCard = ({
 		loadInitialData();
 	}, [voiceNote.id, loggedInUserId, isRepostedProp, logShareState]);
 
-	// Fetch stats with enhanced logging for shares
-	const fetchStats = useCallback(async () => {
-		if (!voiceNote.id) {
-			console.log("[SHARE DEBUG] fetchStats - No voice note ID, skipping");
-			return;
-		}
-
-		try {
-			console.log("[SHARE DEBUG] fetchStats - Starting for voice note:", voiceNote.id);
-			const stats = await getVoiceNoteStats(voiceNote.id);
-			console.log("[SHARE DEBUG] fetchStats - Received stats:", {
-				voiceNoteId: voiceNote.id,
-				stats,
-				sharesFromStats: stats.shares
-			});
-
-			setLikesCount(stats.likes || 0);
-			setCommentsCount(stats.comments || 0);
-			setPlaysCount(stats.plays || 0);
-			setSharesCount(stats.shares || 0);
-
-			console.log("[SHARE DEBUG] fetchStats - Stats updated in state:", {
-				voiceNoteId: voiceNote.id,
-				likes: stats.likes || 0,
-				comments: stats.comments || 0,
-				plays: stats.plays || 0,
-				shares: stats.shares || 0
-			});
-		} catch (error) {
-			console.error("[SHARE DEBUG] fetchStats - Error:", {
-				voiceNoteId: voiceNote.id,
-				error: error instanceof Error ? error.message : String(error)
-			});
-		}
-	}, [voiceNote.id]);
+	// Voice notes already come with stats data, fetchStats removed to prevent 404 errors
 
 	// Fetch the actual share count
 	const fetchShareCount = useCallback(async () => {
@@ -467,8 +572,14 @@ export const useVoiceNoteCard = ({
 		isRepostedEffective,
 		loggedInUserId,
 		progressContainerRef,
+		
+		// Animation values
 		likeScale,
 		shareScale,
+		commentScale,
+		likePulse,
+		sharePulse,
+		commentPulse,
 
 		// Handlers
 		handlePlayPress,

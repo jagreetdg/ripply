@@ -19,8 +19,20 @@ import {
  */
 export const getUserVoiceNotes = async (userId: string, page: number = 1, limit: number = 10): Promise<VoiceNote[]> => {
   try {
-    const data = await apiRequest(ENDPOINTS.USER_VOICE_NOTES(userId) + `?page=${page}&limit=${limit}`);
-    return data;
+    const response = await apiRequest(ENDPOINTS.USER_VOICE_NOTES(userId) + `?page=${page}&limit=${limit}`);
+    
+    // Handle different response formats
+    if (Array.isArray(response)) {
+      return response;
+    }
+    
+    // Backend returns { data: [...], pagination: {...} }
+    if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+      return response.data;
+    }
+    
+    console.error("Unexpected response format for user voice notes:", response);
+    return [];
   } catch (error) {
     console.error("Error fetching user voice notes:", error);
     throw error;
@@ -34,8 +46,20 @@ export const getUserVoiceNotes = async (userId: string, page: number = 1, limit:
  */
 export const getUserSharedVoiceNotes = async (userId: string, page: number = 1, limit: number = 10): Promise<VoiceNote[]> => {
   try {
-    const data = await apiRequest(ENDPOINTS.USER_SHARED_VOICE_NOTES(userId) + `?page=${page}&limit=${limit}`);
-    return data;
+    const response = await apiRequest(ENDPOINTS.USER_SHARED_VOICE_NOTES(userId) + `?page=${page}&limit=${limit}`);
+    
+    // Handle different response formats
+    if (Array.isArray(response)) {
+      return response;
+    }
+    
+    // Backend returns { data: [...], pagination: {...} }
+    if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+      return response.data;
+    }
+    
+    console.error("Unexpected response format for user shared voice notes:", response);
+    return [];
   } catch (error) {
     console.error("Error fetching user shared voice notes:", error);
     throw error;
@@ -73,9 +97,7 @@ export const debugFollowsSchema = async (userId: string): Promise<any> => {
           has_followee_id: "followee_id" in firstFollower,
           has_following_id: "following_id" in firstFollower,
           has_users: "users" in firstFollower,
-          user_data: firstFollower.users
-            ? Object.keys(firstFollower.users)
-            : null,
+          user_data: firstFollower.id || null,
         };
       }
     } catch (error) {
@@ -97,9 +119,7 @@ export const debugFollowsSchema = async (userId: string): Promise<any> => {
           has_followee_id: "followee_id" in firstFollowing,
           has_following_id: "following_id" in firstFollowing,
           has_users: "users" in firstFollowing,
-          user_data: firstFollowing.users
-            ? Object.keys(firstFollowing.users)
-            : null,
+          user_data: firstFollowing.id || null,
         };
       }
     } catch (error) {
@@ -125,7 +145,7 @@ export const debugFollowsSchema = async (userId: string): Promise<any> => {
   }
 };
 
-export const createFollowsSchema = async (userId: string): Promise<void> => {
+export const createFollowsSchema = async (userId: string): Promise<any> => {
   try {
     const response = await apiRequest(
       ENDPOINTS.USER_VERIFY(userId),
@@ -172,16 +192,4 @@ export const getUserVoiceBio = async (userId: string) => {
   }
 };
 
-// Update user profile
-export const updateUserProfile = async (userId: string, profileData: any) => {
-  try {
-    const data = await apiRequest(ENDPOINTS.USER_PROFILE(userId), {
-      method: "PUT",
-      body: profileData,
-    });
-    return data;
-  } catch (error) {
-    console.error("Error updating user profile:", error);
-    throw error;
-  }
-}; 
+ 

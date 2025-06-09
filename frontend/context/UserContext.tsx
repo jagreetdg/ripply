@@ -5,7 +5,11 @@ import React, {
 	useContext,
 	ReactNode,
 } from "react";
-import { getCurrentUser, verifyToken, logoutUser } from "../services/api";
+import {
+	getCurrentUser,
+	verifyToken,
+	logout as apiLogout,
+} from "../services/api";
 
 // Define the User interface
 export interface User {
@@ -177,7 +181,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 	const logout = async () => {
 		setLoading(true);
 		try {
-			await logoutUser();
+			await apiLogout();
 			setUser(null);
 		} catch (err) {
 			console.error("Error logging out:", err);

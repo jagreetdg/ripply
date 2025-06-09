@@ -15,7 +15,7 @@ export const {
   createVoiceNote,
   updateVoiceNote,
   deleteVoiceNote,
-  getVoiceNotes,
+  getAllVoiceNotes,
   getUserVoiceNotes,
   
   // Feed API
@@ -32,8 +32,18 @@ export const {
   recordShare,
   checkShareStatus,
   getShareCount,
-  getVoiceNoteStats
+  getVoiceNoteStats,
+  
+  // Repost API
+  hasUserRepostedVoiceNote,
+  toggleRepost,
+  getRepostCount,
+  getReposters,
+  getReposterInfo
 } = VoiceNoteModules;
+
+// Create alias for backward compatibility
+export const getVoiceNotes = getAllVoiceNotes;
 
 // Define interfaces for type safety
 export interface VoiceNote {

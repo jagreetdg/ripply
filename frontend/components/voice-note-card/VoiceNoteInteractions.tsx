@@ -15,11 +15,15 @@ interface VoiceNoteInteractionsProps {
 	hasBackgroundImage: boolean;
 	isLiked: boolean;
 	likeScale: Animated.Value;
+	shareScale: Animated.Value;
+	commentScale: Animated.Value;
+	likePulse: Animated.Value;
+	sharePulse: Animated.Value;
+	commentPulse: Animated.Value;
 	likesCount: number;
 	commentsCount: number;
 	playsCount: number;
 	isReposted: boolean; // Renamed from isShared for clarity
-	shareScale: Animated.Value;
 	sharesCount: number;
 	isLoadingShareCount: boolean;
 	isLoadingStats?: boolean; // Add loading state for all stats
@@ -40,11 +44,15 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 	hasBackgroundImage,
 	isLiked,
 	likeScale,
+	shareScale,
+	commentScale,
+	likePulse,
+	sharePulse,
+	commentPulse,
 	likesCount,
 	commentsCount,
 	playsCount,
 	isReposted, // Renamed from isShared
-	shareScale,
 	sharesCount,
 	isLoadingShareCount,
 	isLoadingStats = false,
@@ -60,25 +68,20 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 
 	// Define colors based on whether we have a background image
 	const iconColor = useOnImageStyles ? colors.card : colors.tabIconDefault;
+
+	// Static colors for like state
 	const likedColor = isLiked
 		? useOnImageStyles
 			? colors.likedOnImage
 			: colors.liked
 		: iconColor;
 
-	// Calculate repost color - use Boolean type for consistency
+	// Static colors for repost state
 	const repostColor = Boolean(isReposted)
 		? useOnImageStyles
 			? colors.repostedOnImage
 			: colors.reposted
 		: iconColor;
-
-	// Log to confirm what's determining the repost highlighting
-	console.log("[VoiceNoteInteractions] Repost highlighting:", {
-		isReposted: Boolean(isReposted),
-		repostColor: Boolean(isReposted) ? "GREEN" : "DEFAULT",
-		useOnImageStyles,
-	});
 
 	// Loading indicator styles
 	const loadingIndicatorColor = useOnImageStyles ? colors.white : colors.tint;
@@ -99,13 +102,21 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 				disabled={isLoadingStats}
 			>
 				<View style={styles.interactionContent}>
-					<Animated.View style={[{ transform: [{ scale: likeScale }] }]}>
-						<Feather
-							name={isLiked ? (useOnImageStyles ? "heart" : "heart") : "heart"}
-							size={18}
-							color={likedColor}
-							style={isLiked ? { transform: [{ scale: 1.05 }] } : {}}
-						/>
+					<Animated.View
+						style={[
+							{
+								transform: [{ scale: Animated.multiply(likeScale, likePulse) }],
+							},
+						]}
+					>
+						<Animated.View>
+							<Feather
+								name={isLiked ? "heart" : "heart"}
+								size={18}
+								color={likedColor}
+								style={isLiked ? { transform: [{ scale: 1.05 }] } : {}}
+							/>
+						</Animated.View>
 					</Animated.View>
 					{isLoadingStats ? (
 						<ActivityIndicator
@@ -136,9 +147,17 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 				disabled={isLoadingStats}
 			>
 				<View style={styles.interactionContent}>
-					<View>
+					<Animated.View
+						style={[
+							{
+								transform: [
+									{ scale: Animated.multiply(commentScale, commentPulse) },
+								],
+							},
+						]}
+					>
 						<Feather name="message-circle" size={18} color={iconColor} />
-					</View>
+					</Animated.View>
 					{isLoadingStats ? (
 						<ActivityIndicator
 							size={loadingIndicatorSize}
@@ -203,7 +222,15 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 				}
 			>
 				<View style={styles.interactionContent}>
-					<Animated.View style={[{ transform: [{ scale: shareScale }] }]}>
+					<Animated.View
+						style={[
+							{
+								transform: [
+									{ scale: Animated.multiply(shareScale, sharePulse) },
+								],
+							},
+						]}
+					>
 						{isLoadingRepostStatus ? (
 							<ActivityIndicator
 								size={loadingIndicatorSize}

@@ -6,7 +6,6 @@ import {
 	recordShare,
 	recordPlay,
 	getVoiceNoteById,
-	getVoiceNoteStats,
 	deleteVoiceNote,
 	checkShareStatus,
 } from "../../../../services/api";
@@ -90,54 +89,10 @@ export const useVoiceNotesList = ({
 		fetchRepostedNotesData();
 	}, [voiceNotes]);
 
-	// Fetch stats for all voice notes
+	// Voice notes already come with stats data, no need to fetch separately
 	useEffect(() => {
-		const fetchAllVoiceNoteStats = async () => {
-			if (!localVoiceNotes || localVoiceNotes.length === 0) {
-				setLoadingStats(false);
-				return;
-			}
-
-			console.log("VoiceNotesList: Fetching stats for all voice notes");
-			setLoadingStats(true);
-
-			const updatedNotes = [...localVoiceNotes];
-			let hasUpdates = false;
-
-			for (let i = 0; i < updatedNotes.length; i++) {
-				const note = updatedNotes[i];
-				
-				try {
-					const stats = await getVoiceNoteStats(note.id);
-					
-					if (
-						stats.likes !== note.likes ||
-						stats.comments !== note.comments ||
-						stats.plays !== normalizePlaysCount(note.plays) ||
-						stats.shares !== note.shares
-					) {
-						console.log(`Updating stats for note ${note.id}`);
-						updatedNotes[i] = {
-							...note,
-							likes: stats.likes,
-							comments: stats.comments,
-							plays: stats.plays,
-							shares: stats.shares,
-						};
-						hasUpdates = true;
-					}
-				} catch (error) {
-					console.error(`Error fetching stats for note ${note.id}:`, error);
-				}
-			}
-
-			if (hasUpdates) {
-				setLocalVoiceNotes(updatedNotes);
-			}
-			setLoadingStats(false);
-		};
-
-		fetchAllVoiceNoteStats();
+		// Just set loading to false since we're not fetching stats anymore
+		setLoadingStats(false);
 	}, [localVoiceNotes.length]);
 
 	const handleRefresh = useCallback(() => {

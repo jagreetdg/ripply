@@ -11,6 +11,7 @@ type RequireAuthProps = {
 /**
  * A component that protects routes by requiring authentication.
  * If the user is not authenticated, they will be redirected to the landing page.
+ * If the user is authenticated and on the landing page, they will be redirected to home.
  */
 export default function RequireAuth({ children }: RequireAuthProps) {
 	const { user, loading } = useUser();
@@ -34,14 +35,16 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 	console.log("[DEBUG] RequireAuth - User authenticated:", !!user);
 	console.log("[DEBUG] RequireAuth - Auth loading state:", loading);
 
-	// Handle protected route access
+	// Handle authentication-based routing
 	useEffect(() => {
-		// Only redirect if:
-		// 1. Not loading the user state
-		// 2. User is not authenticated
-		// 3. Not on a public route
-		if (!loading && !user && !isPublicRoute) {
-			console.log("[DEBUG] RequireAuth - Redirecting to landing page");
+		// Wait for loading to complete before making routing decisions
+		if (loading) return;
+
+		// Case 1: User is NOT authenticated and trying to access protected route
+		if (!user && !isPublicRoute) {
+			console.log(
+				"[DEBUG] RequireAuth - Unauthenticated user on protected route, redirecting to landing"
+			);
 			console.log("[DEBUG] RequireAuth - From pathname:", pathname);
 
 			// Use setTimeout to ensure navigation happens after current render cycle
@@ -64,10 +67,27 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 				}
 			}, 0);
 		}
+
+		// Case 2: User IS authenticated and on landing page
+		if (user && pathname === "/") {
+			console.log(
+				"[DEBUG] RequireAuth - Authenticated user on landing page, redirecting to home"
+			);
+			setTimeout(() => {
+				try {
+					router.replace("/(tabs)/home");
+				} catch (error) {
+					console.error(
+						"[DEBUG] RequireAuth - Navigation to home error:",
+						error
+					);
+				}
+			}, 0);
+		}
 	}, [user, loading, router, pathname, isPublicRoute]);
 
-	// Show loading if we're still loading user data and not on a public route
-	if (loading && !isPublicRoute) {
+	// Show loading if we're still loading user data
+	if (loading) {
 		console.log("[DEBUG] RequireAuth - Showing loading indicator");
 		return (
 			<View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>

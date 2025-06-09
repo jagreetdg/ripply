@@ -9,15 +9,15 @@ import {
   FeedParams 
 } from "./types/voiceNoteTypes";
 import { Comment } from "../../../components/voice-note-card/VoiceNoteCardTypes";
+import { FeedResponse } from "./feedApi";
 
 /**
  * Get a voice note by ID
  */
-export const getVoiceNoteById = async (voiceNoteId: string): Promise<any> => {
-  try {
-    const response = await apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`);
-    return response;
-  } catch (error) {
+export const getVoiceNoteById = async (voiceNoteId: string): Promise<VoiceNote> => {
+   try {
+    return await apiRequest<VoiceNote>(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`);
+   } catch (error) {
     console.error("Error fetching voice note by ID:", error);
     throw error;
   }
@@ -36,7 +36,10 @@ export const createVoiceNote = (voiceNoteData: CreateVoiceNoteData): Promise<Voi
 /**
  * Update a voice note
  */
-export const updateVoiceNote = (voiceNoteId: string, voiceNoteData: any) => {
+export const updateVoiceNote = (
+  voiceNoteId: string,
+  voiceNoteData: UpdateVoiceNoteData
+) => {
   return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`, {
     method: "PUT",
     body: JSON.stringify(voiceNoteData),
@@ -55,21 +58,20 @@ export const deleteVoiceNote = (voiceNoteId: string) => {
 /**
  * Get all voice notes (feed)
  */
-export const getAllVoiceNotes = async (params?: {
+export const getAllVoiceNotes = async (params?: FeedParams & {
   page?: number;
-  limit?: number;
-  user_id?: string;
+  userId?: string;
   tag?: string;
   search?: string;
 }): Promise<VoiceNote[]> => {
   try {
     const queryParams = new URLSearchParams();
     
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.user_id) queryParams.append('user_id', params.user_id);
-    if (params?.tag) queryParams.append('tag', params.tag);
-    if (params?.search) queryParams.append('search', params.search);
+    if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+    if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
+    if (params?.userId !== undefined) queryParams.append('user_id', params.userId);
+    if (params?.tag !== undefined) queryParams.append('tag', params.tag);
+    if (params?.search !== undefined) queryParams.append('search', params.search);
     
     const endpoint = `${ENDPOINTS.VOICE_NOTES}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
@@ -140,7 +142,7 @@ export const likeVoiceNote = async (voiceNoteId: string, userId: string): Promis
       ENDPOINTS.VOICE_NOTE_LIKE(voiceNoteId),
       {
         method: "POST",
-        body: { userId },
+        body: { user_id: userId },
       }
     );
     return data;
@@ -156,8 +158,8 @@ export const unlikeVoiceNote = async (voiceNoteId: string, userId: string): Prom
     const data = await apiRequest<LikeResponse>(
       ENDPOINTS.VOICE_NOTE_UNLIKE(voiceNoteId),
       {
-        method: "DELETE",
-        body: { userId },
+        method: "POST",
+        body: { user_id: userId },
       }
     );
     return data;
@@ -200,7 +202,7 @@ export const addComment = async (voiceNoteId: string, userId: string, content: s
       ENDPOINTS.VOICE_NOTE_COMMENTS(voiceNoteId),
       {
         method: "POST",
-        body: { userId, content },
+        body: { user_id: userId, content },
       }
     );
     return data;
@@ -217,7 +219,7 @@ export const recordPlay = async (voiceNoteId: string, userId: string): Promise<P
       ENDPOINTS.VOICE_NOTE_PLAY(voiceNoteId),
       {
         method: "POST",
-        body: { userId },
+        body: { user_id: userId },
       }
     );
     return data;

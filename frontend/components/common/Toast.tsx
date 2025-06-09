@@ -1,4 +1,11 @@
-import React, { useEffect, useRef } from "react";
+import React, {
+	useEffect,
+	useRef,
+	createContext,
+	useContext,
+	useState,
+	useCallback,
+} from "react";
 import { View, Text, Animated, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
@@ -13,6 +20,24 @@ interface ToastProps {
 	onHide: () => void;
 }
 
+interface ToastContextType {
+	showToast: (message: string, type: ToastType, duration?: number) => void;
+	hideToast: () => void;
+}
+
+const ToastContext = createContext<ToastContextType | null>(null);
+
+export const useToast = () => {
+	const context = useContext(ToastContext);
+	if (!context) {
+		throw new Error("useToast must be used within a GlobalToastProvider");
+	}
+	return context;
+};
+
+// Alias for backward compatibility
+export const useGlobalToast = useToast;
+
 export const Toast: React.FC<ToastProps> = ({
 	visible,
 	message,
@@ -23,6 +48,16 @@ export const Toast: React.FC<ToastProps> = ({
 	const { colors } = useTheme();
 	const slideAnim = useRef(new Animated.Value(-100)).current;
 	const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+	const hideToast = useCallback(() => {
+		Animated.timing(slideAnim, {
+			toValue: -100,
+			duration: 300,
+			useNativeDriver: true,
+		}).start(() => {
+			onHide();
+		});
+	}, [slideAnim, onHide]);
 
 	useEffect(() => {
 		if (visible) {
@@ -50,17 +85,7 @@ export const Toast: React.FC<ToastProps> = ({
 				clearTimeout(hideTimeoutRef.current);
 			}
 		};
-	}, [visible, duration]);
-
-	const hideToast = () => {
-		Animated.timing(slideAnim, {
-			toValue: -100,
-			duration: 300,
-			useNativeDriver: true,
-		}).start(() => {
-			onHide();
-		});
-	};
+	}, [visible, duration, hideToast]);
 
 	const getToastStyles = () => {
 		switch (type) {
@@ -103,8 +128,7 @@ export const Toast: React.FC<ToastProps> = ({
 				transform: [{ translateY: slideAnim }],
 			}}
 		>
-			<TouchableOpacity
-				onPress={hideToast}
+			<View
 				style={{
 					backgroundColor: toastStyles.backgroundColor,
 					padding: 16,
@@ -140,7 +164,58 @@ export const Toast: React.FC<ToastProps> = ({
 				<TouchableOpacity onPress={hideToast}>
 					<MaterialIcons name="close" size={20} color="white" />
 				</TouchableOpacity>
-			</TouchableOpacity>
+			</View>
 		</Animated.View>
+	);
+};
+
+interface ToastState {
+	visible: boolean;
+	message: string;
+	type: ToastType;
+	duration?: number;
+}
+
+export const GlobalToastProvider: React.FC<{ children: React.ReactNode }> = ({
+	children,
+}) => {
+	const [toastState, setToastState] = useState<ToastState>({
+		visible: false,
+		message: "",
+		type: "info",
+		duration: 3000,
+	});
+
+	const showToast = (
+		message: string,
+		type: ToastType,
+		duration: number = 3000
+	) => {
+		setToastState({
+			visible: true,
+			message,
+			type,
+			duration,
+		});
+	};
+
+	const hideToast = () => {
+		setToastState((prev) => ({
+			...prev,
+			visible: false,
+		}));
+	};
+
+	return (
+		<ToastContext.Provider value={{ showToast, hideToast }}>
+			{children}
+			<Toast
+				visible={toastState.visible}
+				message={toastState.message}
+				type={toastState.type}
+				duration={toastState.duration}
+				onHide={hideToast}
+			/>
+		</ToastContext.Provider>
 	);
 };

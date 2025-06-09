@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { VoiceNoteCard } from "../../../voice-note-card/VoiceNoteCard";
 import { VoiceNote } from "../VoiceNotesListTypes";
 import { formatRelativeTime } from "../VoiceNotesListUtils";
+import { hasUserRepostedVoiceNote } from "../../../../services/api";
 
 interface VoiceNotesListItemProps {
 	item: VoiceNote;
@@ -32,16 +33,48 @@ export const VoiceNotesListItem: React.FC<VoiceNotesListItemProps> = ({
 	onUserProfilePress,
 	onVoiceNoteUnshared,
 }) => {
+	const [isRepostedByCurrentUser, setIsRepostedByCurrentUser] =
+		useState<boolean>(false);
+	const [isLoadingRepostStatus, setIsLoadingRepostStatus] =
+		useState<boolean>(true);
+
+	// Check if the current user has reposted this note
+	useEffect(() => {
+		const checkRepostStatus = async () => {
+			if (!currentUserId) {
+				setIsLoadingRepostStatus(false);
+				return;
+			}
+
+			setIsLoadingRepostStatus(true);
+
+			try {
+				console.log(
+					`[PROFILE] Checking repost status for note ${item.id} by user ${currentUserId}`
+				);
+				const hasReposted = await hasUserRepostedVoiceNote(
+					item.id,
+					currentUserId
+				);
+				console.log(`[PROFILE] Note ${item.id} repost status: ${hasReposted}`);
+				setIsRepostedByCurrentUser(hasReposted);
+			} catch (error) {
+				console.error(
+					`[PROFILE] Error checking repost status for note ${item.id}:`,
+					error
+				);
+				setIsRepostedByCurrentUser(false);
+			} finally {
+				setIsLoadingRepostStatus(false);
+			}
+		};
+
+		checkRepostStatus();
+	}, [item.id, currentUserId]);
+
 	// Determine if this is a reposted item
 	const isRepostedItem = Boolean(
 		item.is_shared || item.shared_by || item.sharer_id
-	);
-
-	// Check if this note is reposted by the current user
-	const isRepostedByCurrentUser = Boolean(
-		item.isReposted ||
-			(item.shared_by && item.shared_by.id === currentUserId) ||
-			item.sharer_id === currentUserId
 	);
 
 	// Create the voice note object for the card
@@ -101,9 +134,13 @@ export const VoiceNotesListItem: React.FC<VoiceNotesListItemProps> = ({
 			onShare={(voiceNoteId) => {
 				onShare(voiceNoteId);
 			}}
-			onShareStatusChanged={(voiceNoteId, isShared) =>
-				onShareStatusChanged(voiceNoteId, isShared)
-			}
+			onShareStatusChanged={(voiceNoteId, isShared) => {
+				console.log(
+					`[PROFILE] Share status changed for note ${voiceNoteId}: ${isShared}`
+				);
+				setIsRepostedByCurrentUser(isShared);
+				onShareStatusChanged(voiceNoteId, isShared);
+			}}
 			onUserProfilePress={
 				item.users?.username
 					? () => onUserProfilePress?.(item.users?.username!)
@@ -111,6 +148,7 @@ export const VoiceNotesListItem: React.FC<VoiceNotesListItemProps> = ({
 			}
 			currentUserId={currentUserId}
 			isReposted={isRepostedByCurrentUser}
+			isLoadingRepostStatus={isLoadingRepostStatus}
 			sharedBy={sharedByProp}
 			showRepostAttribution={isRepostedItem}
 			onVoiceNoteUnshared={onVoiceNoteUnshared}

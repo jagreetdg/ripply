@@ -23,11 +23,15 @@ interface VoiceNoteCardContentProps {
 	progressContainerRef: React.RefObject<any>;
 	isLiked: boolean;
 	likeScale: any;
+	shareScale: any;
+	commentScale: any;
+	likePulse: any;
+	sharePulse: any;
+	commentPulse: any;
 	likesCount: number;
 	commentsCount: number;
 	playsCount: number;
 	isReposted: boolean;
-	shareScale: any;
 	sharesCount: number;
 	isLoadingShareCount: boolean;
 	isLoadingStats: boolean;
@@ -61,11 +65,15 @@ export const VoiceNoteCardContent: React.FC<VoiceNoteCardContentProps> = ({
 	progressContainerRef,
 	isLiked,
 	likeScale,
+	shareScale,
+	commentScale,
+	likePulse,
+	sharePulse,
+	commentPulse,
 	likesCount,
 	commentsCount,
 	playsCount,
 	isReposted,
-	shareScale,
 	sharesCount,
 	isLoadingShareCount,
 	isLoadingStats,
@@ -157,11 +165,15 @@ export const VoiceNoteCardContent: React.FC<VoiceNoteCardContentProps> = ({
 				hasBackgroundImage={hasBackgroundImage}
 				isLiked={isLiked}
 				likeScale={likeScale}
+				shareScale={shareScale}
+				commentScale={commentScale}
+				likePulse={likePulse}
+				sharePulse={sharePulse}
+				commentPulse={commentPulse}
 				likesCount={likesCount}
 				commentsCount={commentsCount}
 				playsCount={playsCount}
 				isReposted={isReposted}
-				shareScale={shareScale}
 				sharesCount={sharesCount}
 				isLoadingShareCount={isLoadingShareCount}
 				isLoadingStats={isLoadingStats}

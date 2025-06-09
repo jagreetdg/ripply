@@ -21,7 +21,7 @@ export const getPersonalizedFeed = async (userId: string): Promise<VoiceNote[]> 
   try {
     const endpoint = ENDPOINTS.PERSONALIZED_FEED(userId);
     
-    const response = await apiRequest<FeedResponse>(endpoint);
+    const response = await apiRequest<FeedResponse | VoiceNote[]>(endpoint);
 
     // Handle different response formats
     if (Array.isArray(response)) {
@@ -82,7 +82,7 @@ export const diagnoseFeedIssues = async (userId?: string) => {
     const feed = await getPersonalizedFeed(userId);
     
     // Extract unique user IDs from feed
-    const userIds = [...new Set(feed.map(note => note.user_id))];
+    const userIds = Array.from(new Set(feed.map(note => note.user_id)));
     
     console.log("[DIAGNOSTIC] Feed diagnostic results:", {
       feedLength: feed.length,
@@ -95,40 +95,7 @@ export const diagnoseFeedIssues = async (userId?: string) => {
   }
 };
 
-export const getAllVoiceNotes = async (params?: {
-  page?: number;
-  limit?: number;
-  tag?: string;
-  search?: string;
-}): Promise<VoiceNote[]> => {
-  try {
-    const queryParams = new URLSearchParams();
-    
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.tag) queryParams.append('tag', params.tag);
-    if (params?.search) queryParams.append('search', params.search);
-    
-    const endpoint = `${ENDPOINTS.VOICE_NOTES}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    
-    const response = await apiRequest<FeedResponse>(endpoint);
 
-    // Handle different response formats
-    if (Array.isArray(response)) {
-      return response;
-    }
-
-    if (response?.data && Array.isArray(response.data)) {
-      return response.data;
-    }
-
-    console.error("[FEED ERROR] Unexpected response format for voice notes:", response);
-    return [];
-  } catch (error) {
-    console.error("[FEED ERROR] Error fetching all voice notes:", error);
-    return [];
-  }
-};
 
 // Feed diagnostic data structure
 interface FeedDiagnosticData {

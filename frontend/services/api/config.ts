@@ -149,7 +149,7 @@ export const apiRequest = async <T = any>(
     if (token) {
       requestHeaders.Authorization = `Bearer ${token}`;
       if (isShareRelated) {
-        console.log(`[SHARE DEBUG] API Request - Auth token present: ${token.substring(0, 20)}...`);
+        console.log('[SHARE DEBUG] API Request - Auth token present');
       }
     } else if (isShareRelated) {
       console.log(`[SHARE DEBUG] API Request - No auth token found`);

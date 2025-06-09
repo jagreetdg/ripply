@@ -3,76 +3,7 @@
  */
 import { ENDPOINTS, apiRequest } from "../config";
 
-/**
- * Like a voice note
- */
-export const likeVoiceNote = (voiceNoteId: string, userId: string) => {
-  return apiRequest(ENDPOINTS.VOICE_NOTE_LIKE(voiceNoteId), {
-    method: "POST",
-    body: JSON.stringify({ user_id: userId }),
-  });
-};
 
-/**
- * Unlike a voice note
- */
-export const unlikeVoiceNote = (voiceNoteId: string, userId: string) => {
-  return apiRequest(ENDPOINTS.VOICE_NOTE_UNLIKE(voiceNoteId), {
-    method: "POST",
-    body: JSON.stringify({ user_id: userId }),
-  });
-};
-
-/**
- * Check if a user has liked a voice note
- */
-export const checkLikeStatus = async (voiceNoteId: string, userId: string) => {
-  try {
-    const response = await apiRequest(
-      `${ENDPOINTS.CHECK_LIKE_STATUS(voiceNoteId)}?userId=${userId}`
-    );
-    
-    // Normalize response format
-    if (response && typeof response.liked === "boolean") {
-      return response.liked;
-    } else if (response && response.data && typeof response.data.liked === "boolean") {
-      return response.data.liked;
-    }
-    
-    // Default to false if response format is unexpected
-    return false;
-  } catch (error) {
-    console.error("Error checking like status:", error);
-    return false;
-  }
-};
-
-/**
- * Add a comment to a voice note
- */
-export const addComment = (voiceNoteId: string, commentData: any) => {
-  return apiRequest(ENDPOINTS.VOICE_NOTE_COMMENTS(voiceNoteId), {
-    method: "POST",
-    body: JSON.stringify(commentData),
-  });
-};
-
-/**
- * Get comments for a voice note
- */
-export const getComments = (voiceNoteId: string) => {
-  return apiRequest(ENDPOINTS.VOICE_NOTE_COMMENTS(voiceNoteId));
-};
-
-/**
- * Record a play for a voice note
- */
-export const recordPlay = (voiceNoteId: string, userId: string) => {
-  return apiRequest(ENDPOINTS.VOICE_NOTE_PLAY(voiceNoteId), {
-    method: "POST",
-    body: JSON.stringify({ user_id: userId }),
-  });
-};
 
 /**
  * Share a voice note
@@ -141,36 +72,4 @@ export const getShareCount = async (voiceNoteId: string) => {
   }
 };
 
-/**
- * Get voice note stats (likes, comments, plays, shares)
- */
-export const getVoiceNoteStats = async (voiceNoteId: string) => {
-  try {
-    // Since there's no single stats endpoint, fetch the voice note directly
-    // which includes likes, comments, plays, and shares counts
-    const response = await apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`);
-    
-    // Normalize stats to numbers
-    const normalizeCount = (value: any): number => {
-      if (typeof value === "number") return value;
-      if (Array.isArray(value) && value.length > 0 && value[0]?.count) {
-        return value[0].count;
-      }
-      return 0;
-    };
-    
-    if (response) {
-      return {
-        likes: normalizeCount(response.likes) || 0,
-        comments: normalizeCount(response.comments) || 0,
-        plays: normalizeCount(response.plays) || 0,
-        shares: normalizeCount(response.shares) || 0,
-      };
-    }
-    
-    return { likes: 0, comments: 0, plays: 0, shares: 0 };
-  } catch (error) {
-    console.error(`Error getting stats for voice note ${voiceNoteId}:`, error);
-    return { likes: 0, comments: 0, plays: 0, shares: 0 };
-  }
-}; 
+ 

@@ -95,6 +95,7 @@ export const useSearch = ({
     if (query.trim() === '') {
       setUserResults([]);
       setPostResults([]);
+      setResults([]);
       // Load discovery content when search is cleared
       loadDiscoveryContent(tab);
       return;
@@ -104,13 +105,16 @@ export const useSearch = ({
     setError(null);
 
     try {
+      let users: UserSearchResult[] = [];
+      let posts: any[] = [];
+
       if (tab === 'users') {
-        const users = await searchUsers(query);
+        users = await searchUsers(query);
         setUserResults(users);
       }
 
       if (tab === 'posts') {
-        const posts = await searchVoiceNotes(query);
+        posts = await searchVoiceNotes(query);
         setPostResults(posts);
       }
 
@@ -153,6 +157,7 @@ export const useSearch = ({
       // Clear results and load discovery content if search is empty
       setUserResults([]);
       setPostResults([]);
+      setResults([]);
       // Only load discovery content if not already loaded
       loadDiscoveryContent(activeTab, false);
     }
@@ -179,6 +184,7 @@ export const useSearch = ({
     setSearchQuery('');
     setUserResults([]);
     setPostResults([]);
+    setResults([]);
   };
 
   // Handle refresh

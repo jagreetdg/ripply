@@ -32,10 +32,11 @@ export const hasUserRepostedVoiceNote = async (
 
   try {
     console.log("[SHARE DEBUG] hasUserRepostedVoiceNote - Starting check:", { voiceNoteId, userId });
-    console.log("[SHARE DEBUG] hasUserRepostedVoiceNote - API endpoint:", ENDPOINTS.CHECK_SHARE_STATUS(voiceNoteId));
+    const endpoint = `${ENDPOINTS.CHECK_SHARE_STATUS(voiceNoteId)}?userId=${encodeURIComponent(userId)}`;
+    console.log("[SHARE DEBUG] hasUserRepostedVoiceNote - API endpoint:", endpoint);
     
     const response = await apiRequest(
-      ENDPOINTS.CHECK_SHARE_STATUS(voiceNoteId),
+      endpoint,
       {
         method: "GET",
         headers: {
@@ -82,13 +83,12 @@ export const toggleRepost = async (
   try {
     console.log("[SHARE DEBUG] toggleRepost - Starting toggle:", { voiceNoteId, userId });
     console.log("[SHARE DEBUG] toggleRepost - API endpoint:", ENDPOINTS.VOICE_NOTE_REPOST(voiceNoteId));
-    console.log("[SHARE DEBUG] toggleRepost - Request body:", JSON.stringify({ user_id: userId }));
     
     const response = await apiRequest(
       ENDPOINTS.VOICE_NOTE_REPOST(voiceNoteId),
       {
         method: "POST",
-        body: JSON.stringify({ user_id: userId }),
+        // No body needed - backend gets user ID from authentication
       }
     );
 
@@ -194,7 +194,7 @@ export const getReposters = async (voiceNoteId: string): Promise<any[]> => {
     console.log("[SHARE DEBUG] getReposters - Final result:", { 
       voiceNoteId, 
       repostersCount: reposters.length,
-      reposters: reposters.map(r => ({ id: r.id, username: r.username }))
+      reposters: reposters.map((r: any) => ({ id: r.id, username: r.username }))
     });
     return reposters;
   } catch (error) {
