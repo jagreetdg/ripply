@@ -295,7 +295,7 @@ router.get("/search", async (req, res) => {
 });
 
 // Get personalized feed for a user - REQUIRES AUTHENTICATION
-router.get("/feed/:userId", async (req, res) => {
+router.get("/feed/:userId", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
 		const { page = 1, limit = 10 } = req.query;
