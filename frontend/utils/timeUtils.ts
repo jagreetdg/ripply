@@ -18,6 +18,11 @@ export const formatTimeAgo = (timestamp: string | Date): string => {
 	
 	const diffInSeconds = Math.floor((now.getTime() - postTime.getTime()) / 1000);
 
+	// Handle future timestamps
+	if (diffInSeconds < 0) {
+		return "just now";
+	}
+
 	// Less than 1 minute - show seconds
 	if (diffInSeconds < 60) {
 		return `${Math.max(1, diffInSeconds)}s`;

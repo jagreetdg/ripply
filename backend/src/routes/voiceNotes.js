@@ -18,6 +18,26 @@ const processVoiceNoteCounts = (note) => {
 	};
 };
 
+// Temporary test endpoint to check deployment status
+router.get("/test-deployment", async (req, res) => {
+	try {
+		const deploymentInfo = {
+			timestamp: new Date().toISOString(),
+			message: "Feed algorithm fix deployed successfully",
+			version: "2024-12-19-feed-fix",
+			fixDescription:
+				"Fixed issue where only shared posts show instead of original posts",
+			debugLogging: "Enhanced debug logging is active",
+		};
+
+		console.log("[DEBUG] Test deployment endpoint called:", deploymentInfo);
+		res.status(200).json(deploymentInfo);
+	} catch (error) {
+		console.error("Error in test deployment endpoint:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
+
 // Search for voice notes by title or tags - PUBLIC (no auth required)
 router.get("/search", async (req, res) => {
 	try {
