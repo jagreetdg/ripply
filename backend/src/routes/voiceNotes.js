@@ -38,6 +38,163 @@ router.get("/test-deployment", async (req, res) => {
 	}
 });
 
+// Debug feed endpoint that doesn't require auth - for testing only
+router.get("/debug-feed/:userId", async (req, res) => {
+	try {
+		const { userId } = req.params;
+		console.log(`[DEBUG] Debug feed called for user: ${userId}`);
+
+		// Get following data
+		const { data: followingData, error: followingError } = await supabase
+			.from("follows")
+			.select("following_id")
+			.eq("follower_id", userId);
+
+		if (followingError) {
+			throw followingError;
+		}
+
+		const followingIds = followingData.map((follow) => follow.following_id);
+		console.log(
+			`[DEBUG] Following ${followingIds.length} users: ${followingIds.join(
+				", "
+			)}`
+		);
+
+		// Get original posts
+		const { data: originalPosts, error: originalError } = await supabase
+			.from("voice_notes")
+			.select(
+				`
+        *,
+        users:user_id (id, username, display_name, avatar_url),
+        likes:voice_note_likes (count),
+        comments:voice_note_comments (count),
+        plays:voice_note_plays (count),
+        shares:voice_note_shares (count)
+      `
+			)
+			.in("user_id", followingIds)
+			.order("created_at", { ascending: false })
+			.limit(5);
+
+		if (originalError) {
+			throw originalError;
+		}
+
+		console.log(`[DEBUG] Found ${originalPosts.length} original posts`);
+
+		// Process original posts
+		const processedOriginalPosts = originalPosts.map((note) => ({
+			...processVoiceNoteCounts(note),
+			is_shared: false,
+		}));
+
+		// Get shared posts
+		const { data: sharedData, error: sharedError } = await supabase
+			.from("voice_note_shares")
+			.select("id, voice_note_id, user_id, shared_at")
+			.in("user_id", followingIds)
+			.order("shared_at", { ascending: false })
+			.limit(5);
+
+		if (sharedError && sharedError.code !== "42P01") {
+			throw sharedError;
+		}
+
+		console.log(`[DEBUG] Found ${sharedData?.length || 0} share records`);
+
+		let processedSharedPosts = [];
+		if (sharedData && sharedData.length > 0) {
+			const sharedVoiceNoteIds = sharedData.map((share) => share.voice_note_id);
+
+			const { data: sharedVoiceNotes, error: sharedVoiceNotesError } =
+				await supabase
+					.from("voice_notes")
+					.select(
+						`
+					*,
+					users:user_id (id, username, display_name, avatar_url),
+					likes:voice_note_likes (count),
+					comments:voice_note_comments (count),
+					plays:voice_note_plays (count),
+					shares:voice_note_shares (count)
+				`
+					)
+					.in("id", sharedVoiceNoteIds);
+
+			if (sharedVoiceNotesError) {
+				throw sharedVoiceNotesError;
+			}
+
+			// Get sharer info
+			const sharersData = await Promise.all(
+				sharedData.map(async (share) => {
+					const { data: sharerInfo } = await supabase
+						.from("users")
+						.select("id, username, display_name, avatar_url")
+						.eq("id", share.user_id)
+						.single();
+					return { ...share, sharer: sharerInfo };
+				})
+			);
+
+			processedSharedPosts = sharedVoiceNotes.map((note) => {
+				const shareRecord = sharersData.find(
+					(share) => share.voice_note_id === note.id
+				);
+
+				return {
+					...processVoiceNoteCounts(note),
+					is_shared: true,
+					shared_at: shareRecord?.shared_at || new Date().toISOString(),
+					shared_by: shareRecord?.sharer || null,
+				};
+			});
+		}
+
+		// Combine and return structured response
+		const response = {
+			userId,
+			followingCount: followingIds.length,
+			originalPosts: {
+				count: processedOriginalPosts.length,
+				items: processedOriginalPosts.map((post) => ({
+					id: post.id,
+					title: post.title,
+					is_shared: post.is_shared,
+					username: post.users?.username,
+				})),
+			},
+			sharedPosts: {
+				count: processedSharedPosts.length,
+				items: processedSharedPosts.map((post) => ({
+					id: post.id,
+					title: post.title,
+					is_shared: post.is_shared,
+					username: post.users?.username,
+					shared_by: post.shared_by?.username,
+				})),
+			},
+			combined: [...processedOriginalPosts, ...processedSharedPosts].map(
+				(post) => ({
+					id: post.id,
+					title: post.title,
+					is_shared: post.is_shared,
+					username: post.users?.username,
+					shared_by: post.shared_by?.username || null,
+				})
+			),
+		};
+
+		console.log(`[DEBUG] Debug response:`, JSON.stringify(response, null, 2));
+		res.status(200).json(response);
+	} catch (error) {
+		console.error("Error in debug feed:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
+
 // Search for voice notes by title or tags - PUBLIC (no auth required)
 router.get("/search", async (req, res) => {
 	try {
