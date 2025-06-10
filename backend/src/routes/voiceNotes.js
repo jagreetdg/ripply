@@ -545,10 +545,21 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 			`[DEBUG] Processed ${processedSharedPosts.length} shared posts`
 		);
 
-		// Combine both types of posts
-		const allPosts = [...processedOriginalPosts, ...processedSharedPosts];
+		// Combine both types of posts and remove duplicates
+		const originalPostIds = new Set(processedOriginalPosts.map((p) => p.id));
+		const uniqueSharedPosts = processedSharedPosts.filter(
+			(p) => !originalPostIds.has(p.id)
+		);
+
 		console.log(
-			`[DEBUG] Combined ${processedOriginalPosts.length} original posts with ${processedSharedPosts.length} shared posts`
+			`[DEBUG] Removed ${
+				processedSharedPosts.length - uniqueSharedPosts.length
+			} duplicate posts from shared section`
+		);
+
+		const allPosts = [...processedOriginalPosts, ...uniqueSharedPosts];
+		console.log(
+			`[DEBUG] Combined ${processedOriginalPosts.length} original posts with ${uniqueSharedPosts.length} unique shared posts`
 		);
 
 		// Print type breakdown
