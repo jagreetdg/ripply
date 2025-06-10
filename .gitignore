@@ -3,6 +3,12 @@
 # dependencies
 node_modules/
 
+# Testing
+coverage/
+*.log
+.env.test
+Thumbs.db
+
 # Expo
 .expo/
 dist/
