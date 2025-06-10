@@ -5,7 +5,8 @@
 import {
   getAllVoiceNotes,
   getPersonalizedFeed,
-  recordPlay
+  recordPlay,
+  fetchFeed
 } from '../../services/api';
 import { formatVoiceNote } from './feedUtils';
 import { FeedItem } from './types';
