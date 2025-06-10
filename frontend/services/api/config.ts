@@ -1,11 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-// API Configuration
-export const API_BASE_URL = 
-  process.env.EXPO_PUBLIC_API_URL || 
-  Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 
-  'https://ripply-backend.onrender.com';
+// API Configuration - DEBUG MODE ENABLED
+// TODO: Remove debug mode before production
+const DEBUG_USE_LOCAL_BACKEND = true; // Set to false to use production
+
+export const API_BASE_URL = DEBUG_USE_LOCAL_BACKEND 
+  ? 'http://localhost:3000'  // Local backend for debugging
+  : (process.env.EXPO_PUBLIC_API_URL || 
+     Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 
+     'https://ripply-backend.onrender.com');
 
 // Storage keys
 export const TOKEN_KEY = '@ripply_auth_token';
@@ -132,8 +136,16 @@ export const apiRequest = async <T = any>(
 
   const url = `${API_BASE_URL}${endpoint}`;
   
-  // Log share-related requests for debugging
+  // Log feed-related requests for debugging  
+  const isFeedRelated = endpoint.includes('/feed') || endpoint.includes('/voice-notes');
   const isShareRelated = endpoint.includes('/share') || endpoint.includes('/repost');
+  
+  if (isFeedRelated) {
+    console.log(`🚨 API CONFIG - Feed request: ${method} ${url}`);
+    console.log(`🚨 API CONFIG - API_BASE_URL: ${API_BASE_URL}`);
+    console.log(`🚨 API CONFIG - Endpoint: ${endpoint}`);
+  }
+  
   if (isShareRelated) {
     console.log(`[SHARE DEBUG] API Request - ${method} ${url}`);
     if (body) {

@@ -35,20 +35,85 @@ export function HomeFeed() {
 			setLoading(true);
 			let voiceNotesData;
 
+			console.log(
+				`CRITICAL DEBUG - Feed fetch: user=${
+					user?.id
+				}, feedType=${feedTypeToFetch}, hasUser=${!!user}`
+			);
+
 			if (user && feedTypeToFetch === "personalized") {
 				// If user is logged in and wants personalized feed
 				voiceNotesData = await getPersonalizedFeed(user.id);
 				console.log("Fetched personalized feed for user:", user.id);
+				console.log(
+					"CRITICAL DEBUG - Raw API response:",
+					JSON.stringify(voiceNotesData.slice(0, 2), null, 2)
+				);
+
+				// ULTRA CRITICAL: Log the COMPLETE response structure
+				console.log("🚨 COMPLETE RESPONSE ANALYSIS:");
+				console.log("  Response type:", typeof voiceNotesData);
+				console.log("  Is array:", Array.isArray(voiceNotesData));
+				console.log("  Length:", voiceNotesData?.length || 0);
+
+				if (voiceNotesData && voiceNotesData.length > 0) {
+					console.log("🔍 FIRST ITEM DEEP ANALYSIS:");
+					const firstItem = voiceNotesData[0];
+					console.log("  First item keys:", Object.keys(firstItem));
+					console.log("  is_shared value:", firstItem.is_shared);
+					console.log("  shared_by:", firstItem.shared_by);
+					console.log("  users:", firstItem.users);
+					console.log("  title:", firstItem.title);
+					console.log("  created_at:", firstItem.created_at);
+					console.log("  shared_at:", firstItem.shared_at);
+
+					// Check ALL items for is_shared distribution
+					const sharedCount = voiceNotesData.filter(
+						(item) => item.is_shared === true
+					).length;
+					const originalCount = voiceNotesData.filter(
+						(item) => item.is_shared === false
+					).length;
+					const undefinedCount = voiceNotesData.filter(
+						(item) => item.is_shared === undefined
+					).length;
+
+					console.log("📊 RAW DATA DISTRIBUTION:");
+					console.log("  Shared (is_shared=true):", sharedCount);
+					console.log("  Original (is_shared=false):", originalCount);
+					console.log("  Undefined is_shared:", undefinedCount);
+
+					// Log first 3 items is_shared values
+					console.log("📋 FIRST 3 ITEMS is_shared VALUES:");
+					voiceNotesData.slice(0, 3).forEach((item, idx) => {
+						console.log(
+							`  Item ${idx + 1}: id=${item.id}, is_shared=${
+								item.is_shared
+							}, title="${item.title}"`
+						);
+					});
+				} else {
+					console.log("🚨 NO DATA RECEIVED FROM API!");
+				}
 			} else {
 				// Otherwise get the global feed
 				voiceNotesData = await getAllVoiceNotes();
 				console.log("Fetched global feed");
+				console.log(
+					"CRITICAL DEBUG - Raw global feed:",
+					JSON.stringify(voiceNotesData.slice(0, 2), null, 2)
+				);
 			}
 
 			// Transform the voice notes into feed items
 			const transformedFeed = voiceNotesData.map((note: any) => {
 				// Determine if this is a shared voice note
 				const isShared = note.is_shared || false;
+
+				// CRITICAL DEBUG: Log each note's is_shared value
+				console.log(
+					`FRONTEND DEBUG - Note ${note.id}: title="${note.title}", is_shared=${note.is_shared}, computed_isShared=${isShared}`
+				);
 
 				// Process the shared_by information properly
 				let sharedByInfo = null;

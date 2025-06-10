@@ -20,23 +20,39 @@ export interface FeedResponse {
 export const getPersonalizedFeed = async (userId: string): Promise<VoiceNote[]> => {
   try {
     const endpoint = ENDPOINTS.PERSONALIZED_FEED(userId);
+    console.log(`🚨 FEED API - getPersonalizedFeed called: userId=${userId}, endpoint=${endpoint}`);
     
     const response = await apiRequest<FeedResponse | VoiceNote[]>(endpoint);
 
+    console.log(`🚨 FEED API - Raw response received:`);
+    console.log(`  Type: ${typeof response}`);
+    console.log(`  Is Array: ${Array.isArray(response)}`);
+    console.log(`  Length: ${Array.isArray(response) ? response.length : 'N/A'}`);
+    console.log(`  Full response:`, JSON.stringify(response, null, 2));
+
     // Handle different response formats
     if (Array.isArray(response)) {
+      console.log(`🚨 FEED API - Returning array response with ${response.length} items`);
+      
+      // CRITICAL: Log each item's is_shared value before returning
+      response.forEach((item, idx) => {
+        console.log(`  Item ${idx}: id=${item.id}, is_shared=${item.is_shared}, title="${item.title}"`);
+      });
+      
       return response;
     }
 
     if (response?.data && Array.isArray(response.data)) {
+      console.log(`🚨 FEED API - Returning nested data array with ${response.data.length} items`);
       return response.data;
     }
 
     // Log unexpected formats for debugging
-    console.error("[FEED ERROR] Unexpected response format:", response);
+    console.error("🚨 FEED API ERROR - Unexpected response format:", response);
     return [];
   } catch (error) {
-    console.error("[FEED ERROR] Error fetching personalized feed:", error);
+    console.error("🚨 FEED API ERROR - Error fetching personalized feed:", error);
+    console.error("🚨 FEED API ERROR - Error details:", error);
     return [];
   }
 };
