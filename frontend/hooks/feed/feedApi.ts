@@ -11,14 +11,18 @@ import { formatVoiceNote } from './feedUtils';
 import { FeedItem } from './types';
 
 /**
- * Fetch feed data for a user or guest
+ * Fetch feed data for a user or guest with pagination support
  * @param userId - The current user ID, or null for guest
  * @param diagnosticInfo - Optional diagnostic data for logging
+ * @param page - Page number (default: 1)
+ * @param limit - Items per page (default: 50)
  * @returns Array of formatted feed items
  */
 export const fetchFeedData = async (
   userId: string | null | undefined,
-  diagnosticInfo?: any
+  diagnosticInfo?: any,
+  page: number = 1,
+  limit: number = 100
 ): Promise<FeedItem[]> => {
   try {
     let data;
@@ -38,13 +42,13 @@ export const fetchFeedData = async (
 
     // Check if user is logged in
     if (userId) {
-      // Fetch personalized feed for logged in users
-      console.log("Fetching personalized feed for user:", userId);
-      data = await getPersonalizedFeed(userId);
+      // Fetch personalized feed for logged in users with pagination
+      console.log(`[INFINITE_SCROLL] Fetching personalized feed for user: ${userId}, page: ${page}, limit: ${limit}`);
+      data = await fetchFeed(userId, page, limit, diagnosticInfo);
     } else {
       // Fetch public feed for guests
-      console.log("Fetching public feed for guest");
-      data = await getAllVoiceNotes();
+      console.log(`[INFINITE_SCROLL] Fetching public feed for guest, page: ${page}, limit: ${limit}`);
+      data = await fetchFeed(undefined, page, limit, diagnosticInfo);
     }
 
     if (data && Array.isArray(data)) {

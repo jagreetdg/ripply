@@ -23,11 +23,13 @@ router.get("/test-deployment", async (req, res) => {
 	try {
 		const deploymentInfo = {
 			timestamp: new Date().toISOString(),
-			message: "Feed algorithm fix deployed successfully",
-			version: "2024-12-19-feed-fix",
+			message: "Balanced feed algorithm deployed successfully",
+			version: "2024-12-19-balanced-feed",
 			fixDescription:
-				"Fixed issue where only shared posts show instead of original posts",
-			debugLogging: "Enhanced debug logging is active",
+				"Implemented balanced feed algorithm to ensure original posts appear on page 1",
+			debugLogging: "Enhanced debug logging with balanced feed ratio tracking",
+			algorithm:
+				"60% original posts, 40% shared posts per page for better balance",
 		};
 
 		console.log("[DEBUG] Test deployment endpoint called:", deploymentInfo);
@@ -298,7 +300,7 @@ router.get("/search", async (req, res) => {
 router.get("/feed/:userId", authenticateToken, async (req, res) => {
 	try {
 		const { userId } = req.params;
-		const { page = 1, limit = 10 } = req.query;
+		const { page = 1, limit = 100 } = req.query; // Large limit for mobile infinite scroll
 		const offset = (page - 1) * limit;
 
 		console.log(`[DEBUG] Fetching personalized feed for user: ${userId}`);
@@ -557,35 +559,77 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 			} duplicate posts from shared section`
 		);
 
-		const allPosts = [...processedOriginalPosts, ...uniqueSharedPosts];
 		console.log(
-			`[DEBUG] Combined ${processedOriginalPosts.length} original posts with ${uniqueSharedPosts.length} unique shared posts`
+			`[DEBUG] Ready to create balanced feed with ${processedOriginalPosts.length} original posts and ${uniqueSharedPosts.length} unique shared posts`
 		);
 
-		// Print type breakdown
-		const originalCount = allPosts.filter(
-			(post) => post.is_shared !== true
-		).length;
-		const sharedCount = allPosts.filter(
-			(post) => post.is_shared === true
-		).length;
-		console.log(
-			`[DEBUG] Final feed breakdown - Original: ${originalCount}, Shared: ${sharedCount}`
+		// BALANCED FEED ALGORITHM: Mix original and shared posts for better distribution
+		// Instead of pure chronological sorting, we'll interleave original and shared posts
+		// to ensure each page has a good mix of both types
+
+		// Sort original posts by creation date (newest first)
+		const sortedOriginalPosts = processedOriginalPosts.sort(
+			(a, b) => new Date(b.created_at) - new Date(a.created_at)
 		);
 
-		// Sort by created_at or shared_at (newest first)
-		allPosts.sort((a, b) => {
-			const dateA = a.is_shared
-				? new Date(a.shared_at)
-				: new Date(a.created_at);
-			const dateB = b.is_shared
-				? new Date(b.shared_at)
-				: new Date(b.created_at);
-			return dateB - dateA;
-		});
+		// Sort shared posts by share date (newest first)
+		const sortedSharedPosts = uniqueSharedPosts.sort(
+			(a, b) => new Date(b.shared_at) - new Date(a.shared_at)
+		);
 
-		// Apply pagination after sorting
-		const paginatedPosts = allPosts.slice(offset, offset + parseInt(limit));
+		console.log(
+			`[DEBUG] Sorted ${sortedOriginalPosts.length} original posts, ${sortedSharedPosts.length} shared posts`
+		);
+
+		// Create balanced feed by interleaving posts
+		// This ensures each page has a mix rather than all shared posts dominating
+		const balancedFeed = [];
+		let originalIndex = 0;
+		let sharedIndex = 0;
+
+		// Target ratio: roughly 60% original posts, 40% shared posts per page
+		// This mimics Twitter/Instagram where you see more from people you follow than reposts
+		const totalItems = sortedOriginalPosts.length + sortedSharedPosts.length;
+		const targetOriginalRatio = 0.6;
+
+		while (
+			originalIndex < sortedOriginalPosts.length ||
+			sharedIndex < sortedSharedPosts.length
+		) {
+			const currentRatio =
+				balancedFeed.length > 0
+					? balancedFeed.filter((p) => !p.is_shared).length /
+					  balancedFeed.length
+					: 0;
+
+			// Decide whether to add original or shared post next
+			const shouldAddOriginal =
+				(currentRatio < targetOriginalRatio &&
+					originalIndex < sortedOriginalPosts.length) ||
+				sharedIndex >= sortedSharedPosts.length;
+
+			if (shouldAddOriginal && originalIndex < sortedOriginalPosts.length) {
+				balancedFeed.push(sortedOriginalPosts[originalIndex]);
+				originalIndex++;
+			} else if (sharedIndex < sortedSharedPosts.length) {
+				balancedFeed.push(sortedSharedPosts[sharedIndex]);
+				sharedIndex++;
+			} else {
+				break;
+			}
+		}
+
+		console.log(
+			`[DEBUG] Created balanced feed with ${balancedFeed.length} posts`
+		);
+		console.log(
+			`[DEBUG] Balanced feed ratio - Original: ${
+				balancedFeed.filter((p) => !p.is_shared).length
+			}, Shared: ${balancedFeed.filter((p) => p.is_shared).length}`
+		);
+
+		// Apply pagination to the balanced feed
+		const paginatedPosts = balancedFeed.slice(offset, offset + parseInt(limit));
 
 		console.log(
 			`[DEBUG] Returning ${paginatedPosts.length} personalized feed items for user ${userId}`

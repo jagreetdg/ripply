@@ -8,17 +8,20 @@ import { fetchFeedData, trackVoiceNotePlay } from './feedApi';
 import { runFollowDiagnostics } from './feedDiagnostics';
 
 /**
- * Custom hook for managing feed data and interactions
+ * Custom hook for managing feed data and interactions with infinite scrolling
  */
 export const useFeed = () => {
   // State
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [diagnosticData, setDiagnosticData] = useState<DiagnosticData | null>(null);
   const [runningDiagnostics, setRunningDiagnostics] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
   
   // Context
   const { user: currentUser } = useUser();
@@ -43,20 +46,42 @@ export const useFeed = () => {
     }
   }, [currentUser]);
 
-  // Fetch voice notes from the API
-  const loadFeedData = useCallback(async (isRefreshing = false) => {
+  // Fetch voice notes from the API with pagination support
+  const loadFeedData = useCallback(async (isRefreshing = false, pageToLoad = 1) => {
     // Only show loading indicator on initial load, not on subsequent refreshes
-    if (!initialLoadComplete && !isRefreshing) {
+    if (!initialLoadComplete && !isRefreshing && pageToLoad === 1) {
       setLoading(true);
+    }
+
+    // For loading more pages
+    if (pageToLoad > 1) {
+      setLoadingMore(true);
     }
 
     try {
       const formattedData = await fetchFeedData(
         currentUser?.id, 
-        diagnosticData
+        diagnosticData,
+        pageToLoad,
+        100 // Items per page for infinite scroll
       );
       
-      setFeedItems(formattedData);
+      if (isRefreshing || pageToLoad === 1) {
+        // Fresh load or refresh - replace all data
+        setFeedItems(formattedData);
+        setCurrentPage(1);
+        setHasMoreData(formattedData.length === 100); // If we get full batch, there might be more
+      } else {
+        // Loading more - append to existing data
+        setFeedItems(prev => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = formattedData.filter(item => !existingIds.has(item.id));
+          return [...prev, ...newItems];
+        });
+        setCurrentPage(pageToLoad);
+        setHasMoreData(formattedData.length === 100); // If we get full batch, there might be more
+      }
+      
       setError(null);
     } catch (err) {
       console.error("Error fetching voice notes:", err);
@@ -64,6 +89,7 @@ export const useFeed = () => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
       setInitialLoadComplete(true);
     }
   }, [currentUser?.id, initialLoadComplete, diagnosticData]);
@@ -71,20 +97,33 @@ export const useFeed = () => {
   // Handle refresh
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadFeedData(true);
+    await loadFeedData(true, 1);
   }, [loadFeedData]);
+
+  // Handle loading more data for infinite scroll
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !hasMoreData) return;
+    
+    console.log(`[INFINITE_SCROLL] Loading page ${currentPage + 1}`);
+    await loadFeedData(false, currentPage + 1);
+  }, [loadFeedData, loadingMore, hasMoreData, currentPage]);
 
   // Load feed data on initial load and when the user changes
   useEffect(() => {
-    loadFeedData();
-  }, [loadFeedData, currentUser?.id]);
+    setCurrentPage(1);
+    setHasMoreData(true);
+    loadFeedData(false, 1);
+  }, [currentUser?.id]);
 
   return {
     feedItems,
     loading,
     refreshing,
+    loadingMore,
+    hasMoreData,
     error,
     handleRefresh,
+    handleLoadMore,
     handlePlayVoiceNote,
     runFollowDiagnostics: handleRunDiagnostics,
     diagnosticData,

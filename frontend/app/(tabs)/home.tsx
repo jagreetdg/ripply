@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
-import { StyleSheet, View, Animated, Platform } from "react-native";
+import { StyleSheet, View, Animated, Platform, FlatList } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, usePathname } from "expo-router";
 import { HomeHeader } from "../../components/home/HomeHeader";
@@ -13,7 +13,7 @@ const HEADER_HEIGHT = 60; // Header height
 export default function HomeScreen() {
 	console.log("[DEBUG] Home - Component rendering");
 	const scrollY = useRef(new Animated.Value(0)).current;
-	const scrollViewRef = useRef<any>(null);
+	const flatListRef = useRef<FlatList>(null);
 	const { colors } = useTheme();
 	const pathname = usePathname();
 	const insets = useSafeAreaInsets();
@@ -24,7 +24,7 @@ export default function HomeScreen() {
 
 	// Scroll to top function to pass to the header
 	const scrollToTop = () => {
-		scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+		flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
 	};
 
 	// Effect to track mounting/unmounting
@@ -41,13 +41,16 @@ export default function HomeScreen() {
 		};
 	}, []);
 
-	// Use the new useFeedData hook
+	// Use the new useFeedData hook with infinite scroll support
 	const {
 		feedItems,
 		loading,
+		loadingMore,
+		hasMoreData,
 		error,
 		refreshing,
 		handleRefresh,
+		handleLoadMore,
 		handlePlayVoiceNote,
 		diagnosticData,
 	} = useFeedData();
@@ -123,16 +126,19 @@ export default function HomeScreen() {
 				<HomeHeader onLogoPress={scrollToTop} />
 			</Animated.View>
 
-			{/* Main Content - now with top padding for fixed header */}
+			{/* Main Content - now with infinite scroll support */}
 			<FeedContent
 				feedItems={feedItems}
 				loading={loading}
+				loadingMore={loadingMore}
+				hasMoreData={hasMoreData}
 				error={error}
 				refreshing={refreshing}
 				onRefresh={handleRefresh}
+				onLoadMore={handleLoadMore}
 				onUserProfilePress={handleUserProfilePress}
 				onPlayVoiceNote={handlePlayVoiceNote}
-				scrollViewRef={scrollViewRef}
+				flatListRef={flatListRef}
 				onScroll={handleScroll}
 				diagnosticData={diagnosticData}
 				contentInsetTop={HEADER_HEIGHT + insets.top} // Add this prop to adjust content padding

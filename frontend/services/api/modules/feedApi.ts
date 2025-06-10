@@ -124,11 +124,11 @@ interface FeedDiagnosticData {
   cacheStatus?: string;
 }
 
-// Fetch feed data with optional user ID for personalized feeds
+// Fetch feed data with optional user ID for personalized feeds (infinite scroll version)
 export const fetchFeed = async (
   userId?: string,
   page: number = 1,
-  limit: number = 10,
+  limit: number = 100, // Large limit for mobile infinite scroll
   diagnosticData?: FeedDiagnosticData
 ): Promise<VoiceNote[]> => {
   try {
@@ -145,10 +145,7 @@ export const fetchFeed = async (
       requiresAuth = false;
     }
 
-    // Use diagnostic data if available for logging
-    if (diagnosticData) {
-      // Only log if truly needed for critical debugging
-    }
+    console.log(`[INFINITE_SCROLL] Fetching page ${page} with limit ${limit} for ${userId ? 'personalized' : 'public'} feed`);
 
     const data = await apiRequest<VoiceNote[]>(endpoint, {
       method: "GET",
@@ -157,6 +154,7 @@ export const fetchFeed = async (
 
     // Validate response format
     if (Array.isArray(data)) {
+      console.log(`[INFINITE_SCROLL] Received ${data.length} items for page ${page}`);
       return data;
     } else {
       console.error("Unexpected data format from API:", data);

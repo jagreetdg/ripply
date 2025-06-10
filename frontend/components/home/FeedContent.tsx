@@ -6,7 +6,7 @@ import {
 	ActivityIndicator,
 	TouchableOpacity,
 	RefreshControl,
-	ScrollView,
+	FlatList,
 	Platform,
 	useWindowDimensions,
 } from "react-native";
@@ -24,12 +24,15 @@ const HEADER_HEIGHT = 60;
 interface FeedContentProps {
 	feedItems: FeedItem[];
 	loading: boolean;
+	loadingMore: boolean;
+	hasMoreData: boolean;
 	error: string | null;
 	refreshing: boolean;
 	onRefresh: () => Promise<void>;
+	onLoadMore: () => Promise<void>;
 	onUserProfilePress: (userId: string, username?: string) => void;
 	onPlayVoiceNote: (voiceNoteId: string, userId: string) => Promise<void>;
-	scrollViewRef: React.RefObject<ScrollView>;
+	flatListRef: React.RefObject<FlatList>;
 	onScroll: any; // Animated.event type
 	diagnosticData: any;
 	contentInsetTop?: number; // Add optional prop for content inset
@@ -38,12 +41,15 @@ interface FeedContentProps {
 export function FeedContent({
 	feedItems,
 	loading,
+	loadingMore,
+	hasMoreData,
 	error,
 	refreshing,
 	onRefresh,
+	onLoadMore,
 	onUserProfilePress,
 	onPlayVoiceNote,
-	scrollViewRef,
+	flatListRef,
 	onScroll,
 	diagnosticData,
 	contentInsetTop, // Add to props
@@ -207,52 +213,92 @@ export function FeedContent({
 			);
 		}
 
-		return (
-			<View style={styles.feedContent}>
-				{feedItems.map((item) => (
-					<View key={item.id} style={styles.feedItem}>
-						<VoiceNoteCard
-							voiceNote={{
-								id: item.voiceNote.id,
-								duration: item.voiceNote.duration,
-								title: item.voiceNote.title,
-								likes: item.voiceNote.likes,
-								comments: item.voiceNote.comments,
-								plays: item.voiceNote.plays,
-								shares: item.voiceNote.shares,
-								backgroundImage: item.voiceNote.backgroundImage,
-								tags: item.voiceNote.tags,
-								users: item.voiceNote.users,
-							}}
-							userId={item.userId}
-							displayName={item.displayName}
-							username={item.username}
-							userAvatarUrl={item.userAvatar}
-							timePosted={item.timePosted}
-							isShared={sharedStatusMap[item.voiceNote.id] || false}
-							sharedBy={item.sharedBy}
-							showRepostAttribution={item.isShared === true}
-							onUserProfilePress={() =>
-								onUserProfilePress(item.userId, item.username)
-							}
-							onPlayPress={() =>
-								onPlayVoiceNote(item.voiceNote.id, item.userId)
-							}
-						/>
-					</View>
-				))}
-			</View>
-		);
+		// This will be handled by FlatList
+		return null;
 	};
 
+	// Render individual feed item for FlatList
+	const renderFeedItem = useCallback(
+		({ item }: { item: FeedItem }) => (
+			<View style={styles.feedItem}>
+				<VoiceNoteCard
+					voiceNote={{
+						id: item.voiceNote.id,
+						duration: item.voiceNote.duration,
+						title: item.voiceNote.title,
+						likes: item.voiceNote.likes,
+						comments: item.voiceNote.comments,
+						plays: item.voiceNote.plays,
+						shares: item.voiceNote.shares,
+						backgroundImage: item.voiceNote.backgroundImage,
+						tags: item.voiceNote.tags,
+						users: item.voiceNote.users,
+					}}
+					userId={item.userId}
+					displayName={item.displayName}
+					username={item.username}
+					userAvatarUrl={item.userAvatar}
+					timePosted={item.timePosted}
+					isShared={sharedStatusMap[item.voiceNote.id] || false}
+					sharedBy={item.sharedBy}
+					showRepostAttribution={item.isShared === true}
+					onUserProfilePress={() =>
+						onUserProfilePress(item.userId, item.username)
+					}
+					onPlayPress={() => onPlayVoiceNote(item.voiceNote.id, item.userId)}
+				/>
+			</View>
+		),
+		[sharedStatusMap, onUserProfilePress, onPlayVoiceNote]
+	);
+
+	// Render footer loading indicator for infinite scroll
+	const renderFooter = useCallback(() => {
+		if (!loadingMore) return null;
+
+		return (
+			<View style={styles.footerLoader}>
+				<ActivityIndicator size="small" color={colors.tint} />
+				<Text style={[styles.footerText, { color: colors.textSecondary }]}>
+					Loading more...
+				</Text>
+			</View>
+		);
+	}, [loadingMore, colors.tint, colors.textSecondary]);
+
+	// Handle end reached for infinite scroll
+	const handleEndReached = useCallback(() => {
+		if (hasMoreData && !loadingMore) {
+			console.log("[INFINITE_SCROLL] Reached end, loading more...");
+			onLoadMore();
+		}
+	}, [hasMoreData, loadingMore, onLoadMore]);
+
+	// If there's an error or no data, use the old approach
+	if (loading || error || feedItems.length === 0) {
+		return (
+			<View style={[styles.scrollView, { backgroundColor: colors.background }]}>
+				<View
+					style={[
+						styles.scrollContent,
+						{ paddingTop: headerPadding, minHeight: height },
+					]}
+				>
+					{renderContent()}
+				</View>
+			</View>
+		);
+	}
+
+	// Use FlatList for infinite scrolling with data
 	return (
-		<ScrollView
-			ref={scrollViewRef}
+		<FlatList
+			ref={flatListRef}
+			data={feedItems}
+			renderItem={renderFeedItem}
+			keyExtractor={(item) => item.id}
 			style={[styles.scrollView, { backgroundColor: colors.background }]}
-			contentContainerStyle={[
-				styles.scrollContent,
-				{ paddingTop: headerPadding, minHeight: height },
-			]}
+			contentContainerStyle={{ paddingTop: headerPadding }}
 			onScroll={onScroll}
 			scrollEventThrottle={16}
 			refreshControl={
@@ -263,9 +309,13 @@ export function FeedContent({
 					tintColor={colors.tint}
 				/>
 			}
-		>
-			{renderContent()}
-		</ScrollView>
+			onEndReached={handleEndReached}
+			onEndReachedThreshold={0.1} // Trigger when 10% from bottom
+			ListFooterComponent={renderFooter}
+			removeClippedSubviews={true} // Performance optimization
+			maxToRenderPerBatch={10} // Performance optimization
+			windowSize={10} // Performance optimization
+		/>
 	);
 }
 
@@ -329,5 +379,15 @@ const styles = StyleSheet.create({
 	feedItem: {
 		paddingHorizontal: 16,
 		paddingVertical: 12,
+	},
+	footerLoader: {
+		flexDirection: "row",
+		justifyContent: "center",
+		alignItems: "center",
+		paddingVertical: 20,
+	},
+	footerText: {
+		marginLeft: 10,
+		fontSize: 14,
 	},
 });
