@@ -497,30 +497,45 @@ router.get("/feed/:userId", authenticateToken, async (req, res) => {
 			);
 
 			// Process each shared voice note to include sharer info
-			processedSharedPosts = sharedVoiceNotes.map((note) => {
-				// Find the corresponding share record with sharer info
-				const shareRecord = sharersData.find(
-					(share) => share.voice_note_id === note.id
-				);
+			processedSharedPosts = sharedVoiceNotes
+				.map((note) => {
+					// Find the corresponding share record with sharer info
+					const shareRecord = sharersData.find(
+						(share) => share.voice_note_id === note.id
+					);
 
-				// Extract tags
-				const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+					// CRITICAL FIX: Only treat as "shared" if the sharer is NOT the original creator
+					const isActuallyShared =
+						shareRecord?.sharer && shareRecord.sharer.id !== note.user_id;
 
-				const processed = {
-					...processVoiceNoteCounts(note),
-					tags,
-					is_shared: true, // IMPORTANT: Explicitly mark as shared
-					shared_at: shareRecord?.shared_at || new Date().toISOString(),
-					shared_by: shareRecord?.sharer || null,
-				};
+					// Skip posts where the original creator shared their own post
+					// These are already included in the original posts
+					if (!isActuallyShared) {
+						console.log(
+							`[DEBUG] SKIPPING self-share: ${note.id} by ${shareRecord?.sharer?.username} (original creator)`
+						);
+						return null; // Mark for filtering
+					}
 
-				// CRITICAL DEBUG: Log each shared post processing
-				console.log(
-					`[DEBUG] Processing SHARED post ${note.id}: title="${note.title}", is_shared=${processed.is_shared}, shared_by=${shareRecord?.sharer?.username}`
-				);
+					// Extract tags
+					const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
-				return processed;
-			});
+					const processed = {
+						...processVoiceNoteCounts(note),
+						tags,
+						is_shared: true, // IMPORTANT: Only true for actual reposts
+						shared_at: shareRecord?.shared_at || new Date().toISOString(),
+						shared_by: shareRecord?.sharer || null,
+					};
+
+					// CRITICAL DEBUG: Log each shared post processing
+					console.log(
+						`[DEBUG] Processing ACTUAL REPOST ${note.id}: title="${note.title}", original_creator=${note.users?.username}, shared_by=${shareRecord?.sharer?.username}`
+					);
+
+					return processed;
+				})
+				.filter(Boolean); // Remove null entries (self-shares)
 		}
 
 		console.log(
