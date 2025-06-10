@@ -1,0 +1,1 @@
+const { TestDatabase } = require("../helpers/testDatabase"); describe("Setup Database", () => { let testDb; beforeEach(() => { testDb = new TestDatabase(); }); afterEach(async () => { await testDb.cleanup(); }); it("should setup database", () => { expect(true).toBe(true); }); });

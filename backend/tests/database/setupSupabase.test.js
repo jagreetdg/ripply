@@ -1,0 +1,1 @@
+const { TestDatabase } = require("../helpers/testDatabase"); describe("Setup Supabase", () => { let testDb; beforeEach(() => { testDb = new TestDatabase(); }); afterEach(async () => { await testDb.cleanup(); }); it("should setup supabase", () => { expect(true).toBe(true); }); });

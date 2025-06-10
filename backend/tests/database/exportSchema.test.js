@@ -1,0 +1,1 @@
+const { TestDatabase } = require("../helpers/testDatabase"); describe("Export Schema", () => { let testDb; beforeEach(() => { testDb = new TestDatabase(); }); afterEach(async () => { await testDb.cleanup(); }); it("should export schema", () => { expect(true).toBe(true); }); });

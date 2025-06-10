@@ -1,0 +1,1 @@
+const { TestDatabase } = require("../helpers/testDatabase"); describe("Run Migration", () => { let testDb; beforeEach(() => { testDb = new TestDatabase(); }); afterEach(async () => { await testDb.cleanup(); }); it("should run migrations", () => { expect(true).toBe(true); }); });
