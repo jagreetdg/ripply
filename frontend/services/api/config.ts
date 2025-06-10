@@ -1,15 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-// API Configuration - DEBUG MODE ENABLED
-// TODO: Remove debug mode before production
-const DEBUG_USE_LOCAL_BACKEND = true; // Set to false to use production
-
-export const API_BASE_URL = DEBUG_USE_LOCAL_BACKEND 
-  ? 'http://localhost:3000'  // Local backend for debugging
-  : (process.env.EXPO_PUBLIC_API_URL || 
-     Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 
-     'https://ripply-backend.onrender.com');
+// API Configuration
+export const API_BASE_URL = 
+  process.env.EXPO_PUBLIC_API_URL || 
+  Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 
+  'https://ripply-backend.onrender.com';
 
 // Storage keys
 export const TOKEN_KEY = '@ripply_auth_token';
