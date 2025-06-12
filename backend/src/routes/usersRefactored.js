@@ -19,8 +19,8 @@ const contentController = require("../controllers/users/contentController");
 // Get current authenticated user (authenticated)
 router.get("/me", authenticateToken, profileController.getCurrentUser);
 
-// Search for users (public)
-router.get("/search", profileController.searchUsers);
+// Search for users (authenticated)
+router.get("/search", authenticateToken, profileController.searchUsers);
 
 // Get user by username (public)
 router.get("/username/:username", profileController.getUserByUsername);
@@ -45,13 +45,6 @@ router.post("/:userId/follow", authenticateToken, followController.followUser);
 // Unfollow a user (authenticated)
 router.post(
 	"/:userId/unfollow",
-	authenticateToken,
-	followController.unfollowUser
-);
-
-// Unfollow a user (authenticated) - Alternative DELETE method
-router.delete(
-	"/:userId/follow",
 	authenticateToken,
 	followController.unfollowUser
 );

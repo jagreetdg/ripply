@@ -14,50 +14,10 @@ const feedController = require("../controllers/voiceNotes/feedController");
  * modular structure using separate controllers for different concerns.
  */
 
-// ===== STATIC ROUTES (MUST COME BEFORE DYNAMIC ROUTES) =====
-
-/**
- * Temporary test endpoint to check deployment status
- * @route GET /api/voice-notes/test-deployment
- */
-router.get("/test-deployment", async (req, res) => {
-	try {
-		const deploymentInfo = {
-			timestamp: new Date().toISOString(),
-			message: "Refactored voice notes API deployed successfully",
-			version: "2024-12-19-refactored",
-			architecture: "Modular MVC pattern with service layer",
-			improvements: [
-				"Separated concerns into controllers, services, and utilities",
-				"Reduced monolithic file from 1,938 lines to focused modules",
-				"Improved maintainability and testability",
-				"Clear separation of feed algorithms, CRUD operations, and interactions",
-			],
-		};
-
-		console.log("[DEBUG] Test deployment endpoint called:", deploymentInfo);
-		res.status(200).json(deploymentInfo);
-	} catch (error) {
-		console.error("Error in test deployment endpoint:", error);
-		res.status(500).json({ message: "Server error", error: error.message });
-	}
-});
-
-// ===== FEED & DISCOVERY (BEFORE DYNAMIC ROUTES) =====
-
-// Get public feed (public)
-router.get("/feed", feedController.getPublicFeed);
-
-// Get personalized feed for user (authenticated)
-router.get("/feed/:userId", authenticateToken, feedController.getUserFeed);
-
 // ===== BASIC CRUD OPERATIONS =====
 
 // Search voice notes (public)
 router.get("/search", voiceNoteController.searchVoiceNotes);
-
-// Get voice notes by user (public)
-router.get("/user/:userId", voiceNoteController.getVoiceNotesByUser);
 
 // Get all voice notes with pagination (authenticated)
 router.get("/", authenticateToken, voiceNoteController.getAllVoiceNotes);
@@ -74,7 +34,10 @@ router.put("/:id", authenticateToken, voiceNoteController.updateVoiceNote);
 // Delete voice note (authenticated)
 router.delete("/:id", authenticateToken, voiceNoteController.deleteVoiceNote);
 
-// ===== ADDITIONAL DISCOVERY =====
+// ===== FEED & DISCOVERY =====
+
+// Get personalized feed for user (authenticated)
+router.get("/feed/:userId", authenticateToken, feedController.getUserFeed);
 
 // Get discovery posts (authenticated)
 router.get(
@@ -139,5 +102,35 @@ router.get(
 	authenticateToken,
 	interactionController.checkUserShared
 );
+
+// ===== LEGACY/DEBUG ENDPOINTS =====
+// These could be moved to separate debug routes or removed in production
+
+/**
+ * Temporary test endpoint to check deployment status
+ * @route GET /api/voice-notes/test-deployment
+ */
+router.get("/test-deployment", async (req, res) => {
+	try {
+		const deploymentInfo = {
+			timestamp: new Date().toISOString(),
+			message: "Refactored voice notes API deployed successfully",
+			version: "2024-12-19-refactored",
+			architecture: "Modular MVC pattern with service layer",
+			improvements: [
+				"Separated concerns into controllers, services, and utilities",
+				"Reduced monolithic file from 1,938 lines to focused modules",
+				"Improved maintainability and testability",
+				"Clear separation of feed algorithms, CRUD operations, and interactions",
+			],
+		};
+
+		console.log("[DEBUG] Test deployment endpoint called:", deploymentInfo);
+		res.status(200).json(deploymentInfo);
+	} catch (error) {
+		console.error("Error in test deployment endpoint:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
 
 module.exports = router;
