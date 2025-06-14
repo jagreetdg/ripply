@@ -4,6 +4,51 @@ const interactionService = require("../../services/voiceNotes/interactionService
  * Controller for voice note interactions (likes, comments, plays, shares)
  */
 
+// In-memory cache to prevent duplicate requests
+const requestCache = new Map();
+
+// Helper function to create a request key
+const createRequestKey = (userId, voiceNoteId, action) => {
+	return `${userId}-${voiceNoteId}-${action}`;
+};
+
+// Helper function to handle request deduplication
+const withRequestDeduplication = async (
+	userId,
+	voiceNoteId,
+	action,
+	handler
+) => {
+	const requestKey = createRequestKey(userId, voiceNoteId, action);
+
+	// Check if request is already in progress
+	if (requestCache.has(requestKey)) {
+		console.log(`[DEDUP] Request already in progress: ${requestKey}`);
+		throw new Error("Request already in progress. Please wait.");
+	}
+
+	// Mark request as in progress
+	requestCache.set(requestKey, Date.now());
+
+	try {
+		const result = await handler();
+		return result;
+	} finally {
+		// Remove from cache after completion
+		requestCache.delete(requestKey);
+	}
+};
+
+// Clean up old cache entries periodically (older than 30 seconds)
+setInterval(() => {
+	const now = Date.now();
+	for (const [key, timestamp] of requestCache.entries()) {
+		if (now - timestamp > 30000) {
+			requestCache.delete(key);
+		}
+	}
+}, 10000); // Clean every 10 seconds
+
 // ===== LIKES =====
 
 /**
@@ -35,33 +80,50 @@ const likeVoiceNote = async (req, res) => {
 			return res.status(401).json({ message: "Authentication required" });
 		}
 
-		// Check if already liked to provide toggle behavior
-		const alreadyLiked = await interactionService.checkUserLiked(id, userId);
+		// Use request deduplication to prevent race conditions
+		const result = await withRequestDeduplication(
+			userId,
+			id,
+			"like",
+			async () => {
+				// Check if already liked to provide toggle behavior
+				const alreadyLiked = await interactionService.checkUserLiked(
+					id,
+					userId
+				);
 
-		if (alreadyLiked) {
-			// If already liked, unlike it (toggle behavior)
-			await interactionService.unlikeVoiceNote(id, userId);
-			const likesCount = await interactionService.getVoiceNoteLikes(id);
+				if (alreadyLiked) {
+					// If already liked, unlike it (toggle behavior)
+					await interactionService.unlikeVoiceNote(id, userId);
+					const likesCount = await interactionService.getVoiceNoteLikes(id);
 
-			res.status(200).json({
-				message: "Voice note unliked successfully",
-				isLiked: false,
-				likesCount: likesCount.length || 0,
-			});
-		} else {
-			// Like the voice note
-			const like = await interactionService.likeVoiceNote(id, userId);
-			const likesCount = await interactionService.getVoiceNoteLikes(id);
+					return {
+						message: "Voice note unliked successfully",
+						isLiked: false,
+						likesCount: likesCount,
+					};
+				} else {
+					// If not liked, like it
+					await interactionService.likeVoiceNote(id, userId);
+					const likesCount = await interactionService.getVoiceNoteLikes(id);
 
-			res.status(201).json({
-				message: "Voice note liked successfully",
-				isLiked: true,
-				likesCount: likesCount.length || 0,
-				like,
-			});
-		}
+					return {
+						message: "Voice note liked successfully",
+						isLiked: true,
+						likesCount: likesCount,
+					};
+				}
+			}
+		);
+
+		res.status(200).json(result);
 	} catch (error) {
 		console.error("Error toggling like on voice note:", error);
+
+		if (error.message === "Request already in progress. Please wait.") {
+			return res.status(429).json({ message: error.message });
+		}
+
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 };
@@ -209,57 +271,62 @@ const shareVoiceNote = async (req, res) => {
 			`[DEBUG] Share/Unshare request: voiceNoteId=${voiceNoteId}, userId=${userId}`
 		);
 
-		// Check if already shared to toggle behavior
-		const alreadyShared = await interactionService.checkUserShared(
+		// Use request deduplication to prevent race conditions
+		const result = await withRequestDeduplication(
+			userId,
 			voiceNoteId,
-			userId
+			"share",
+			async () => {
+				// Check if already shared to toggle behavior
+				const alreadyShared = await interactionService.checkUserShared(
+					voiceNoteId,
+					userId
+				);
+
+				if (alreadyShared) {
+					// If already shared, unshare it (toggle behavior)
+					await interactionService.unshareVoiceNote(voiceNoteId, userId);
+					const shareCount = await interactionService.getVoiceNoteShareCount(
+						voiceNoteId
+					);
+
+					console.log(
+						`[DEBUG] Voice note unshared: voiceNoteId=${voiceNoteId}, userId=${userId}, newShareCount=${shareCount}`
+					);
+
+					return {
+						message: "Voice note unshared successfully",
+						isShared: false,
+						shareCount: shareCount,
+					};
+				} else {
+					// If not shared, share it
+					await interactionService.shareVoiceNote(voiceNoteId, userId);
+					const shareCount = await interactionService.getVoiceNoteShareCount(
+						voiceNoteId
+					);
+
+					console.log(
+						`[DEBUG] Voice note shared: voiceNoteId=${voiceNoteId}, userId=${userId}, newShareCount=${shareCount}`
+					);
+
+					return {
+						message: "Voice note shared successfully",
+						isShared: true,
+						shareCount: shareCount,
+					};
+				}
+			}
 		);
 
-		if (alreadyShared) {
-			// Unshare
-			await interactionService.unshareVoiceNote(voiceNoteId, userId);
-			console.log(`[DEBUG] User ${userId} unshared voice note ${voiceNoteId}`);
-
-			// Get updated share count
-			const shares = await interactionService.getVoiceNoteShares(voiceNoteId);
-			const shareCount = Array.isArray(shares)
-				? shares.length
-				: shares.data
-				? shares.data.length
-				: 0;
-
-			res.status(200).json({
-				message: "Voice note unshared successfully",
-				isShared: false,
-				shareCount: shareCount,
-				action: "unshared",
-			});
-		} else {
-			// Share
-			const share = await interactionService.shareVoiceNote(
-				voiceNoteId,
-				userId
-			);
-			console.log(`[DEBUG] User ${userId} shared voice note ${voiceNoteId}`);
-
-			// Get updated share count
-			const shares = await interactionService.getVoiceNoteShares(voiceNoteId);
-			const shareCount = Array.isArray(shares)
-				? shares.length
-				: shares.data
-				? shares.data.length
-				: 0;
-
-			res.status(201).json({
-				message: "Voice note shared successfully",
-				isShared: true,
-				shareCount: shareCount,
-				action: "shared",
-				share,
-			});
-		}
+		res.status(200).json(result);
 	} catch (error) {
-		console.error("Error sharing/unsharing voice note:", error);
+		console.error("Error toggling share on voice note:", error);
+
+		if (error.message === "Request already in progress. Please wait.") {
+			return res.status(429).json({ message: error.message });
+		}
+
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 };

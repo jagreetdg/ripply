@@ -314,6 +314,21 @@ const getVoiceNoteShares = async (voiceNoteId, options = {}) => {
 	};
 };
 
+/**
+ * Get the count of shares for a voice note
+ * @param {string} voiceNoteId - Voice note ID
+ * @returns {number} Number of shares
+ */
+const getVoiceNoteShareCount = async (voiceNoteId) => {
+	const { count, error } = await supabase
+		.from("voice_note_shares")
+		.select("*", { count: "exact", head: true })
+		.eq("voice_note_id", voiceNoteId);
+
+	if (error) throw error;
+	return count || 0;
+};
+
 module.exports = {
 	// Likes
 	checkUserLiked,
@@ -330,4 +345,5 @@ module.exports = {
 	shareVoiceNote,
 	unshareVoiceNote,
 	getVoiceNoteShares,
+	getVoiceNoteShareCount,
 };
