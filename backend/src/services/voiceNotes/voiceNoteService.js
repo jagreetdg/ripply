@@ -155,16 +155,15 @@ const deleteVoiceNote = async (id) => {
  * Search voice notes by title or tags
  * @param {string} query - Search query
  * @param {Object} options - Search options
+ * @param {string} options.searchType - Search type: 'title' or 'tag'
  * @returns {Array} Matching voice notes
  */
 const searchVoiceNotes = async (query, options = {}) => {
-	const { page = 1, limit = 10 } = options;
+	const { page = 1, limit = 10, searchType = "title" } = options;
 	const offset = (page - 1) * limit;
 
-	const { data, error, count } = await supabase
-		.from("voice_notes")
-		.select(
-			`
+	let voiceNoteQuery = supabase.from("voice_notes").select(
+		`
 			*,
 			users:user_id (id, username, display_name, avatar_url, is_verified),
 			likes:voice_note_likes (count),
@@ -173,9 +172,39 @@ const searchVoiceNotes = async (query, options = {}) => {
 			shares:voice_note_shares (count),
 			tags:voice_note_tags (tag_name)
 		`,
-			{ count: "exact" }
-		)
-		.or(`title.ilike.%${query}%`)
+		{ count: "exact" }
+	);
+
+	if (searchType === "tag") {
+		// Search by tags: first get voice note IDs that have matching tags
+		const { data: tagMatches, error: tagError } = await supabase
+			.from("voice_note_tags")
+			.select("voice_note_id")
+			.ilike("tag_name", `%${query}%`);
+
+		if (tagError) throw tagError;
+
+		if (!tagMatches || tagMatches.length === 0) {
+			return {
+				data: [],
+				pagination: {
+					page: parseInt(page),
+					limit: parseInt(limit),
+					total: 0,
+					totalPages: 0,
+				},
+			};
+		}
+
+		// Get the voice note IDs from the tag matches
+		const voiceNoteIds = tagMatches.map((match) => match.voice_note_id);
+		voiceNoteQuery = voiceNoteQuery.in("id", voiceNoteIds);
+	} else {
+		// Search by title (default)
+		voiceNoteQuery = voiceNoteQuery.ilike("title", `%${query}%`);
+	}
+
+	const { data, error, count } = await voiceNoteQuery
 		.order("created_at", { ascending: false })
 		.range(offset, offset + parseInt(limit) - 1);
 
