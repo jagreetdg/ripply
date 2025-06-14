@@ -35,14 +35,33 @@ const likeVoiceNote = async (req, res) => {
 			return res.status(401).json({ message: "Authentication required" });
 		}
 
-		const like = await interactionService.likeVoiceNote(id, userId);
-		res.status(201).json(like);
-	} catch (error) {
-		if (error.message === "Already liked this voice note") {
-			return res.status(400).json({ message: error.message });
-		}
+		// Check if already liked to provide toggle behavior
+		const alreadyLiked = await interactionService.checkUserLiked(id, userId);
 
-		console.error("Error liking voice note:", error);
+		if (alreadyLiked) {
+			// If already liked, unlike it (toggle behavior)
+			await interactionService.unlikeVoiceNote(id, userId);
+			const likesCount = await interactionService.getVoiceNoteLikes(id);
+
+			res.status(200).json({
+				message: "Voice note unliked successfully",
+				isLiked: false,
+				likesCount: likesCount.length || 0,
+			});
+		} else {
+			// Like the voice note
+			const like = await interactionService.likeVoiceNote(id, userId);
+			const likesCount = await interactionService.getVoiceNoteLikes(id);
+
+			res.status(201).json({
+				message: "Voice note liked successfully",
+				isLiked: true,
+				likesCount: likesCount.length || 0,
+				like,
+			});
+		}
+	} catch (error) {
+		console.error("Error toggling like on voice note:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 };
@@ -61,7 +80,13 @@ const unlikeVoiceNote = async (req, res) => {
 		}
 
 		await interactionService.unlikeVoiceNote(id, userId);
-		res.status(200).json({ message: "Voice note unliked successfully" });
+		const likesCount = await interactionService.getVoiceNoteLikes(id);
+
+		res.status(200).json({
+			message: "Voice note unliked successfully",
+			isLiked: false,
+			likesCount: likesCount.length || 0,
+		});
 	} catch (error) {
 		console.error("Error unliking voice note:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
@@ -82,7 +107,7 @@ const checkUserLiked = async (req, res) => {
 		}
 
 		const hasLiked = await interactionService.checkUserLiked(id, userId);
-		res.status(200).json({ hasLiked });
+		res.status(200).json({ isLiked: hasLiked });
 	} catch (error) {
 		console.error("Error checking like status:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
@@ -194,8 +219,19 @@ const shareVoiceNote = async (req, res) => {
 			// Unshare
 			await interactionService.unshareVoiceNote(voiceNoteId, userId);
 			console.log(`[DEBUG] User ${userId} unshared voice note ${voiceNoteId}`);
+
+			// Get updated share count
+			const shares = await interactionService.getVoiceNoteShares(voiceNoteId);
+			const shareCount = Array.isArray(shares)
+				? shares.length
+				: shares.data
+				? shares.data.length
+				: 0;
+
 			res.status(200).json({
 				message: "Voice note unshared successfully",
+				isShared: false,
+				shareCount: shareCount,
 				action: "unshared",
 			});
 		} else {
@@ -205,9 +241,21 @@ const shareVoiceNote = async (req, res) => {
 				userId
 			);
 			console.log(`[DEBUG] User ${userId} shared voice note ${voiceNoteId}`);
+
+			// Get updated share count
+			const shares = await interactionService.getVoiceNoteShares(voiceNoteId);
+			const shareCount = Array.isArray(shares)
+				? shares.length
+				: shares.data
+				? shares.data.length
+				: 0;
+
 			res.status(201).json({
-				...share,
+				message: "Voice note shared successfully",
+				isShared: true,
+				shareCount: shareCount,
 				action: "shared",
+				share,
 			});
 		}
 	} catch (error) {
@@ -230,7 +278,17 @@ const getVoiceNoteShares = async (req, res) => {
 			limit: parseInt(limit),
 		});
 
-		res.status(200).json(result);
+		// Return both the detailed result and a simple shareCount for API compatibility
+		const shareCount = Array.isArray(result)
+			? result.length
+			: result.data
+			? result.data.length
+			: 0;
+
+		res.status(200).json({
+			...result,
+			shareCount: shareCount,
+		});
 	} catch (error) {
 		console.error("Error fetching voice note shares:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
@@ -251,7 +309,7 @@ const checkUserShared = async (req, res) => {
 		}
 
 		const hasShared = await interactionService.checkUserShared(id, userId);
-		res.status(200).json({ hasShared });
+		res.status(200).json({ isShared: hasShared });
 	} catch (error) {
 		console.error("Error checking share status:", error);
 		res.status(500).json({ message: "Server error", error: error.message });

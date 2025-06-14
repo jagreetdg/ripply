@@ -35,7 +35,16 @@ const likeVoiceNote = async (voiceNoteId, userId) => {
 	// Check if already liked
 	const alreadyLiked = await checkUserLiked(voiceNoteId, userId);
 	if (alreadyLiked) {
-		throw new Error("Already liked this voice note");
+		// Return existing like instead of throwing error
+		const { data, error } = await supabase
+			.from("voice_note_likes")
+			.select("*")
+			.eq("voice_note_id", voiceNoteId)
+			.eq("user_id", userId)
+			.single();
+
+		if (error) throw error;
+		return data;
 	}
 
 	const { data, error } = await supabase
