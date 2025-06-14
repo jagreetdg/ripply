@@ -44,7 +44,8 @@ const getOriginalPosts = async (followingIds, options = {}) => {
 			likes:voice_note_likes (count),
 			comments:voice_note_comments (count),
 			plays:voice_note_plays (count),
-			shares:voice_note_shares (count)
+			shares:voice_note_shares (count),
+			tags:voice_note_tags (tag_name)
 		`
 		)
 		.in("user_id", followingIds)
@@ -53,10 +54,16 @@ const getOriginalPosts = async (followingIds, options = {}) => {
 
 	if (error) throw error;
 
-	return data.map((note) => ({
-		...processVoiceNoteCounts(note),
-		is_shared: false,
-	}));
+	return data.map((note) => {
+		// Extract tags from the nested structure
+		const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
+		return {
+			...processVoiceNoteCounts(note),
+			tags,
+			is_shared: false,
+		};
+	});
 };
 
 /**
@@ -96,7 +103,8 @@ const getSharedPosts = async (followingIds, options = {}) => {
 			likes:voice_note_likes (count),
 			comments:voice_note_comments (count),
 			plays:voice_note_plays (count),
-			shares:voice_note_shares (count)
+			shares:voice_note_shares (count),
+			tags:voice_note_tags (tag_name)
 		`
 			)
 			.in("id", sharedVoiceNoteIds);
@@ -117,11 +125,15 @@ const getSharedPosts = async (followingIds, options = {}) => {
 
 	// Combine voice notes with share info
 	return sharedVoiceNotes.map((note) => {
+		// Extract tags from the nested structure
+		const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
 		const shareRecord = sharersData.find(
 			(share) => share.voice_note_id === note.id
 		);
 		return {
 			...processVoiceNoteCounts(note),
+			tags,
 			is_shared: true,
 			shared_at: shareRecord?.shared_at || new Date().toISOString(),
 			shared_by: shareRecord?.sharer || null,
@@ -421,8 +433,16 @@ const getPublicFeed = async (options = {}) => {
 
 	if (error) throw error;
 
-	// Process voice note counts
-	const processedData = data.map(processVoiceNoteCounts);
+	// Process voice note counts and tags
+	const processedData = data.map((note) => {
+		// Extract tags from the nested structure
+		const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
+		return {
+			...processVoiceNoteCounts(note),
+			tags,
+		};
+	});
 
 	return {
 		data: processedData,

@@ -19,8 +19,16 @@ const getAllVoiceNotes = async (req, res) => {
 			limit: parseInt(limit),
 		});
 
-		// Process voice note counts
-		const processedData = result.data.map(processVoiceNoteCounts);
+		// Process voice note counts and tags
+		const processedData = result.data.map((note) => {
+			// Extract tags from the nested structure
+			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
+			return {
+				...processVoiceNoteCounts(note),
+				tags,
+			};
+		});
 
 		res.status(200).json({
 			...result,
@@ -46,7 +54,15 @@ const getVoiceNoteById = async (req, res) => {
 			return res.status(404).json({ message: "Voice note not found" });
 		}
 
-		const processedVoiceNote = processVoiceNoteCounts(voiceNote);
+		// Extract tags from the nested structure
+		const tags = voiceNote.tags
+			? voiceNote.tags.map((tag) => tag.tag_name)
+			: [];
+
+		const processedVoiceNote = {
+			...processVoiceNoteCounts(voiceNote),
+			tags,
+		};
 		res.status(200).json(processedVoiceNote);
 	} catch (error) {
 		console.error("Error fetching voice note:", error);
@@ -172,8 +188,16 @@ const searchVoiceNotes = async (req, res) => {
 				limit: parseInt(limit),
 			});
 
-			// Process voice note counts
-			const processedData = result.data.map(processVoiceNoteCounts);
+			// Process voice note counts and tags
+			const processedData = result.data.map((note) => {
+				// Extract tags from the nested structure
+				const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
+				return {
+					...processVoiceNoteCounts(note),
+					tags,
+				};
+			});
 
 			return res.status(200).json({
 				...result,
@@ -186,8 +210,16 @@ const searchVoiceNotes = async (req, res) => {
 			limit: parseInt(limit),
 		});
 
-		// Process voice note counts
-		const processedData = result.data.map(processVoiceNoteCounts);
+		// Process voice note counts and tags
+		const processedData = result.data.map((note) => {
+			// Extract tags from the nested structure
+			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
+			return {
+				...processVoiceNoteCounts(note),
+				tags,
+			};
+		});
 
 		res.status(200).json({
 			...result,
@@ -213,8 +245,16 @@ const getVoiceNotesByUser = async (req, res) => {
 			limit: parseInt(limit),
 		});
 
-		// Process voice note counts
-		const processedData = result.data.map(processVoiceNoteCounts);
+		// Process voice note counts and tags
+		const processedData = result.data.map((note) => {
+			// Extract tags from the nested structure
+			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
+
+			return {
+				...processVoiceNoteCounts(note),
+				tags,
+			};
+		});
 
 		res.status(200).json({
 			...result,
