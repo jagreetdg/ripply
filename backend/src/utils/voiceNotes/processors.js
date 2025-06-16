@@ -17,6 +17,12 @@ const processVoiceNoteCounts = (note) => {
 		comments: note.comments?.[0]?.count || 0,
 		plays: note.plays?.[0]?.count || 0,
 		shares: note.shares?.[0]?.count || 0,
+		// Extract tags if they exist (for cases where tags weren't already processed)
+		tags: note.tags
+			? Array.isArray(note.tags) && typeof note.tags[0] === "string"
+				? note.tags
+				: note.tags.map((tag) => tag.tag_name)
+			: [],
 	};
 };
 

@@ -82,6 +82,18 @@ export const useSearch = ({
         console.log('loadDiscoveryContent: Fetching discovery posts');
         const posts = await getDiscoveryPosts(userId);
         console.log('loadDiscoveryContent: Received discovery posts', posts?.length || 0);
+        if (posts && posts.length > 0) {
+          console.log('loadDiscoveryContent: First discovery post structure:', {
+            id: posts[0].id,
+            title: posts[0].title,
+            likes: posts[0].likes,
+            comments: posts[0].comments,
+            plays: posts[0].plays,
+            shares: posts[0].shares,
+            tags: posts[0].tags,
+            hasInteractionCounts: typeof posts[0].likes === 'number' && typeof posts[0].comments === 'number'
+          });
+        }
         setDiscoveryPosts(posts || []);
         setDiscoveryContentLoaded((prev) => ({ ...prev, posts: true }));
       } else if (tab === 'users') {

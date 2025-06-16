@@ -284,9 +284,15 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 	}
 
 	// Calculate discovery scores and sort
-	const processedPosts = discoveryPosts.map((post) =>
-		calculateDiscoveryScore(post, preferredTags, likedCreators)
-	);
+	const processedPosts = discoveryPosts.map((post) => {
+		const scoredPost = calculateDiscoveryScore(
+			post,
+			preferredTags,
+			likedCreators
+		);
+		// Process the counts to convert from Supabase aggregation format to simple numbers
+		return processVoiceNoteCounts(scoredPost);
+	});
 
 	const finalPosts = processedPosts
 		.sort((a, b) => b.discoveryScore - a.discoveryScore)
