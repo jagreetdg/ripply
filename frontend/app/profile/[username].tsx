@@ -8,6 +8,7 @@ import {
 	Text,
 	Animated,
 	RefreshControl,
+	TouchableOpacity,
 } from "react-native";
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
 import { VoiceNotesList } from "../../components/profile/voice-notes-list/VoiceNotesList";
@@ -77,8 +78,33 @@ export default function ProfileByUsernameScreen() {
 				const profile = await getUserProfileByUsername(params.username);
 				if (!profile) throw new Error("Profile not found");
 				setUserProfile(profile);
-				setFollowerCount((profile as any).follower_count || 0);
-				setFollowingCount((profile as any).following_count || 0);
+
+				// Load follower/following counts separately since they're not in the profile response
+				console.log("Loading follower/following counts for user:", profile.id);
+				try {
+					const [followerCountData, followingCountData] = await Promise.all([
+						fetch(
+							`https://ripply-backend.onrender.com/api/users/${profile.id}/follower-count`
+						).then((res) => res.json()),
+						fetch(
+							`https://ripply-backend.onrender.com/api/users/${profile.id}/following-count`
+						).then((res) => res.json()),
+					]);
+
+					console.log("Follower count response:", followerCountData);
+					console.log("Following count response:", followingCountData);
+
+					setFollowerCount(followerCountData?.count || 0);
+					setFollowingCount(followingCountData?.count || 0);
+				} catch (countError) {
+					console.error(
+						"Error fetching follower/following counts:",
+						countError
+					);
+					// Set to 0 if can't fetch counts
+					setFollowerCount(0);
+					setFollowingCount(0);
+				}
 
 				// Load voice notes and shared notes
 				setLoadingVoiceNotes(true);
@@ -314,13 +340,13 @@ export default function ProfileByUsernameScreen() {
 					/>
 				</Animated.View>
 
-				{/* Stats section */}
+				{/* Stats */}
 				<ProfileStats
-					followingCount={profileData.followingCount}
-					voiceNotesCount={profileData.voiceNotes.length}
-					followerCount={profileData.followerCount}
-					onFollowingPress={handleFollowingPress}
-					onFollowersPress={handleFollowersPress}
+					followerCount={followerCount}
+					voiceNotesCount={voiceNotes.length}
+					followingCount={followingCount}
+					onFollowersPress={() => setShowFollowersPopup(true)}
+					onFollowingPress={() => setShowFollowingPopup(true)}
 				/>
 
 				{/* Action button */}

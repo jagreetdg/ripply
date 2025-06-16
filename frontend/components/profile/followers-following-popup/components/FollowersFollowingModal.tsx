@@ -68,12 +68,19 @@ export const FollowersFollowingModal: React.FC<
 		onClose();
 	};
 
-	const renderUserItem = ({ item }: { item: UserType }) => (
+	const renderUserItem = ({
+		item,
+		index,
+	}: {
+		item: UserType;
+		index: number;
+	}) => (
 		<UserItem
 			user={item}
 			currentUserId={currentUserId}
 			onProfilePress={onProfilePress}
 			onFollowChange={onFollowChange}
+			isLast={index === users.length - 1}
 		/>
 	);
 

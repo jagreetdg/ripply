@@ -80,7 +80,7 @@ export default function GoogleCallback() {
 
 					// Update user context
 					console.log("[Auth Flow] Updating user context");
-					setUser({
+					await setUser({
 						id: userData.user.id,
 						username: userData.user.username,
 						email: userData.user.email,

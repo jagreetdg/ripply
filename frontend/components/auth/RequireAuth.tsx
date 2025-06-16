@@ -1,12 +1,12 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { View, ActivityIndicator, Platform } from "react-native";
 import { useRouter, usePathname } from "expo-router";
-import { View, ActivityIndicator } from "react-native";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 
-type RequireAuthProps = {
+interface RequireAuthProps {
 	children: React.ReactNode;
-};
+}
 
 /**
  * A component that protects routes by requiring authentication.
@@ -18,6 +18,7 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 	const { colors } = useTheme();
 	const router = useRouter();
 	const pathname = usePathname();
+	const [hasNavigated, setHasNavigated] = useState(false);
 
 	// Public routes that don't require authentication
 	const publicRoutes = [
@@ -38,53 +39,61 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 	// Handle authentication-based routing
 	useEffect(() => {
 		// Wait for loading to complete before making routing decisions
-		if (loading) return;
+		if (loading || hasNavigated) return;
 
-		// Case 1: User is NOT authenticated and trying to access protected route
-		if (!user && !isPublicRoute) {
-			console.log(
-				"[DEBUG] RequireAuth - Unauthenticated user on protected route, redirecting to landing"
-			);
-			console.log("[DEBUG] RequireAuth - From pathname:", pathname);
+		const navigateWithRetry = (path: string, reason: string) => {
+			console.log(`[DEBUG] RequireAuth - ${reason}`);
+			setHasNavigated(true);
 
-			// Use setTimeout to ensure navigation happens after current render cycle
-			setTimeout(() => {
+			const navigate = () => {
 				try {
-					router.replace("/");
+					router.replace(path);
 				} catch (error) {
-					console.error("[DEBUG] RequireAuth - Navigation error:", error);
-					// Fallback: try again after a short delay
+					console.error(`[DEBUG] RequireAuth - Navigation error:`, error);
+					// Retry after a short delay
 					setTimeout(() => {
 						try {
-							router.replace("/");
+							router.replace(path);
 						} catch (retryError) {
 							console.error(
-								"[DEBUG] RequireAuth - Retry navigation failed:",
+								`[DEBUG] RequireAuth - Retry navigation failed:`,
 								retryError
 							);
 						}
 					}, 100);
 				}
-			}, 0);
+			};
+
+			// Use requestAnimationFrame for web, setTimeout for native
+			if (Platform.OS === "web") {
+				requestAnimationFrame(navigate);
+			} else {
+				setTimeout(navigate, 0);
+			}
+		};
+
+		// Case 1: User is NOT authenticated and trying to access protected route
+		if (!user && !isPublicRoute) {
+			navigateWithRetry(
+				"/",
+				"Unauthenticated user on protected route, redirecting to landing"
+			);
 		}
 
 		// Case 2: User IS authenticated and on landing page
+		// Only redirect if we're specifically on the root path to avoid conflicts
 		if (user && pathname === "/") {
-			console.log(
-				"[DEBUG] RequireAuth - Authenticated user on landing page, redirecting to home"
+			navigateWithRetry(
+				"/(tabs)/home",
+				"Authenticated user on landing page, redirecting to home"
 			);
-			setTimeout(() => {
-				try {
-					router.replace("/(tabs)/home");
-				} catch (error) {
-					console.error(
-						"[DEBUG] RequireAuth - Navigation to home error:",
-						error
-					);
-				}
-			}, 0);
 		}
-	}, [user, loading, router, pathname, isPublicRoute]);
+	}, [user, loading, router, pathname, isPublicRoute, hasNavigated]);
+
+	// Reset navigation flag when pathname changes
+	useEffect(() => {
+		setHasNavigated(false);
+	}, [pathname]);
 
 	// Show loading if we're still loading user data
 	if (loading) {

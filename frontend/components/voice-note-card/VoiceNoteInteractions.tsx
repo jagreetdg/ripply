@@ -6,8 +6,8 @@ import {
 	Animated,
 	ActivityIndicator,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { formatNumber } from "./VoiceNoteCardUtils"; // Path remains ./
+import { Feather, MaterialIcons } from "@expo/vector-icons";
+import { formatNumber } from "./VoiceNoteCardUtils";
 
 interface VoiceNoteInteractionsProps {
 	styles: any;
@@ -110,8 +110,8 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 						]}
 					>
 						<Animated.View>
-							<Feather
-								name={isLiked ? "heart" : "heart"}
+							<MaterialIcons
+								name={isLiked ? "favorite" : "favorite-border"}
 								size={18}
 								color={likedColor}
 								style={isLiked ? { transform: [{ scale: 1.05 }] } : {}}

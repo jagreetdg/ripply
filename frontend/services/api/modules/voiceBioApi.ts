@@ -24,7 +24,7 @@ export interface CreateVoiceBioData {
  */
 export const getVoiceBio = async (userId: string): Promise<VoiceBio | null> => {
   try {
-    const response = await apiRequest(ENDPOINTS.VOICE_BIO(userId));
+    const response = await apiRequest(ENDPOINTS.VOICE_BIO(userId), { requiresAuth: false });
     return response;
   } catch (error: any) {
     // If it's a 404 or "Voice bio not found", that's expected - user doesn't have a voice bio

@@ -122,10 +122,12 @@ export const Toast: React.FC<ToastProps> = ({
 			style={{
 				position: "absolute",
 				top: 0,
-				left: 20,
-				right: 20,
+				left: 0,
+				right: 0,
 				zIndex: 9999,
 				transform: [{ translateY: slideAnim }],
+				alignItems: "center", // Center the toast horizontally
+				paddingHorizontal: 20, // Add horizontal padding to prevent edge touching
 			}}
 		>
 			<View
@@ -143,6 +145,8 @@ export const Toast: React.FC<ToastProps> = ({
 					shadowOpacity: 0.25,
 					shadowRadius: 3.84,
 					elevation: 5,
+					maxWidth: "90%", // Limit maximum width to 90% of screen
+					minWidth: 250, // Set minimum width for very short messages
 				}}
 			>
 				<MaterialIcons
@@ -156,7 +160,8 @@ export const Toast: React.FC<ToastProps> = ({
 						color: "white",
 						fontSize: 16,
 						fontWeight: "500",
-						flex: 1,
+						flexShrink: 1, // Allow text to shrink if needed
+						marginRight: 8, // Add some space before the close button
 					}}
 				>
 					{message}

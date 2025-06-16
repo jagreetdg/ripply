@@ -24,7 +24,7 @@ export const search = async (params: SearchParams): Promise<SearchResults> => {
     const queryString = new URLSearchParams(params as any).toString();
     const endpoint = `/api/search?${queryString}`;
     
-    const response = await apiRequest(endpoint);
+    const response = await apiRequest(endpoint, { requiresAuth: false });
     
     return {
       users: response.users || [],
@@ -44,7 +44,7 @@ export const search = async (params: SearchParams): Promise<SearchResults> => {
  */
 export const getTrendingSearches = async () => {
   try {
-    const response = await apiRequest('/api/search/trending');
+    const response = await apiRequest('/api/search/trending', { requiresAuth: false });
     return response.trending || [];
   } catch (error) {
     console.error('Error getting trending searches:', error);
@@ -58,7 +58,7 @@ export const getTrendingSearches = async () => {
 export const getSearchSuggestions = async (query: string) => {
   try {
     const params = new URLSearchParams({ query });
-    const response = await apiRequest(`/api/search/suggestions?${params}`);
+    const response = await apiRequest(`/api/search/suggestions?${params}`, { requiresAuth: false });
     return response.suggestions || [];
   } catch (error) {
     console.error('Error getting search suggestions:', error);

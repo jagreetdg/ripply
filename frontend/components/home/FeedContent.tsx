@@ -15,7 +15,6 @@ import { useRouter } from "expo-router";
 import { VoiceNoteCard } from "../voice-note-card/VoiceNoteCard";
 import { useTheme } from "../../context/ThemeContext";
 import { FeedItem } from "../../hooks/useFeedData";
-import { checkShareStatus } from "../../services/api";
 import { useUser } from "../../context/UserContext";
 
 // Define a constant for header height to match the one in home.tsx
@@ -65,6 +64,36 @@ export function FeedContent({
 		if (feedItems.length > 0) {
 			console.log(`[DEBUG] FeedContent received ${feedItems.length} items`);
 
+			// Check for duplicate IDs in the feed
+			const ids = feedItems.map((item) => item.id);
+			const uniqueIds = new Set(ids);
+			if (ids.length !== uniqueIds.size) {
+				console.error(
+					`[DEBUG] DUPLICATE KEYS DETECTED! Total items: ${ids.length}, Unique IDs: ${uniqueIds.size}`
+				);
+
+				// Find and log duplicates
+				const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+				console.error(`[DEBUG] Duplicate IDs:`, [...new Set(duplicates)]);
+
+				// Log detailed info about duplicate items
+				duplicates.forEach((dupId) => {
+					const duplicateItems = feedItems.filter((item) => item.id === dupId);
+					console.error(
+						`[DEBUG] Items with ID ${dupId}:`,
+						duplicateItems.map((item) => ({
+							id: item.id,
+							voiceNoteId: item.voiceNote.id,
+							userId: item.userId,
+							isShared: item.isShared,
+							sharedBy: item.sharedBy?.id,
+						}))
+					);
+				});
+			} else {
+				console.log(`[DEBUG] All ${ids.length} feed item IDs are unique ✓`);
+			}
+
 			// Check for original vs shared posts
 			const sharedItems = feedItems.filter((item) => item.isShared === true);
 			const originalItems = feedItems.filter((item) => item.isShared === false);
@@ -98,44 +127,9 @@ export function FeedContent({
 		}
 	}, [feedItems]);
 
-	// Add state to track which voice notes the current user has shared
-	const [sharedStatusMap, setSharedStatusMap] = useState<
-		Record<string, boolean>
-	>({});
-
-	// Fetch share status for all voice notes
-	useEffect(() => {
-		const checkShareStatuses = async () => {
-			if (!currentUser?.id || feedItems.length === 0) return;
-
-			console.log(`Checking share status for ${feedItems.length} feed items`);
-			const statusMap: Record<string, boolean> = {};
-
-			// Check each voice note
-			for (const item of feedItems) {
-				try {
-					const isShared = await checkShareStatus(
-						item.voiceNote.id,
-						currentUser.id
-					);
-					statusMap[item.voiceNote.id] = isShared;
-					console.log(
-						`Voice note ${item.voiceNote.id} is shared by current user: ${isShared}`
-					);
-				} catch (error) {
-					console.error(
-						`Error checking share status for ${item.voiceNote.id}:`,
-						error
-					);
-					statusMap[item.voiceNote.id] = false;
-				}
-			}
-
-			setSharedStatusMap(statusMap);
-		};
-
-		checkShareStatuses();
-	}, [feedItems, currentUser?.id]);
+	// Note: Removed sharedStatusMap state and the performance-heavy useEffect
+	// that was making individual API calls for each voice note.
+	// Each VoiceNoteCard will handle its own repost status via useVoiceNoteCard hook.
 
 	// Calculate the padding needed to account for the header
 	// Use contentInsetTop if provided, otherwise calculate default
@@ -217,6 +211,22 @@ export function FeedContent({
 		return null;
 	};
 
+	// Handle share status change - no longer needed to maintain local state
+	// Each VoiceNoteCard manages its own state via useVoiceNoteCard hook
+	const handleShareStatusChanged = useCallback(
+		(voiceNoteId: string, isShared: boolean) => {
+			console.log(
+				`[FEED] Share status changed for ${voiceNoteId}: ${isShared}`
+			);
+		},
+		[]
+	);
+
+	// Handle voice note unshared - no longer needed to maintain local state
+	const handleVoiceNoteUnshared = useCallback((voiceNoteId: string) => {
+		console.log(`[FEED] Voice note unshared: ${voiceNoteId}`);
+	}, []);
+
 	// Render individual feed item for FlatList
 	const renderFeedItem = useCallback(
 		({ item }: { item: FeedItem }) => (
@@ -239,17 +249,25 @@ export function FeedContent({
 					username={item.username}
 					userAvatarUrl={item.userAvatar}
 					timePosted={item.timePosted}
-					isShared={sharedStatusMap[item.voiceNote.id] || false}
+					currentUserId={currentUser?.id}
 					sharedBy={item.sharedBy}
 					showRepostAttribution={item.isShared === true}
 					onUserProfilePress={() =>
 						onUserProfilePress(item.userId, item.username)
 					}
 					onPlayPress={() => onPlayVoiceNote(item.voiceNote.id, item.userId)}
+					onShareStatusChanged={handleShareStatusChanged}
+					onVoiceNoteUnshared={handleVoiceNoteUnshared}
 				/>
 			</View>
 		),
-		[sharedStatusMap, onUserProfilePress, onPlayVoiceNote]
+		[
+			onUserProfilePress,
+			onPlayVoiceNote,
+			currentUser?.id,
+			handleShareStatusChanged,
+			handleVoiceNoteUnshared,
+		]
 	);
 
 	// Render footer loading indicator for infinite scroll

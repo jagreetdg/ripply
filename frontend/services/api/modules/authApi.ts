@@ -1,4 +1,4 @@
-import { apiRequest, ENDPOINTS, setAuthToken, removeAuthToken } from "../config";
+import { apiRequest, ENDPOINTS, setAuthToken, removeAuthToken, getStoredUser, setStoredUser, removeStoredUser } from "../config";
 
 export interface LoginRequest {
   email: string;
@@ -38,11 +38,18 @@ export interface CheckEmailResponse {
 // Get current user from storage
 export const getCurrentUser = async () => {
   try {
-    // This function should get user data from storage or make an API call
-    // For now, let's return null to avoid the error and let verifyToken handle auth
-    return null;
+    console.log('[PERF] getCurrentUser - Checking AsyncStorage for stored user data');
+    const userData = await getStoredUser();
+    
+    if (userData) {
+      console.log('[PERF] getCurrentUser - Found stored user data');
+      return userData;
+    } else {
+      console.log('[PERF] getCurrentUser - No stored user data found');
+      return null;
+    }
   } catch (error) {
-    console.error("Error getting current user:", error);
+    console.error("Error getting current user from storage:", error);
     return null;
   }
 };
@@ -59,9 +66,14 @@ export const login = async (loginData: LoginRequest): Promise<AuthResponse> => {
       }
     );
 
-    // Store the token
+    // Store the token and user data
     if (data.token) {
       await setAuthToken(data.token);
+    }
+    
+    if (data.user) {
+      console.log('[PERF] login - Storing user data in AsyncStorage');
+      await setStoredUser(data.user);
     }
 
     return data;
@@ -83,9 +95,14 @@ export const register = async (registerData: RegisterRequest): Promise<AuthRespo
       }
     );
 
-    // Store the token
+    // Store the token and user data
     if (data.token) {
       await setAuthToken(data.token);
+    }
+    
+    if (data.user) {
+      console.log('[PERF] register - Storing user data in AsyncStorage');
+      await setStoredUser(data.user);
     }
 
     return data;
@@ -105,8 +122,10 @@ export const logout = async (): Promise<void> => {
     console.error("Error during logout:", error);
     // Continue with local cleanup even if server logout fails
   } finally {
-    // Always remove the token locally
+    // Always remove the token and user data locally
+    console.log('[PERF] logout - Clearing stored auth data');
     await removeAuthToken();
+    await removeStoredUser();
   }
 };
 
@@ -125,7 +144,7 @@ export const verifyToken = async (): Promise<AuthResponse> => {
 export const checkUsername = async (username: string): Promise<CheckUsernameResponse> => {
   try {
     const data = await apiRequest<CheckUsernameResponse>(
-      `${ENDPOINTS.CHECK_USERNAME}?username=${encodeURIComponent(username)}`,
+      `${ENDPOINTS.CHECK_USERNAME}/${encodeURIComponent(username)}`,
       { requiresAuth: false }
     );
     return data;
@@ -139,7 +158,7 @@ export const checkUsername = async (username: string): Promise<CheckUsernameResp
 export const checkEmail = async (email: string): Promise<CheckEmailResponse> => {
   try {
     const data = await apiRequest<CheckEmailResponse>(
-      `${ENDPOINTS.CHECK_EMAIL}?email=${encodeURIComponent(email)}`,
+      `${ENDPOINTS.CHECK_EMAIL}/${encodeURIComponent(email)}`,
       { requiresAuth: false }
     );
     return data;

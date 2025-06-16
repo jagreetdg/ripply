@@ -1,20 +1,46 @@
-import { useState, useRef } from 'react';
-import { Audio } from 'expo-av';
+import { useState, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
+import { Audio } from 'expo-av';
 
-export interface UseAudioPlaybackProps {
-  audioUri?: string | null;
+interface AudioPlaybackProps {
+  recordingUri?: string | null;
+  existingAudioUrl?: string | null;
 }
 
-export const useAudioPlayback = ({ audioUri }: UseAudioPlaybackProps = {}) => {
-  const [isPlaying, setIsPlaying] = useState(false);
+interface AudioPlaybackState {
+  sound: Audio.Sound | null;
+  isPlaying: boolean;
+  playbackPosition: number;
+}
+
+interface AudioPlaybackActions {
+  playRecording: () => Promise<void>;
+  pausePlayback: () => Promise<void>;
+  stopPlayback: () => Promise<void>;
+  unloadSound: () => Promise<void>;
+}
+
+export const useAudioPlayback = ({
+  recordingUri,
+  existingAudioUrl,
+}: AudioPlaybackProps): AudioPlaybackState & AudioPlaybackActions => {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const playbackPosition = useRef(0);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
 
   const onPlaybackStatusUpdate = (status: any) => {
     if (status.isLoaded) {
       playbackPosition.current = status.positionMillis;
-      
+
       if (status.didJustFinish) {
         setIsPlaying(false);
         playbackPosition.current = 0;
@@ -22,11 +48,9 @@ export const useAudioPlayback = ({ audioUri }: UseAudioPlaybackProps = {}) => {
     }
   };
 
-  const playAudio = async (uri?: string) => {
-    const sourceUri = uri || audioUri;
-    
-    if (!sourceUri) {
-      Alert.alert('Error', 'No audio available to play.');
+  const playRecording = async () => {
+    if (!recordingUri && !existingAudioUrl) {
+      Alert.alert('Error', 'No recording available to play.');
       return;
     }
 
@@ -36,24 +60,25 @@ export const useAudioPlayback = ({ audioUri }: UseAudioPlaybackProps = {}) => {
         await sound.playFromPositionAsync(playbackPosition.current);
       } else {
         // Create a new sound object
+        const source = recordingUri || existingAudioUrl || '';
         const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: sourceUri },
+          { uri: source },
           { shouldPlay: true },
           onPlaybackStatusUpdate
         );
         setSound(newSound);
       }
-      
+
       setIsPlaying(true);
     } catch (error) {
-      console.error('Failed to play audio:', error);
-      Alert.alert('Error', 'Failed to play audio. Please try again.');
+      console.error('Failed to play recording:', error);
+      Alert.alert('Error', 'Failed to play recording. Please try again.');
     }
   };
 
-  const pauseAudio = async () => {
+  const pausePlayback = async () => {
     if (!sound) return;
-    
+
     try {
       await sound.pauseAsync();
       setIsPlaying(false);
@@ -62,9 +87,9 @@ export const useAudioPlayback = ({ audioUri }: UseAudioPlaybackProps = {}) => {
     }
   };
 
-  const stopAudio = async () => {
+  const stopPlayback = async () => {
     if (!sound) return;
-    
+
     try {
       await sound.stopAsync();
       setIsPlaying(false);
@@ -74,7 +99,7 @@ export const useAudioPlayback = ({ audioUri }: UseAudioPlaybackProps = {}) => {
     }
   };
 
-  const unloadAudio = async () => {
+  const unloadSound = async () => {
     if (sound) {
       try {
         await sound.unloadAsync();
@@ -82,16 +107,21 @@ export const useAudioPlayback = ({ audioUri }: UseAudioPlaybackProps = {}) => {
         setIsPlaying(false);
         playbackPosition.current = 0;
       } catch (error) {
-        console.error('Failed to unload audio:', error);
+        console.error('Failed to unload sound:', error);
       }
     }
   };
 
   return {
+    // State
+    sound,
     isPlaying,
-    playAudio,
-    pauseAudio,
-    stopAudio,
-    unloadAudio,
+    playbackPosition: playbackPosition.current,
+
+    // Actions
+    playRecording,
+    pausePlayback,
+    stopPlayback,
+    unloadSound,
   };
 }; 

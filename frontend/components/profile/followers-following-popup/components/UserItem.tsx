@@ -11,6 +11,7 @@ export const UserItem: React.FC<UserItemProps> = ({
 	currentUserId,
 	onProfilePress,
 	onFollowChange,
+	isLast = false,
 }) => {
 	const { colors } = useTheme();
 
@@ -21,7 +22,13 @@ export const UserItem: React.FC<UserItemProps> = ({
 	};
 
 	return (
-		<View style={[styles.userItem, { borderBottomColor: colors.border }]}>
+		<View
+			style={[
+				styles.userItem,
+				{ borderBottomColor: colors.border },
+				isLast && { borderBottomWidth: 0 },
+			]}
+		>
 			<TouchableOpacity
 				style={styles.userInfoLeft}
 				onPress={handleProfilePress}

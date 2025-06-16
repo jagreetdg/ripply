@@ -5,7 +5,7 @@
 /**
  * Format a timestamp into Twitter-style relative time format
  * @param timestamp - Date string or Date object
- * @returns Formatted string like "10m", "5hr", "2d", etc.
+ * @returns Formatted string like "10m", "5hr", "2d", or "2024/01/12" for older posts
  */
 export const formatTimeAgo = (timestamp: string | Date): string => {
 	if (!timestamp) return "";
@@ -46,18 +46,12 @@ export const formatTimeAgo = (timestamp: string | Date): string => {
 		return `${diffInDays}d`;
 	}
 
-	// More than 7 days - show actual date
-	const options: Intl.DateTimeFormatOptions = {
-		month: "short",
-		day: "numeric",
-	};
-
-	// If it's from a different year, include the year
-	if (postTime.getFullYear() !== now.getFullYear()) {
-		options.year = "numeric";
-	}
-
-	return postTime.toLocaleDateString("en-US", options);
+	// More than 7 days - show Twitter-style date format (YYYY/MM/DD)
+	const year = postTime.getFullYear();
+	const month = String(postTime.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+	const day = String(postTime.getDate()).padStart(2, '0');
+	
+	return `${year}/${month}/${day}`;
 };
 
 /**

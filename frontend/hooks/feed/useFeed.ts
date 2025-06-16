@@ -76,6 +76,14 @@ export const useFeed = () => {
         setFeedItems(prev => {
           const existingIds = new Set(prev.map(item => item.id));
           const newItems = formattedData.filter(item => !existingIds.has(item.id));
+          
+          // Debug logging for duplicate detection
+          if (formattedData.length !== newItems.length) {
+            const duplicateCount = formattedData.length - newItems.length;
+            console.log(`[INFINITE_SCROLL] Filtered out ${duplicateCount} duplicate items`);
+            console.log(`[INFINITE_SCROLL] Total items: ${formattedData.length}, New items: ${newItems.length}`);
+          }
+          
           return [...prev, ...newItems];
         });
         setCurrentPage(pageToLoad);

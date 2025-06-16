@@ -84,7 +84,7 @@ export default function LoginScreen() {
 				console.log("Login successful:", response.user);
 
 				// Update the user context with proper type casting to match User interface
-				setUser({
+				await setUser({
 					id: response.user.id,
 					username: response.user.username,
 					email: response.user.email,

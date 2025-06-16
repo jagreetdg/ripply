@@ -47,13 +47,13 @@ export const hasUserRepostedVoiceNote = async (
 
     console.log("[SHARE DEBUG] hasUserRepostedVoiceNote - Raw API response:", JSON.stringify(response, null, 2));
     
-    const hasReposted = Boolean(response?.isShared || response?.shared);
+    // Handle the new backend response format
+    const hasReposted = Boolean(response?.isShared);
     console.log("[SHARE DEBUG] hasUserRepostedVoiceNote - Processed result:", { 
       voiceNoteId, 
       userId, 
       hasReposted,
-      responseIsShared: response?.isShared,
-      responseShared: response?.shared
+      responseIsShared: response?.isShared
     });
     
     return hasReposted;
@@ -83,28 +83,21 @@ export const toggleRepost = async (
   try {
     console.log("[SHARE DEBUG] toggleRepost - Starting toggle:", { voiceNoteId, userId });
     console.log("[SHARE DEBUG] toggleRepost - API endpoint:", ENDPOINTS.VOICE_NOTE_REPOST(voiceNoteId));
+    console.log("[SHARE DEBUG] toggleRepost - Request body:", { user_id: userId });
     
     const response = await apiRequest(
       ENDPOINTS.VOICE_NOTE_REPOST(voiceNoteId),
       {
         method: "POST",
-        // No body needed - backend gets user ID from authentication
+        body: { user_id: userId },
       }
     );
 
     console.log("[SHARE DEBUG] toggleRepost - Raw API response:", JSON.stringify(response, null, 2));
 
+    // Handle the new backend response format
     const isReposted = response?.isShared === true;
-    let repostCount = 0;
-    
-    if (typeof response?.shareCount === "number") {
-      repostCount = response.shareCount;
-      console.log("[SHARE DEBUG] toggleRepost - Share count from response:", repostCount);
-    } else {
-      console.log("[SHARE DEBUG] toggleRepost - No share count in response, fetching separately");
-      repostCount = await getRepostCount(voiceNoteId);
-      console.log("[SHARE DEBUG] toggleRepost - Share count from separate call:", repostCount);
-    }
+    const repostCount = typeof response?.shareCount === "number" ? response.shareCount : 0;
 
     const result = {
       isReposted,
@@ -135,7 +128,7 @@ export const getRepostCount = async (voiceNoteId: string): Promise<number> => {
   }
 
   try {
-    const endpoint = `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`;
+    const endpoint = ENDPOINTS.VOICE_NOTE_SHARES(voiceNoteId);
     console.log("[SHARE DEBUG] getRepostCount - Starting request:", { voiceNoteId, endpoint });
     
     const response = await apiRequest(endpoint);
@@ -176,7 +169,7 @@ export const getReposters = async (voiceNoteId: string): Promise<any[]> => {
   }
 
   try {
-    const endpoint = `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/shares`;
+    const endpoint = ENDPOINTS.VOICE_NOTE_SHARES(voiceNoteId);
     console.log("[SHARE DEBUG] getReposters - Starting request:", { voiceNoteId, endpoint });
     
     const response = await apiRequest(endpoint);

@@ -9,6 +9,7 @@ export const API_BASE_URL =
 
 // Storage keys
 export const TOKEN_KEY = '@ripply_auth_token';
+export const USER_KEY = '@ripply_user';
 
 // API Endpoints
 export const ENDPOINTS = {
@@ -16,7 +17,7 @@ export const ENDPOINTS = {
   LOGIN: '/api/auth/login',
   REGISTER: '/api/auth/register',
   LOGOUT: '/api/auth/logout',
-  CURRENT_USER: '/api/users/me',
+  CURRENT_USER: '/api/auth/me',
   VERIFY_TOKEN: '/api/auth/verify-token',
   CHECK_USERNAME: '/api/auth/check-username',
   CHECK_EMAIL: '/api/auth/check-email',
@@ -37,8 +38,8 @@ export const ENDPOINTS = {
   VOICE_NOTE_UNLIKE: (id: string) => `/api/voice-notes/${id}/unlike`,
   VOICE_NOTE_COMMENTS: (id: string) => `/api/voice-notes/${id}/comments`,
   VOICE_NOTE_PLAY: (id: string) => `/api/voice-notes/${id}/play`,
-  VOICE_NOTE_SHARE: (id: string) => `/api/voice-notes/${id}/share`,
-  VOICE_NOTE_REPOST: (id: string) => `/api/voice-notes/${id}/share`,
+  VOICE_NOTE_SHARE: (voiceNoteId: string) => `/api/voice-notes/${voiceNoteId}/share`,
+  VOICE_NOTE_REPOST: (voiceNoteId: string) => `/api/voice-notes/${voiceNoteId}/share`,
   CHECK_LIKE_STATUS: (id: string) => `/api/voice-notes/${id}/likes/check`,
   CHECK_SHARE_STATUS: (id: string) => `/api/voice-notes/${id}/shares/check`,
 
@@ -79,7 +80,7 @@ export const ENDPOINTS = {
   VOICE_NOTE_LIKES: (id: string) => `/api/voice-notes/${id}/likes`,
   VOICE_NOTE_TAGS: (id: string) => `/api/voice-notes/${id}/tags`,
   VOICE_NOTES_BY_TAG: (tagName: string) => `/api/voice-notes/tags/${tagName}`,
-  VOICE_NOTE_SHARES: (id: string) => `/api/voice-notes/${id}/shares`,
+  VOICE_NOTE_SHARES: (voiceNoteId: string) => `/api/voice-notes/${voiceNoteId}/shares`,
 };
 
 // Request configuration
@@ -118,6 +119,35 @@ export const removeAuthToken = async (): Promise<void> => {
   }
 };
 
+// Get stored user data
+export const getStoredUser = async (): Promise<any | null> => {
+  try {
+    const userData = await AsyncStorage.getItem(USER_KEY);
+    return userData ? JSON.parse(userData) : null;
+  } catch (error) {
+    console.error('Error getting stored user data:', error);
+    return null;
+  }
+};
+
+// Set stored user data
+export const setStoredUser = async (user: any): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch (error) {
+    console.error('Error setting stored user data:', error);
+  }
+};
+
+// Remove stored user data
+export const removeStoredUser = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(USER_KEY);
+  } catch (error) {
+    console.error('Error removing stored user data:', error);
+  }
+};
+
 // Generic API request function
 export const apiRequest = async <T = any>(
   endpoint: string,
@@ -135,6 +165,7 @@ export const apiRequest = async <T = any>(
   // Log feed-related requests for debugging  
   const isFeedRelated = endpoint.includes('/feed') || endpoint.includes('/voice-notes');
   const isShareRelated = endpoint.includes('/share') || endpoint.includes('/repost');
+  const isProfileUpdate = endpoint.includes('/users/') && method === 'PUT';
   
   if (isFeedRelated) {
     console.log(`🚨 API CONFIG - Feed request: ${method} ${url}`);
@@ -163,8 +194,10 @@ export const apiRequest = async <T = any>(
       if (isShareRelated) {
         console.log('[SHARE DEBUG] API Request - Auth token present');
       }
-    } else if (isShareRelated) {
-      console.log(`[SHARE DEBUG] API Request - No auth token found`);
+    } else {
+      if (isShareRelated) {
+        console.log(`[SHARE DEBUG] API Request - No auth token found`);
+      }
     }
   }
 
@@ -179,69 +212,65 @@ export const apiRequest = async <T = any>(
     requestOptions.body = JSON.stringify(body);
   }
 
+
+
   try {
     const response = await fetch(url, requestOptions);
-    
+
     if (isShareRelated) {
       console.log(`[SHARE DEBUG] API Response - Status: ${response.status} ${response.statusText}`);
     }
-    
-    // Handle non-JSON responses
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (isShareRelated) {
-          console.error(`[SHARE DEBUG] API Error - Non-JSON response:`, errorText);
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const responseText = await response.text();
-      if (isShareRelated) {
-        console.log(`[SHARE DEBUG] API Response - Text:`, responseText);
-      }
-      return responseText as unknown as T;
-    }
 
-    const data = await response.json();
-    
-    if (isShareRelated) {
-      console.log(`[SHARE DEBUG] API Response - Data:`, JSON.stringify(data, null, 2));
-    }
-
+    // Handle non-ok responses
     if (!response.ok) {
-      if (isShareRelated) {
-        console.error(`[SHARE DEBUG] API Error - HTTP ${response.status}:`, data);
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      
+      // Try to get error details from response body
+      try {
+        const errorText = await response.text();
+        
+        // Try to parse as JSON first
+        try {
+          const errorData = JSON.parse(errorText);
+          throw { 
+            status: response.status, 
+            message: errorData.message || errorData.error || errorMessage,
+            data: errorData 
+          };
+        } catch (parseError) {
+          // If not JSON, use the text response
+          throw { 
+            status: response.status, 
+            message: errorText || errorMessage,
+            data: null 
+          };
+        }
+      } catch (textError) {
+        throw { 
+          status: response.status, 
+          message: errorMessage,
+          data: null 
+        };
       }
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
     }
 
-    return data;
-  } catch (error) {
-    if (isShareRelated) {
-      console.error(`[SHARE DEBUG] API Request Failed:`, {
-        method,
-        url,
-        error: error instanceof Error ? error.message : String(error)
-      });
+    // Handle successful responses
+    const responseText = await response.text();
+    
+    // Try to parse as JSON
+    try {
+      const data = JSON.parse(responseText);
+      return data;
+    } catch (parseError) {
+      return responseText as T;
     }
-    console.error(`[API Error] ${method} ${url}:`, error);
+
+  } catch (error: any) {
+    if (isShareRelated) {
+      console.error(`[SHARE DEBUG] API Error:`, error);
+    }
+    
+    // Re-throw the error for handling by the caller
     throw error;
   }
-};
-
-// Specialized request methods
-export const get = <T = any>(endpoint: string, requiresAuth = true): Promise<T> =>
-  apiRequest<T>(endpoint, { method: 'GET', requiresAuth });
-
-export const post = <T = any>(endpoint: string, body?: any, requiresAuth = true): Promise<T> =>
-  apiRequest<T>(endpoint, { method: 'POST', body, requiresAuth });
-
-export const put = <T = any>(endpoint: string, body?: any, requiresAuth = true): Promise<T> =>
-  apiRequest<T>(endpoint, { method: 'PUT', body, requiresAuth });
-
-export const patch = <T = any>(endpoint: string, body?: any, requiresAuth = true): Promise<T> =>
-  apiRequest<T>(endpoint, { method: 'PATCH', body, requiresAuth });
-
-export const del = <T = any>(endpoint: string, requiresAuth = true): Promise<T> =>
-  apiRequest<T>(endpoint, { method: 'DELETE', requiresAuth }); 
+}; 

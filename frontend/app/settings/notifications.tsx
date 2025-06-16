@@ -5,13 +5,13 @@ import {
 	Text,
 	TouchableOpacity,
 	ScrollView,
-	Switch,
 	Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTheme } from "../../context/ThemeContext";
+import { CustomToggle } from "../../components/common";
 
 interface NotificationSettingProps {
 	icon: keyof typeof Feather.glyphMap;
@@ -50,16 +50,7 @@ const NotificationSetting: React.FC<NotificationSettingProps> = ({
 					{description}
 				</Text>
 			</View>
-			<Switch
-				value={value}
-				onValueChange={onValueChange}
-				trackColor={{
-					false: colors.tabIconDefault + "40",
-					true: colors.tint + "60",
-				}}
-				thumbColor={value ? colors.tint : colors.background}
-				ios_backgroundColor={colors.tabIconDefault + "40"}
-			/>
+			<CustomToggle value={value} onValueChange={onValueChange} />
 		</View>
 	);
 };

@@ -294,7 +294,13 @@ export default function SearchScreen() {
 		<SafeAreaView
 			style={[styles.container, { backgroundColor: colors.background }]}
 		>
-			<View style={{ paddingTop: insets.top, paddingHorizontal: 16 }}>
+			<View
+				style={{
+					paddingTop: insets.top + 16,
+					paddingHorizontal: 16,
+					paddingBottom: 12,
+				}}
+			>
 				<SearchBar
 					value={searchQuery}
 					onChangeText={handleSearchChange}

@@ -29,7 +29,7 @@ export const searchUsers = async (query: string): Promise<UserSearchResult[]> =>
     const url = `${ENDPOINTS.SEARCH_USERS}?term=${encodeURIComponent(query)}`;
     console.log("[SEARCH DEBUG] Searching users:", { query, url });
     
-    const data = await apiRequest<UserSearchResult[]>(url);
+    const data = await apiRequest<UserSearchResult[]>(url, { requiresAuth: false });
     console.log("[SEARCH DEBUG] Users search response:", { 
       query, 
       resultCount: data?.length || 0,
@@ -84,10 +84,40 @@ export const unfollowUser = async (userId: string): Promise<boolean> => {
  */
 export const getUserFollowers = async (userId: string): Promise<UserSearchResult[]> => {
   try {
-    const data = await apiRequest<UserSearchResult[]>(
+    const response = await apiRequest<{ data: any[], pagination?: any }>(
       ENDPOINTS.USER_FOLLOWERS(userId)
     );
-    return data || [];
+    
+    console.log(`[FOLLOWERS API] Raw response for user ${userId}:`, response);
+    
+    // Handle both direct array and wrapped { data: [] } responses
+    const followers = Array.isArray(response) ? response : (response?.data || []);
+    
+    // Transform the backend response to match frontend expectations
+    const transformedFollowers = followers.map((item: any) => {
+      // If the item has a users field (from backend join), extract it
+      if (item.users) {
+        return {
+          id: item.users.id,
+          username: item.users.username,
+          display_name: item.users.display_name,
+          avatar_url: item.users.avatar_url,
+          is_verified: item.users.is_verified || false,
+        };
+      }
+      
+      // If it's already in the expected format
+      return {
+        id: item.id,
+        username: item.username,
+        display_name: item.display_name,
+        avatar_url: item.avatar_url,
+        is_verified: item.is_verified || false,
+      };
+    });
+    
+    console.log(`[FOLLOWERS API] Transformed ${transformedFollowers.length} followers`);
+    return transformedFollowers;
   } catch (error) {
     console.error("Error fetching user followers:", error);
     return [];
@@ -101,10 +131,40 @@ export const getUserFollowers = async (userId: string): Promise<UserSearchResult
  */
 export const getUserFollowing = async (userId: string): Promise<UserSearchResult[]> => {
   try {
-    const data = await apiRequest<UserSearchResult[]>(
+    const response = await apiRequest<{ data: any[], pagination?: any }>(
       ENDPOINTS.USER_FOLLOWING(userId)
     );
-    return data || [];
+    
+    console.log(`[FOLLOWING API] Raw response for user ${userId}:`, response);
+    
+    // Handle both direct array and wrapped { data: [] } responses
+    const following = Array.isArray(response) ? response : (response?.data || []);
+    
+    // Transform the backend response to match frontend expectations
+    const transformedFollowing = following.map((item: any) => {
+      // If the item has a users field (from backend join), extract it
+      if (item.users) {
+        return {
+          id: item.users.id,
+          username: item.users.username,
+          display_name: item.users.display_name,
+          avatar_url: item.users.avatar_url,
+          is_verified: item.users.is_verified || false,
+        };
+      }
+      
+      // If it's already in the expected format
+      return {
+        id: item.id,
+        username: item.username,
+        display_name: item.display_name,
+        avatar_url: item.avatar_url,
+        is_verified: item.is_verified || false,
+      };
+    });
+    
+    console.log(`[FOLLOWING API] Transformed ${transformedFollowing.length} following`);
+    return transformedFollowing;
   } catch (error) {
     console.error("Error fetching user following:", error);
     return [];

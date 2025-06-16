@@ -76,69 +76,11 @@ export const useFollowersFollowingPopup = (
 			);
 
 			if (isFollowersTab) {
-				const followers = await getUserFollowers(userId);
-				console.log(`Found ${followers?.length || 0} followers entries`);
-
-				// Process and normalize the data - handle null or undefined responses
-				if (state.mounted && Array.isArray(followers) && followers.length > 0) {
-					userData = followers
-						.map((item: FollowRelation) => {
-							if (!item) return null;
-
-							// Check if user data is in the 'users' field (from the API)
-							if (item.users) {
-								return {
-									id: item.follower_id || item.users.id || "",
-									username: item.users.username || "",
-									display_name: item.users.display_name || "",
-									avatar_url: item.users.avatar_url || null,
-									is_verified: item.users.is_verified || false,
-								};
-							}
-
-							// If the API returns users directly
-							return {
-								id: item.id || item.follower_id || "",
-								username: item.username || "",
-								display_name: item.display_name || "",
-								avatar_url: item.avatar_url || null,
-								is_verified: item.is_verified || false,
-							};
-						})
-						.filter(Boolean) as UserType[]; // Filter out null entries
-				}
+				userData = await getUserFollowers(userId);
+				console.log(`Successfully fetched ${userData.length} followers`);
 			} else {
-				const following = await getUserFollowing(userId);
-				console.log(`Found ${following?.length || 0} following entries`);
-
-				// Process and normalize the data - handle null or undefined responses
-				if (state.mounted && Array.isArray(following) && following.length > 0) {
-					userData = following
-						.map((item: FollowRelation) => {
-							if (!item) return null;
-
-							// Check if user data is in the 'users' field (from the API)
-							if (item.users) {
-								return {
-									id: item.following_id || item.users.id || "",
-									username: item.users.username || "",
-									display_name: item.users.display_name || "",
-									avatar_url: item.users.avatar_url || null,
-									is_verified: item.users.is_verified || false,
-								};
-							}
-
-							// If the API returns users directly
-							return {
-								id: item.id || item.following_id || "",
-								username: item.username || "",
-								display_name: item.display_name || "",
-								avatar_url: item.avatar_url || null,
-								is_verified: item.is_verified || false,
-							};
-						})
-						.filter(Boolean) as UserType[]; // Filter out null entries
-				}
+				userData = await getUserFollowing(userId);
+				console.log(`Successfully fetched ${userData.length} following`);
 			}
 
 			// Filter out any empty/invalid entries

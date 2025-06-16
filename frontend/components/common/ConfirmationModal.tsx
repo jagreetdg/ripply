@@ -125,12 +125,7 @@ export function ConfirmationModal({
 							onPress={onConfirm}
 							activeOpacity={0.8}
 						>
-							<LinearGradient
-								colors={[finalConfirmColor, finalConfirmColor]}
-								style={styles.confirmButtonGradient}
-							>
-								<Text style={styles.confirmButtonText}>{confirmText}</Text>
-							</LinearGradient>
+							<Text style={styles.confirmButtonText}>{confirmText}</Text>
 						</TouchableOpacity>
 					</View>
 				</View>
@@ -144,16 +139,19 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
+		zIndex: 9999,
 	},
 	backdropOverlay: {
 		...StyleSheet.absoluteFillObject,
-		backgroundColor: "rgba(0, 0, 0, 0.5)",
+		backgroundColor: "rgba(0, 0, 0, 0.6)",
+		zIndex: 9999,
 	},
 	container: {
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
 		paddingHorizontal: 20,
+		zIndex: 10000,
 	},
 	modal: {
 		width: "100%",
@@ -209,11 +207,6 @@ const styles = StyleSheet.create({
 		fontWeight: "500",
 	},
 	confirmButton: {
-		overflow: "hidden",
-	},
-	confirmButtonGradient: {
-		flex: 1,
-		width: "100%",
 		justifyContent: "center",
 		alignItems: "center",
 	},

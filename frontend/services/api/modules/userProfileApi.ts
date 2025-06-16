@@ -10,7 +10,7 @@ import { User, UpdateUserProfileParams, UserPhoto, UpdateUserPhotosParams } from
  * @returns User profile data
  */
 export const getUserProfile = (userId: string): Promise<User> => {
-  return apiRequest(`${ENDPOINTS.USERS}/${userId}`);
+  return apiRequest(`${ENDPOINTS.USERS}/${userId}`, { requiresAuth: false });
 };
 
 /**
@@ -25,7 +25,7 @@ export const updateUserProfile = (
 ): Promise<User> => {
   return apiRequest(`${ENDPOINTS.USERS}/${userId}`, {
     method: "PUT",
-    body: JSON.stringify(userData),
+    body: userData,
   });
 };
 
@@ -42,7 +42,8 @@ export const getUserProfileByUsername = async (username: string): Promise<User |
       : username;
 
     const response = await apiRequest<User | { data: User }>(
-      `${ENDPOINTS.USERS}/username/${cleanUsername}`
+      `${ENDPOINTS.USERS}/username/${cleanUsername}`,
+      { requiresAuth: false }
     );
 
     // The response might be the data directly or have a data property
@@ -75,7 +76,7 @@ export const updateUserVerificationStatus = async (
 ): Promise<User> => {
   return apiRequest(`${ENDPOINTS.USERS}/${userId}/verify`, {
     method: "PATCH",
-    body: JSON.stringify({ is_verified: isVerified }),
+    body: { is_verified: isVerified },
   });
 };
 
@@ -91,6 +92,6 @@ export const updateUserPhotos = async (
 ): Promise<User> => {
   return apiRequest(`${ENDPOINTS.USERS}/${userId}/photos`, {
     method: "PATCH",
-    body: JSON.stringify({ photos }),
+    body: { photos },
   });
 }; 

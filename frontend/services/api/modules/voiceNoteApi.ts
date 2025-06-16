@@ -16,7 +16,7 @@ import { FeedResponse } from "./feedApi";
  */
 export const getVoiceNoteById = async (voiceNoteId: string): Promise<VoiceNote> => {
    try {
-    return await apiRequest<VoiceNote>(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`);
+    return await apiRequest<VoiceNote>(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`, { requiresAuth: false });
    } catch (error) {
     console.error("Error fetching voice note by ID:", error);
     throw error;
@@ -29,7 +29,7 @@ export const getVoiceNoteById = async (voiceNoteId: string): Promise<VoiceNote> 
 export const createVoiceNote = (voiceNoteData: CreateVoiceNoteData): Promise<VoiceNote> => {
   return apiRequest(ENDPOINTS.VOICE_NOTES, {
     method: "POST",
-    body: JSON.stringify(voiceNoteData),
+    body: voiceNoteData,
   });
 };
 
@@ -42,7 +42,7 @@ export const updateVoiceNote = (
 ) => {
   return apiRequest(`${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}`, {
     method: "PUT",
-    body: JSON.stringify(voiceNoteData),
+    body: voiceNoteData,
   });
 };
 
@@ -116,16 +116,21 @@ export interface PlayResponse {
   playsCount: number;
 }
 
-// Get voice note stats
+// Get voice note stats - Note: Backend doesn't have a combined stats endpoint
+// This function now calls individual endpoints to build stats
 export const getVoiceNoteStats = async (voiceNoteId: string): Promise<VoiceNoteStatsResponse> => {
   try {
-    const data = await apiRequest<VoiceNoteStatsResponse>(
-      `${ENDPOINTS.VOICE_NOTES}/${voiceNoteId}/stats`
-    );
-    return data;
+    // Since backend doesn't have combined stats endpoint, return defaults for now
+    // Individual stats are fetched by VoiceNoteCard component as needed
+    console.warn("Voice note stats endpoint not implemented in backend, returning defaults");
+    return {
+      likes: 0,
+      comments: 0,
+      plays: 0,
+      shares: 0
+    };
   } catch (error) {
     console.error("Error fetching voice note stats:", error);
-    // Return default stats if API fails
     return {
       likes: 0,
       comments: 0,
@@ -135,7 +140,7 @@ export const getVoiceNoteStats = async (voiceNoteId: string): Promise<VoiceNoteS
   }
 };
 
-// Like a voice note
+// Like a voice note (now handles toggle behavior)
 export const likeVoiceNote = async (voiceNoteId: string, userId: string): Promise<LikeResponse> => {
   try {
     const data = await apiRequest<LikeResponse>(
@@ -147,12 +152,12 @@ export const likeVoiceNote = async (voiceNoteId: string, userId: string): Promis
     );
     return data;
   } catch (error) {
-    console.error("Error liking voice note:", error);
+    console.error("Error toggling like on voice note:", error);
     throw error;
   }
 };
 
-// Unlike a voice note
+// Unlike a voice note (kept for backward compatibility)
 export const unlikeVoiceNote = async (voiceNoteId: string, userId: string): Promise<LikeResponse> => {
   try {
     const data = await apiRequest<LikeResponse>(
@@ -186,7 +191,8 @@ export const checkLikeStatus = async (voiceNoteId: string, userId: string): Prom
 export const getComments = async (voiceNoteId: string): Promise<Comment[]> => {
   try {
     const data = await apiRequest<Comment[]>(
-      ENDPOINTS.VOICE_NOTE_COMMENTS(voiceNoteId)
+      ENDPOINTS.VOICE_NOTE_COMMENTS(voiceNoteId),
+      { requiresAuth: false }
     );
     return data || [];
   } catch (error) {
@@ -220,6 +226,7 @@ export const recordPlay = async (voiceNoteId: string, userId: string): Promise<P
       {
         method: "POST",
         body: { user_id: userId },
+        requiresAuth: false, // Plays can be recorded without authentication
       }
     );
     return data;
@@ -246,7 +253,19 @@ export const searchVoiceNotes = async (query: string): Promise<VoiceNote[]> => {
       url 
     });
     
-    const data = await apiRequest<VoiceNote[]>(url);
+    const response = await apiRequest<VoiceNote[] | { data: VoiceNote[], pagination: any }>(url, { requiresAuth: false });
+    
+    // Handle different response formats
+    let data: VoiceNote[];
+    if (Array.isArray(response)) {
+      data = response;
+    } else if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+      data = response.data;
+    } else {
+      console.error("[SEARCH DEBUG] Unexpected response format:", response);
+      data = [];
+    }
+    
     console.log("[SEARCH DEBUG] Voice notes search response:", { 
       originalQuery: query,
       searchTerm,

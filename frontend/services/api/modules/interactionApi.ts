@@ -12,7 +12,7 @@ export const recordShare = async (voiceNoteId: string, userId: string) => {
   try {
     const response = await apiRequest(ENDPOINTS.VOICE_NOTE_SHARE(voiceNoteId), {
       method: "POST",
-      body: JSON.stringify({ user_id: userId }),
+      body: { user_id: userId },
     });
     
     return response;

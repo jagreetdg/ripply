@@ -50,7 +50,7 @@ export const SearchBar = ({
 	};
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.card }]}>
+		<View style={styles.container}>
 			<TouchableOpacity
 				activeOpacity={0.9}
 				style={[
@@ -108,7 +108,8 @@ export const SearchBar = ({
 const styles = StyleSheet.create({
 	container: {
 		width: "100%",
-		padding: 12,
+		// Remove padding and background to blend with main body
+		// padding: 12,
 		// backgroundColor: "#fff", // Theme color applied inline
 	},
 	searchContainer: {

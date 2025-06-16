@@ -5,7 +5,6 @@ import {
 	Text,
 	TouchableOpacity,
 	ScrollView,
-	Switch,
 	Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -220,10 +219,13 @@ export default function SettingsScreen() {
 										styles.themeOptionButton,
 										{
 											backgroundColor:
-												theme === option.value
-													? colors.tint
-													: colors.background,
+												theme === option.value ? colors.tint : colors.card,
 											borderColor: colors.tint,
+											shadowColor: colors.shadow,
+											shadowOffset: { width: 0, height: 1 },
+											shadowOpacity: theme === option.value ? 0.2 : 0.1,
+											shadowRadius: 2,
+											elevation: theme === option.value ? 3 : 1,
 										},
 									]}
 									onPress={() => setTheme(option.value as "light" | "dark")}
@@ -233,13 +235,7 @@ export default function SettingsScreen() {
 											styles.themeOptionText,
 											{
 												color:
-													theme === option.value
-														? option.value === "light"
-															? Colors.light.card
-															: isDarkMode
-															? colors.background
-															: colors.text
-														: colors.tint,
+													theme === option.value ? colors.card : colors.tint,
 											},
 										]}
 									>
@@ -372,16 +368,19 @@ const styles = StyleSheet.create({
 	themeToggleContainer: {
 		flexDirection: "row",
 		alignItems: "center",
+		gap: 8,
 	},
 	themeOptionButton: {
-		paddingVertical: 6,
-		paddingHorizontal: 12,
-		borderRadius: 16,
+		paddingVertical: 8,
+		paddingHorizontal: 16,
+		borderRadius: 20,
 		borderWidth: 1.5,
-		marginLeft: 8,
+		minWidth: 60,
+		alignItems: "center",
 	},
 	themeOptionText: {
 		fontSize: 14,
-		fontWeight: "500",
+		fontWeight: "600",
+		textAlign: "center",
 	},
 });

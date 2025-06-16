@@ -167,19 +167,16 @@ export const fetchFeed = async (
 };
 
 // Fetch recommended voice notes for a user
+// Note: Backend doesn't have recommendations endpoint yet
 export const fetchRecommendedVoiceNotes = async (
   userId: string,
   limit: number = 5
 ): Promise<VoiceNote[]> => {
   try {
-    const endpoint = `${ENDPOINTS.VOICE_NOTES}/recommended?userId=${userId}&limit=${limit}`;
-    
-    const data = await apiRequest<VoiceNote[]>(endpoint, {
-      method: "GET",
-      requiresAuth: true,
-    });
-
-    return Array.isArray(data) ? data : [];
+    console.warn("Recommended voice notes endpoint not implemented in backend, returning empty array");
+    // Backend doesn't have recommendations endpoint yet
+    // Return empty array until backend implements this feature
+    return [];
   } catch (error) {
     console.error("Error fetching recommended voice notes:", error);
     return [];

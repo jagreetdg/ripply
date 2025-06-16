@@ -1,5 +1,5 @@
 /**
- * Format a date as a relative time string like Twitter (e.g. "2h", "5m", "46s", or date)
+ * Format a date as a relative time string like Twitter (e.g. "2h", "5m", "46s", or "2024/01/12")
  * @param date - The date to format
  * @returns Formatted relative time
  */
@@ -30,16 +30,10 @@ export const formatRelativeTime = (date: Date): string => {
     return `${diffInDays}d`;
   }
   
-  // More than 7 days - show actual date
-  const options: Intl.DateTimeFormatOptions = { 
-    month: 'short', 
-    day: 'numeric'
-  };
+  // More than 7 days - show Twitter-style date format (YYYY/MM/DD)
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+  const day = String(date.getDate()).padStart(2, '0');
   
-  // If it's from a different year, include the year
-  if (date.getFullYear() !== now.getFullYear()) {
-    options.year = 'numeric';
-  }
-  
-  return date.toLocaleDateString('en-US', options);
+  return `${year}/${month}/${day}`;
 }; 

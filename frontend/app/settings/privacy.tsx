@@ -5,13 +5,13 @@ import {
 	Text,
 	TouchableOpacity,
 	ScrollView,
-	Switch,
 	Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTheme } from "../../context/ThemeContext";
+import { CustomToggle } from "../../components/common";
 
 interface PrivacySettingProps {
 	icon: keyof typeof Feather.glyphMap;
@@ -60,16 +60,7 @@ const PrivacySetting: React.FC<PrivacySettingProps> = ({
 			</View>
 			{rightContent ||
 				(value !== undefined && onValueChange ? (
-					<Switch
-						value={value}
-						onValueChange={onValueChange}
-						trackColor={{
-							false: colors.tabIconDefault + "40",
-							true: colors.tint + "60",
-						}}
-						thumbColor={value ? colors.tint : colors.background}
-						ios_backgroundColor={colors.tabIconDefault + "40"}
-					/>
+					<CustomToggle value={value} onValueChange={onValueChange} />
 				) : onPress ? (
 					<Feather
 						name="chevron-right"

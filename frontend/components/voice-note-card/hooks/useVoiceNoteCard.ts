@@ -86,6 +86,10 @@ export const useVoiceNoteCard = ({
 	const sharePulse = useRef(new Animated.Value(1)).current;
 	const commentPulse = useRef(new Animated.Value(1)).current;
 
+	// State for preventing rapid clicks
+	const [isLikeProcessing, setIsLikeProcessing] = useState(false);
+	const [isShareProcessing, setIsShareProcessing] = useState(false);
+
 	// Add comprehensive state logging for debugging
 	const logShareState = useCallback((context: string) => {
 		console.log(`[SHARE DEBUG] State Snapshot - ${context}:`, {
@@ -184,12 +188,20 @@ export const useVoiceNoteCard = ({
 		}
 	}, [onProfilePress, onUserProfilePress]);
 
-	// Handle like press with optimistic updates
+	// Handle like press with optimistic updates and debouncing
 	const handleLikePress = useCallback(async () => {
 		if (!loggedInUserId) {
 			Alert.alert("Please log in", "You need to be logged in to like voice notes.");
 			return;
 		}
+
+		// Prevent rapid clicking
+		if (isLikeProcessing) {
+			console.log("[LIKE DEBUG] Like already processing, ignoring click");
+			return;
+		}
+
+		setIsLikeProcessing(true);
 
 		// Store original values for potential rollback
 		const originalIsLiked = isLiked;
@@ -234,33 +246,53 @@ export const useVoiceNoteCard = ({
 		// Start animations immediately
 		Animated.parallel([scaleAnimation, pulseAnimation]).start();
 
-		// API request in background
+		// API request in background - use likeVoiceNote for toggle behavior
 		try {
-			if (originalIsLiked) {
-				const result = await unlikeVoiceNote(voiceNote.id, loggedInUserId);
-				// Update with server response if different
-				if (typeof result.likesCount === 'number' && result.likesCount !== newLikesCount) {
-					setLikesCount(result.likesCount);
-				}
-			} else {
-				const result = await likeVoiceNote(voiceNote.id, loggedInUserId);
-				// Update with server response if different
-				if (typeof result.likesCount === 'number' && result.likesCount !== newLikesCount) {
-					setLikesCount(result.likesCount);
-				}
+			const result = await likeVoiceNote(voiceNote.id, loggedInUserId);
+			
+			// Only update if the server response differs from our optimistic update
+			// This prevents unnecessary state changes that cause visual flickering
+			if (result.isLiked !== newIsLiked) {
+				console.log(`[LIKE DEBUG] Server state differs from optimistic update, correcting:`, {
+					optimistic: newIsLiked,
+					server: result.isLiked
+				});
+				setIsLiked(result.isLiked);
 			}
+			
+			if (typeof result.likesCount === 'number' && result.likesCount !== newLikesCount) {
+				console.log(`[LIKE DEBUG] Server count differs from optimistic update, correcting:`, {
+					optimistic: newLikesCount,
+					server: result.likesCount
+				});
+				setLikesCount(result.likesCount);
+			}
+			
+			console.log(`Voice note ${result.isLiked ? 'liked' : 'unliked'} successfully`);
 		} catch (error) {
 			console.error("Error toggling like:", error);
 			
-			// ROLLBACK: Revert optimistic update
+			// ROLLBACK: Revert optimistic update on error only
 			setIsLiked(originalIsLiked);
 			setLikesCount(originalLikesCount);
 			
 			// Show user-friendly error message
-			const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+			let errorMessage = 'Unknown error occurred';
+			if (error instanceof Error) {
+				if (error.message.includes('429') || error.message.includes('already in progress')) {
+					errorMessage = 'Please wait a moment before trying again';
+				} else {
+					errorMessage = error.message;
+				}
+			}
 			showToast(`Failed to ${originalIsLiked ? 'unlike' : 'like'}: ${errorMessage}`, 'error');
+		} finally {
+			// Re-enable clicking after a short delay
+			setTimeout(() => {
+				setIsLikeProcessing(false);
+			}, 500);
 		}
-	}, [loggedInUserId, likeScale, likePulse, voiceNote.id, isLiked, likesCount, showToast]);
+	}, [loggedInUserId, likeScale, likePulse, voiceNote.id, isLiked, likesCount, showToast, isLikeProcessing]);
 
 	// Handle comment press
 	const handleCommentPress = useCallback(() => {
@@ -304,18 +336,25 @@ export const useVoiceNoteCard = ({
 		// Show plays information or navigate to plays list
 	}, []);
 
-	// Handle repost press with optimistic updates
+	// Handle repost press with optimistic updates and debouncing
 	const handleRepostPress = useCallback(async () => {
 		if (!loggedInUserId) {
-			console.log("[SHARE DEBUG] handleRepostPress - No logged in user, showing alert");
-			Alert.alert("Please log in", "You need to be logged in to repost voice notes.");
+			Alert.alert("Please log in", "You need to be logged in to share voice notes.");
 			return;
 		}
 
+		// Prevent rapid clicking
+		if (isShareProcessing) {
+			console.log("[SHARE DEBUG] Share already processing, ignoring click");
+			return;
+		}
+
+		setIsShareProcessing(true);
+
 		// Store original values for potential rollback
+		const originalHasUserInteracted = hasUserInteracted;
 		const originalRepostedState = isRepostedEffective;
 		const originalSharesCount = sharesCount;
-		const originalHasUserInteracted = hasUserInteracted;
 
 		// OPTIMISTIC UPDATE: Immediately update UI
 		const newRepostedState = !isRepostedEffective;
@@ -325,47 +364,43 @@ export const useVoiceNoteCard = ({
 		setInternalRepostedState(newRepostedState);
 		setSharesCount(newSharesCount);
 
-		logShareState("Optimistic Update Applied");
-
-		console.log("[SHARE DEBUG] handleRepostPress - Optimistic update:", {
+		console.log("[SHARE DEBUG] handleRepostPress - Optimistic update applied:", {
 			voiceNoteId: voiceNote.id,
 			userId: loggedInUserId,
-			oldState: originalRepostedState,
+			originalState: originalRepostedState,
 			newState: newRepostedState,
-			oldCount: originalSharesCount,
+			originalCount: originalSharesCount,
 			newCount: newSharesCount
 		});
 
-		// Enhanced share button animation with scale and pulse effects
+		// Enhanced share button animation
 		const scaleAnimation = Animated.sequence([
 			Animated.timing(shareScale, {
-				toValue: 1.35,
-				duration: 160,
+				toValue: 1.2,
+				duration: 150,
 				useNativeDriver: true,
 			}),
 			Animated.spring(shareScale, {
 				toValue: 1,
-				tension: 220,
-				friction: 9,
+				tension: 200,
+				friction: 8,
 				useNativeDriver: true,
 			}),
 		]);
 
-		// Pulse effect for state change
 		const pulseAnimation = Animated.sequence([
 			Animated.timing(sharePulse, {
-				toValue: 1.2,
-				duration: 120,
+				toValue: 1.1,
+				duration: 100,
 				useNativeDriver: true,
 			}),
 			Animated.timing(sharePulse, {
 				toValue: 1,
-				duration: 250,
+				duration: 200,
 				useNativeDriver: true,
 			}),
 		]);
 
-		// Start animations immediately
 		Animated.parallel([scaleAnimation, pulseAnimation]).start();
 
 		// API request in background
@@ -374,20 +409,19 @@ export const useVoiceNoteCard = ({
 			const result = await toggleRepost(voiceNote.id, loggedInUserId);
 			console.log("[SHARE DEBUG] handleRepostPress - toggleRepost result:", result);
 			
-			const serverRepostedState = result.isReposted;
-			
-			// Update with server response if different from optimistic update
-			if (serverRepostedState !== newRepostedState) {
-				console.log("[SHARE DEBUG] handleRepostPress - Server state differs, updating:", {
+			// Only update if the server response differs from our optimistic update
+			// This prevents unnecessary state changes that cause visual flickering
+			if (result.isReposted !== newRepostedState) {
+				console.log("[SHARE DEBUG] handleRepostPress - Server state differs from optimistic update, correcting:", {
 					optimistic: newRepostedState,
-					server: serverRepostedState
+					server: result.isReposted
 				});
-				setInternalRepostedState(serverRepostedState);
+				setInternalRepostedState(result.isReposted);
 			}
 			
-			// Update share count from API response (this is the authoritative count)
+			// Only update count if server response differs from optimistic update
 			if (typeof result.repostCount === "number" && result.repostCount !== newSharesCount) {
-				console.log("[SHARE DEBUG] handleRepostPress - Server count differs, updating:", {
+				console.log("[SHARE DEBUG] handleRepostPress - Server count differs from optimistic update, correcting:", {
 					optimistic: newSharesCount,
 					server: result.repostCount
 				});
@@ -396,10 +430,10 @@ export const useVoiceNoteCard = ({
 			
 			if (onShareStatusChanged) {
 				console.log("[SHARE DEBUG] handleRepostPress - Calling onShareStatusChanged callback");
-				onShareStatusChanged(voiceNote.id, serverRepostedState);
+				onShareStatusChanged(voiceNote.id, result.isReposted);
 			}
 
-			if (!serverRepostedState && onVoiceNoteUnshared) {
+			if (!result.isReposted && onVoiceNoteUnshared) {
 				console.log("[SHARE DEBUG] handleRepostPress - Voice note unshared, calling callback");
 				onVoiceNoteUnshared(voiceNote.id);
 			}
@@ -414,18 +448,30 @@ export const useVoiceNoteCard = ({
 				errorStack: error instanceof Error ? error.stack : undefined
 			});
 			
-			// ROLLBACK: Revert optimistic update
+			// ROLLBACK: Revert optimistic update on error only
 			setHasUserInteracted(originalHasUserInteracted);
 			setInternalRepostedState(originalRepostedState);
 			setSharesCount(originalSharesCount);
 			
 			// Show user-friendly error message
-			const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+			let errorMessage = 'Unknown error occurred';
+			if (error instanceof Error) {
+				if (error.message.includes('429') || error.message.includes('already in progress')) {
+					errorMessage = 'Please wait a moment before trying again';
+				} else {
+					errorMessage = error.message;
+				}
+			}
 			showToast(`Failed to ${originalRepostedState ? 'unshare' : 'share'}: ${errorMessage}`, 'error');
 			
 			logShareState("After Rollback");
+		} finally {
+			// Re-enable clicking after a short delay
+			setTimeout(() => {
+				setIsShareProcessing(false);
+			}, 500);
 		}
-	}, [loggedInUserId, shareScale, sharePulse, voiceNote.id, isRepostedEffective, sharesCount, hasUserInteracted, onShareStatusChanged, onVoiceNoteUnshared, logShareState, showToast]);
+	}, [loggedInUserId, shareScale, sharePulse, voiceNote.id, isRepostedEffective, sharesCount, hasUserInteracted, onShareStatusChanged, onVoiceNoteUnshared, logShareState, showToast, isShareProcessing]);
 
 	// Handle share count long press
 	const handleShareCountLongPress = useCallback(() => {

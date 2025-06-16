@@ -23,12 +23,12 @@ const ProfileStats: React.FC<ProfileStatsProps> = ({
 		<View
 			style={[styles.statsContainer, { backgroundColor: colors.background }]}
 		>
-			<TouchableOpacity style={styles.statsItem} onPress={onFollowingPress}>
+			<TouchableOpacity style={styles.statsItem} onPress={onFollowersPress}>
 				<Text style={[styles.statsNumber, { color: colors.text }]}>
-					{followingCount}
+					{followerCount}
 				</Text>
 				<Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
-					Following
+					{followerCount === 1 ? "Follower" : "Followers"}
 				</Text>
 			</TouchableOpacity>
 			<View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
@@ -41,12 +41,12 @@ const ProfileStats: React.FC<ProfileStatsProps> = ({
 				</Text>
 			</TouchableOpacity>
 			<View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
-			<TouchableOpacity style={styles.statsItem} onPress={onFollowersPress}>
+			<TouchableOpacity style={styles.statsItem} onPress={onFollowingPress}>
 				<Text style={[styles.statsNumber, { color: colors.text }]}>
-					{followerCount}
+					{followingCount}
 				</Text>
 				<Text style={[styles.statsLabel, { color: colors.textSecondary }]}>
-					{followerCount === 1 ? "Follower" : "Followers"}
+					Following
 				</Text>
 			</TouchableOpacity>
 		</View>

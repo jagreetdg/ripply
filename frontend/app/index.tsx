@@ -7,37 +7,70 @@ import {
 	Platform,
 	ScrollView,
 	SafeAreaView,
+	TouchableOpacity,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import AuthModal from "../components/auth/AuthModal";
-import { useAuthHandler } from "../hooks/useAuthHandler";
+import { useUser } from "../context/UserContext";
+import { useSocialAuth } from "../hooks/useSocialAuth";
 import HeroSection from "../components/landing/HeroSection";
 import BackgroundRippleEffect from "../components/landing/BackgroundRippleEffect";
+import Colors from "../constants/Colors";
 
 export default function LandingPage() {
 	const [loginModalVisible, setLoginModalVisible] = useState(false);
 	const [signupModalVisible, setSignupModalVisible] = useState(false);
+	const [hasNavigated, setHasNavigated] = useState(false);
 	const router = useRouter();
 
+	const { user, loading: userLoading } = useUser();
 	const {
-		user,
-		isLoading: isAuthLoading,
-		isAuthenticated,
+		isLoading: socialAuthLoading,
 		authError,
 		initiateSocialAuth,
-	} = useAuthHandler();
+	} = useSocialAuth();
+
+	// Combine loading states
+	const isAuthLoading = userLoading || socialAuthLoading;
 
 	// Redirect authenticated users to home page
 	useEffect(() => {
-		if (!isAuthLoading && isAuthenticated && user) {
+		if (!userLoading && user && !hasNavigated) {
 			console.log(
 				"[DEBUG] LandingPage - User is authenticated, redirecting to home"
 			);
-			router.replace("/(tabs)/home");
+			setHasNavigated(true);
+
+			// Use a more robust navigation approach
+			const navigateToHome = () => {
+				try {
+					router.replace("/(tabs)/home");
+				} catch (error) {
+					console.error("[DEBUG] LandingPage - Navigation error:", error);
+					// Retry after a short delay
+					setTimeout(() => {
+						try {
+							router.replace("/(tabs)/home");
+						} catch (retryError) {
+							console.error(
+								"[DEBUG] LandingPage - Retry navigation failed:",
+								retryError
+							);
+						}
+					}, 100);
+				}
+			};
+
+			// Use requestAnimationFrame to ensure navigation happens after render
+			if (Platform.OS === "web") {
+				requestAnimationFrame(navigateToHome);
+			} else {
+				setTimeout(navigateToHome, 0);
+			}
 		}
-	}, [isAuthLoading, isAuthenticated, user, router]);
+	}, [userLoading, user, router, hasNavigated]);
 
 	const handleLoginModalOpen = () => {
 		setLoginModalVisible(true);
@@ -58,7 +91,7 @@ export default function LandingPage() {
 
 	// Don't render landing page if user is authenticated
 	// (they should be redirected to home)
-	if (isAuthenticated && user) {
+	if (user) {
 		return (
 			<View style={styles.container}>
 				<Text style={styles.loadingText}>Redirecting...</Text>
@@ -98,7 +131,7 @@ export default function LandingPage() {
 							onShowSignupModal={handleSignupModalOpen}
 							onGoogleSignIn={() => initiateSocialAuth("google")}
 							onAppleSignIn={() => initiateSocialAuth("apple")}
-							isAuthLoading={isAuthLoading}
+							isAuthLoading={socialAuthLoading}
 						/>
 					</ScrollView>
 				</SafeAreaView>

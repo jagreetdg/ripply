@@ -45,9 +45,18 @@ export function FollowButton({
 		}
 
 		try {
-			console.log(`Checking if user ${user.id} is following ${userId}`);
+			// Only log once per minute to prevent console spam
+			const now = Date.now();
+			const lastLogKey = `follow-check-${userId}`;
+			const lastLogTime = Number(sessionStorage.getItem(lastLogKey) || 0);
+
+			if (now - lastLogTime > 60000) {
+				// 1 minute
+				console.log(`Checking if user ${user.id} is following ${userId}`);
+				sessionStorage.setItem(lastLogKey, now.toString());
+			}
+
 			const isUserFollowing = await isFollowing(userId, user.id);
-			console.log(`Follow status check result: ${isUserFollowing}`);
 			setFollowing(isUserFollowing);
 		} catch (error) {
 			console.error("Error checking follow status:", error);
@@ -90,17 +99,13 @@ export function FollowButton({
 				onFollowChange(newFollowStatus, updatedCount);
 			}
 
-			// Double-check the follow status after a short delay
-			// This ensures the UI matches the server state
-			setTimeout(() => {
-				checkFollowStatus();
-			}, 1000);
+			// Note: Removed aggressive re-checking since we update state optimistically
 		} catch (error) {
 			console.error("Error toggling follow status:", error);
 			// Revert to the previous state in case of error
 			setFollowing((prev) => !prev);
 
-			// Check actual status from server
+			// Only check actual status from server if there was an error
 			checkFollowStatus();
 		} finally {
 			setLoading(false);

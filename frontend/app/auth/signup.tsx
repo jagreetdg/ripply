@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
 	StyleSheet,
 	Text,
 	View,
-	TextInput,
 	Pressable,
 	KeyboardAvoidingView,
 	Platform,
@@ -13,246 +12,46 @@ import {
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Feather } from "@expo/vector-icons";
-import {
-	registerUser,
-	checkUsernameAvailability,
-	checkEmailAvailability,
-} from "../../services/api";
-import { useUser } from "../../context/UserContext";
-
-interface ApiResponse {
-	exists?: boolean;
-	available?: boolean;
-	message?: string;
-	user?: any;
-	token?: string;
-	field?: string;
-	[key: string]: any;
-}
+import { useSignupValidation } from "../../components/auth/hooks/useSignupValidation";
+import { useSignupSubmission } from "../../components/auth/hooks/useSignupSubmission";
+import { FormField } from "../../components/auth/components/FormField";
+import { ErrorMessage } from "../../components/auth/components/ErrorMessage";
 
 export default function SignupScreen() {
 	const router = useRouter();
-	const { user, setUser } = useUser();
-	const [username, setUsername] = useState("");
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
-	const [confirmPassword, setConfirmPassword] = useState("");
-	const [displayName, setDisplayName] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
-	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState("");
 
-	// Field-specific errors
-	const [usernameError, setUsernameError] = useState("");
-	const [emailError, setEmailError] = useState("");
-	const [passwordError, setPasswordError] = useState("");
-	const [confirmPasswordError, setConfirmPasswordError] = useState("");
+	// Custom hooks for form logic
+	const {
+		username,
+		email,
+		password,
+		confirmPassword,
+		displayName,
+		usernameError,
+		emailError,
+		passwordError,
+		confirmPasswordError,
+		isCheckingUsername,
+		isCheckingEmail,
+		isUsernameValid,
+		isEmailValid,
+		setUsername,
+		setEmail,
+		setPassword,
+		setConfirmPassword,
+		setDisplayName,
+		validateForm,
+	} = useSignupValidation();
 
-	// Validation states
-	const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-	const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-	const [isUsernameValid, setIsUsernameValid] = useState(true);
-	const [isEmailValid, setIsEmailValid] = useState(true);
-
-	// Validate username with debounce
-	useEffect(() => {
-		// Clear previous errors
-		setUsernameError("");
-		setIsUsernameValid(true);
-
-		if (!username) return;
-
-		// Basic validation
-		if (username.length < 3) {
-			setUsernameError("Username must be at least 3 characters");
-			setIsUsernameValid(false);
-			return;
-		}
-
-		// Check if username contains only allowed characters
-		if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-			setUsernameError(
-				"Username can only contain letters, numbers, and underscores"
-			);
-			setIsUsernameValid(false);
-			return;
-		}
-
-		// Debounce the API call
-		const timer = setTimeout(async () => {
-			if (username.length >= 3) {
-				setIsCheckingUsername(true);
-				try {
-					const response = (await checkUsernameAvailability(
-						username
-					)) as ApiResponse;
-					if (response && !response.available) {
-						setUsernameError("Username is already taken");
-						setIsUsernameValid(false);
-					}
-				} catch (error: any) {
-					console.error("Error checking username:", error);
-				} finally {
-					setIsCheckingUsername(false);
-				}
-			}
-		}, 500); // 500ms debounce
-
-		return () => clearTimeout(timer);
-	}, [username]);
-
-	// Validate email with debounce
-	useEffect(() => {
-		// Clear previous errors
-		setEmailError("");
-		setIsEmailValid(true);
-
-		if (!email) return;
-
-		// Basic email validation
-		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		if (!emailRegex.test(email)) {
-			setEmailError("Please enter a valid email address");
-			setIsEmailValid(false);
-			return;
-		}
-
-		// Debounce the API call
-		const timer = setTimeout(async () => {
-			if (emailRegex.test(email)) {
-				setIsCheckingEmail(true);
-				try {
-					const response = (await checkEmailAvailability(email)) as ApiResponse;
-					if (response && !response.available) {
-						setEmailError("Email is already registered");
-						setIsEmailValid(false);
-					}
-				} catch (error: any) {
-					console.error("Error checking email:", error);
-				} finally {
-					setIsCheckingEmail(false);
-				}
-			}
-		}, 500); // 500ms debounce
-
-		return () => clearTimeout(timer);
-	}, [email]);
-
-	// Validate password
-	useEffect(() => {
-		// Clear previous errors
-		setPasswordError("");
-
-		if (!password) return;
-
-		if (password.length < 8) {
-			setPasswordError("Password must be at least 8 characters");
-		}
-	}, [password]);
-
-	// Validate confirm password
-	useEffect(() => {
-		// Clear previous errors
-		setConfirmPasswordError("");
-
-		if (!confirmPassword) return;
-
-		if (password !== confirmPassword) {
-			setConfirmPasswordError("Passwords do not match");
-		}
-	}, [confirmPassword, password]);
+	const { isLoading, error, submitSignup } = useSignupSubmission();
 
 	const handleSignup = async () => {
-		// Reset all errors
-		setError("");
-		setUsernameError("");
-		setEmailError("");
-		setPasswordError("");
-		setConfirmPasswordError("");
-
-		// Comprehensive validation
-		let hasError = false;
-
-		if (!username) {
-			setUsernameError("Username is required");
-			hasError = true;
-		} else if (!isUsernameValid) {
-			hasError = true;
-		}
-
-		if (!email) {
-			setEmailError("Email is required");
-			hasError = true;
-		} else if (!isEmailValid) {
-			hasError = true;
-		}
-
-		if (!password) {
-			setPasswordError("Password is required");
-			hasError = true;
-		} else if (password.length < 8) {
-			setPasswordError("Password must be at least 8 characters");
-			hasError = true;
-		}
-
-		if (!confirmPassword) {
-			setConfirmPasswordError("Please confirm your password");
-			hasError = true;
-		} else if (password !== confirmPassword) {
-			setConfirmPasswordError("Passwords do not match");
-			hasError = true;
-		}
-
-		if (hasError) return;
-
-		setIsLoading(true);
-
-		try {
-			// Register the user
-			const userData = {
-				username,
-				email,
-				password,
-				display_name: displayName || username,
-			};
-
-			const response = (await registerUser(userData)) as ApiResponse;
-
-			if (response && response.user && response.token) {
-				// Store user data in local storage or context
-				setUser({
-					id: response.user.id,
-					username: response.user.username,
-					email: response.user.email,
-					display_name: response.user.display_name || response.user.username,
-					avatar_url: response.user.avatar_url || null,
-					bio: response.user.bio || null,
-					is_verified: response.user.is_verified || false,
-					created_at: response.user.created_at,
-					updated_at: response.user.updated_at,
-				});
-				// For now, just redirect to home page
-				router.replace("/(tabs)/home");
-			} else {
-				setError("Registration failed. Please try again.");
-			}
-		} catch (error: any) {
-			console.error("Registration error:", error);
-
-			// Handle specific error types
-			if (error.message && error.message.includes("Username already exists")) {
-				setUsernameError("Username is already taken");
-			} else if (
-				error.message &&
-				error.message.includes("Email already exists")
-			) {
-				setEmailError("Email is already registered");
-			} else {
-				setError(error.message || "Something went wrong. Please try again.");
-			}
-		} finally {
-			setIsLoading(false);
-		}
+		const isFormValid = validateForm();
+		await submitSignup(
+			{ username, email, password, confirmPassword, displayName },
+			isFormValid
+		);
 	};
 
 	return (

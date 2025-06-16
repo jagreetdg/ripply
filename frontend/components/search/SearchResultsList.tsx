@@ -138,7 +138,15 @@ export const SearchResultsList = ({
 					userAvatarUrl={userData.avatar_url}
 					timePosted={formatTimeAgo(item.created_at)}
 					currentUserId={currentUserId}
-					isShared={sharedStatusMap[item.id] || false}
+					isReposted={sharedStatusMap[item.id] || false}
+					onShareStatusChanged={(voiceNoteId: string, isShared: boolean) => {
+						console.log(
+							`[SEARCH] Share status changed for ${voiceNoteId}: ${isShared}`
+						);
+					}}
+					onVoiceNoteUnshared={(voiceNoteId: string) => {
+						console.log(`[SEARCH] Voice note unshared: ${voiceNoteId}`);
+					}}
 				/>
 			</View>
 		);

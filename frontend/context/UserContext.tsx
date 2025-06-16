@@ -10,6 +10,7 @@ import {
 	verifyToken,
 	logout as apiLogout,
 } from "../services/api";
+import { setStoredUser, removeStoredUser } from "../services/api/config";
 
 // Define the User interface
 export interface User {
@@ -32,7 +33,7 @@ interface UserContextType {
 	error: string | null;
 	logout: () => Promise<void>;
 	refreshUser: () => Promise<void>;
-	setUser: React.Dispatch<React.SetStateAction<User | null>>;
+	setUser: (user: React.SetStateAction<User | null>) => Promise<void>;
 }
 
 // Create the context with a default value
@@ -42,7 +43,7 @@ const UserContext = createContext<UserContextType>({
 	error: null,
 	logout: async () => {},
 	refreshUser: async () => {},
-	setUser: () => {},
+	setUser: async () => {},
 });
 
 // Custom hook to use the user context
@@ -54,10 +55,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 	const [loading, setLoading] = useState<boolean>(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// Wrap setUser to add logging
-	const setUser: React.Dispatch<React.SetStateAction<User | null>> = (
-		newUser
-	) => {
+	// Wrap setUser to add logging and persistence
+	const setUser: (
+		user: React.SetStateAction<User | null>
+	) => Promise<void> = async (newUser) => {
 		console.log(
 			"[DEBUG] UserContext - setUser called:",
 			typeof newUser === "function"
@@ -66,7 +67,31 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 				? `user:${newUser.id}`
 				: "null"
 		);
-		setUserState(newUser);
+
+		// Handle function updates
+		if (typeof newUser === "function") {
+			setUserState((prevUser) => {
+				const updatedUser = newUser(prevUser);
+				// Store the updated user data
+				if (updatedUser) {
+					setStoredUser(updatedUser).catch(console.error);
+				} else {
+					removeStoredUser().catch(console.error);
+				}
+				return updatedUser;
+			});
+		} else {
+			setUserState(newUser);
+			// Store user data in AsyncStorage for persistence
+			if (newUser) {
+				console.log("[DEBUG] UserContext - Storing user data for persistence");
+				await setStoredUser(newUser).catch(console.error);
+			} else {
+				console.log("[DEBUG] UserContext - Removing stored user data");
+				await removeStoredUser().catch(console.error);
+			}
+		}
+
 		// When we explicitly set a user, we're no longer loading
 		setLoading(false);
 	};
@@ -101,7 +126,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 					Date.now(),
 					"[PERF] UserContext - Setting user from getCurrentUser"
 				);
-				setUser(userData as User); // setUser also sets loading to false
+				await setUser(userData as User); // setUser also sets loading to false
 			} else {
 				console.log(
 					Date.now(),
@@ -119,13 +144,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 							Date.now(),
 							"[PERF] UserContext - Setting user from verifyToken"
 						);
-						setUser(verifiedUser.user as User); // setUser also sets loading to false
+						await setUser(verifiedUser.user as User); // setUser also sets loading to false
 					} else {
 						console.log(
 							Date.now(), // Added timestamp
 							"[PERF] UserContext - No user from verifyToken, setting user to null via setUser"
 						);
-						setUser(null); // setUser also sets loading to false
+						await setUser(null); // setUser also sets loading to false
 					}
 				} catch (verifyError) {
 					console.error(
@@ -137,7 +162,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 						Date.now(), // Added timestamp
 						"[PERF] UserContext - Token verification failed, setting user to null via setUser"
 					);
-					setUser(null); // setUser also sets loading to false
+					await setUser(null); // setUser also sets loading to false
 				}
 			}
 		} catch (err) {
@@ -151,7 +176,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 				Date.now(), // Added timestamp
 				"[PERF] UserContext - Error in refreshUser, setting user to null via setUser"
 			);
-			setUser(null); // setUser also sets loading to false
+			await setUser(null); // setUser also sets loading to false
 		} finally {
 			clearTimeout(loadingTimeout);
 			// setLoading(false); // setUser above should handle this, or it might cause a flicker if called too early
@@ -182,12 +207,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 		setLoading(true);
 		try {
 			await apiLogout();
-			setUser(null);
+			await setUser(null);
 		} catch (err) {
 			console.error("Error logging out:", err);
 			setError("Failed to logout");
 			// Still clear user state even if logout API fails
-			setUser(null);
+			await setUser(null);
 		} finally {
 			setLoading(false);
 		}

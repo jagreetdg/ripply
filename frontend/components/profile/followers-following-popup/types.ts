@@ -32,6 +32,7 @@ export interface UserItemProps {
 	currentUserId?: string;
 	onProfilePress: (username: string) => void;
 	onFollowChange: (userId: string, isFollowing: boolean, updatedCount?: number) => void;
+	isLast?: boolean;
 }
 
 export interface UserAvatarProps {
