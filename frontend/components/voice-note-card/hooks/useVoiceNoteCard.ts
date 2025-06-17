@@ -84,7 +84,7 @@ export const useVoiceNoteCard = ({
 	const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
 	// Calculate if ALL stats are loading
-	const isLoadingAllStats = !initialDataLoaded || isLoadingLikeStatus || isLoadingRepostStatusInternal || isLoadingSharesCount || isLoadingShareCount;
+	const isLoadingAllStats = !initialDataLoaded || isLoadingLikeStatus || isLoadingRepostStatusInternal || isLoadingSharesCount;
 
 	// Animation refs
 	const likeScale = useRef(new Animated.Value(1)).current;

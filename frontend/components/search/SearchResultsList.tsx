@@ -132,15 +132,39 @@ export const SearchResultsList = ({
 		// Create a voiceNote object with stable data
 		const voiceNoteData = {
 			...item,
-			// Ensure stats are proper numbers
-			likes: typeof item.likes === "number" ? item.likes : 0,
-			comments: typeof item.comments === "number" ? item.comments : 0,
-			plays: typeof item.plays === "number" ? item.plays : 0,
-			shares: typeof item.shares === "number" ? item.shares : 0,
+			// Handle counts properly - backend already processes these to numbers
+			// If they're still in array format, extract the count, otherwise use as-is
+			likes: Array.isArray(item.likes)
+				? item.likes[0]?.count || 0
+				: typeof item.likes === "number"
+				? item.likes
+				: 0,
+			comments: Array.isArray(item.comments)
+				? item.comments[0]?.count || 0
+				: typeof item.comments === "number"
+				? item.comments
+				: 0,
+			plays: Array.isArray(item.plays)
+				? item.plays[0]?.count || 0
+				: typeof item.plays === "number"
+				? item.plays
+				: 0,
+			shares: Array.isArray(item.shares)
+				? item.shares[0]?.count || 0
+				: typeof item.shares === "number"
+				? item.shares
+				: 0,
 			// Ensure user data is properly structured
 			user_id: item.user_id || userData.id,
 			users: userData,
 		};
+
+		console.log(`[SEARCH DEBUG] Processing voice note ${item.id}:`, {
+			originalShares: item.shares,
+			processedShares: voiceNoteData.shares,
+			sharesType: typeof item.shares,
+			isArray: Array.isArray(item.shares),
+		});
 
 		return (
 			<View style={styles.postItemContainer}>
