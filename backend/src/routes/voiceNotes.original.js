@@ -1698,6 +1698,7 @@ router.get("/discovery/posts/:userId", authenticateToken, async (req, res) => {
 				likes:voice_note_likes (count),
 				comments:voice_note_comments (count),
 				plays:voice_note_plays (count),
+				shares:voice_note_shares (count),
 				tags:voice_note_tags (tag_name)
 			`
 			)
@@ -1779,6 +1780,7 @@ router.get("/discovery/posts/:userId", authenticateToken, async (req, res) => {
 					likes:voice_note_likes (count),
 					comments:voice_note_comments (count),
 					plays:voice_note_plays (count),
+					shares:voice_note_shares (count),
 					tags:voice_note_tags (tag_name)
 				`
 				)
