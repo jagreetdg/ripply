@@ -7,6 +7,7 @@
 export * from './voiceNoteApi';
 export * from './feedApi';
 export * from './interactionApi';
+export * from './batchApi';
 
 // Export User modules
 export * from './userApi';

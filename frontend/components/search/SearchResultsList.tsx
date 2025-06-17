@@ -8,6 +8,7 @@ import {
 	ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { SearchTab } from "../../hooks/useSearch";
 import { UserSearchResult } from "./UserSearchResult";
 import { VoiceNoteCard } from "../voice-note-card/VoiceNoteCard";
@@ -44,8 +45,21 @@ export const SearchResultsList = ({
 	previewCount,
 	colors,
 }: SearchResultsListProps) => {
+	const router = useRouter();
+
 	// Only show the data up to the preview count if not showing all
 	const filteredData = showAll ? data : data.slice(0, previewCount);
+
+	// Handle user profile navigation
+	const handleUserProfilePress = (username: string) => {
+		if (username) {
+			console.log("Navigating to profile from search:", username);
+			router.push({
+				pathname: "/profile/[username]",
+				params: { username },
+			});
+		}
+	};
 
 	// Show more button
 	const renderShowMoreButton = () => {
@@ -139,6 +153,11 @@ export const SearchResultsList = ({
 					timePosted={formatTimeAgo(item.created_at)}
 					currentUserId={currentUserId}
 					isReposted={sharedStatusMap[item.id] || false}
+					onUserProfilePress={
+						userData.username
+							? () => handleUserProfilePress(userData.username)
+							: undefined
+					}
 					onShareStatusChanged={(voiceNoteId: string, isShared: boolean) => {
 						console.log(
 							`[SEARCH] Share status changed for ${voiceNoteId}: ${isShared}`

@@ -14,6 +14,7 @@ import {
 	hasUserRepostedVoiceNote,
 	toggleRepost,
 	getRepostCount,
+	batchVoiceNoteStats,
 } from "../../../services/api";
 import { VoiceNoteCardProps, Comment, CommentsResponse } from "../VoiceNoteCardTypes";
 import { normalizePlaysCount } from "../VoiceNoteCardUtils";
@@ -99,49 +100,7 @@ export const useVoiceNoteCard = ({
 	const [isLikeProcessing, setIsLikeProcessing] = useState(false);
 	const [isShareProcessing, setIsShareProcessing] = useState(false);
 
-	// Add comprehensive state logging for debugging
-	const logShareState = useCallback((context: string) => {
-		console.log(`[SHARE DEBUG] State Snapshot - ${context}:`, {
-			voiceNoteId: voiceNote.id,
-			// State values
-			sharesCount,
-			isLoadingShareCount,
-			isRepostedEffective,
-			internalRepostedState,
-			hasUserInteracted,
-			// Loading states
-			isLoadingLikeStatus,
-			isLoadingRepostStatusInternal,
-			isLoadingSharesCount,
-			isLoadingAllStats,
-			initialDataLoaded,
-			// Props
-			isRepostedProp,
-			isLoadingRepostStatusProp: isLoadingRepostStatus,
-			// User
-			loggedInUserId,
-			// Voice note data
-			voiceNoteShares: voiceNote.shares,
-			voiceNoteIsShared: (voiceNote as any).is_shared
-		});
-	}, [
-		voiceNote.id, 
-		voiceNote.shares, 
-		(voiceNote as any).is_shared,
-		sharesCount,
-		isLoadingShareCount,
-		isRepostedEffective,
-		internalRepostedState,
-		hasUserInteracted,
-		isLoadingLikeStatus,
-		isLoadingRepostStatusInternal,
-		isLoadingSharesCount,
-		isLoadingAllStats,
-		initialDataLoaded,
-		isRepostedProp,
-		isLoadingRepostStatus,
-		loggedInUserId
-	]);
+
 
 	// Sync with props when user hasn't interacted yet
 	useEffect(() => {
@@ -158,10 +117,14 @@ export const useVoiceNoteCard = ({
 		setStatsLoaded(false);
 	}, [voiceNote.id, isRepostedProp]);
 
-	// Log state changes for debugging
+	// Log state changes for debugging (simplified)
 	useEffect(() => {
-		logShareState("State Change");
-	}, [sharesCount, isRepostedEffective, isLoadingAllStats, logShareState]);
+		console.log(`[SHARE DEBUG] State Change - ${voiceNote.id}:`, {
+			sharesCount,
+			isRepostedEffective,
+			isLoadingAllStats
+		});
+	}, [voiceNote.id, sharesCount, isRepostedEffective, isLoadingAllStats]);
 
 	// Fetch comments when needed
 	const fetchComments = useCallback(async () => {
@@ -461,7 +424,6 @@ export const useVoiceNoteCard = ({
 			}
 
 			console.log("[SHARE DEBUG] handleRepostPress - Share toggle completed successfully");
-			logShareState("After handleRepostPress");
 		} catch (error) {
 			console.error("[SHARE DEBUG] handleRepostPress - Error:", {
 				voiceNoteId: voiceNote.id,
@@ -485,15 +447,13 @@ export const useVoiceNoteCard = ({
 				}
 			}
 			showToast(`Failed to ${originalRepostedState ? 'unshare' : 'share'}: ${errorMessage}`, 'error');
-			
-			logShareState("After Rollback");
 		} finally {
 			// Re-enable clicking after a short delay
 			setTimeout(() => {
 				setIsShareProcessing(false);
 			}, 500);
 		}
-	}, [loggedInUserId, shareScale, sharePulse, voiceNote.id, isRepostedEffective, sharesCount, hasUserInteracted, onShareStatusChanged, onVoiceNoteUnshared, logShareState, showToast, isShareProcessing]);
+	}, [loggedInUserId, shareScale, sharePulse, voiceNote.id, isRepostedEffective, sharesCount, hasUserInteracted, onShareStatusChanged, onVoiceNoteUnshared, showToast, isShareProcessing]);
 
 	// Handle share count long press
 	const handleShareCountLongPress = useCallback(() => {
@@ -545,11 +505,11 @@ export const useVoiceNoteCard = ({
 		setCommentsCount(prev => prev + 1);
 	}, []);
 
-	// Load initial data
+	// Load initial data using batch API
 	useEffect(() => {
 		const loadInitialData = async () => {
 			if (!voiceNote.id || !loggedInUserId) {
-				console.log("[STATS DEBUG] loadInitialData - Missing requirements:", {
+				console.log("[BATCH DEBUG] loadInitialData - Missing requirements:", {
 					hasVoiceNoteId: !!voiceNote.id,
 					hasLoggedInUserId: !!loggedInUserId
 				});
@@ -561,116 +521,96 @@ export const useVoiceNoteCard = ({
 				return;
 			}
 
-			logShareState("Before loadInitialData");
+			// Prevent multiple calls for the same voice note
+			if (initialDataLoaded) {
+				console.log("[BATCH DEBUG] loadInitialData - Already loaded, skipping:", voiceNote.id);
+				return;
+			}
 
-			console.log("[STATS DEBUG] loadInitialData - Starting for voice note:", {
+			console.log("[BATCH DEBUG] loadInitialData - Starting batch request for voice note:", {
 				voiceNoteId: voiceNote.id,
 				userId: loggedInUserId,
 				isRepostedProp
 			});
 
 			try {
-				// Start loading all stats in parallel
+				// Set ALL loading states including share icon highlight status
 				setIsLoadingLikeStatus(true);
 				setIsLoadingRepostStatusInternal(true);
 				setIsLoadingSharesCount(true);
+				setIsLoadingShareCount(true);
 
-				const promises = [];
+				// Use batch API to fetch all stats efficiently
+				const batchResults = await batchVoiceNoteStats(voiceNote.id, loggedInUserId);
+				
+				console.log("[BATCH DEBUG] Batch results received:", {
+					voiceNoteId: voiceNote.id,
+					likeStatus: batchResults.likeStatus,
+					repostStatus: batchResults.repostStatus,
+					shareCount: batchResults.shareCount
+				});
 
-				// Check like status
-				promises.push(
-					checkLikeStatus(voiceNote.id, loggedInUserId)
-						.then(likeStatus => {
-							setIsLiked(likeStatus.isLiked);
-							setIsLoadingLikeStatus(false);
-							console.log("[STATS DEBUG] Like status loaded:", likeStatus.isLiked);
-						})
-						.catch(error => {
-							console.error("[STATS DEBUG] Error loading like status:", error);
-							setIsLoadingLikeStatus(false);
-						})
-				);
+				// Update like status
+				setIsLiked(batchResults.likeStatus.isLiked);
+				setIsLoadingLikeStatus(false);
+				console.log("[BATCH DEBUG] Like status loaded:", batchResults.likeStatus.isLiked);
 
-				// Check repost status if not provided via props
+				// Update repost status (only if not provided via props)
 				if (isRepostedProp === undefined) {
-					console.log("[STATS DEBUG] loadInitialData - Checking repost status from API");
-					promises.push(
-						hasUserRepostedVoiceNote(voiceNote.id, loggedInUserId)
-							.then(repostStatus => {
-								console.log("[STATS DEBUG] loadInitialData - Repost status from API:", repostStatus);
-								setInternalRepostedState(repostStatus);
-								setIsLoadingRepostStatusInternal(false);
-							})
-							.catch(error => {
-								console.error("[STATS DEBUG] Error loading repost status:", error);
-								setIsLoadingRepostStatusInternal(false);
-							})
-					);
+					console.log("[BATCH DEBUG] loadInitialData - Using repost status from batch:", batchResults.repostStatus);
+					setInternalRepostedState(batchResults.repostStatus);
 				} else {
-					console.log("[STATS DEBUG] loadInitialData - Using repost status from props:", isRepostedProp);
-					setIsLoadingRepostStatusInternal(false);
+					console.log("[BATCH DEBUG] loadInitialData - Using repost status from props:", isRepostedProp);
 				}
+				setIsLoadingRepostStatusInternal(false);
 
-				// Fetch share count to ensure we have the latest data
-				promises.push(
-					getRepostCount(voiceNote.id)
-						.then(count => {
-							setSharesCount(typeof count === "number" ? count : 0);
-							setIsLoadingSharesCount(false);
-							console.log("[STATS DEBUG] Share count loaded:", count);
-						})
-						.catch(error => {
-							console.error("[STATS DEBUG] Error loading share count:", error);
-							setIsLoadingSharesCount(false);
-						})
-				);
+				// Update share count
+				setSharesCount(typeof batchResults.shareCount === "number" ? batchResults.shareCount : 0);
+				setIsLoadingSharesCount(false);
+				console.log("[BATCH DEBUG] Share count loaded:", batchResults.shareCount);
 
-				// Wait for all promises to complete
-				await Promise.allSettled(promises);
+				// Share icon highlight status is determined by repost status, so mark it as loaded too
+				setIsLoadingShareCount(false);
+				console.log("[BATCH DEBUG] Share icon highlight status loaded");
 
 				setStatsLoaded(true);
 				setInitialDataLoaded(true);
-				console.log("[STATS DEBUG] loadInitialData - All initial data loaded successfully");
-				
-				logShareState("After loadInitialData");
+				console.log("[BATCH DEBUG] loadInitialData - All initial data loaded successfully via batch");
 			} catch (error) {
-				console.error("[STATS DEBUG] loadInitialData - Error:", {
+				console.error("[BATCH DEBUG] loadInitialData - Error:", {
 					voiceNoteId: voiceNote.id,
 					userId: loggedInUserId,
 					error: error instanceof Error ? error.message : String(error)
 				});
-				// Ensure loading states are reset even on error
+				// Ensure ALL loading states are reset even on error
 				setIsLoadingLikeStatus(false);
 				setIsLoadingRepostStatusInternal(false);
 				setIsLoadingSharesCount(false);
+				setIsLoadingShareCount(false);
 				setInitialDataLoaded(true);
 				setStatsLoaded(true);
 			}
 		};
 
 		loadInitialData();
-	}, [voiceNote.id, loggedInUserId, isRepostedProp, logShareState]);
+	}, [voiceNote.id, loggedInUserId, isRepostedProp, initialDataLoaded]);
 
 	// Voice notes already come with stats data, fetchStats removed to prevent 404 errors
 
-	// Fetch the actual share count
+	// Fetch the actual share count (fallback for individual updates)
 	const fetchShareCount = useCallback(async () => {
 		if (!voiceNote.id) {
 			console.log("[SHARE DEBUG] fetchShareCount - No voice note ID, skipping");
 			return;
 		}
 
-		logShareState("Before fetchShareCount");
-
 		try {
-			console.log("[SHARE DEBUG] fetchShareCount - Starting for voice note:", voiceNote.id);
+			console.log("[SHARE DEBUG] fetchShareCount - Starting individual request for voice note:", voiceNote.id);
 			setIsLoadingSharesCount(true);
 			const count = await getRepostCount(voiceNote.id);
 			console.log("[SHARE DEBUG] fetchShareCount - Received count:", { voiceNoteId: voiceNote.id, count });
 			setSharesCount(typeof count === "number" ? count : 0);
 			console.log("[SHARE DEBUG] fetchShareCount - Share count state updated:", typeof count === "number" ? count : 0);
-			
-			logShareState("After fetchShareCount");
 		} catch (error) {
 			console.error("[SHARE DEBUG] fetchShareCount - Error:", {
 				voiceNoteId: voiceNote.id,
@@ -680,7 +620,7 @@ export const useVoiceNoteCard = ({
 			setIsLoadingSharesCount(false);
 			console.log("[SHARE DEBUG] fetchShareCount - Loading state set to false");
 		}
-	}, [voiceNote.id, logShareState]);
+	}, [voiceNote.id]);
 
 	return {
 		// State

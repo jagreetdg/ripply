@@ -166,18 +166,23 @@ export function CommentPopup({
 			<View
 				style={[styles.commentItem, { backgroundColor: colors.background }]}
 			>
-				<View style={[styles.avatar, { backgroundColor: colors.tint }]}>
-					{user?.avatar_url ? (
-						<Image
-							source={{ uri: user.avatar_url }}
-							style={styles.avatarImage}
-						/>
-					) : (
-						<Text style={styles.avatarText}>
-							{displayName.charAt(0).toUpperCase()}
-						</Text>
-					)}
-				</View>
+				<TouchableOpacity
+					onPress={() => handleProfilePress(item.user_id, username)}
+					activeOpacity={0.7}
+				>
+					<View style={[styles.avatar, { backgroundColor: colors.tint }]}>
+						{user?.avatar_url ? (
+							<Image
+								source={{ uri: user.avatar_url }}
+								style={styles.avatarImage}
+							/>
+						) : (
+							<Text style={styles.avatarText}>
+								{displayName.charAt(0).toUpperCase()}
+							</Text>
+						)}
+					</View>
+				</TouchableOpacity>
 
 				<View style={styles.commentContent}>
 					<TouchableOpacity

@@ -231,19 +231,12 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 							},
 						]}
 					>
-						{isLoadingRepostStatus ? (
-							<ActivityIndicator
-								size={loadingIndicatorSize}
-								color={loadingIndicatorColor}
-							/>
-						) : (
-							<Feather
-								name={"repeat"}
-								size={18}
-								color={repostColor}
-								style={isReposted ? { transform: [{ scale: 1.05 }] } : {}}
-							/>
-						)}
+						<Feather
+							name={"repeat"}
+							size={18}
+							color={repostColor}
+							style={isReposted ? { transform: [{ scale: 1.05 }] } : {}}
+						/>
 					</Animated.View>
 					{isLoadingStats || isLoadingShareCount || isLoadingRepostStatus ? (
 						<ActivityIndicator
