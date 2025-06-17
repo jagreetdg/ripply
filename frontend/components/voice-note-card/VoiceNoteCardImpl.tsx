@@ -77,6 +77,12 @@ export function VoiceNoteCardImpl({
 		isRepostedEffective,
 		loggedInUserId,
 		progressContainerRef,
+		// Loading states
+		isLoadingAllStats,
+		isLoadingLikeStatus,
+		isLoadingRepostStatus,
+		isLoadingSharesCount,
+		initialDataLoaded,
 		// Animation values
 		likeScale,
 		shareScale,
@@ -113,9 +119,8 @@ export function VoiceNoteCardImpl({
 		onVoiceNoteUnshared,
 	});
 
-	// Read isLoadingStats from the voiceNote or default to false
-	const isLoadingStats =
-		voiceNote.isLoadingStats !== undefined ? voiceNote.isLoadingStats : false;
+	// Use the comprehensive loading state from the hook
+	const isLoadingStats = isLoadingAllStats;
 
 	// Render the card
 	return (
@@ -182,7 +187,7 @@ export function VoiceNoteCardImpl({
 						playsCount={playsCount}
 						isReposted={isRepostedEffective}
 						sharesCount={sharesCount}
-						isLoadingShareCount={isLoadingShareCount}
+						isLoadingShareCount={isLoadingSharesCount}
 						isLoadingStats={isLoadingStats}
 						isLoadingRepostStatus={isLoadingRepostStatus}
 						onProfilePress={handleProfilePress}
@@ -242,7 +247,7 @@ export function VoiceNoteCardImpl({
 						playsCount={playsCount}
 						isReposted={isRepostedEffective}
 						sharesCount={sharesCount}
-						isLoadingShareCount={isLoadingShareCount}
+						isLoadingShareCount={isLoadingSharesCount}
 						isLoadingStats={isLoadingStats}
 						isLoadingRepostStatus={isLoadingRepostStatus}
 						onProfilePress={handleProfilePress}
