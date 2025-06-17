@@ -125,7 +125,7 @@ export function ConfirmationModal({
 							onPress={onConfirm}
 							activeOpacity={0.8}
 						>
-							<Text style={styles.confirmButtonText}>{confirmText}</Text>
+								<Text style={styles.confirmButtonText}>{confirmText}</Text>
 						</TouchableOpacity>
 					</View>
 				</View>
