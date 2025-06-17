@@ -31,14 +31,21 @@ export const checkShareStatus = async (voiceNoteId: string, userId: string) => {
       `${ENDPOINTS.CHECK_SHARE_STATUS(voiceNoteId)}?userId=${userId}`
     );
     
-    // Normalize response format
-    if (response && typeof response.shared === "boolean") {
+    // Normalize response format - backend returns { isShared: boolean }
+    if (response && typeof response.isShared === "boolean") {
+      return response.isShared;
+    } else if (response && response.data && typeof response.data.isShared === "boolean") {
+      return response.data.isShared;
+    } else if (response && typeof response.shared === "boolean") {
+      // Fallback for legacy format
       return response.shared;
     } else if (response && response.data && typeof response.data.shared === "boolean") {
+      // Fallback for legacy format with data wrapper
       return response.data.shared;
     }
     
     // Default to false if response format is unexpected
+    console.warn(`[SHARE] Unexpected checkShareStatus response format for ${voiceNoteId}:`, response);
     return false;
   } catch (error) {
     console.error("Error checking share status:", error);

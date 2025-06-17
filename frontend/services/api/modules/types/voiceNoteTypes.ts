@@ -73,7 +73,7 @@ export interface LikeStatus {
 }
 
 export interface ShareStatus {
-  shared: boolean;
+  isShared: boolean;
 }
 
 export interface ShareCount {

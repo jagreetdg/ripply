@@ -264,6 +264,33 @@ export const useSearch = ({
     checkShareStatuses();
   }, [postResults, userId]);
 
+  // Fetch share status for discovery posts (default posts view)
+  useEffect(() => {
+    const checkDiscoveryShareStatuses = async () => {
+      if (!userId || !discoveryPosts.length) return;
+
+      console.log('[SEARCH DEBUG] Checking share statuses for discovery posts:', discoveryPosts.length);
+      const statusMap: Record<string, boolean> = {};
+
+      // Check each discovery post
+      for (const post of discoveryPosts) {
+        try {
+          const isShared = await checkShareStatus(post.id, userId);
+          statusMap[post.id] = isShared;
+          console.log(`[SEARCH DEBUG] Discovery post ${post.id} share status:`, isShared);
+        } catch (error) {
+          console.error(`Error checking share status for discovery post ${post.id}:`, error);
+          statusMap[post.id] = false;
+        }
+      }
+
+      setSharedStatusMap(statusMap);
+      console.log('[SEARCH DEBUG] Discovery posts share status map updated:', statusMap);
+    };
+
+    checkDiscoveryShareStatuses();
+  }, [discoveryPosts, userId]);
+
   return {
     searchQuery,
     setSearchQuery,

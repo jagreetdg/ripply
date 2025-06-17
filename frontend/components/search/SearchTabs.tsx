@@ -1,11 +1,10 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
 	StyleSheet,
 	View,
 	Text,
 	TouchableOpacity,
 	Animated,
-	Dimensions,
 } from "react-native";
 import { SearchTab } from "../../hooks/useSearch";
 
@@ -28,16 +27,25 @@ export const SearchTabs = ({
 	tabIndicatorPosition,
 	colors,
 }: SearchTabsProps) => {
-	const windowWidth = Dimensions.get("window").width;
+	const [containerWidth, setContainerWidth] = useState(0);
 
-	// Calculate tab indicator position for animation
+	// Calculate responsive tab indicator position
 	const translateX = tabIndicatorPosition.interpolate({
 		inputRange: [0, 1],
-		outputRange: [0, windowWidth / 2],
+		outputRange: [0, containerWidth / 2],
 	});
 
+	// Handle container layout to get actual width
+	const handleContainerLayout = (event: any) => {
+		const { width } = event.nativeEvent.layout;
+		setContainerWidth(width);
+	};
+
 	return (
-		<View style={[styles.tabContainer, { borderBottomColor: colors.border }]}>
+		<View
+			style={[styles.tabContainer, { borderBottomColor: colors.border }]}
+			onLayout={handleContainerLayout}
+		>
 			<TouchableOpacity
 				style={[
 					styles.tabButton,
@@ -76,15 +84,18 @@ export const SearchTabs = ({
 				</Text>
 			</TouchableOpacity>
 
-			<Animated.View
-				style={[
-					styles.tabIndicator,
-					{
-						backgroundColor: colors.tint,
-						transform: [{ translateX }],
-					},
-				]}
-			/>
+			{containerWidth > 0 && (
+				<Animated.View
+					style={[
+						styles.tabIndicator,
+						{
+							backgroundColor: colors.tint,
+							width: containerWidth / 2,
+							transform: [{ translateX }],
+						},
+					]}
+				/>
+			)}
 		</View>
 	);
 };
@@ -110,7 +121,6 @@ const styles = StyleSheet.create({
 	tabIndicator: {
 		position: "absolute",
 		bottom: 0,
-		width: Dimensions.get("window").width / 2,
 		height: 3,
 	},
 });
