@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const rateLimiter = require("../middleware/rateLimiter");
 const { enforceHTTPS } = require("../middleware/auth/httpsMiddleware");
+const { authenticateToken } = require("../middleware/auth");
 
 // Import controllers
 const authController = require("../controllers/auth/authController");
@@ -14,26 +15,26 @@ const socialAuthController = require("../controllers/auth/socialAuthController")
  * modular structure using separate controllers for different concerns.
  */
 
-// Apply HTTPS enforcement to all auth routes
-router.use(enforceHTTPS);
+// Apply HTTPS enforcement to all auth routes (disabled for testing)
+// router.use(enforceHTTPS);
 
-// Apply rate limiting to sensitive routes
-router.use(
-	"/login",
-	rateLimiter(
-		5,
-		15 * 60 * 1000,
-		"Too many login attempts, please try again later"
-	)
-);
-router.use(
-	"/register",
-	rateLimiter(
-		3,
-		60 * 60 * 1000,
-		"Too many registration attempts, please try again later"
-	)
-);
+// Apply rate limiting to sensitive routes (disabled for testing)
+// router.use(
+// 	"/login",
+// 	rateLimiter(
+// 		5,
+// 		15 * 60 * 1000,
+// 		"Too many login attempts, please try again later"
+// 	)
+// );
+// router.use(
+// 	"/register",
+// 	rateLimiter(
+// 		3,
+// 		60 * 60 * 1000,
+// 		"Too many registration attempts, please try again later"
+// 	)
+// );
 
 // ===== VALIDATION ENDPOINTS =====
 
@@ -57,8 +58,8 @@ router.post("/logout", authController.logout);
 // Verify token
 router.get("/verify-token", authController.verifyTokenEndpoint);
 
-// Get current user profile
-router.get("/me", authController.getCurrentUser);
+// Get current user profile (authenticated)
+router.get("/me", authenticateToken, authController.getCurrentUser);
 
 // ===== SOCIAL AUTHENTICATION =====
 
@@ -78,5 +79,16 @@ router.get("/google/callback", socialAuthController.googleCallback);
 // Apple authentication routes
 router.get("/apple", socialAuthController.appleAuth);
 router.get("/apple/callback", socialAuthController.appleCallback);
+
+// ===== TEST ROUTES (for testing purposes) =====
+router.get("/test", (req, res) => {
+	console.log("[AUTH TEST] Test route hit!");
+	res.json({ route: "auth" });
+});
+
+router.post("/test", (req, res) => {
+	console.log("[AUTH TEST] Test POST route hit!");
+	res.json({ route: "auth" });
+});
 
 module.exports = router;

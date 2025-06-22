@@ -8,8 +8,55 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const { TestDatabase } = require("../helpers/testDatabase");
 
-// Mock the dependencies
-jest.mock("../../src/config/supabase");
+// Ensure JWT_SECRET is available for tests
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+	throw new Error("JWT_SECRET environment variable is required for tests");
+}
+
+// Mock the dependencies - MUST be before any requires that use them
+jest.mock("../../src/config/supabase", () => {
+	// Create a comprehensive mock that provides all the necessary method chains
+	const createMockQuery = (data = null, error = null, count = 0) => {
+		const mockQuery = {
+			select: jest.fn(),
+			insert: jest.fn(),
+			update: jest.fn(),
+			delete: jest.fn(),
+			eq: jest.fn(),
+			in: jest.fn(),
+			ilike: jest.fn(),
+			order: jest.fn(),
+			range: jest.fn(),
+			limit: jest.fn(),
+			single: jest.fn(),
+		};
+
+		// Each method returns the same mock object to allow chaining
+		mockQuery.select.mockReturnValue(mockQuery);
+		mockQuery.insert.mockReturnValue(mockQuery);
+		mockQuery.update.mockReturnValue(mockQuery);
+		mockQuery.delete.mockReturnValue(mockQuery);
+		mockQuery.eq.mockReturnValue(mockQuery);
+		mockQuery.in.mockReturnValue(mockQuery);
+		mockQuery.ilike.mockReturnValue(mockQuery);
+		mockQuery.order.mockReturnValue(mockQuery);
+		mockQuery.range.mockReturnValue(mockQuery);
+		mockQuery.limit.mockReturnValue(mockQuery);
+
+		// Terminal methods resolve with data
+		mockQuery.single.mockResolvedValue({ data, error });
+		mockQuery.range.mockResolvedValue({ data: data || [], error, count });
+		mockQuery.limit.mockResolvedValue({ data: data || [], error });
+
+		return mockQuery;
+	};
+
+	return {
+		from: jest.fn().mockImplementation(() => createMockQuery()),
+	};
+});
+
 jest.mock("../../src/middleware/auth");
 
 const mockSupabase = require("../../src/config/supabase");
@@ -36,7 +83,6 @@ describe("Voice Notes Routes", () => {
 			display_name: "Test User",
 		};
 
-		const JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 		authToken = jwt.sign(
 			{ id: mockUser.id, email: mockUser.email, username: mockUser.username },
 			JWT_SECRET,
@@ -60,135 +106,10 @@ describe("Voice Notes Routes", () => {
 
 			expect(response.body).toHaveProperty(
 				"message",
-				"Balanced feed algorithm deployed successfully"
+				"Refactored voice notes API deployed successfully"
 			);
 			expect(response.body).toHaveProperty("version");
 			expect(response.body).toHaveProperty("timestamp");
-		});
-	});
-
-	describe("GET /debug-feed/:userId", () => {
-		it("should return debug feed data", async () => {
-			const userId = "user-123";
-			const followingData = [
-				{ following_id: "user-456" },
-				{ following_id: "user-789" },
-			];
-
-			const originalPosts = [
-				{
-					id: "note-1",
-					title: "Original Post 1",
-					user_id: "user-456",
-					users: {
-						id: "user-456",
-						username: "user456",
-						display_name: "User 456",
-					},
-					likes: [{ count: 5 }],
-					comments: [{ count: 2 }],
-					plays: [{ count: 10 }],
-					shares: [{ count: 1 }],
-				},
-			];
-
-			const sharedData = [
-				{
-					id: "share-1",
-					voice_note_id: "note-2",
-					user_id: "user-456",
-					shared_at: new Date().toISOString(),
-				},
-			];
-
-			const sharedVoiceNotes = [
-				{
-					id: "note-2",
-					title: "Shared Post 1",
-					user_id: "user-789",
-					users: {
-						id: "user-789",
-						username: "user789",
-						display_name: "User 789",
-					},
-					likes: [{ count: 3 }],
-					comments: [{ count: 1 }],
-					plays: [{ count: 8 }],
-					shares: [{ count: 2 }],
-				},
-			];
-
-			// Mock following query
-			mockSupabase.from.mockReturnValueOnce({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						eq: jest
-							.fn()
-							.mockResolvedValue({ data: followingData, error: null }),
-					}),
-				}),
-			});
-
-			// Mock original posts query
-			mockSupabase.from.mockReturnValueOnce({
-				select: jest.fn().mockReturnValue({
-					in: jest.fn().mockReturnValue({
-						order: jest.fn().mockReturnValue({
-							limit: jest
-								.fn()
-								.mockResolvedValue({ data: originalPosts, error: null }),
-						}),
-					}),
-				}),
-			});
-
-			// Mock shared posts query
-			mockSupabase.from.mockReturnValueOnce({
-				select: jest.fn().mockReturnValue({
-					in: jest.fn().mockReturnValue({
-						order: jest.fn().mockReturnValue({
-							limit: jest
-								.fn()
-								.mockResolvedValue({ data: sharedData, error: null }),
-						}),
-					}),
-				}),
-			});
-
-			// Mock shared voice notes query
-			mockSupabase.from.mockReturnValueOnce({
-				select: jest.fn().mockReturnValue({
-					in: jest
-						.fn()
-						.mockResolvedValue({ data: sharedVoiceNotes, error: null }),
-				}),
-			});
-
-			// Mock sharer info queries
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						single: jest.fn().mockResolvedValue({
-							data: {
-								id: "user-456",
-								username: "user456",
-								display_name: "User 456",
-							},
-							error: null,
-						}),
-					}),
-				}),
-			});
-
-			const response = await request(app)
-				.get(`/debug-feed/${userId}`)
-				.expect(200);
-
-			expect(response.body).toHaveProperty("userId", userId);
-			expect(response.body).toHaveProperty("followingCount", 2);
-			expect(response.body).toHaveProperty("originalPosts");
-			expect(response.body).toHaveProperty("sharedPosts");
-			expect(response.body).toHaveProperty("combined");
 		});
 	});
 
@@ -207,20 +128,12 @@ describe("Voice Notes Routes", () => {
 				},
 			];
 
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					ilike: jest.fn().mockReturnValue({
-						order: jest.fn().mockReturnValue({
-							range: jest
-								.fn()
-								.mockResolvedValue({
-									data: searchResults,
-									error: null,
-									count: 1,
-								}),
-						}),
-					}),
-				}),
+			// Configure mock to return search results
+			const mockQuery = mockSupabase.from();
+			mockQuery.range.mockResolvedValue({
+				data: searchResults,
+				error: null,
+				count: 1,
 			});
 
 			const response = await request(app).get("/search?q=test").expect(200);
@@ -235,7 +148,7 @@ describe("Voice Notes Routes", () => {
 
 			expect(response.body).toEqual({
 				data: [],
-				pagination: { page: 1, limit: 20, total: 0 },
+				pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
 			});
 		});
 	});
@@ -256,17 +169,12 @@ describe("Voice Notes Routes", () => {
 				},
 			];
 
-			// Mock complex feed query
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					in: jest.fn().mockReturnValue({
-						order: jest.fn().mockReturnValue({
-							range: jest
-								.fn()
-								.mockResolvedValue({ data: feedData, error: null, count: 1 }),
-						}),
-					}),
-				}),
+			// Configure mock for feed operations
+			const mockQuery = mockSupabase.from();
+			mockQuery.range.mockResolvedValue({
+				data: feedData,
+				error: null,
+				count: 1,
 			});
 
 			const response = await request(app)
@@ -296,20 +204,9 @@ describe("Voice Notes Routes", () => {
 				...newVoiceNote,
 			};
 
-			mockSupabase.from.mockReturnValueOnce({
-				insert: jest.fn().mockReturnValue({
-					select: jest.fn().mockReturnValue({
-						single: jest
-							.fn()
-							.mockResolvedValue({ data: createdNote, error: null }),
-					}),
-				}),
-			});
-
-			// Mock tag insertion
-			mockSupabase.from.mockReturnValue({
-				insert: jest.fn().mockResolvedValue({ error: null }),
-			});
+			// Configure mock for voice note creation
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({ data: createdNote, error: null });
 
 			const response = await request(app)
 				.post("/")
@@ -355,15 +252,9 @@ describe("Voice Notes Routes", () => {
 				tags: [{ tag_name: "music" }],
 			};
 
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						single: jest
-							.fn()
-							.mockResolvedValue({ data: voiceNote, error: null }),
-					}),
-				}),
-			});
+			// Configure mock for getting voice note by ID
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({ data: voiceNote, error: null });
 
 			const response = await request(app).get("/note-123").expect(200);
 
@@ -373,14 +264,11 @@ describe("Voice Notes Routes", () => {
 		});
 
 		it("should return 404 for non-existent voice note", async () => {
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						single: jest
-							.fn()
-							.mockResolvedValue({ data: null, error: { code: "PGRST116" } }),
-					}),
-				}),
+			// Configure mock for non-existent voice note
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({
+				data: null,
+				error: { code: "PGRST116" },
 			});
 
 			const response = await request(app).get("/non-existent").expect(404);
@@ -403,36 +291,19 @@ describe("Voice Notes Routes", () => {
 				...updateData,
 			};
 
-			// Mock ownership check
-			mockSupabase.from.mockReturnValueOnce({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						single: jest.fn().mockResolvedValue({
-							data: { user_id: "user-123" },
-							error: null,
-						}),
-					}),
-				}),
+			// Configure mock for update operations
+			// First call: ownership check
+			const ownershipQuery = mockSupabase.from();
+			ownershipQuery.single.mockResolvedValueOnce({
+				data: { user_id: "user-123" },
+				error: null,
 			});
 
-			// Mock update
-			mockSupabase.from.mockReturnValueOnce({
-				update: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						select: jest.fn().mockReturnValue({
-							single: jest
-								.fn()
-								.mockResolvedValue({ data: updatedNote, error: null }),
-						}),
-					}),
-				}),
-			});
-
-			// Mock tag deletion and insertion
-			mockSupabase.from.mockReturnValue({
-				delete: jest.fn().mockReturnValue({
-					eq: jest.fn().mockResolvedValue({ error: null }),
-				}),
+			// Second call: actual update
+			const updateQuery = mockSupabase.from();
+			updateQuery.single.mockResolvedValueOnce({
+				data: updatedNote,
+				error: null,
 			});
 
 			const response = await request(app)
@@ -447,16 +318,11 @@ describe("Voice Notes Routes", () => {
 		it("should reject update by non-owner", async () => {
 			const updateData = { title: "Hacker Update" };
 
-			// Mock ownership check - different user
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						single: jest.fn().mockResolvedValue({
-							data: { user_id: "different-user" },
-							error: null,
-						}),
-					}),
-				}),
+			// Configure mock for ownership check (different user)
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({
+				data: { user_id: "different-user" },
+				error: null,
 			});
 
 			const response = await request(app)
@@ -474,23 +340,18 @@ describe("Voice Notes Routes", () => {
 
 	describe("DELETE /:id", () => {
 		it("should delete voice note", async () => {
-			// Mock ownership check
-			mockSupabase.from.mockReturnValueOnce({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						single: jest.fn().mockResolvedValue({
-							data: { user_id: "user-123" },
-							error: null,
-						}),
-					}),
-				}),
+			// Configure mock for delete operations
+			// First call: ownership check
+			const ownershipQuery = mockSupabase.from();
+			ownershipQuery.single.mockResolvedValueOnce({
+				data: { user_id: "user-123" },
+				error: null,
 			});
 
-			// Mock delete
-			mockSupabase.from.mockReturnValue({
-				delete: jest.fn().mockReturnValue({
-					eq: jest.fn().mockResolvedValue({ error: null }),
-				}),
+			// Second call: actual delete
+			const deleteQuery = mockSupabase.from();
+			deleteQuery.delete.mockReturnValue({
+				eq: jest.fn().mockResolvedValue({ error: null }),
 			});
 
 			const response = await request(app)
@@ -505,16 +366,11 @@ describe("Voice Notes Routes", () => {
 		});
 
 		it("should reject delete by non-owner", async () => {
-			// Mock ownership check - different user
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						single: jest.fn().mockResolvedValue({
-							data: { user_id: "different-user" },
-							error: null,
-						}),
-					}),
-				}),
+			// Configure mock for ownership check (different user)
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({
+				data: { user_id: "different-user" },
+				error: null,
 			});
 
 			const response = await request(app)
@@ -538,27 +394,17 @@ describe("Voice Notes Routes", () => {
 				user_id: "user-123",
 			};
 
-			// Mock check for existing like (none found)
-			mockSupabase.from.mockReturnValueOnce({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						eq: jest.fn().mockReturnValue({
-							single: jest
-								.fn()
-								.mockResolvedValue({ data: null, error: { code: "PGRST116" } }),
-						}),
-					}),
-				}),
+			// Configure mock for like operations
+			// First call: check if user already liked (not found)
+			const checkQuery = mockSupabase.from();
+			checkQuery.single.mockResolvedValueOnce({
+				data: null,
+				error: { code: "PGRST116" },
 			});
 
-			// Mock insert like
-			mockSupabase.from.mockReturnValueOnce({
-				insert: jest.fn().mockReturnValue({
-					select: jest.fn().mockReturnValue({
-						single: jest.fn().mockResolvedValue({ data: newLike, error: null }),
-					}),
-				}),
-			});
+			// Second call: create new like
+			const likeQuery = mockSupabase.from();
+			likeQuery.single.mockResolvedValueOnce({ data: newLike, error: null });
 
 			const response = await request(app)
 				.post("/note-456/like")
@@ -577,45 +423,35 @@ describe("Voice Notes Routes", () => {
 				user_id: "user-123",
 			};
 
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						eq: jest.fn().mockReturnValue({
-							single: jest
-								.fn()
-								.mockResolvedValue({ data: existingLike, error: null }),
-						}),
-					}),
-				}),
-			});
+			// Configure mock for duplicate like check
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({ data: existingLike, error: null });
 
 			const response = await request(app)
 				.post("/note-456/like")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(likeData)
-				.expect(400);
+				.expect(200);
 
-			expect(response.body).toHaveProperty(
-				"message",
-				"Voice note already liked"
-			);
+			expect(response.body).toEqual(existingLike);
 		});
 	});
 
-	describe("DELETE /:id/like", () => {
+	describe("POST /:id/unlike", () => {
 		it("should unlike a voice note", async () => {
 			const unlikeData = { userId: "user-123" };
 
-			mockSupabase.from.mockReturnValue({
-				delete: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						eq: jest.fn().mockResolvedValue({ error: null }),
-					}),
+			// Configure mock for unlike operation
+			const mockQuery = mockSupabase.from();
+			// The delete method needs to return an object with eq method
+			mockQuery.delete.mockReturnValue({
+				eq: jest.fn().mockReturnValue({
+					eq: jest.fn().mockResolvedValue({ error: null }),
 				}),
 			});
 
 			const response = await request(app)
-				.delete("/note-456/like")
+				.post("/note-456/unlike")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(unlikeData)
 				.expect(200);
@@ -627,32 +463,32 @@ describe("Voice Notes Routes", () => {
 		});
 	});
 
-	describe("POST /:id/comment", () => {
+	describe("POST /:id/comments", () => {
 		it("should add comment to voice note", async () => {
-			const commentData = {
-				userId: "user-123",
-				content: "Great voice note!",
-			};
-
+			const commentData = { content: "Great voice note!" };
 			const newComment = {
 				id: "comment-123",
 				voice_note_id: "note-456",
 				user_id: "user-123",
 				content: "Great voice note!",
+				user: {
+					id: "user-123",
+					username: "testuser",
+					display_name: "Test User",
+				},
+				users: {
+					id: "user-123",
+					username: "testuser",
+					display_name: "Test User",
+				},
 			};
 
-			mockSupabase.from.mockReturnValue({
-				insert: jest.fn().mockReturnValue({
-					select: jest.fn().mockReturnValue({
-						single: jest
-							.fn()
-							.mockResolvedValue({ data: newComment, error: null }),
-					}),
-				}),
-			});
+			// Configure mock for comment creation
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({ data: newComment, error: null });
 
 			const response = await request(app)
-				.post("/note-456/comment")
+				.post("/note-456/comments")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(commentData)
 				.expect(201);
@@ -661,10 +497,10 @@ describe("Voice Notes Routes", () => {
 		});
 
 		it("should reject comment without content", async () => {
-			const commentData = { userId: "user-123" };
+			const commentData = {};
 
 			const response = await request(app)
-				.post("/note-456/comment")
+				.post("/note-456/comments")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(commentData)
 				.expect(400);
@@ -679,89 +515,70 @@ describe("Voice Notes Routes", () => {
 				{
 					id: "comment-1",
 					content: "Great voice note!",
-					user_id: "user-456",
 					users: {
 						id: "user-456",
 						username: "user456",
 						display_name: "User 456",
 					},
-					created_at: new Date().toISOString(),
 				},
 			];
 
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						order: jest.fn().mockReturnValue({
-							range: jest
-								.fn()
-								.mockResolvedValue({ data: comments, error: null, count: 1 }),
-						}),
-					}),
-				}),
+			// Configure mock for getting comments
+			const mockQuery = mockSupabase.from();
+			mockQuery.range.mockResolvedValue({
+				data: comments,
+				error: null,
+				count: 1,
 			});
 
 			const response = await request(app).get("/note-456/comments").expect(200);
 
 			expect(response.body).toHaveProperty("data");
 			expect(response.body.data).toHaveLength(1);
-			expect(response.body.data[0]).toHaveProperty(
-				"content",
-				"Great voice note!"
-			);
 		});
 	});
 
 	describe("POST /:id/play", () => {
 		it("should record voice note play", async () => {
 			const playData = { userId: "user-123" };
-			const newPlay = {
-				id: "play-123",
-				voice_note_id: "note-456",
-				user_id: "user-123",
-			};
 
-			mockSupabase.from.mockReturnValue({
-				insert: jest.fn().mockReturnValue({
-					select: jest.fn().mockReturnValue({
-						single: jest.fn().mockResolvedValue({ data: newPlay, error: null }),
-					}),
-				}),
+			// Configure mock for play recording
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({
+				data: { id: "play-123", voice_note_id: "note-456" },
+				error: null,
 			});
 
 			const response = await request(app)
 				.post("/note-456/play")
+				.set("Authorization", `Bearer ${authToken}`)
 				.send(playData)
 				.expect(201);
 
-			expect(response.body).toEqual(newPlay);
+			expect(response.body).toEqual({
+				id: "play-123",
+				voice_note_id: "note-456",
+			});
 		});
 
 		it("should record anonymous play", async () => {
-			const newPlay = {
-				id: "play-123",
-				voice_note_id: "note-456",
-				user_id: null,
-			};
-
-			mockSupabase.from.mockReturnValue({
-				insert: jest.fn().mockReturnValue({
-					select: jest.fn().mockReturnValue({
-						single: jest.fn().mockResolvedValue({ data: newPlay, error: null }),
-					}),
-				}),
+			// Configure mock for anonymous play recording
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({
+				data: { id: "play-124", voice_note_id: "note-456" },
+				error: null,
 			});
 
-			const response = await request(app)
-				.post("/note-456/play")
-				.send({})
-				.expect(201);
+			const response = await request(app).post("/note-456/play").expect(201);
 
-			expect(response.body).toEqual(newPlay);
+			expect(response.body).toEqual({
+				id: "play-124",
+				voice_note_id: "note-456",
+			});
 		});
 	});
 
-	describe("POST /:id/share", () => {
+	describe("POST /:voiceNoteId/share", () => {
 		it("should share a voice note", async () => {
 			const shareData = { userId: "user-123" };
 			const newShare = {
@@ -770,29 +587,17 @@ describe("Voice Notes Routes", () => {
 				user_id: "user-123",
 			};
 
-			// Mock check for existing share (none found)
-			mockSupabase.from.mockReturnValueOnce({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						eq: jest.fn().mockReturnValue({
-							single: jest
-								.fn()
-								.mockResolvedValue({ data: null, error: { code: "PGRST116" } }),
-						}),
-					}),
-				}),
+			// Configure mock for share operations
+			// First call: check if user already shared (not found)
+			const checkQuery = mockSupabase.from();
+			checkQuery.single.mockResolvedValueOnce({
+				data: null,
+				error: { code: "PGRST116" },
 			});
 
-			// Mock insert share
-			mockSupabase.from.mockReturnValueOnce({
-				insert: jest.fn().mockReturnValue({
-					select: jest.fn().mockReturnValue({
-						single: jest
-							.fn()
-							.mockResolvedValue({ data: newShare, error: null }),
-					}),
-				}),
-			});
+			// Second call: create new share
+			const shareQuery = mockSupabase.from();
+			shareQuery.single.mockResolvedValueOnce({ data: newShare, error: null });
 
 			const response = await request(app)
 				.post("/note-456/share")
@@ -806,17 +611,11 @@ describe("Voice Notes Routes", () => {
 		it("should handle sharing when table does not exist", async () => {
 			const shareData = { userId: "user-123" };
 
-			// Mock table not found error
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						eq: jest.fn().mockReturnValue({
-							single: jest
-								.fn()
-								.mockResolvedValue({ data: null, error: { code: "42P01" } }),
-						}),
-					}),
-				}),
+			// Configure mock for table not found error
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({
+				data: null,
+				error: { code: "42P01" },
 			});
 
 			const response = await request(app)
@@ -833,72 +632,64 @@ describe("Voice Notes Routes", () => {
 		it("should get voice notes by tag", async () => {
 			const taggedNotes = [
 				{
-					id: "note-1",
-					title: "Music Note",
-					tags: [{ tag_name: "music" }],
-					likes: [{ count: 5 }],
-					comments: [{ count: 2 }],
-					plays: [{ count: 10 }],
-					shares: [{ count: 1 }],
+					tag_name: "music",
+					voice_notes: {
+						id: "note-1",
+						title: "Music Note",
+						user_id: "user-456",
+						users: {
+							id: "user-456",
+							username: "user456",
+							display_name: "User 456",
+						},
+						likes: [{ count: 5 }],
+						comments: [{ count: 2 }],
+						plays: [{ count: 10 }],
+					},
 				},
 			];
 
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						order: jest.fn().mockReturnValue({
-							range: jest
-								.fn()
-								.mockResolvedValue({
-									data: taggedNotes,
-									error: null,
-									count: 1,
-								}),
-						}),
-					}),
-				}),
+			// Configure mock for tag-based retrieval
+			const mockQuery = mockSupabase.from();
+			mockQuery.range.mockResolvedValue({
+				data: taggedNotes,
+				error: null,
+				count: 1,
 			});
 
 			const response = await request(app).get("/tags/music").expect(200);
 
 			expect(response.body).toHaveProperty("data");
 			expect(response.body.data).toHaveLength(1);
-			expect(response.body.data[0]).toHaveProperty("title", "Music Note");
 		});
 	});
 
 	describe("Error Handling", () => {
 		it("should handle database errors gracefully", async () => {
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					eq: jest
-						.fn()
-						.mockResolvedValue({
-							data: null,
-							error: { message: "Database error" },
-						}),
-				}),
+			// Configure mock for database error
+			const mockQuery = mockSupabase.from();
+			mockQuery.single.mockResolvedValue({
+				data: null,
+				error: { message: "Database connection failed" },
 			});
 
-			const response = await request(app).get("/note-123").expect(500);
+			const response = await request(app).get("/note-error").expect(500);
 
 			expect(response.body).toHaveProperty("message", "Server error");
 		});
 
 		it("should handle authentication errors", async () => {
+			// Override auth mock to simulate auth failure
 			mockAuth.authenticateToken.mockImplementation((req, res, next) => {
-				res.status(401).json({ message: "Authentication required" });
+				return res.status(401).json({ message: "Invalid token" });
 			});
 
 			const response = await request(app)
-				.post("/")
-				.send({ title: "Test Note" })
+				.post("/note-456/like")
+				.set("Authorization", "Bearer invalid-token")
 				.expect(401);
 
-			expect(response.body).toHaveProperty(
-				"message",
-				"Authentication required"
-			);
+			expect(response.body).toHaveProperty("message", "Invalid token");
 		});
 	});
 });

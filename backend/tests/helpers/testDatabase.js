@@ -6,19 +6,30 @@
 const { createClient } = require("@supabase/supabase-js");
 const { v4: uuidv4 } = require("uuid");
 
-// Initialize test Supabase client
-const supabaseUrl =
-	process.env.SUPABASE_URL || "https://kxuczrnakuybcgpnxclb.supabase.co";
-const supabaseKey =
-	process.env.SUPABASE_KEY ||
-	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4dWN6cm5ha3V5YmNncG54Y2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzEwMTc3ODIsImV4cCI6MjA0NjU5Mzc4Mn0.D7tKw-Ae8-vOC_PLFF9GVyQ0nP7b4jV--XEmbN5mP_A";
+// Test environment configuration
+const getTestSupabaseConfig = () => {
+	// Use test environment variables or throw error
+	const testUrl = process.env.TEST_SUPABASE_URL || process.env.SUPABASE_URL;
+	const testKey = process.env.TEST_SUPABASE_KEY || process.env.SUPABASE_KEY;
 
-const testSupabase = createClient(supabaseUrl, supabaseKey, {
-	auth: { persistSession: false },
-});
+	if (!testUrl || !testKey) {
+		throw new Error(
+			"Test database configuration missing. Please set TEST_SUPABASE_URL and TEST_SUPABASE_KEY environment variables, or ensure SUPABASE_URL and SUPABASE_KEY are set for testing."
+		);
+	}
+
+	return { testUrl, testKey };
+};
+
+// Create test Supabase client
+const createTestClient = () => {
+	const { testUrl, testKey } = getTestSupabaseConfig();
+	return createClient(testUrl, testKey);
+};
 
 class TestDatabase {
 	constructor() {
+		this.testSupabase = createTestClient();
 		this.createdUsers = [];
 		this.createdVoiceNotes = [];
 		this.createdEntities = {
@@ -51,7 +62,7 @@ class TestDatabase {
 			...userData,
 		};
 
-		const { data, error } = await testSupabase
+		const { data, error } = await this.testSupabase
 			.from("users")
 			.insert([defaultUser])
 			.select()
@@ -77,7 +88,7 @@ class TestDatabase {
 			...voiceNoteData,
 		};
 
-		const { data, error } = await testSupabase
+		const { data, error } = await this.testSupabase
 			.from("voice_notes")
 			.insert([defaultVoiceNote])
 			.select()
@@ -102,7 +113,7 @@ class TestDatabase {
 			...voiceBioData,
 		};
 
-		const { data, error } = await testSupabase
+		const { data, error } = await this.testSupabase
 			.from("voice_bios")
 			.insert([defaultVoiceBio])
 			.select()
@@ -124,7 +135,7 @@ class TestDatabase {
 			updated_at: new Date().toISOString(),
 		};
 
-		const { data, error } = await testSupabase
+		const { data, error } = await this.testSupabase
 			.from("follows")
 			.insert([followData])
 			.select()
@@ -145,7 +156,7 @@ class TestDatabase {
 			created_at: new Date().toISOString(),
 		};
 
-		const { data, error } = await testSupabase
+		const { data, error } = await this.testSupabase
 			.from("voice_note_likes")
 			.insert([likeData])
 			.select()
@@ -168,7 +179,7 @@ class TestDatabase {
 			updated_at: new Date().toISOString(),
 		};
 
-		const { data, error } = await testSupabase
+		const { data, error } = await this.testSupabase
 			.from("voice_note_comments")
 			.insert([commentData])
 			.select()
@@ -192,7 +203,7 @@ class TestDatabase {
 		};
 
 		try {
-			const { data, error } = await testSupabase
+			const { data, error } = await this.testSupabase
 				.from("voice_note_shares")
 				.insert([shareData])
 				.select()
@@ -229,7 +240,7 @@ class TestDatabase {
 					this.createdEntities[table] &&
 					this.createdEntities[table].length > 0
 				) {
-					await testSupabase
+					await this.testSupabase
 						.from(table)
 						.delete()
 						.in("id", this.createdEntities[table]);
@@ -246,7 +257,9 @@ class TestDatabase {
 	}
 }
 
+// Export test client and configuration
 module.exports = {
 	TestDatabase,
-	testSupabase,
+	createTestClient,
+	getTestSupabaseConfig,
 };

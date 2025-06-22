@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { getUserProfileByUsername } from '../../../services/api';
 
-interface ProfileUser {
+export interface ProfileUser {
   id: string;
   username: string;
   display_name: string;
@@ -51,7 +51,7 @@ export const useProfileData = (): ProfileDataState & ProfileDataActions => {
         setUserNotFound(true);
         setUserProfile(null);
       } else {
-        setUserProfile(profile as ProfileUser);
+        setUserProfile(profile as unknown as ProfileUser);
         setUserNotFound(false);
       }
     } catch (error) {

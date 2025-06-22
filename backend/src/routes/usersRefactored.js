@@ -31,11 +31,19 @@ router.get("/:userId", profileController.getUserById);
 // Update user profile (authenticated)
 router.put("/:userId", authenticateToken, profileController.updateUserProfile);
 
-// Update user verification status (admin)
-router.patch("/:userId/verify", profileController.updateVerificationStatus);
+// Update user verification status (admin only) - REQUIRES AUTHENTICATION
+router.patch(
+	"/:userId/verify",
+	authenticateToken,
+	profileController.updateVerificationStatus
+);
 
-// Update user profile photos (admin/user)
-router.patch("/:userId/photos", profileController.updateProfilePhotos);
+// Update user profile photos (authenticated) - REQUIRES AUTHENTICATION
+router.patch(
+	"/:userId/photos",
+	authenticateToken,
+	profileController.updateProfilePhotos
+);
 
 // ===== FOLLOW SYSTEM =====
 

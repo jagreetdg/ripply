@@ -9,6 +9,14 @@ const {
 	requireVerified,
 	requireAdmin,
 } = require("../../src/middleware/auth");
+const authMiddleware = require("../../src/middleware/auth");
+const { TestDatabase } = require("../helpers/testDatabase");
+
+// Ensure JWT_SECRET is available for tests
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+	throw new Error("JWT_SECRET environment variable is required for tests");
+}
 
 // Mock the dependencies
 jest.mock("../../src/config/supabase");
@@ -16,7 +24,6 @@ const mockSupabase = require("../../src/config/supabase");
 
 describe("Authentication Middleware", () => {
 	let mockReq, mockRes, mockNext;
-	const JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 
 	beforeEach(() => {
 		jest.clearAllMocks();

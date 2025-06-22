@@ -39,15 +39,17 @@ const withRequestDeduplication = async (
 	}
 };
 
-// Clean up old cache entries periodically (older than 30 seconds)
-setInterval(() => {
-	const now = Date.now();
-	for (const [key, timestamp] of requestCache.entries()) {
-		if (now - timestamp > 30000) {
-			requestCache.delete(key);
+// Clean up old cache entries periodically (older than 30 seconds) - only in non-test environments
+if (process.env.NODE_ENV !== "test") {
+	setInterval(() => {
+		const now = Date.now();
+		for (const [key, timestamp] of requestCache.entries()) {
+			if (now - timestamp > 30000) {
+				requestCache.delete(key);
+			}
 		}
-	}
-}, 10000); // Clean every 10 seconds
+	}, 10000); // Clean every 10 seconds
+}
 
 // ===== LIKES =====
 

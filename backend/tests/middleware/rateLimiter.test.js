@@ -24,9 +24,8 @@ describe("Rate Limiter Middleware", () => {
 
 		mockNext = jest.fn();
 
-		// Clear the in-memory rate limit store
-		const rateLimiterModule = require("../../src/middleware/rateLimiter");
-		// Reset the internal rate limit store if it's exposed
+		// Reset the in-memory rate limit store
+		rateLimiter.resetRateLimit();
 	});
 
 	describe("Basic Rate Limiting", () => {

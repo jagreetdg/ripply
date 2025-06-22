@@ -1,9 +1,17 @@
 const { createClient } = require("@supabase/supabase-js");
 
 // Initialize Supabase client
-const supabaseUrl = "https://kxuczrnakuybcgpnxclb.supabase.co";
-const supabaseKey =
-	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4dWN6cm5ha3V5YmNncG54Y2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzEwMTc3ODIsImV4cCI6MjA0NjU5Mzc4Mn0.D7tKw-Ae8-vOC_PLFF9GVyQ0nP7b4jV--XEmbN5mP_A";
+// Validate environment variables
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+	console.error(
+		"Error: SUPABASE_URL and SUPABASE_KEY environment variables are required"
+	);
+	console.error("Please ensure these are set in your .env file");
+	process.exit(1);
+}
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function findTestUser() {

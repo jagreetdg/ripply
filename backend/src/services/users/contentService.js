@@ -66,10 +66,6 @@ const getUserSharedVoiceNotes = async (userId, options = {}) => {
 	const { page = 1, limit = 10 } = options;
 	const offset = (page - 1) * limit;
 
-	console.log(
-		`[DEBUG] Fetching shared voice notes for user: ${userId}, page: ${page}, limit: ${limit}`
-	);
-
 	// First get all the voice note share records by the user, with sharer's details
 	const {
 		data: sharedEntries,
@@ -88,7 +84,7 @@ const getUserSharedVoiceNotes = async (userId, options = {}) => {
 	if (sharedError) {
 		if (sharedError.code === "42P01") {
 			// Table doesn't exist
-			console.warn("[WARN] voice_note_shares table does not exist.");
+
 			return {
 				data: [],
 				pagination: {
@@ -104,7 +100,6 @@ const getUserSharedVoiceNotes = async (userId, options = {}) => {
 	}
 
 	if (!sharedEntries || sharedEntries.length === 0) {
-		console.log(`[DEBUG] User ${userId} has not shared any voice notes.`);
 		return {
 			data: [],
 			pagination: {

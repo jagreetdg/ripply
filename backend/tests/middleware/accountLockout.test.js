@@ -273,16 +273,17 @@ describe("Account Lockout Middleware", () => {
 				}),
 			});
 
-			// Mock update record
+			// Mock update record - capture the update function
+			const mockUpdate = jest.fn().mockReturnValue({
+				eq: jest.fn().mockResolvedValue({ error: null }),
+			});
 			mockSupabase.from.mockReturnValueOnce({
-				update: jest.fn().mockReturnValue({
-					eq: jest.fn().mockResolvedValue({ error: null }),
-				}),
+				update: mockUpdate,
 			});
 
 			await resetFailedAttempts(email);
 
-			expect(mockSupabase.from().update).toHaveBeenCalledWith({
+			expect(mockUpdate).toHaveBeenCalledWith({
 				failed_attempts: 0,
 				last_failed_attempt: null,
 			});

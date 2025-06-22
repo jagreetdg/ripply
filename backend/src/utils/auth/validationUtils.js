@@ -127,7 +127,7 @@ const validateRegistrationData = (data) => {
  * @returns {Object} Validation result with isValid and message
  */
 const validateLoginData = (data) => {
-	const { email, password } = data;
+	const { email, password, timestamp } = data;
 
 	if (!email || !password) {
 		return {
@@ -140,7 +140,21 @@ const validateLoginData = (data) => {
 		return {
 			isValid: false,
 			message: "Invalid email format",
+			field: "email",
 		};
+	}
+
+	// Validate timestamp to prevent replay attacks (within 5 minutes)
+	if (timestamp) {
+		const currentTime = Date.now();
+		const requestTime = timestamp;
+		if (Math.abs(currentTime - requestTime) > 5 * 60 * 1000) {
+			// 5 minutes
+			return {
+				isValid: false,
+				message: "Request expired, please try again",
+			};
+		}
 	}
 
 	return { isValid: true };

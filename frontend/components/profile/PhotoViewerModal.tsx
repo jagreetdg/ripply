@@ -335,7 +335,7 @@ export function PhotoViewerModal({
 		// If it's a relative path, make it absolute
 		if (imageUrl.startsWith("/")) {
 			return `${
-				process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"
+				process.env.EXPO_PUBLIC_API_URL || "https://ripply-backend.onrender.com"
 			}${imageUrl}`;
 		}
 

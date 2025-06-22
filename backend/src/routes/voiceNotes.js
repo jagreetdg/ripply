@@ -17,10 +17,15 @@ const feedController = require("../controllers/voiceNotes/feedController");
 // ===== STATIC ROUTES (MUST COME BEFORE DYNAMIC ROUTES) =====
 
 /**
- * Temporary test endpoint to check deployment status
+ * Test deployment endpoint - Development only
  * @route GET /api/voice-notes/test-deployment
  */
 router.get("/test-deployment", async (req, res) => {
+	// Only allow in development
+	if (process.env.NODE_ENV === "production") {
+		return res.status(404).json({ error: "Endpoint not found" });
+	}
+
 	try {
 		const deploymentInfo = {
 			timestamp: new Date().toISOString(),
@@ -35,10 +40,8 @@ router.get("/test-deployment", async (req, res) => {
 			],
 		};
 
-		console.log("[DEBUG] Test deployment endpoint called:", deploymentInfo);
 		res.status(200).json(deploymentInfo);
 	} catch (error) {
-		console.error("Error in test deployment endpoint:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 });
@@ -139,5 +142,14 @@ router.get(
 	authenticateToken,
 	interactionController.checkUserShared
 );
+
+// ===== TEST ROUTES (for testing purposes) =====
+router.get("/test", (req, res) => {
+	res.json({ route: "voiceNotes" });
+});
+
+router.post("/test", (req, res) => {
+	res.json({ route: "voiceNotes" });
+});
 
 module.exports = router;

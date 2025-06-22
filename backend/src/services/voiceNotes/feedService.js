@@ -155,7 +155,6 @@ const getBalancedFeed = async (userId, options = {}) => {
 	const followingIds = await getUserFollowing(userId);
 
 	if (followingIds.length === 0) {
-		console.log(`[DEBUG] User ${userId} follows no one, returning empty feed`);
 		return [];
 	}
 
@@ -205,8 +204,6 @@ const getBalancedFeed = async (userId, options = {}) => {
 const getDiscoveryPosts = async (userId, options = {}) => {
 	const { page = 1, limit = 20 } = options;
 	const offset = (page - 1) * limit;
-
-	console.log(`[DEBUG] Fetching discovery posts for user: ${userId}`);
 
 	// Get user's following to exclude from discovery
 	const followingIds = await getUserFollowing(userId);
@@ -280,7 +277,6 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 	if (error) throw error;
 
 	if (!discoveryPosts || discoveryPosts.length === 0) {
-		console.log(`[DEBUG] No discovery posts found for user ${userId}`);
 		return [];
 	}
 
@@ -299,9 +295,6 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 		.sort((a, b) => b.discoveryScore - a.discoveryScore)
 		.slice(offset, offset + parseInt(limit));
 
-	console.log(
-		`[DEBUG] Returning ${finalPosts.length} discovery posts for user ${userId}`
-	);
 	return finalPosts;
 };
 
@@ -315,12 +308,8 @@ const getDiscoveryUsers = async (userId, options = {}) => {
 	const { page = 1, limit = 20 } = options;
 	const offset = (page - 1) * limit;
 
-	console.log(`[DEBUG] Fetching discovery users for user: ${userId}`);
-
 	// Get users the current user already follows
 	const followingIds = await getUserFollowing(userId);
-
-	console.log(`[DEBUG] User ${userId} follows ${followingIds.length} users`);
 
 	// Get users with their voice notes stats for engagement scoring
 	let query = supabase
@@ -348,7 +337,6 @@ const getDiscoveryUsers = async (userId, options = {}) => {
 	if (error) throw error;
 
 	if (!users || users.length === 0) {
-		console.log(`[DEBUG] No users found for discovery`);
 		return [];
 	}
 
@@ -360,9 +348,6 @@ const getDiscoveryUsers = async (userId, options = {}) => {
 		.sort((a, b) => b.discoveryScore - a.discoveryScore)
 		.slice(offset, offset + parseInt(limit));
 
-	console.log(
-		`[DEBUG] Returning ${finalUsers.length} discovery users for user ${userId}`
-	);
 	return finalUsers;
 };
 

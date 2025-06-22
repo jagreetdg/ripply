@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const rateLimiter = require("../middleware/rateLimiter");
 const { enforceHTTPS } = require("../middleware/auth/httpsMiddleware");
+const { authenticateToken } = require("../middleware/auth");
 
 // Import controllers
 const authController = require("../controllers/auth/authController");
@@ -57,8 +58,8 @@ router.post("/logout", authController.logout);
 // Verify token
 router.get("/verify-token", authController.verifyTokenEndpoint);
 
-// Get current user profile
-router.get("/me", authController.getCurrentUser);
+// Get current user profile (authenticated)
+router.get("/me", authenticateToken, authController.getCurrentUser);
 
 // ===== SOCIAL AUTHENTICATION =====
 

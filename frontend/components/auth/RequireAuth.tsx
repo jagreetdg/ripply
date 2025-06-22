@@ -47,13 +47,13 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 
 			const navigate = () => {
 				try {
-					router.replace(path);
+					router.replace(path as any);
 				} catch (error) {
 					console.error(`[DEBUG] RequireAuth - Navigation error:`, error);
 					// Retry after a short delay
 					setTimeout(() => {
 						try {
-							router.replace(path);
+							router.replace(path as any);
 						} catch (retryError) {
 							console.error(
 								`[DEBUG] RequireAuth - Retry navigation failed:`,

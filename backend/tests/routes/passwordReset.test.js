@@ -11,7 +11,9 @@ const { TestDatabase } = require("../helpers/testDatabase");
 
 // Mock the dependencies
 jest.mock("../../src/config/supabase");
-jest.mock("../../src/middleware/rateLimiter");
+jest.mock("../../src/middleware/rateLimiter", () => {
+	return jest.fn(() => (req, res, next) => next());
+});
 
 const mockSupabase = require("../../src/config/supabase");
 const mockRateLimiter = require("../../src/middleware/rateLimiter");

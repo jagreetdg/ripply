@@ -59,69 +59,15 @@ export function FeedContent({
 	const { height } = useWindowDimensions();
 	const { user: currentUser } = useUser();
 
-	// Add logging to debug feed items
+	// Development debugging for feed items
 	useEffect(() => {
-		if (feedItems.length > 0) {
-			console.log(`[DEBUG] FeedContent received ${feedItems.length} items`);
-
+		if (__DEV__ && feedItems.length > 0) {
 			// Check for duplicate IDs in the feed
 			const ids = feedItems.map((item) => item.id);
 			const uniqueIds = new Set(ids);
 			if (ids.length !== uniqueIds.size) {
 				console.error(
 					`[DEBUG] DUPLICATE KEYS DETECTED! Total items: ${ids.length}, Unique IDs: ${uniqueIds.size}`
-				);
-
-				// Find and log duplicates
-				const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
-				console.error(`[DEBUG] Duplicate IDs:`, [...new Set(duplicates)]);
-
-				// Log detailed info about duplicate items
-				duplicates.forEach((dupId) => {
-					const duplicateItems = feedItems.filter((item) => item.id === dupId);
-					console.error(
-						`[DEBUG] Items with ID ${dupId}:`,
-						duplicateItems.map((item) => ({
-							id: item.id,
-							voiceNoteId: item.voiceNote.id,
-							userId: item.userId,
-							isShared: item.isShared,
-							sharedBy: item.sharedBy?.id,
-						}))
-					);
-				});
-			} else {
-				console.log(`[DEBUG] All ${ids.length} feed item IDs are unique ✓`);
-			}
-
-			// Check for original vs shared posts
-			const sharedItems = feedItems.filter((item) => item.isShared === true);
-			const originalItems = feedItems.filter((item) => item.isShared === false);
-
-			console.log(
-				`[DEBUG] Feed breakdown - Original: ${originalItems.length}, Shared: ${sharedItems.length}`
-			);
-
-			if (originalItems.length === 0) {
-				console.log("[DEBUG] WARNING: No original posts in feed!");
-			}
-
-			// Log a sample of each type if available
-			if (originalItems.length > 0) {
-				console.log(
-					"[DEBUG] Sample original post:",
-					originalItems[0].id,
-					originalItems[0].userId,
-					originalItems[0].isShared
-				);
-			}
-
-			if (sharedItems.length > 0) {
-				console.log(
-					"[DEBUG] Sample shared post:",
-					sharedItems[0].id,
-					sharedItems[0].userId,
-					sharedItems[0].isShared
 				);
 			}
 		}
@@ -215,16 +161,20 @@ export function FeedContent({
 	// Each VoiceNoteCard manages its own state via useVoiceNoteCard hook
 	const handleShareStatusChanged = useCallback(
 		(voiceNoteId: string, isShared: boolean) => {
-			console.log(
-				`[FEED] Share status changed for ${voiceNoteId}: ${isShared}`
-			);
+			if (__DEV__) {
+				console.log(
+					`[FEED] Share status changed for ${voiceNoteId}: ${isShared}`
+				);
+			}
 		},
 		[]
 	);
 
 	// Handle voice note unshared - no longer needed to maintain local state
 	const handleVoiceNoteUnshared = useCallback((voiceNoteId: string) => {
-		console.log(`[FEED] Voice note unshared: ${voiceNoteId}`);
+		if (__DEV__) {
+			console.log(`[FEED] Voice note unshared: ${voiceNoteId}`);
+		}
 	}, []);
 
 	// Render individual feed item for FlatList

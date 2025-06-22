@@ -9,11 +9,18 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { TestDatabase } = require("../helpers/testDatabase");
 
+// Ensure JWT_SECRET is available for tests
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+	throw new Error("JWT_SECRET environment variable is required for tests");
+}
+
 // Mock the dependencies
 jest.mock("../../src/config/supabase");
 jest.mock("../../src/middleware/accountLockout");
 jest.mock("../../src/config/passport", () => ({
 	_strategies: {},
+	authenticate: jest.fn(() => (req, res, next) => next()),
 }));
 
 const mockSupabase = require("../../src/config/supabase");
@@ -147,12 +154,10 @@ describe("Authentication Routes", () => {
 			// Mock existing username
 			mockSupabase.from.mockReturnValueOnce({
 				select: jest.fn().mockReturnValue({
-					eq: jest
-						.fn()
-						.mockResolvedValue({
-							data: [{ id: "existing-user" }],
-							error: null,
-						}),
+					eq: jest.fn().mockResolvedValue({
+						data: [{ id: "existing-user" }],
+						error: null,
+					}),
 				}),
 			});
 
@@ -185,12 +190,10 @@ describe("Authentication Routes", () => {
 				})
 				.mockReturnValueOnce({
 					select: jest.fn().mockReturnValue({
-						eq: jest
-							.fn()
-							.mockResolvedValue({
-								data: [{ id: "existing-user" }],
-								error: null,
-							}), // Existing email
+						eq: jest.fn().mockResolvedValue({
+							data: [{ id: "existing-user" }],
+							error: null,
+						}), // Existing email
 					}),
 				});
 
@@ -242,6 +245,9 @@ describe("Authentication Routes", () => {
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					eq: jest.fn().mockResolvedValue({ data: [mockUser], error: null }),
+				}),
+				update: jest.fn().mockReturnValue({
+					eq: jest.fn().mockResolvedValue({ data: null, error: null }),
 				}),
 			});
 
@@ -343,7 +349,7 @@ describe("Authentication Routes", () => {
 			const response = await request(app)
 				.post("/login")
 				.send(loginData)
-				.expect(429);
+				.expect(423);
 
 			expect(response.body.message).toContain("Account temporarily locked");
 		});
@@ -385,6 +391,9 @@ describe("Authentication Routes", () => {
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					eq: jest.fn().mockResolvedValue({ data: [mockUser], error: null }),
+				}),
+				update: jest.fn().mockReturnValue({
+					eq: jest.fn().mockResolvedValue({ data: null, error: null }),
 				}),
 			});
 

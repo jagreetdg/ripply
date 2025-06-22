@@ -153,12 +153,12 @@ const deleteVoiceNote = async (id) => {
 
 /**
  * Search voice notes by title or tags
- * @param {string} query - Search query
+ * @param {string} searchTerm - Search query
  * @param {Object} options - Search options
  * @param {string} options.searchType - Search type: 'title' or 'tag'
  * @returns {Array} Matching voice notes
  */
-const searchVoiceNotes = async (query, options = {}) => {
+const searchVoiceNotes = async (searchTerm, options = {}) => {
 	const { page = 1, limit = 10, searchType = "title" } = options;
 	const offset = (page - 1) * limit;
 
@@ -180,7 +180,7 @@ const searchVoiceNotes = async (query, options = {}) => {
 		const { data: tagMatches, error: tagError } = await supabase
 			.from("voice_note_tags")
 			.select("voice_note_id")
-			.ilike("tag_name", `%${query}%`);
+			.ilike("tag_name", `%${searchTerm}%`);
 
 		if (tagError) throw tagError;
 
@@ -201,7 +201,7 @@ const searchVoiceNotes = async (query, options = {}) => {
 		voiceNoteQuery = voiceNoteQuery.in("id", voiceNoteIds);
 	} else {
 		// Search by title (default)
-		voiceNoteQuery = voiceNoteQuery.ilike("title", `%${query}%`);
+		voiceNoteQuery = voiceNoteQuery.ilike("title", `%${searchTerm}%`);
 	}
 
 	const { data, error, count } = await voiceNoteQuery

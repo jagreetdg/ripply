@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { getUserVoiceNotes, getUserSharedVoiceNotes } from '../../../services/api';
 
-interface VoiceNote {
+export interface VoiceNote {
   id: string;
   created_at: string;
   shared_at?: string;

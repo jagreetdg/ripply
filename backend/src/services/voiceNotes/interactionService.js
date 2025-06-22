@@ -210,10 +210,6 @@ const shareVoiceNote = async (voiceNoteId, userId) => {
 		throw new Error("Already shared this voice note");
 	}
 
-	console.log(
-		`[DEBUG] Attempting to insert share record: voiceNoteId=${voiceNoteId}, userId=${userId}`
-	);
-
 	// Try using a stored function first (if it exists)
 	try {
 		const { data, error } = await supabase.rpc("create_voice_note_share", {
@@ -222,18 +218,14 @@ const shareVoiceNote = async (voiceNoteId, userId) => {
 		});
 
 		if (!error && data) {
-			console.log(`[DEBUG] Share insert successful via RPC:`, data);
 			return data[0] || data; // Handle array or single object response
 		}
 	} catch (rpcError) {
-		console.log(
-			`[DEBUG] RPC function not available, falling back to direct insert`
-		);
+		// RPC function not available, fall back to direct insert
 	}
 
 	// Fallback to direct insert with explicit UUID
 	const shareId = randomUUID();
-	console.log(`[DEBUG] Generated share ID: ${shareId}`);
 
 	const { data, error } = await supabase
 		.from("voice_note_shares")
@@ -248,20 +240,9 @@ const shareVoiceNote = async (voiceNoteId, userId) => {
 		.single();
 
 	if (error) {
-		console.error(`[DEBUG] Share insert error:`, {
-			error,
-			voiceNoteId,
-			userId,
-			shareId,
-			errorCode: error.code,
-			errorMessage: error.message,
-			errorDetails: error.details,
-			errorHint: error.hint,
-		});
 		throw error;
 	}
 
-	console.log(`[DEBUG] Share insert successful:`, data);
 	return data;
 };
 

@@ -1,7 +1,7 @@
 const axios = require("axios");
 
 // Configuration - update these as needed
-const BASE_URL = "http://localhost:3000"; // Use local backend for testing
+const BASE_URL = process.env.API_BASE_URL || "http://localhost:3000"; // Use local backend for testing
 const REMOTE_URL = "https://ripply-backend.onrender.com"; // Remote backend
 const USE_REMOTE = true; // Set to false to use local backend
 

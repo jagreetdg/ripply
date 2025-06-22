@@ -51,7 +51,7 @@ export const useSignupSubmission = (): SubmissionState & SubmissionActions => {
         username: formData.username.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
-        displayName: formData.displayName.trim() || formData.username.trim(),
+        display_name: formData.displayName.trim() || formData.username.trim(),
       };
 
       const response = (await registerUser(userData)) as ApiResponse;

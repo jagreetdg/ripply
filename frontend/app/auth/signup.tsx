@@ -8,6 +8,7 @@ import {
 	Platform,
 	ScrollView,
 	ActivityIndicator,
+	TextInput,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";

@@ -8,6 +8,12 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const { TestDatabase } = require("../helpers/testDatabase");
 
+// Ensure JWT_SECRET is available for tests
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+	throw new Error("JWT_SECRET environment variable is required for tests");
+}
+
 // Mock the dependencies
 jest.mock("../../src/config/supabase");
 jest.mock("../../src/middleware/auth");
@@ -38,7 +44,6 @@ describe("User Routes", () => {
 			is_verified: false,
 		};
 
-		const JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 		authToken = jwt.sign(
 			{ id: mockUser.id, email: mockUser.email, username: mockUser.username },
 			JWT_SECRET,
@@ -101,13 +106,11 @@ describe("User Routes", () => {
 						order: jest.fn().mockReturnValue({
 							order: jest.fn().mockReturnValue({
 								neq: jest.fn().mockReturnValue({
-									range: jest
-										.fn()
-										.mockResolvedValue({
-											data: searchResults,
-											error: null,
-											count: 2,
-										}),
+									range: jest.fn().mockResolvedValue({
+										data: searchResults,
+										error: null,
+										count: 2,
+									}),
 								}),
 							}),
 						}),
@@ -147,13 +150,11 @@ describe("User Routes", () => {
 						order: jest.fn().mockReturnValue({
 							order: jest.fn().mockReturnValue({
 								neq: jest.fn().mockReturnValue({
-									range: jest
-										.fn()
-										.mockResolvedValue({
-											data: searchResults,
-											error: null,
-											count: 25,
-										}),
+									range: jest.fn().mockResolvedValue({
+										data: searchResults,
+										error: null,
+										count: 25,
+									}),
 								}),
 							}),
 						}),

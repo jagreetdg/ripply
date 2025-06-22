@@ -31,11 +31,19 @@ router.get("/:userId", profileController.getUserById);
 // Update user profile (authenticated)
 router.put("/:userId", authenticateToken, profileController.updateUserProfile);
 
-// Update user verification status (admin)
-router.patch("/:userId/verify", profileController.updateVerificationStatus);
+// Update user verification status (admin only) - REQUIRES AUTHENTICATION
+router.patch(
+	"/:userId/verify",
+	authenticateToken,
+	profileController.updateVerificationStatus
+);
 
-// Update user profile photos (admin/user)
-router.patch("/:userId/photos", profileController.updateProfilePhotos);
+// Update user profile photos (authenticated) - REQUIRES AUTHENTICATION
+router.patch(
+	"/:userId/photos",
+	authenticateToken,
+	profileController.updateProfilePhotos
+);
 
 // ===== FOLLOW SYSTEM =====
 
@@ -97,6 +105,7 @@ router.get(
 // Get shared voice notes by user (authenticated)
 router.get(
 	"/:userId/shared-voice-notes",
+	authenticateToken,
 	contentController.getUserSharedVoiceNotes
 );
 
@@ -106,5 +115,14 @@ router.get(
 	authenticateToken,
 	contentController.getUserCombinedContent
 );
+
+// ===== TEST ROUTES (for testing purposes) =====
+router.get("/test", (req, res) => {
+	res.json({ route: "users" });
+});
+
+router.post("/test", (req, res) => {
+	res.json({ route: "users" });
+});
 
 module.exports = router;

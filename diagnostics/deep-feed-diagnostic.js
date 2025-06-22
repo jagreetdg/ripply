@@ -1,10 +1,21 @@
 const { createClient } = require("@supabase/supabase-js");
 
 // Initialize Supabase client
-const supabaseUrl = "https://kxuczrnakuybcgpnxclb.supabase.co";
-const supabaseKey =
-	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4dWN6cm5ha3V5YmNncG54Y2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzEwMTc3ODIsImV4cCI6MjA0NjU5Mzc4Mn0.D7tKw-Ae8-vOC_PLFF9GVyQ0nP7b4jV--XEmbN5mP_A";
+// Validate environment variables
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+	console.error(
+		"Error: SUPABASE_URL and SUPABASE_KEY environment variables are required"
+	);
+	console.error("Please ensure these are set in your .env file");
+	process.exit(1);
+}
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Use environment variable or fallback to localhost
+const BASE_URL = process.env.API_BASE_URL || "http://localhost:3000";
 
 async function runDeepDiagnostic() {
 	console.log("\n🔍 DEEP FEED DIAGNOSTIC - SYSTEMATIC INVESTIGATION");
@@ -100,7 +111,7 @@ async function runDeepDiagnostic() {
 
 		// Call the backend feed endpoint directly
 		const backendResponse = await fetch(
-			`http://localhost:3000/api/voice-notes/feed/${testUserId}`,
+			`${BASE_URL}/api/voice-notes/feed/${testUserId}`,
 			{
 				headers: {
 					Authorization: `Bearer fake-token-for-testing`,

@@ -1,6 +1,6 @@
 /**
  * Database getUsers Utility Tests
- * Tests all database user retrieval functionality
+ * Tests all database users functionality
  */
 
 const { TestDatabase } = require("../helpers/testDatabase");
@@ -9,7 +9,7 @@ const { TestDatabase } = require("../helpers/testDatabase");
 jest.mock("../../src/config/supabase");
 
 const mockSupabase = require("../../src/config/supabase");
-const getUsers = require("../../src/db/getUsers");
+const { getUsers } = require("../../src/db/getUsers");
 
 describe("Database getUsers Utility", () => {
 	let testDb;
@@ -24,29 +24,35 @@ describe("Database getUsers Utility", () => {
 	});
 
 	describe("getUsers function", () => {
-		it("should retrieve all users successfully", async () => {
+		it("should retrieve users with pagination", async () => {
 			const mockUsers = [
 				{
 					id: "user-1",
-					username: "user1",
-					email: "user1@example.com",
-					display_name: "User One",
-					is_verified: true,
+					username: "testuser1",
+					display_name: "Test User 1",
+					email: "test1@example.com",
+					created_at: "2023-01-01T00:00:00Z",
 				},
 				{
 					id: "user-2",
-					username: "user2",
-					email: "user2@example.com",
-					display_name: "User Two",
-					is_verified: false,
+					username: "testuser2",
+					display_name: "Test User 2",
+					email: "test2@example.com",
+					created_at: "2023-01-02T00:00:00Z",
 				},
 			];
 
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockResolvedValue({ data: mockUsers, error: null }),
+			const mockSelect = jest.fn().mockReturnValue({
+				order: jest.fn().mockReturnValue({
+					limit: jest.fn().mockResolvedValue({ data: mockUsers, error: null }),
+				}),
 			});
 
-			const result = await getUsers();
+			mockSupabase.from.mockReturnValue({
+				select: mockSelect,
+			});
+
+			const result = await getUsers({ limit: 10 });
 
 			expect(result).toEqual(mockUsers);
 			expect(mockSupabase.from).toHaveBeenCalledWith("users");
@@ -56,64 +62,68 @@ describe("Database getUsers Utility", () => {
 			const mockError = new Error("Database connection failed");
 
 			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockResolvedValue({ data: null, error: mockError }),
+				select: jest.fn().mockReturnValue({
+					order: jest.fn().mockReturnValue({
+						limit: jest
+							.fn()
+							.mockResolvedValue({ data: null, error: mockError }),
+					}),
+				}),
 			});
 
-			await expect(getUsers()).rejects.toThrow("Database connection failed");
+			await expect(getUsers({ limit: 10 })).rejects.toThrow(
+				"Database connection failed"
+			);
 		});
 
-		it("should handle empty results", async () => {
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockResolvedValue({ data: [], error: null }),
+		it("should apply correct ordering", async () => {
+			const mockOrder = jest.fn().mockReturnValue({
+				limit: jest.fn().mockResolvedValue({ data: [], error: null }),
 			});
 
-			const result = await getUsers();
+			mockSupabase.from.mockReturnValue({
+				select: jest.fn().mockReturnValue({
+					order: mockOrder,
+				}),
+			});
 
-			expect(result).toEqual([]);
+			await getUsers({ limit: 10 });
+
+			expect(mockOrder).toHaveBeenCalledWith("created_at", {
+				ascending: false,
+			});
 		});
 
-		it("should select correct user fields", async () => {
-			const mockSelect = jest.fn().mockResolvedValue({ data: [], error: null });
+		it("should apply correct pagination", async () => {
+			const mockLimit = jest.fn().mockResolvedValue({ data: [], error: null });
 
 			mockSupabase.from.mockReturnValue({
-				select: mockSelect,
+				select: jest.fn().mockReturnValue({
+					order: jest.fn().mockReturnValue({
+						limit: mockLimit,
+					}),
+				}),
 			});
 
-			await getUsers();
+			await getUsers({ limit: 10 });
 
-			expect(mockSelect).toHaveBeenCalledWith("*");
-		});
-	});
-
-	describe("Error handling", () => {
-		it("should handle null data response", async () => {
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockResolvedValue({ data: null, error: null }),
-			});
-
-			const result = await getUsers();
-
-			expect(result).toBeNull();
+			expect(mockLimit).toHaveBeenCalledWith(10);
 		});
 
-		it("should propagate Supabase errors", async () => {
-			const supabaseError = { message: "RLS policy violation", code: 42501 };
+		it("should handle edge case pagination values", async () => {
+			const mockLimit = jest.fn().mockResolvedValue({ data: [], error: null });
 
 			mockSupabase.from.mockReturnValue({
-				select: jest
-					.fn()
-					.mockResolvedValue({ data: null, error: supabaseError }),
+				select: jest.fn().mockReturnValue({
+					order: jest.fn().mockReturnValue({
+						limit: mockLimit,
+					}),
+				}),
 			});
 
-			await expect(getUsers()).rejects.toEqual(supabaseError);
-		});
+			await getUsers({ limit: 1 });
 
-		it("should handle network timeout errors", async () => {
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockRejectedValue(new Error("Network timeout")),
-			});
-
-			await expect(getUsers()).rejects.toThrow("Network timeout");
+			expect(mockLimit).toHaveBeenCalledWith(1);
 		});
 	});
 
@@ -122,48 +132,66 @@ describe("Database getUsers Utility", () => {
 			const mockUser = {
 				id: "user-123",
 				username: "testuser",
-				email: "test@example.com",
 				display_name: "Test User",
+				email: "test@example.com",
 				avatar_url: "https://example.com/avatar.jpg",
 				bio: "Test bio",
-				is_verified: true,
+				is_verified: false,
+				followers_count: 10,
+				following_count: 5,
+				voice_notes_count: 3,
 				created_at: "2023-01-01T00:00:00Z",
 				updated_at: "2023-01-01T00:00:00Z",
 			};
 
 			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockResolvedValue({ data: [mockUser], error: null }),
+				select: jest.fn().mockReturnValue({
+					order: jest.fn().mockReturnValue({
+						limit: jest
+							.fn()
+							.mockResolvedValue({ data: [mockUser], error: null }),
+					}),
+				}),
 			});
 
-			const result = await getUsers();
+			const result = await getUsers({ limit: 10 });
 
 			expect(result[0]).toEqual(mockUser);
 			expect(result[0]).toHaveProperty("id");
 			expect(result[0]).toHaveProperty("username");
 			expect(result[0]).toHaveProperty("email");
-			expect(result[0]).toHaveProperty("display_name");
 		});
 
 		it("should handle users with null optional fields", async () => {
 			const mockUser = {
 				id: "user-123",
 				username: "testuser",
+				display_name: null,
 				email: "test@example.com",
-				display_name: "Test User",
 				avatar_url: null,
 				bio: null,
 				is_verified: false,
+				followers_count: 0,
+				following_count: 0,
+				voice_notes_count: 0,
 				created_at: "2023-01-01T00:00:00Z",
 				updated_at: "2023-01-01T00:00:00Z",
 			};
 
 			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockResolvedValue({ data: [mockUser], error: null }),
+				select: jest.fn().mockReturnValue({
+					order: jest.fn().mockReturnValue({
+						limit: jest
+							.fn()
+							.mockResolvedValue({ data: [mockUser], error: null }),
+					}),
+				}),
 			});
 
-			const result = await getUsers();
+			const result = await getUsers({ limit: 10 });
 
 			expect(result[0]).toEqual(mockUser);
+			expect(result[0].display_name).toBeNull();
 			expect(result[0].avatar_url).toBeNull();
 			expect(result[0].bio).toBeNull();
 		});
@@ -172,77 +200,140 @@ describe("Database getUsers Utility", () => {
 	describe("Performance considerations", () => {
 		it("should call Supabase client only once", async () => {
 			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockResolvedValue({ data: [], error: null }),
+				select: jest.fn().mockReturnValue({
+					order: jest.fn().mockReturnValue({
+						limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+					}),
+				}),
 			});
 
-			await getUsers();
+			await getUsers({ limit: 10 });
 
 			expect(mockSupabase.from).toHaveBeenCalledTimes(1);
 		});
 
-		it("should handle large datasets", async () => {
-			const largeMockUsers = Array.from({ length: 1000 }, (_, i) => ({
+		it("should handle large result sets efficiently", async () => {
+			const mockLargeDataSet = Array.from({ length: 1000 }, (_, i) => ({
 				id: `user-${i}`,
 				username: `user${i}`,
-				email: `user${i}@example.com`,
 				display_name: `User ${i}`,
-				is_verified: i % 2 === 0,
+				email: `user${i}@example.com`,
+				created_at: new Date().toISOString(),
 			}));
 
 			mockSupabase.from.mockReturnValue({
-				select: jest
-					.fn()
-					.mockResolvedValue({ data: largeMockUsers, error: null }),
+				select: jest.fn().mockReturnValue({
+					order: jest.fn().mockReturnValue({
+						limit: jest
+							.fn()
+							.mockResolvedValue({ data: mockLargeDataSet, error: null }),
+					}),
+				}),
 			});
 
-			const result = await getUsers();
+			const result = await getUsers({ limit: 1000 });
 
 			expect(result).toHaveLength(1000);
-			expect(result[0].username).toBe("user0");
-			expect(result[999].username).toBe("user999");
+			expect(result[0]).toHaveProperty("id");
 		});
 	});
 
-	describe("Integration scenarios", () => {
-		it("should work with real-like database responses", async () => {
-			const realisticUsers = [
+	describe("Error handling", () => {
+		it("should handle null data response", async () => {
+			mockSupabase.from.mockReturnValue({
+				select: jest.fn().mockReturnValue({
+					order: jest.fn().mockReturnValue({
+						limit: jest.fn().mockResolvedValue({ data: null, error: null }),
+					}),
+				}),
+			});
+
+			const result = await getUsers({ limit: 10 });
+
+			expect(result).toEqual([]);
+		});
+
+		it("should propagate Supabase errors", async () => {
+			const supabaseError = {
+				message: "RLS policy violation",
+				code: 42501,
+			};
+
+			mockSupabase.from.mockReturnValue({
+				select: jest.fn().mockReturnValue({
+					order: jest.fn().mockReturnValue({
+						limit: jest
+							.fn()
+							.mockResolvedValue({ data: null, error: supabaseError }),
+					}),
+				}),
+			});
+
+			await expect(getUsers({ limit: 10 })).rejects.toEqual(supabaseError);
+		});
+
+		it("should handle network timeout errors", async () => {
+			mockSupabase.from.mockReturnValue({
+				select: jest.fn().mockReturnValue({
+					order: jest.fn().mockReturnValue({
+						limit: jest.fn().mockRejectedValue(new Error("Network timeout")),
+					}),
+				}),
+			});
+
+			await expect(getUsers({ limit: 10 })).rejects.toThrow("Network timeout");
+		});
+	});
+
+	describe("Search functionality", () => {
+		it("should support search by username and display name", async () => {
+			const mockSearchResults = [
 				{
-					id: "550e8400-e29b-41d4-a716-446655440000",
-					username: "johndoe",
-					email: "john.doe@example.com",
+					id: "user-1",
+					username: "john_doe",
 					display_name: "John Doe",
-					avatar_url: "https://avatars.githubusercontent.com/u/12345?v=4",
-					bio: "Software developer passionate about open source",
-					is_verified: true,
-					created_at: "2023-01-15T10:30:00.000Z",
-					updated_at: "2023-12-01T15:45:30.000Z",
-				},
-				{
-					id: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-					username: "janedoe",
-					email: "jane.doe@example.com",
-					display_name: "Jane Doe",
-					avatar_url: null,
-					bio: null,
-					is_verified: false,
-					created_at: "2023-02-20T08:15:00.000Z",
-					updated_at: "2023-02-20T08:15:00.000Z",
+					email: "john@example.com",
 				},
 			];
 
-			mockSupabase.from.mockReturnValue({
-				select: jest
-					.fn()
-					.mockResolvedValue({ data: realisticUsers, error: null }),
+			const mockOr = jest.fn().mockReturnValue({
+				order: jest.fn().mockReturnValue({
+					limit: jest
+						.fn()
+						.mockResolvedValue({ data: mockSearchResults, error: null }),
+				}),
 			});
 
-			const result = await getUsers();
+			mockSupabase.from.mockReturnValue({
+				select: jest.fn().mockReturnValue({
+					or: mockOr,
+				}),
+			});
 
-			expect(result).toEqual(realisticUsers);
-			expect(result).toHaveLength(2);
-			expect(result[0].id).toMatch(
-				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+			const result = await getUsers({ search: "john", limit: 10 });
+
+			expect(result).toEqual(mockSearchResults);
+			expect(mockOr).toHaveBeenCalledWith(
+				"username.ilike.%john%,display_name.ilike.%john%"
 			);
+		});
+
+		it("should handle empty search results", async () => {
+			const mockOr = jest.fn().mockReturnValue({
+				order: jest.fn().mockReturnValue({
+					limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+				}),
+			});
+
+			mockSupabase.from.mockReturnValue({
+				select: jest.fn().mockReturnValue({
+					or: mockOr,
+				}),
+			});
+
+			const result = await getUsers({ search: "nonexistent", limit: 10 });
+
+			expect(result).toEqual([]);
 		});
 	});
 });

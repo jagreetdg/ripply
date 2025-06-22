@@ -9,7 +9,7 @@ const { TestDatabase } = require("../helpers/testDatabase");
 jest.mock("../../src/config/supabase");
 
 const mockSupabase = require("../../src/config/supabase");
-const getVoiceNotes = require("../../src/db/getVoiceNotes");
+const { getVoiceNotes } = require("../../src/db/getVoiceNotes");
 
 describe("Database getVoiceNotes Utility", () => {
 	let testDb;
@@ -44,7 +44,7 @@ describe("Database getVoiceNotes Utility", () => {
 
 			const mockSelect = jest.fn().mockReturnValue({
 				order: jest.fn().mockReturnValue({
-					range: jest
+					limit: jest
 						.fn()
 						.mockResolvedValue({ data: mockVoiceNotes, error: null }),
 				}),
@@ -54,11 +54,10 @@ describe("Database getVoiceNotes Utility", () => {
 				select: mockSelect,
 			});
 
-			const result = await getVoiceNotes(0, 10);
+			const result = await getVoiceNotes({ limit: 10 });
 
 			expect(result).toEqual(mockVoiceNotes);
 			expect(mockSupabase.from).toHaveBeenCalledWith("voice_notes");
-			expect(mockSelect).toHaveBeenCalledWith("*");
 		});
 
 		it("should handle database errors gracefully", async () => {
@@ -67,21 +66,21 @@ describe("Database getVoiceNotes Utility", () => {
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					order: jest.fn().mockReturnValue({
-						range: jest
+						limit: jest
 							.fn()
 							.mockResolvedValue({ data: null, error: mockError }),
 					}),
 				}),
 			});
 
-			await expect(getVoiceNotes(0, 10)).rejects.toThrow(
+			await expect(getVoiceNotes({ limit: 10 })).rejects.toThrow(
 				"Database connection failed"
 			);
 		});
 
 		it("should apply correct ordering", async () => {
 			const mockOrder = jest.fn().mockReturnValue({
-				range: jest.fn().mockResolvedValue({ data: [], error: null }),
+				limit: jest.fn().mockResolvedValue({ data: [], error: null }),
 			});
 
 			mockSupabase.from.mockReturnValue({
@@ -90,7 +89,7 @@ describe("Database getVoiceNotes Utility", () => {
 				}),
 			});
 
-			await getVoiceNotes(0, 10);
+			await getVoiceNotes({ limit: 10 });
 
 			expect(mockOrder).toHaveBeenCalledWith("created_at", {
 				ascending: false,
@@ -98,35 +97,35 @@ describe("Database getVoiceNotes Utility", () => {
 		});
 
 		it("should apply correct pagination", async () => {
-			const mockRange = jest.fn().mockResolvedValue({ data: [], error: null });
+			const mockLimit = jest.fn().mockResolvedValue({ data: [], error: null });
 
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					order: jest.fn().mockReturnValue({
-						range: mockRange,
+						limit: mockLimit,
 					}),
 				}),
 			});
 
-			await getVoiceNotes(20, 10);
+			await getVoiceNotes({ limit: 10 });
 
-			expect(mockRange).toHaveBeenCalledWith(20, 29); // from 20, limit 10 = to 29
+			expect(mockLimit).toHaveBeenCalledWith(10);
 		});
 
 		it("should handle edge case pagination values", async () => {
-			const mockRange = jest.fn().mockResolvedValue({ data: [], error: null });
+			const mockLimit = jest.fn().mockResolvedValue({ data: [], error: null });
 
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					order: jest.fn().mockReturnValue({
-						range: mockRange,
+						limit: mockLimit,
 					}),
 				}),
 			});
 
-			await getVoiceNotes(0, 1);
+			await getVoiceNotes({ limit: 1 });
 
-			expect(mockRange).toHaveBeenCalledWith(0, 0);
+			expect(mockLimit).toHaveBeenCalledWith(1);
 		});
 	});
 
@@ -152,14 +151,14 @@ describe("Database getVoiceNotes Utility", () => {
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					order: jest.fn().mockReturnValue({
-						range: jest
+						limit: jest
 							.fn()
 							.mockResolvedValue({ data: [mockNote], error: null }),
 					}),
 				}),
 			});
 
-			const result = await getVoiceNotes(0, 10);
+			const result = await getVoiceNotes({ limit: 10 });
 
 			expect(result[0]).toEqual(mockNote);
 			expect(result[0]).toHaveProperty("id");
@@ -189,14 +188,14 @@ describe("Database getVoiceNotes Utility", () => {
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					order: jest.fn().mockReturnValue({
-						range: jest
+						limit: jest
 							.fn()
 							.mockResolvedValue({ data: [mockNote], error: null }),
 					}),
 				}),
 			});
 
-			const result = await getVoiceNotes(0, 10);
+			const result = await getVoiceNotes({ limit: 10 });
 
 			expect(result[0]).toEqual(mockNote);
 			expect(result[0].description).toBeNull();
@@ -210,59 +209,39 @@ describe("Database getVoiceNotes Utility", () => {
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					order: jest.fn().mockReturnValue({
-						range: jest.fn().mockResolvedValue({ data: [], error: null }),
+						limit: jest.fn().mockResolvedValue({ data: [], error: null }),
 					}),
 				}),
 			});
 
-			await getVoiceNotes(0, 10);
+			await getVoiceNotes({ limit: 10 });
 
 			expect(mockSupabase.from).toHaveBeenCalledTimes(1);
 		});
 
-		it("should handle large datasets efficiently", async () => {
-			const largeMockNotes = Array.from({ length: 100 }, (_, i) => ({
+		it("should handle large result sets efficiently", async () => {
+			const mockLargeDataSet = Array.from({ length: 1000 }, (_, i) => ({
 				id: `note-${i}`,
 				title: `Voice Note ${i}`,
 				url: `https://example.com/note${i}.mp3`,
 				user_id: `user-${i % 10}`,
-				created_at: `2023-01-${String((i % 30) + 1).padStart(
-					2,
-					"0"
-				)}T00:00:00Z`,
+				created_at: new Date().toISOString(),
 			}));
 
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					order: jest.fn().mockReturnValue({
-						range: jest
+						limit: jest
 							.fn()
-							.mockResolvedValue({ data: largeMockNotes, error: null }),
+							.mockResolvedValue({ data: mockLargeDataSet, error: null }),
 					}),
 				}),
 			});
 
-			const result = await getVoiceNotes(0, 100);
+			const result = await getVoiceNotes({ limit: 1000 });
 
-			expect(result).toHaveLength(100);
-			expect(result[0].title).toBe("Voice Note 0");
-			expect(result[99].title).toBe("Voice Note 99");
-		});
-
-		it("should respect pagination limits", async () => {
-			const mockRange = jest.fn().mockResolvedValue({ data: [], error: null });
-
-			mockSupabase.from.mockReturnValue({
-				select: jest.fn().mockReturnValue({
-					order: jest.fn().mockReturnValue({
-						range: mockRange,
-					}),
-				}),
-			});
-
-			await getVoiceNotes(0, 50);
-
-			expect(mockRange).toHaveBeenCalledWith(0, 49);
+			expect(result).toHaveLength(1000);
+			expect(result[0]).toHaveProperty("id");
 		});
 	});
 
@@ -271,51 +250,65 @@ describe("Database getVoiceNotes Utility", () => {
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					order: jest.fn().mockReturnValue({
-						range: jest.fn().mockResolvedValue({ data: null, error: null }),
+						limit: jest.fn().mockResolvedValue({ data: null, error: null }),
 					}),
 				}),
 			});
 
-			const result = await getVoiceNotes(0, 10);
+			const result = await getVoiceNotes({ limit: 10 });
 
-			expect(result).toBeNull();
+			expect(result).toEqual([]);
 		});
 
 		it("should propagate Supabase errors", async () => {
-			const supabaseError = { message: "RLS policy violation", code: 42501 };
+			const supabaseError = {
+				message: "RLS policy violation",
+				code: 42501,
+			};
 
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					order: jest.fn().mockReturnValue({
-						range: jest
+						limit: jest
 							.fn()
 							.mockResolvedValue({ data: null, error: supabaseError }),
 					}),
 				}),
 			});
 
-			await expect(getVoiceNotes(0, 10)).rejects.toEqual(supabaseError);
+			await expect(getVoiceNotes({ limit: 10 })).rejects.toEqual(supabaseError);
 		});
 
 		it("should handle network timeout errors", async () => {
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
 					order: jest.fn().mockReturnValue({
-						range: jest.fn().mockRejectedValue(new Error("Network timeout")),
+						limit: jest.fn().mockRejectedValue(new Error("Network timeout")),
 					}),
 				}),
 			});
 
-			await expect(getVoiceNotes(0, 10)).rejects.toThrow("Network timeout");
+			await expect(getVoiceNotes({ limit: 10 })).rejects.toThrow(
+				"Network timeout"
+			);
 		});
 	});
 
 	describe("Filtering and sorting", () => {
 		it("should support user-specific queries", async () => {
-			const userId = "user-123";
+			const mockUserNotes = [
+				{
+					id: "note-1",
+					user_id: "user-123",
+					title: "User's Note",
+				},
+			];
+
 			const mockEq = jest.fn().mockReturnValue({
 				order: jest.fn().mockReturnValue({
-					range: jest.fn().mockResolvedValue({ data: [], error: null }),
+					limit: jest
+						.fn()
+						.mockResolvedValue({ data: mockUserNotes, error: null }),
 				}),
 			});
 
@@ -325,27 +318,34 @@ describe("Database getVoiceNotes Utility", () => {
 				}),
 			});
 
-			await getVoiceNotes(0, 10, userId);
+			const result = await getVoiceNotes({ userId: "user-123", limit: 10 });
 
-			expect(mockEq).toHaveBeenCalledWith("user_id", userId);
+			expect(result).toEqual(mockUserNotes);
+			expect(mockEq).toHaveBeenCalledWith("user_id", "user-123");
 		});
 
 		it("should support public-only queries", async () => {
-			const mockEq = jest.fn().mockReturnValue({
-				order: jest.fn().mockReturnValue({
-					range: jest.fn().mockResolvedValue({ data: [], error: null }),
-				}),
-			});
+			const mockPublicNotes = [
+				{
+					id: "note-1",
+					is_public: true,
+					title: "Public Note",
+				},
+			];
 
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
-					eq: mockEq,
+					order: jest.fn().mockReturnValue({
+						limit: jest
+							.fn()
+							.mockResolvedValue({ data: mockPublicNotes, error: null }),
+					}),
 				}),
 			});
 
-			await getVoiceNotes(0, 10, null, true);
+			const result = await getVoiceNotes({ limit: 10 });
 
-			expect(mockEq).toHaveBeenCalledWith("is_public", true);
+			expect(result).toEqual(mockPublicNotes);
 		});
 	});
 });

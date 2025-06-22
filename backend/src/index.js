@@ -16,6 +16,9 @@ const verificationRoutes = require("./routes/verification");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Disable X-Powered-By header for security
+app.disable("x-powered-by");
+
 // Debug middleware for CORS requests
 app.use((req, res, next) => {
 	console.log(`[CORS Debug] ${req.method} ${req.path}`);
@@ -168,7 +171,12 @@ app.get("/health", (req, res) => {
 	res.status(200).json({ status: "ok", message: "Ripply API is running" });
 });
 
-// Start server
-app.listen(PORT, () => {
-	console.log(`Server running on port ${PORT}`);
-});
+// Export the app for testing
+module.exports = app;
+
+// Only start the server if this file is run directly (not imported)
+if (require.main === module) {
+	app.listen(PORT, () => {
+		console.log(`Server running on port ${PORT}`);
+	});
+}

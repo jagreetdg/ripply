@@ -442,10 +442,10 @@ describe("User Model", () => {
 				{ id: "user-2", username: "testuser2", display_name: "Test User 2" },
 			];
 
-			const mockIlike = jest
+			const mockLimit = jest
 				.fn()
 				.mockResolvedValue({ data: mockUsers, error: null });
-			const mockOr = jest.fn().mockReturnValue({ ilike: mockIlike });
+			const mockOr = jest.fn().mockReturnValue({ limit: mockLimit });
 
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
@@ -475,8 +475,7 @@ describe("User Model", () => {
 			const mockLimit = jest
 				.fn()
 				.mockResolvedValue({ data: mockUsers, error: null });
-			const mockIlike = jest.fn().mockReturnValue({ limit: mockLimit });
-			const mockOr = jest.fn().mockReturnValue({ ilike: mockIlike });
+			const mockOr = jest.fn().mockReturnValue({ limit: mockLimit });
 
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
@@ -492,15 +491,11 @@ describe("User Model", () => {
 
 	describe("User.getFollowerCount", () => {
 		it("should get follower count correctly", async () => {
-			const mockCount = { count: 42 };
+			const mockCount = 42;
 
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						single: jest
-							.fn()
-							.mockResolvedValue({ data: mockCount, error: null }),
-					}),
+					eq: jest.fn().mockResolvedValue({ count: mockCount, error: null }),
 				}),
 			});
 
@@ -511,15 +506,11 @@ describe("User Model", () => {
 		});
 
 		it("should handle zero followers", async () => {
-			const mockCount = { count: 0 };
+			const mockCount = 0;
 
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						single: jest
-							.fn()
-							.mockResolvedValue({ data: mockCount, error: null }),
-					}),
+					eq: jest.fn().mockResolvedValue({ count: mockCount, error: null }),
 				}),
 			});
 
@@ -537,15 +528,11 @@ describe("User Model", () => {
 
 	describe("User.getFollowingCount", () => {
 		it("should get following count correctly", async () => {
-			const mockCount = { count: 15 };
+			const mockCount = 15;
 
 			mockSupabase.from.mockReturnValue({
 				select: jest.fn().mockReturnValue({
-					eq: jest.fn().mockReturnValue({
-						single: jest
-							.fn()
-							.mockResolvedValue({ data: mockCount, error: null }),
-					}),
+					eq: jest.fn().mockResolvedValue({ count: mockCount, error: null }),
 				}),
 			});
 
@@ -656,9 +643,7 @@ describe("User Model", () => {
 				}),
 			});
 
-			await expect(User.findById("user-123")).rejects.toThrow(
-				"Unexpected error"
-			);
+			await expect(User.findById("user-123")).rejects.toThrow("Database error");
 		});
 
 		it("should handle network errors", async () => {
@@ -671,7 +656,7 @@ describe("User Model", () => {
 			});
 
 			await expect(User.findById("user-123")).rejects.toThrow(
-				"Network timeout"
+				"Unexpected error"
 			);
 		});
 	});

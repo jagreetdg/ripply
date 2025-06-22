@@ -1,23 +1,116 @@
 # Ripply Backend
 
-This is the backend service for the Ripply voice note social app. It uses Express.js for the API server and Supabase for the database and authentication.
+A Node.js/Express backend for the Ripply voice social media platform.
 
-## Setup
+## 🚀 Features
 
-1. Create a Supabase project at [https://supabase.com](https://supabase.com)
-2. Run the SQL schema in `src/db/schema.sql` in your Supabase SQL editor
-3. Copy your Supabase URL and anon key to the `.env` file
-4. Install dependencies:
+- **Authentication**: JWT-based auth with social login (Google, Apple)
+- **Voice Notes**: Upload, share, like, comment on voice notes
+- **User Profiles**: User management with bio, avatar, and voice bio features
+- **Social Features**: Follow/unfollow, feed algorithms, interactions
+- **Security**: Rate limiting, account lockout, secure middleware
+- **Database**: Supabase integration with PostgreSQL
 
-```bash
-npm install
+## 📁 Project Structure
+
+```
+backend/
+├── src/
+│   ├── config/          # Configuration files (Supabase, Passport)
+│   ├── controllers/     # Route handlers
+│   ├── middleware/      # Custom middleware (auth, rate limiting)
+│   ├── models/          # Data models
+│   ├── routes/          # API routes
+│   ├── services/        # Business logic
+│   └── utils/           # Utility functions
+├── tests/               # Test suites
+├── scripts/             # Database setup and utility scripts
+├── docs/                # Documentation files
+└── diagnostics/         # Diagnostic tools (development)
 ```
 
-5. Start the development server:
+## 🛠️ Setup & Installation
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Environment setup:**
+   Create a `.env` file with:
+   ```
+   # Database
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_anon_key
+   
+   # Authentication
+   JWT_SECRET=your_jwt_secret
+   
+   # OAuth (optional)
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   
+   # Server
+   PORT=3000
+   NODE_ENV=development
+   ```
+
+3. **Database setup:**
+   ```bash
+   npm run setup:db
+   ```
+
+4. **Start development server:**
+   ```bash
+   npm run dev
+   ```
+
+## 🧪 Testing
 
 ```bash
-npm run dev
+# Run all tests
+npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Run specific test file
+npm test -- tests/routes/auth.test.js
 ```
+
+## 📚 API Documentation
+
+- **Authentication**: `/api/auth/*`
+- **Voice Notes**: `/api/voice-notes/*`
+- **Users**: `/api/users/*`
+- **Voice Bios**: `/api/voice-bios/*`
+
+## 🔒 Security Features
+
+- JWT token authentication
+- Rate limiting on sensitive endpoints
+- Account lockout after failed attempts
+- CORS protection
+- Input validation and sanitization
+- Environment-based configuration
+
+## 🚀 Deployment
+
+See `docs/DEPLOY.md` for deployment instructions.
+
+## 📖 Additional Documentation
+
+- [Authentication Refactor](docs/AUTH_REFACTOR.md)
+- [Users Refactor](docs/USERS_REFACTOR.md)
+- [Voice Notes Refactor](docs/VOICE_NOTES_REFACTOR.md)
+- [Fixes Summary](docs/FIXES_SUMMARY.md)
+
+## 🤝 Contributing
+
+1. Follow the existing code structure
+2. Write tests for new features
+3. Ensure all tests pass before submitting
+4. Use proper error handling patterns
 
 ## API Endpoints
 

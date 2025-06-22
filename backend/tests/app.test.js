@@ -4,14 +4,29 @@
  */
 
 const request = require("supertest");
+const express = require("express");
+
+// Create proper Express router mocks before requiring the modules
+const createMockRouter = (routeName) => {
+	const router = express.Router();
+	router.get("/test", (req, res) => {
+		res.json({ route: routeName });
+	});
+	router.post("/test", (req, res) => {
+		res.json({ route: routeName });
+	});
+	return router;
+};
 
 // Mock all route modules before requiring the app
-jest.mock("../src/routes/auth");
-jest.mock("../src/routes/users");
-jest.mock("../src/routes/voiceNotes");
-jest.mock("../src/routes/voiceBios");
-jest.mock("../src/routes/passwordReset");
-jest.mock("../src/routes/verification");
+jest.mock("../src/routes/auth", () => createMockRouter("auth"));
+jest.mock("../src/routes/users", () => createMockRouter("users"));
+jest.mock("../src/routes/voiceNotes", () => createMockRouter("voiceNotes"));
+jest.mock("../src/routes/voiceBios", () => createMockRouter("voiceBios"));
+jest.mock("../src/routes/passwordReset", () =>
+	createMockRouter("passwordReset")
+);
+jest.mock("../src/routes/verification", () => createMockRouter("verification"));
 
 // Mock middleware
 jest.mock("../src/middleware/auth");
@@ -25,59 +40,6 @@ describe("Express Application", () => {
 		// Clear require cache to get fresh app instance
 		jest.resetModules();
 
-		// Mock route handlers
-		require("../src/routes/auth").mockImplementation((req, res, next) => {
-			if (req.path === "/auth/test") {
-				res.json({ route: "auth" });
-			} else {
-				next();
-			}
-		});
-
-		require("../src/routes/users").mockImplementation((req, res, next) => {
-			if (req.path === "/users/test") {
-				res.json({ route: "users" });
-			} else {
-				next();
-			}
-		});
-
-		require("../src/routes/voiceNotes").mockImplementation((req, res, next) => {
-			if (req.path === "/voice-notes/test") {
-				res.json({ route: "voiceNotes" });
-			} else {
-				next();
-			}
-		});
-
-		require("../src/routes/voiceBios").mockImplementation((req, res, next) => {
-			if (req.path === "/voice-bios/test") {
-				res.json({ route: "voiceBios" });
-			} else {
-				next();
-			}
-		});
-
-		require("../src/routes/passwordReset").mockImplementation(
-			(req, res, next) => {
-				if (req.path === "/password-reset/test") {
-					res.json({ route: "passwordReset" });
-				} else {
-					next();
-				}
-			}
-		);
-
-		require("../src/routes/verification").mockImplementation(
-			(req, res, next) => {
-				if (req.path === "/verification/test") {
-					res.json({ route: "verification" });
-				} else {
-					next();
-				}
-			}
-		);
-
 		app = require("../src/index");
 	});
 
@@ -89,7 +51,7 @@ describe("Express Application", () => {
 
 		it("should handle JSON requests", async () => {
 			const response = await request(app)
-				.post("/auth/test")
+				.post("/api/auth/test")
 				.send({ test: "data" })
 				.expect(200);
 
@@ -98,7 +60,7 @@ describe("Express Application", () => {
 
 		it("should parse URL encoded data", async () => {
 			await request(app)
-				.post("/auth/test")
+				.post("/api/auth/test")
 				.send("test=data")
 				.set("Content-Type", "application/x-www-form-urlencoded")
 				.expect(200);
@@ -107,14 +69,17 @@ describe("Express Application", () => {
 
 	describe("CORS Configuration", () => {
 		it("should include CORS headers", async () => {
-			const response = await request(app).get("/auth/test").expect(200);
+			const response = await request(app)
+				.get("/api/auth/test")
+				.set("Origin", "http://localhost:3000")
+				.expect(200);
 
 			expect(response.headers).toHaveProperty("access-control-allow-origin");
 		});
 
 		it("should handle preflight OPTIONS requests", async () => {
 			const response = await request(app)
-				.options("/auth/test")
+				.options("/api/auth/test")
 				.set("Origin", "http://localhost:3000")
 				.set("Access-Control-Request-Method", "POST");
 
@@ -123,7 +88,7 @@ describe("Express Application", () => {
 
 		it("should allow specific origins", async () => {
 			const response = await request(app)
-				.get("/auth/test")
+				.get("/api/auth/test")
 				.set("Origin", "https://ripply-app.netlify.app");
 
 			expect(response.headers["access-control-allow-origin"]).toBeDefined();
@@ -132,39 +97,45 @@ describe("Express Application", () => {
 
 	describe("Route Mounting", () => {
 		it("should mount auth routes", async () => {
-			const response = await request(app).get("/auth/test").expect(200);
+			const response = await request(app).get("/api/auth/test").expect(200);
 
 			expect(response.body).toEqual({ route: "auth" });
 		});
 
 		it("should mount user routes", async () => {
-			const response = await request(app).get("/users/test").expect(200);
+			const response = await request(app).get("/api/users/test").expect(200);
 
 			expect(response.body).toEqual({ route: "users" });
 		});
 
 		it("should mount voice note routes", async () => {
-			const response = await request(app).get("/voice-notes/test").expect(200);
+			const response = await request(app)
+				.get("/api/voice-notes/test")
+				.expect(200);
 
 			expect(response.body).toEqual({ route: "voiceNotes" });
 		});
 
 		it("should mount voice bio routes", async () => {
-			const response = await request(app).get("/voice-bios/test").expect(200);
+			const response = await request(app)
+				.get("/api/voice-bios/test")
+				.expect(200);
 
 			expect(response.body).toEqual({ route: "voiceBios" });
 		});
 
 		it("should mount password reset routes", async () => {
 			const response = await request(app)
-				.get("/password-reset/test")
+				.get("/api/password-reset/test")
 				.expect(200);
 
 			expect(response.body).toEqual({ route: "passwordReset" });
 		});
 
 		it("should mount verification routes", async () => {
-			const response = await request(app).get("/verification/test").expect(200);
+			const response = await request(app)
+				.get("/api/verification/test")
+				.expect(200);
 
 			expect(response.body).toEqual({ route: "verification" });
 		});
@@ -173,7 +144,7 @@ describe("Express Application", () => {
 	describe("Middleware Order", () => {
 		it("should process CORS before routes", async () => {
 			const response = await request(app)
-				.options("/auth/test")
+				.options("/api/auth/test")
 				.set("Origin", "http://localhost:3000");
 
 			expect(response.headers).toHaveProperty("access-control-allow-origin");
@@ -181,7 +152,7 @@ describe("Express Application", () => {
 
 		it("should process body parsing before routes", async () => {
 			const response = await request(app)
-				.post("/auth/test")
+				.post("/api/auth/test")
 				.send({ test: "data" })
 				.set("Content-Type", "application/json");
 
@@ -189,21 +160,23 @@ describe("Express Application", () => {
 		});
 	});
 
-	describe("Error Handling", () => {
-		beforeEach(() => {
-			// Mock a route that throws an error
-			require("../src/routes/auth").mockImplementation((req, res, next) => {
-				if (req.path === "/auth/error") {
-					throw new Error("Test error");
-				}
-				next();
+	describe("Health Check", () => {
+		it("should respond to health check", async () => {
+			const response = await request(app).get("/health").expect(200);
+
+			expect(response.body).toEqual({
+				status: "ok",
+				message: "Ripply API is running",
 			});
 		});
+	});
 
+	describe("Error Handling", () => {
 		it("should handle route errors gracefully", async () => {
-			const response = await request(app).get("/auth/error");
+			// Test with an invalid endpoint to check error handling
+			const response = await request(app).get("/api/auth/invalid");
 
-			// Should not crash the app
+			// Should not crash the app, should return appropriate error code
 			expect(response.status).toBeGreaterThanOrEqual(400);
 		});
 
@@ -217,7 +190,7 @@ describe("Express Application", () => {
 			const consoleSpy = jest.spyOn(console, "log").mockImplementation();
 
 			await request(app)
-				.get("/auth/test")
+				.get("/api/auth/test")
 				.set("Origin", "http://localhost:3000");
 
 			expect(consoleSpy).toHaveBeenCalledWith(
@@ -230,10 +203,10 @@ describe("Express Application", () => {
 		it("should log request method and path", async () => {
 			const consoleSpy = jest.spyOn(console, "log").mockImplementation();
 
-			await request(app).post("/auth/test");
+			await request(app).post("/api/auth/test");
 
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining("POST /auth/test")
+				expect.stringContaining("POST /api/auth/test")
 			);
 
 			consoleSpy.mockRestore();
@@ -242,14 +215,14 @@ describe("Express Application", () => {
 
 	describe("Security Headers", () => {
 		it("should not expose sensitive headers", async () => {
-			const response = await request(app).get("/auth/test");
+			const response = await request(app).get("/api/auth/test");
 
 			expect(response.headers).not.toHaveProperty("x-powered-by", "Express");
 		});
 
 		it("should handle malformed requests", async () => {
 			const response = await request(app)
-				.post("/auth/test")
+				.post("/api/auth/test")
 				.send("invalid json{")
 				.set("Content-Type", "application/json");
 
@@ -261,7 +234,7 @@ describe("Express Application", () => {
 	describe("Content Type Handling", () => {
 		it("should accept JSON content type", async () => {
 			const response = await request(app)
-				.post("/auth/test")
+				.post("/api/auth/test")
 				.send({ test: "data" })
 				.set("Content-Type", "application/json")
 				.expect(200);
@@ -269,7 +242,7 @@ describe("Express Application", () => {
 
 		it("should accept form-encoded content type", async () => {
 			const response = await request(app)
-				.post("/auth/test")
+				.post("/api/auth/test")
 				.send("test=data")
 				.set("Content-Type", "application/x-www-form-urlencoded")
 				.expect(200);
@@ -277,7 +250,7 @@ describe("Express Application", () => {
 
 		it("should handle multipart form data", async () => {
 			const response = await request(app)
-				.post("/auth/test")
+				.post("/api/auth/test")
 				.field("test", "data")
 				.expect(200);
 		});
@@ -285,7 +258,7 @@ describe("Express Application", () => {
 
 	describe("Route Precedence", () => {
 		it("should match specific routes before wildcards", async () => {
-			const response = await request(app).get("/auth/test").expect(200);
+			const response = await request(app).get("/api/auth/test").expect(200);
 
 			expect(response.body).toEqual({ route: "auth" });
 		});
@@ -293,31 +266,10 @@ describe("Express Application", () => {
 		it("should handle route parameters correctly", async () => {
 			// This depends on your actual route setup
 			await request(app)
-				.get("/users/123")
+				.get("/api/users/123")
 				.expect((res) => {
 					// Should route to users handler
 					expect(res.status).toBeLessThan(500);
-				});
-		});
-	});
-
-	describe("Health Check", () => {
-		it("should respond to health check requests", async () => {
-			// If you have a health check endpoint
-			const response = await request(app)
-				.get("/health")
-				.expect((res) => {
-					// Should not return 404
-					expect(res.status).not.toBe(404);
-				});
-		});
-
-		it("should handle root path requests", async () => {
-			const response = await request(app)
-				.get("/")
-				.expect((res) => {
-					// Should handle root requests
-					expect(res.status).toBeDefined();
 				});
 		});
 	});

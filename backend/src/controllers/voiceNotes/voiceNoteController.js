@@ -179,10 +179,10 @@ const deleteVoiceNote = async (req, res) => {
  */
 const searchVoiceNotes = async (req, res) => {
 	try {
-		const { term: query, searchType, page = 1, limit = 10 } = req.query;
+		const { term: searchTerm, searchType, page = 1, limit = 10 } = req.query;
 
 		// Allow search without query (return all public voice notes)
-		if (!query) {
+		if (!searchTerm) {
 			const result = await voiceNoteService.getVoiceNotes({
 				page: parseInt(page),
 				limit: parseInt(limit),
@@ -205,7 +205,7 @@ const searchVoiceNotes = async (req, res) => {
 			});
 		}
 
-		const result = await voiceNoteService.searchVoiceNotes(query, {
+		const result = await voiceNoteService.searchVoiceNotes(searchTerm, {
 			page: parseInt(page),
 			limit: parseInt(limit),
 			searchType: searchType || "title",

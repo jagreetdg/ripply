@@ -103,14 +103,18 @@ router.get(
 	interactionController.checkUserShared
 );
 
-// ===== LEGACY/DEBUG ENDPOINTS =====
-// These could be moved to separate debug routes or removed in production
+// ===== DEBUG ENDPOINTS (Development Only) =====
 
 /**
- * Temporary test endpoint to check deployment status
+ * Test deployment endpoint - Development only
  * @route GET /api/voice-notes/test-deployment
  */
 router.get("/test-deployment", async (req, res) => {
+	// Only allow in development
+	if (process.env.NODE_ENV === "production") {
+		return res.status(404).json({ error: "Endpoint not found" });
+	}
+
 	try {
 		const deploymentInfo = {
 			timestamp: new Date().toISOString(),
@@ -125,10 +129,8 @@ router.get("/test-deployment", async (req, res) => {
 			],
 		};
 
-		console.log("[DEBUG] Test deployment endpoint called:", deploymentInfo);
 		res.status(200).json(deploymentInfo);
 	} catch (error) {
-		console.error("Error in test deployment endpoint:", error);
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 });

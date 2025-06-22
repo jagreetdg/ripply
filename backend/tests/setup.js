@@ -3,7 +3,8 @@
  * This file runs before all tests and sets up the testing environment
  */
 
-require("dotenv").config({ path: ".env.test" });
+// Load environment variables from main .env file
+require("dotenv").config();
 
 // Set test timeout to 30 seconds for database operations
 jest.setTimeout(30000);
@@ -46,7 +47,12 @@ global.testUtils = {
 	// Generate test auth token
 	generateTestToken: (user) => {
 		const jwt = require("jsonwebtoken");
-		const JWT_SECRET = process.env.JWT_SECRET || "test-secret";
+		const JWT_SECRET = process.env.JWT_SECRET;
+		if (!JWT_SECRET) {
+			throw new Error(
+				"JWT_SECRET environment variable is required for test token generation"
+			);
+		}
 		return jwt.sign(
 			{ id: user.id, email: user.email, username: user.username },
 			JWT_SECRET,

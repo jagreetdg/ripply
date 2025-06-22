@@ -108,13 +108,14 @@ const register = async (req, res) => {
  */
 const login = async (req, res) => {
 	try {
-		const { email, password, rememberMe } = req.body;
+		const { email, password, rememberMe, timestamp } = req.body;
 
 		// Validate input data
-		const validation = validateLoginData({ email, password });
+		const validation = validateLoginData({ email, password, timestamp });
 		if (!validation.isValid) {
 			return res.status(400).json({
 				message: validation.message,
+				...(validation.field && { field: validation.field }),
 			});
 		}
 

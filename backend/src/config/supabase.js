@@ -2,19 +2,28 @@ const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config();
 const fetch = require("node-fetch");
 
-// Initialize Supabase client
-const supabaseUrl =
-	process.env.SUPABASE_URL || "https://kxuczrnakuybcgpnxclb.supabase.co";
-const supabaseKey =
-	process.env.SUPABASE_KEY ||
-	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4dWN6cm5ha3V5YmNncG54Y2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzEwMTc3ODIsImV4cCI6MjA0NjU5Mzc4Mn0.D7tKw-Ae8-vOC_PLFF9GVyQ0nP7b4jV--XEmbN5mP_A";
+// Validate required environment variables
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-	console.error("Missing Supabase credentials. Please check your .env file.");
-	process.exit(1);
+if (!supabaseUrl) {
+	throw new Error("SUPABASE_URL environment variable is required");
 }
 
-console.log("Connecting to Supabase at:", supabaseUrl);
+if (!supabaseKey) {
+	throw new Error("SUPABASE_ANON_KEY environment variable is required");
+}
+
+// Validate URL format
+try {
+	new URL(supabaseUrl);
+} catch (error) {
+	throw new Error("SUPABASE_URL must be a valid URL");
+}
+
+if (process.env.NODE_ENV === "development") {
+	console.log("Connecting to Supabase at:", supabaseUrl);
+}
 
 // Create Supabase client with custom fetch implementation
 const supabase = createClient(supabaseUrl, supabaseKey, {
