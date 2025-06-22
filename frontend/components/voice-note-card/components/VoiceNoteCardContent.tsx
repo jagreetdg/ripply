@@ -36,6 +36,8 @@ interface VoiceNoteCardContentProps {
 	isLoadingShareCount: boolean;
 	isLoadingStats: boolean;
 	isLoadingRepostStatus: boolean;
+	showRepostAttribution?: boolean;
+	sharedBy?: any;
 	onProfilePress: () => void;
 	onPlayPress: () => void;
 	onProgressBarPress: (event: any) => void;
@@ -78,6 +80,8 @@ export const VoiceNoteCardContent: React.FC<VoiceNoteCardContentProps> = ({
 	isLoadingShareCount,
 	isLoadingStats,
 	isLoadingRepostStatus,
+	showRepostAttribution,
+	sharedBy,
 	onProfilePress,
 	onPlayPress,
 	onProgressBarPress,
@@ -160,6 +164,7 @@ export const VoiceNoteCardContent: React.FC<VoiceNoteCardContentProps> = ({
 
 			{/* Interaction buttons */}
 			<VoiceNoteInteractions
+				voiceNote={voiceNote}
 				styles={styles}
 				colors={colors}
 				hasBackgroundImage={hasBackgroundImage}
@@ -183,6 +188,8 @@ export const VoiceNoteCardContent: React.FC<VoiceNoteCardContentProps> = ({
 				handleRepostPress={onRepostPress}
 				handleShareCountLongPress={onShareCountLongPress}
 				isLoadingRepostStatus={isLoadingRepostStatus}
+				showRepostAttribution={showRepostAttribution}
+				sharedBy={sharedBy}
 			/>
 		</View>
 	);

@@ -190,6 +190,8 @@ export function VoiceNoteCardImpl({
 						isLoadingShareCount={isLoadingSharesCount}
 						isLoadingStats={isLoadingStats}
 						isLoadingRepostStatus={isLoadingRepostStatus}
+						showRepostAttribution={showRepostAttribution}
+						sharedBy={sharedBy}
 						onProfilePress={handleProfilePress}
 						onPlayPress={handlePlayPress}
 						onProgressBarPress={handleProgressBarPress}
@@ -250,6 +252,8 @@ export function VoiceNoteCardImpl({
 						isLoadingShareCount={isLoadingSharesCount}
 						isLoadingStats={isLoadingStats}
 						isLoadingRepostStatus={isLoadingRepostStatus}
+						showRepostAttribution={showRepostAttribution}
+						sharedBy={sharedBy}
 						onProfilePress={handleProfilePress}
 						onPlayPress={handlePlayPress}
 						onProgressBarPress={handleProgressBarPress}

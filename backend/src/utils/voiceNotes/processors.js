@@ -10,13 +10,39 @@
 const processVoiceNoteCounts = (note) => {
 	if (!note) return note;
 
-	return {
+	// Debug: Track the incoming data structure for shares specifically
+	const originalShares = note.shares;
+	const extractedSharesCount = note.shares?.[0]?.count || 0;
+
+	// Check if we have a problematic case
+	const isProblemCase =
+		Array.isArray(originalShares) &&
+		originalShares.length > 0 &&
+		extractedSharesCount === 0;
+
+	if (isProblemCase || note.id === "cd9144b7-c3da-4d1f-a755-a18c18466d89") {
+		console.log(
+			`[BACKEND DEBUG] processVoiceNoteCounts - Voice Note ${note.id}:`,
+			{
+				originalSharesStructure: originalShares,
+				extractedSharesCount,
+				sharesLength: Array.isArray(originalShares)
+					? originalShares.length
+					: "not array",
+				sharesFirstItem: originalShares?.[0],
+				isProblemCase,
+				noteTitle: note.title,
+			}
+		);
+	}
+
+	const processed = {
 		...note,
 		// Extract count values from Supabase aggregation arrays
 		likes: note.likes?.[0]?.count || 0,
 		comments: note.comments?.[0]?.count || 0,
 		plays: note.plays?.[0]?.count || 0,
-		shares: note.shares?.[0]?.count || 0,
+		shares: extractedSharesCount,
 		// Extract tags if they exist (for cases where tags weren't already processed)
 		tags: note.tags
 			? Array.isArray(note.tags) && typeof note.tags[0] === "string"
@@ -24,6 +50,16 @@ const processVoiceNoteCounts = (note) => {
 				: note.tags.map((tag) => tag.tag_name)
 			: [],
 	};
+
+	// Debug: Log the processed result for problem cases
+	if (isProblemCase || note.id === "cd9144b7-c3da-4d1f-a755-a18c18466d89") {
+		console.log(`[BACKEND DEBUG] processVoiceNoteCounts - Processed result:`, {
+			processedShares: processed.shares,
+			voiceNoteId: note.id,
+		});
+	}
+
+	return processed;
 };
 
 /**

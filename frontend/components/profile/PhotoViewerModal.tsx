@@ -31,6 +31,7 @@ import {
 	useConfirmation,
 	confirmationPresets,
 } from "../../hooks/useConfirmation";
+import { processImageUrl, getFallbackImageUrl } from "../../utils/imageUtils";
 
 interface PhotoViewerModalProps {
 	visible: boolean;
@@ -295,52 +296,74 @@ export function PhotoViewerModal({
 
 	const [loading, setLoading] = useState(false);
 	const [deleteLoading, setDeleteLoading] = useState(false);
-	const [currentImageUrl, setCurrentImageUrl] = useState(imageUrl);
+	const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
 	const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [hasTriedFallback, setHasTriedFallback] = useState(false);
 
 	const defaultImageUrl =
 		photoType === "profile"
-			? "https://your-default-avatar-url.png" // Replace with your actual default
-			: "https://your-default-cover-url.png"; // Replace with your actual default
+			? require("../../assets/images/logo_transparent.png")
+			: null; // No default for cover photos
+
+	// Memoize the computed URLs to prevent recalculation loops
+	const modalImageUrl = useMemo(() => {
+		const processed = processImageUrl(imageUrl);
+		console.log(`[PHOTO VIEWER DEBUG] modalImageUrl processed:`, {
+			originalUrl: imageUrl,
+			processedUrl: processed,
+			photoType,
+		});
+		return processed;
+	}, [imageUrl, photoType]);
+
+	const fallbackImageUrl = useMemo(() => {
+		if (photoType === "profile") {
+			return getFallbackImageUrl(
+				userId,
+				user?.display_name || "User",
+				"avatar"
+			);
+		}
+		return null; // No fallbacks for cover photos
+	}, [photoType, userId, user?.display_name]);
+
+	// Single effect to handle modal state changes
+	useEffect(() => {
+		if (visible) {
+			StatusBar.setHidden(true);
+			setHasTriedFallback(false);
+			setShowDeleteConfirm(false);
+
+			console.log(`[PHOTO VIEWER DEBUG] Opening modal:`, {
+				photoType,
+				imageUrl,
+				userId,
+				modalImageUrl,
+				fallbackImageUrl,
+			});
+
+			// Only set loading if we have a URL to load
+			if (modalImageUrl) {
+				setCurrentImageUrl(modalImageUrl);
+				setLoading(true);
+			} else {
+				setCurrentImageUrl(null);
+				setLoading(false);
+			}
+		} else {
+			StatusBar.setHidden(false);
+			setShowDeleteConfirm(false);
+			setLoading(false);
+			setHasTriedFallback(false);
+			setCurrentImageUrl(null);
+		}
+	}, [visible, modalImageUrl, fallbackImageUrl]); // Only depend on these stable values
 
 	const styles = useMemo(
 		() => getStyles(colors, isDarkMode),
 		[colors, isDarkMode]
 	);
-
-	useEffect(() => {
-		if (visible) {
-			StatusBar.setHidden(true);
-			setCurrentImageUrl(imageUrl);
-		} else {
-			StatusBar.setHidden(false);
-			setShowDeleteConfirm(false); // Reset on close
-		}
-	}, [visible, imageUrl]);
-
-	// Calculate modal image URL with proper fallbacks
-	const modalImageUrl = useMemo(() => {
-		if (!imageUrl) return null;
-
-		// Handle different URL formats
-		if (
-			imageUrl.startsWith("http") ||
-			imageUrl.startsWith("data:") ||
-			imageUrl.startsWith("file:")
-		) {
-			return imageUrl;
-		}
-
-		// If it's a relative path, make it absolute
-		if (imageUrl.startsWith("/")) {
-			return `${
-				process.env.EXPO_PUBLIC_API_URL || "https://ripply-backend.onrender.com"
-			}${imageUrl}`;
-		}
-
-		return imageUrl;
-	}, [imageUrl]);
 
 	// Listen for orientation changes
 	useEffect(() => {
@@ -350,13 +373,6 @@ export function PhotoViewerModal({
 
 		return () => subscription?.remove();
 	}, []);
-
-	// Reset image loading state when modal opens/closes or image changes
-	useEffect(() => {
-		if (visible && modalImageUrl) {
-			setLoading(true);
-		}
-	}, [visible, modalImageUrl]);
 
 	// Handle escape key press to close modal (web only)
 	useEffect(() => {
@@ -682,18 +698,19 @@ export function PhotoViewerModal({
 
 		return (
 			<View style={styles.actionsContainer}>
-				<TouchableOpacity style={styles.button} onPress={handleImagePicker}>
-					<Feather name="upload" size={18} color="#FFF" />
-					<Text style={styles.buttonText}>Upload New</Text>
+				<TouchableOpacity
+					style={[styles.button, styles.iconButton]}
+					onPress={handleImagePicker}
+				>
+					<Feather name="upload" size={20} color="#FFF" />
 				</TouchableOpacity>
 				{currentImageUrl &&
 					!currentImageUrl.includes("your-default-") && ( // Don't show delete for default
 						<TouchableOpacity
-							style={[styles.button, styles.deleteButton]}
+							style={[styles.button, styles.deleteButton, styles.iconButton]}
 							onPress={handleDeletePhoto}
 						>
-							<Feather name="trash-2" size={18} color="#FFF" />
-							<Text style={styles.buttonText}>Delete</Text>
+							<Feather name="trash-2" size={20} color="#FFF" />
 						</TouchableOpacity>
 					)}
 			</View>
@@ -727,14 +744,102 @@ export function PhotoViewerModal({
 								<Text style={styles.loadingText}>Processing...</Text>
 							</View>
 						)}
-						<Image
-							source={{ uri: currentImageUrl || defaultImageUrl }}
-							style={{
-								width: imageDimensions.width,
-								height: imageDimensions.height,
-							}}
-							resizeMode="cover"
-						/>
+
+						{/* Only render Image if we have a valid URL */}
+						{currentImageUrl || modalImageUrl || fallbackImageUrl ? (
+							<Image
+								source={{
+									uri: currentImageUrl || modalImageUrl || fallbackImageUrl,
+								}}
+								style={{
+									width: imageDimensions.width,
+									height: imageDimensions.height,
+								}}
+								resizeMode="cover"
+								onLoad={() => {
+									const loadedUrl =
+										currentImageUrl || modalImageUrl || fallbackImageUrl;
+									console.log(
+										`[PHOTO VIEWER DEBUG] Image loaded successfully:`,
+										loadedUrl
+									);
+									setLoading(false);
+								}}
+								onError={(error) => {
+									const failedUrl = currentImageUrl || modalImageUrl;
+									console.error(`[PHOTO VIEWER DEBUG] Failed to load image:`, {
+										failedUrl,
+										currentImageUrl,
+										modalImageUrl,
+										fallbackImageUrl,
+										photoType,
+										userId,
+										hasTriedFallback,
+										error: error.nativeEvent?.error,
+									});
+
+									setLoading(false);
+
+									// Only try fallback once for profile pics
+									if (
+										photoType === "profile" &&
+										!hasTriedFallback &&
+										fallbackImageUrl &&
+										failedUrl !== fallbackImageUrl
+									) {
+										console.log(
+											`[PHOTO VIEWER DEBUG] Switching to fallback URL:`,
+											fallbackImageUrl
+										);
+										setCurrentImageUrl(fallbackImageUrl);
+										setHasTriedFallback(true);
+										setLoading(true);
+									}
+								}}
+								onLoadStart={() => {
+									const loadingUrl =
+										currentImageUrl || modalImageUrl || fallbackImageUrl;
+									console.log(
+										`[PHOTO VIEWER DEBUG] Starting to load image:`,
+										loadingUrl
+									);
+									if (loadingUrl) {
+										setLoading(true);
+									}
+								}}
+							/>
+						) : (
+							// Show placeholder for missing cover photos or failed profile pics
+							<View
+								style={{
+									width: imageDimensions.width,
+									height: imageDimensions.height,
+									justifyContent: "center",
+									alignItems: "center",
+									backgroundColor: colors.lightGrey,
+								}}
+							>
+								<Feather
+									name={photoType === "profile" ? "user" : "image"}
+									size={64}
+									color={colors.textSecondary}
+								/>
+								<Text
+									style={[
+										styles.loadingText,
+										{
+											color: colors.textSecondary,
+											marginTop: 10,
+											fontSize: 16,
+										},
+									]}
+								>
+									{photoType === "profile"
+										? "No Profile Picture"
+										: "No Cover Photo"}
+								</Text>
+							</View>
+						)}
 					</View>
 
 					{renderActionButtons()}
@@ -797,6 +902,15 @@ const getStyles = (colors: any, isDarkMode: boolean) => {
 			paddingHorizontal: 20,
 			borderRadius: 25,
 		},
+		iconButton: {
+			width: 50,
+			height: 50,
+			borderRadius: 25,
+			padding: 0,
+			flexDirection: "row",
+			alignItems: "center",
+			justifyContent: "center",
+		},
 		buttonText: {
 			color: "#FFF",
 			fontSize: 16,
@@ -817,6 +931,10 @@ const getStyles = (colors: any, isDarkMode: boolean) => {
 		},
 		cancelButton: {
 			backgroundColor: colors.mediumGrey,
+		},
+		iconButton: {
+			padding: 0,
+			borderRadius: 25,
 		},
 	});
 };

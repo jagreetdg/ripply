@@ -159,11 +159,78 @@ export const SearchResultsList = ({
 			users: userData,
 		};
 
+		// AGGRESSIVE SEARCH CONSISTENCY FIX: Apply multiple checks
+		const userHasShared = sharedStatusMap[item.id] || false;
+		const originalShares = voiceNoteData.shares;
+
+		// Check if this is likely a shared post that should have at least 1 share
+		const shouldHaveShares =
+			userHasShared ||
+			item.currentUserHasShared ||
+			item.isReposted ||
+			item.is_shared;
+
+		// CRITICAL FIX: Apply fix even more aggressively
+		if (shouldHaveShares && voiceNoteData.shares === 0) {
+			console.warn(
+				`[SEARCH CONSISTENCY FIX] Fixing share count from 0 to 1 for ${item.id}:`,
+				{
+					userHasShared,
+					currentUserHasShared: item.currentUserHasShared,
+					isReposted: item.isReposted,
+					isShared: item.is_shared,
+					originalShares,
+				}
+			);
+			voiceNoteData.shares = 1;
+		}
+
+		// EXTRA AGGRESSIVE FIX: Also check search results data integrity
+		if (originalShares > 0 && voiceNoteData.shares === 0) {
+			console.error(
+				`[SEARCH CRITICAL FIX] Share count was corrupted, restoring from ${originalShares}:`,
+				{
+					voiceNoteId: item.id,
+					originalShares,
+					corruptedShares: voiceNoteData.shares,
+				}
+			);
+			voiceNoteData.shares = originalShares;
+		}
+
+		// Determine repost attribution props
+		const isRepostedItem = Boolean(
+			item.is_shared || item.shared_by || item.sharer_id
+		);
+		const sharedByData = item.shared_by
+			? {
+					id: item.shared_by.id,
+					username: item.shared_by.username,
+					displayName: item.shared_by.display_name,
+					avatarUrl: item.shared_by.avatar_url,
+			  }
+			: item.sharer_id
+			? {
+					id: item.sharer_id,
+					username: item.sharer_username || "user",
+					displayName:
+						item.sharer_display_name || item.sharer_username || "User",
+					avatarUrl: item.sharer_avatar_url || null,
+			  }
+			: null;
+
 		console.log(`[SEARCH DEBUG] Processing voice note ${item.id}:`, {
 			originalShares: item.shares,
 			processedShares: voiceNoteData.shares,
 			sharesType: typeof item.shares,
 			isArray: Array.isArray(item.shares),
+			userHasShared,
+			sharedStatusFromMap: sharedStatusMap[item.id],
+			shouldHaveShares,
+			wasFixed: originalShares !== voiceNoteData.shares,
+			isRepostedItem,
+			hasSharedByData: !!sharedByData,
+			sharedByUsername: sharedByData?.username,
 		});
 
 		return (
@@ -177,6 +244,8 @@ export const SearchResultsList = ({
 					timePosted={formatTimeAgo(item.created_at)}
 					currentUserId={currentUserId}
 					isReposted={sharedStatusMap[item.id] || false}
+					showRepostAttribution={isRepostedItem}
+					sharedBy={sharedByData}
 					onUserProfilePress={
 						userData.username
 							? () => handleUserProfilePress(userData.username)

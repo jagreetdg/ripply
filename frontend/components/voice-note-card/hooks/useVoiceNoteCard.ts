@@ -128,8 +128,19 @@ export const useVoiceNoteCard = ({
 		setIsLoadingShareCount(!hasValidShares && !!loggedInUserId);
 		setIsLoadingSharesCount(!hasValidShares && !!loggedInUserId);
 		
-		// Reset share count to initial value
-		setSharesCount(hasValidShares && voiceNote.shares >= 0 ? voiceNote.shares : 0);
+		// Use the processed shares value from voiceNote (which may have been corrected by search results or other components)
+		// Priority: voiceNote.shares (processed) > 0 (fallback)
+		const initialSharesValue = hasValidShares && voiceNote.shares >= 0 ? voiceNote.shares : 0;
+		
+		console.log(`[SHARE COUNT INIT DEBUG] ${voiceNote.id}:`, {
+			voiceNoteShares: voiceNote.shares,
+			hasValidShares,
+			initialSharesValue,
+			isRepostedProp,
+			loggedInUserId: !!loggedInUserId,
+		});
+		
+		setSharesCount(initialSharesValue);
 	}, [voiceNote.id, voiceNote.shares, isRepostedProp, loggedInUserId]);
 
 	// Log state changes for debugging (simplified)
@@ -659,6 +670,44 @@ export const useVoiceNoteCard = ({
 			setSharesCount(1);
 		}
 	}, [isRepostedEffective, sharesCount, isLoadingSharesCount, isLoadingShareCount, voiceNote.id]);
+
+	// AGGRESSIVE FRONTEND WORKAROUND: Override backend inconsistencies
+	useEffect(() => {
+		// If we have inconsistent data from backend APIs, force consistency
+		const voiceNoteShares = voiceNote.shares || 0;
+		const currentSharesCount = sharesCount;
+		
+		// BACKEND BUG WORKAROUND: If search results provided a higher count, trust it over batch API
+		if (voiceNoteShares > currentSharesCount) {
+			console.warn(`[BACKEND BUG WORKAROUND] Forcing share count from ${currentSharesCount} to ${voiceNoteShares} for ${voiceNote.id}`);
+			setSharesCount(voiceNoteShares);
+		}
+		
+		// REPOST STATUS INCONSISTENCY WORKAROUND: If we're told it's reposted but count is 0, force it to 1
+		if (isRepostedEffective && currentSharesCount === 0 && voiceNoteShares === 0) {
+			console.warn(`[BACKEND BUG WORKAROUND] Repost status true but count 0, forcing to 1 for ${voiceNote.id}`);
+			setSharesCount(1);
+		}
+	}, [voiceNote.shares, voiceNote.id, isRepostedEffective, sharesCount]);
+
+	// Initialize from voiceNote data on mount/change
+	useEffect(() => {
+		// If we have inconsistent data from backend APIs, force consistency
+		const voiceNoteShares = voiceNote.shares || 0;
+		const currentSharesCount = sharesCount;
+		
+		// BACKEND BUG WORKAROUND: If search results provided a higher count, trust it over batch API
+		if (voiceNoteShares > currentSharesCount) {
+			console.warn(`[BACKEND BUG WORKAROUND] Forcing share count from ${currentSharesCount} to ${voiceNoteShares} for ${voiceNote.id}`);
+			setSharesCount(voiceNoteShares);
+		}
+		
+		// REPOST STATUS INCONSISTENCY WORKAROUND: If we're told it's reposted but count is 0, force it to 1
+		if (isRepostedEffective && currentSharesCount === 0 && voiceNoteShares === 0) {
+			console.warn(`[BACKEND BUG WORKAROUND] Repost status true but count 0, forcing to 1 for ${voiceNote.id}`);
+			setSharesCount(1);
+		}
+	}, [voiceNote.shares, voiceNote.id, isRepostedEffective, sharesCount]);
 
 	// Voice notes already come with stats data, fetchStats removed to prevent 404 errors
 

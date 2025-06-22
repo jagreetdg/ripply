@@ -3,6 +3,7 @@ import { Image, StyleSheet, Platform } from "react-native";
 import DefaultAvatar from "../DefaultAvatar";
 import { useTheme } from "../../context/ThemeContext";
 import Colors from "../../constants/Colors";
+import { processImageUrl, getFallbackImageUrl } from "../../utils/imageUtils";
 
 interface AvatarProps {
 	userId: string;
@@ -27,31 +28,30 @@ export const Avatar = ({
 	// State to track if the avatar image failed to load
 	const [imageError, setImageError] = useState(false);
 
+	// Process the avatar URL properly
+	const processedAvatarUrl = processImageUrl(avatarUrl, "avatar", userId);
+	const fallbackUrl = getFallbackImageUrl(userId, displayName, "avatar");
+
 	// If we have a valid avatar URL and no loading error, show the image
-	if (avatarUrl && !imageError) {
+	if (processedAvatarUrl && !imageError) {
 		return (
 			<Image
-				source={{ uri: avatarUrl }}
+				source={{ uri: processedAvatarUrl }}
 				style={{
 					width: size,
 					height: size,
 					borderRadius: size / 2,
 				}}
 				onError={() => {
-					console.log(`Error loading avatar for user: ${userId}`);
+					console.log(
+						`[AVATAR] Error loading avatar for user: ${userId}, URL: ${processedAvatarUrl}`
+					);
 					setImageError(true); // Mark this image as failed
 				}}
-				// Use ui-avatars.com API to generate default avatars on the fly
+				// Use the fallback URL as default
 				defaultSource={
-					Platform.OS === "ios"
-						? {
-								uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-									displayName || userId
-								)}&background=${Colors.brand.primary.replace(
-									"#",
-									""
-								)}&color=fff`,
-						  }
+					Platform.OS === "ios" && fallbackUrl
+						? { uri: fallbackUrl }
 						: undefined
 				}
 			/>
