@@ -42,7 +42,8 @@ In the Render dashboard, add the following environment variables:
 - `PORT`: 10000 (Render will automatically assign the PORT to your app)
 - `DATABASE_URL`: Your Supabase PostgreSQL connection string
 - `SUPABASE_URL`: Your Supabase project URL
-- `SUPABASE_KEY`: Your Supabase service role key (or anon key depending on your needs)
+- `SUPABASE_ANON_KEY`: Your Supabase anonymous key (public key)
+- `SUPABASE_KEY`: Alternative to SUPABASE_ANON_KEY (for backward compatibility)
 - `JWT_SECRET`: A secure random string for JWT authentication
 
 ### 4. Deploy
