@@ -65,9 +65,13 @@ export const useVoiceNoteCard = ({
 		typeof voiceNote.likes === "number" && voiceNote.likes > 0 ? voiceNote.likes : 0
 	);
 	const [sharesCount, setSharesCount] = useState(
-		typeof voiceNote.shares === "number" && voiceNote.shares > 0 ? voiceNote.shares : 0
+		// Only use the initial value if it's a valid number > 0, otherwise start with 0 but show loading
+		typeof voiceNote.shares === "number" && voiceNote.shares >= 0 ? voiceNote.shares : 0
 	);
-	const [isLoadingShareCount, setIsLoadingShareCount] = useState(false);
+	const [isLoadingShareCount, setIsLoadingShareCount] = useState(
+		// Start with loading if we don't have reliable initial data
+		typeof voiceNote.shares !== "number" || !loggedInUserId
+	);
 	const [showCommentPopup, setShowCommentPopup] = useState(false);
 	const [commentsCount, setCommentsCount] = useState(
 		typeof voiceNote.comments === "number" && voiceNote.comments > 0 ? voiceNote.comments : 0
@@ -79,12 +83,15 @@ export const useVoiceNoteCard = ({
 	// Comprehensive loading state management
 	const [isLoadingLikeStatus, setIsLoadingLikeStatus] = useState(false);
 	const [isLoadingRepostStatusInternal, setIsLoadingRepostStatusInternal] = useState(false);
-	const [isLoadingSharesCount, setIsLoadingSharesCount] = useState(false);
+	const [isLoadingSharesCount, setIsLoadingSharesCount] = useState(
+		// Start with loading if we don't have reliable initial data or user
+		typeof voiceNote.shares !== "number" || !loggedInUserId
+	);
 	const [statsLoaded, setStatsLoaded] = useState(false);
 	const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
-	// Calculate if ALL stats are loading
-	const isLoadingAllStats = !initialDataLoaded || isLoadingLikeStatus || isLoadingRepostStatusInternal || isLoadingSharesCount;
+	// Calculate if ALL stats are loading - include shareCount in the calculation
+	const isLoadingAllStats = !initialDataLoaded || isLoadingLikeStatus || isLoadingRepostStatusInternal || isLoadingSharesCount || isLoadingShareCount;
 
 	// Animation refs
 	const likeScale = useRef(new Animated.Value(1)).current;
@@ -115,16 +122,28 @@ export const useVoiceNoteCard = ({
 		setInternalRepostedState(Boolean(isRepostedProp));
 		setInitialDataLoaded(false);
 		setStatsLoaded(false);
-	}, [voiceNote.id, isRepostedProp]);
+		
+		// Reset loading states based on data availability
+		const hasValidShares = typeof voiceNote.shares === "number";
+		setIsLoadingShareCount(!hasValidShares && !!loggedInUserId);
+		setIsLoadingSharesCount(!hasValidShares && !!loggedInUserId);
+		
+		// Reset share count to initial value
+		setSharesCount(hasValidShares && voiceNote.shares >= 0 ? voiceNote.shares : 0);
+	}, [voiceNote.id, voiceNote.shares, isRepostedProp, loggedInUserId]);
 
 	// Log state changes for debugging (simplified)
 	useEffect(() => {
 		console.log(`[SHARE DEBUG] State Change - ${voiceNote.id}:`, {
 			sharesCount,
 			isRepostedEffective,
-			isLoadingAllStats
+			isLoadingAllStats,
+			isLoadingShareCount,
+			isLoadingSharesCount,
+			initialSharesValue: voiceNote.shares,
+			hasLoggedInUser: !!loggedInUserId
 		});
-	}, [voiceNote.id, sharesCount, isRepostedEffective, isLoadingAllStats]);
+	}, [voiceNote.id, sharesCount, isRepostedEffective, isLoadingAllStats, isLoadingShareCount, isLoadingSharesCount, voiceNote.shares, loggedInUserId]);
 
 	// Fetch comments when needed
 	const fetchComments = useCallback(async () => {
@@ -513,11 +532,14 @@ export const useVoiceNoteCard = ({
 					hasVoiceNoteId: !!voiceNote.id,
 					hasLoggedInUserId: !!loggedInUserId
 				});
-				// If no user is logged in, we can still show the card but without personalized data
-				if (!loggedInUserId) {
-					setInitialDataLoaded(true);
-					setStatsLoaded(true);
-				}
+							// If no user is logged in, we can still show the card but without personalized data
+			if (!loggedInUserId) {
+				setInitialDataLoaded(true);
+				setStatsLoaded(true);
+				// Stop loading states for shares since we'll use the initial data
+				setIsLoadingShareCount(false);
+				setIsLoadingSharesCount(false);
+			}
 				return;
 			}
 
@@ -525,6 +547,12 @@ export const useVoiceNoteCard = ({
 			if (initialDataLoaded) {
 				console.log("[BATCH DEBUG] loadInitialData - Already loaded, skipping:", voiceNote.id);
 				return;
+			}
+			
+			// If we already have valid share data and this is the first load, we might not need to fetch
+			const hasValidInitialShares = typeof voiceNote.shares === "number" && voiceNote.shares >= 0;
+			if (hasValidInitialShares) {
+				console.log("[BATCH DEBUG] loadInitialData - Using valid initial share count:", voiceNote.shares);
 			}
 
 			console.log("[BATCH DEBUG] loadInitialData - Starting batch request for voice note:", {
@@ -565,9 +593,31 @@ export const useVoiceNoteCard = ({
 				setIsLoadingRepostStatusInternal(false);
 
 				// Update share count
-				setSharesCount(typeof batchResults.shareCount === "number" ? batchResults.shareCount : 0);
+				const newShareCount = typeof batchResults.shareCount === "number" ? batchResults.shareCount : 0;
+				
+				// CONSISTENCY CHECK: If user has reposted but count is 0, fix it
+				const userHasReposted = batchResults.repostStatus === true;
+				const adjustedShareCount = userHasReposted && newShareCount === 0 ? 1 : newShareCount;
+				
+				if (adjustedShareCount !== newShareCount) {
+					console.warn("[SHARE DEBUG] CONSISTENCY FIX APPLIED:", {
+						voiceNoteId: voiceNote.id,
+						originalCount: newShareCount,
+						adjustedCount: adjustedShareCount,
+						userHasReposted,
+						reason: "User has reposted but count was 0"
+					});
+				}
+				
+				setSharesCount(adjustedShareCount);
 				setIsLoadingSharesCount(false);
-				console.log("[BATCH DEBUG] Share count loaded:", batchResults.shareCount);
+				console.log("[BATCH DEBUG] Share count loaded:", {
+					received: batchResults.shareCount,
+					userHasReposted,
+					originalCount: newShareCount,
+					finalCount: adjustedShareCount,
+					voiceNoteId: voiceNote.id
+				});
 
 				// Share icon highlight status is determined by repost status, so mark it as loaded too
 				setIsLoadingShareCount(false);

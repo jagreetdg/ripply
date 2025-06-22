@@ -135,9 +135,27 @@ export const getRepostCount = async (voiceNoteId: string): Promise<number> => {
 
     console.log("[SHARE DEBUG] getRepostCount - Raw API response:", JSON.stringify(response, null, 2));
 
-    // Backend returns { shareCount: number }
+    // Backend returns { shareCount: number, isShared: boolean }
     const count = response?.shareCount || 0;
-    console.log("[SHARE DEBUG] getRepostCount - Final count:", { voiceNoteId, count });
+    const isShared = response?.isShared || false;
+    
+    // Check for data inconsistency
+    if (isShared && count === 0) {
+      console.error("[SHARE DEBUG] DATA INCONSISTENCY DETECTED!", {
+        voiceNoteId,
+        count,
+        isShared,
+        message: "User has shared but count is 0 - this should not happen!"
+      });
+    }
+    
+    console.log("[SHARE DEBUG] getRepostCount - Final result:", { 
+      voiceNoteId, 
+      count, 
+      isShared,
+      hasInconsistency: isShared && count === 0
+    });
+    
     return count;
   } catch (error: any) {
     console.error("[SHARE DEBUG] getRepostCount - API Error:", {

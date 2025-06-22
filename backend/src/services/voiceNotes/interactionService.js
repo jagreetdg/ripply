@@ -186,15 +186,33 @@ const recordPlay = async (voiceNoteId, userId = null) => {
  * @returns {boolean} Whether user has shared the voice note
  */
 const checkUserShared = async (voiceNoteId, userId) => {
+	console.log("[SHARE DEBUG] checkUserShared - Checking:", {
+		voiceNoteId,
+		userId,
+	});
+
 	const { data, error } = await supabase
 		.from("voice_note_shares")
-		.select("id")
+		.select("id, user_id, voice_note_id, shared_at")
 		.eq("voice_note_id", voiceNoteId)
 		.eq("user_id", userId)
 		.single();
 
-	if (error && error.code !== "PGRST116") throw error;
-	return !!data;
+	if (error && error.code !== "PGRST116") {
+		console.error("[SHARE DEBUG] checkUserShared - Database error:", error);
+		throw error;
+	}
+
+	const hasShared = !!data;
+	console.log("[SHARE DEBUG] checkUserShared - Result:", {
+		voiceNoteId,
+		userId,
+		hasShared,
+		foundRecord: data || null,
+		errorCode: error?.code,
+	});
+
+	return hasShared;
 };
 
 /**
@@ -301,13 +319,58 @@ const getVoiceNoteShares = async (voiceNoteId, options = {}) => {
  * @returns {number} Number of shares
  */
 const getVoiceNoteShareCount = async (voiceNoteId) => {
-	const { count, error } = await supabase
-		.from("voice_note_shares")
-		.select("*", { count: "exact", head: true })
-		.eq("voice_note_id", voiceNoteId);
+	console.log(
+		"[SHARE DEBUG] getVoiceNoteShareCount - Starting count query for:",
+		voiceNoteId
+	);
 
-	if (error) throw error;
-	return count || 0;
+	try {
+		const { count, error } = await supabase
+			.from("voice_note_shares")
+			.select("*", { count: "exact", head: true })
+			.eq("voice_note_id", voiceNoteId);
+
+		if (error) {
+			console.error(
+				"[SHARE DEBUG] getVoiceNoteShareCount - Database error:",
+				error
+			);
+			throw error;
+		}
+
+		const finalCount = count || 0;
+		console.log("[SHARE DEBUG] getVoiceNoteShareCount - Count result:", {
+			voiceNoteId,
+			count: finalCount,
+			rawCount: count,
+		});
+
+		// Also fetch actual records for debugging inconsistencies
+		if (finalCount === 0) {
+			const { data: records, error: recordsError } = await supabase
+				.from("voice_note_shares")
+				.select("id, user_id, voice_note_id, shared_at")
+				.eq("voice_note_id", voiceNoteId);
+
+			console.log(
+				"[SHARE DEBUG] getVoiceNoteShareCount - Records check for count=0:",
+				{
+					voiceNoteId,
+					recordsFound: records?.length || 0,
+					records: records || [],
+					recordsError: recordsError?.message,
+				}
+			);
+		}
+
+		return finalCount;
+	} catch (error) {
+		console.error(
+			"[SHARE DEBUG] getVoiceNoteShareCount - Unexpected error:",
+			error
+		);
+		throw error;
+	}
 };
 
 module.exports = {

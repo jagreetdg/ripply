@@ -341,6 +341,7 @@ const getVoiceNoteShares = async (req, res) => {
 	try {
 		const { voiceNoteId } = req.params;
 		const { page = 1, limit = 10 } = req.query;
+		const userId = req.user?.id; // Get current user for repost status
 
 		const result = await interactionService.getVoiceNoteShares(voiceNoteId, {
 			page: parseInt(page),
@@ -354,9 +355,23 @@ const getVoiceNoteShares = async (req, res) => {
 			? result.data.length
 			: 0;
 
+		// Also check if current user has shared it for consistency
+		let isShared = false;
+		if (userId) {
+			try {
+				isShared = await interactionService.checkUserShared(
+					voiceNoteId,
+					userId
+				);
+			} catch (error) {
+				console.warn("Could not check user share status:", error.message);
+			}
+		}
+
 		res.status(200).json({
 			...result,
 			shareCount: shareCount,
+			isShared: isShared,
 		});
 	} catch (error) {
 		console.error("Error fetching voice note shares:", error);
