@@ -645,6 +645,21 @@ export const useVoiceNoteCard = ({
 		loadInitialData();
 	}, [voiceNote.id, loggedInUserId, isRepostedProp, initialDataLoaded]);
 
+	// ADDITIONAL CONSISTENCY CHECK: Ensure share count reflects repost status
+	useEffect(() => {
+		// If user has reposted but count is 0, fix it immediately
+		if (isRepostedEffective && sharesCount === 0 && !isLoadingSharesCount && !isLoadingShareCount) {
+			console.warn("[HOOK CONSISTENCY FIX] User has reposted but count is 0, setting to 1:", {
+				voiceNoteId: voiceNote.id,
+				isRepostedEffective,
+				sharesCount,
+				isLoadingSharesCount,
+				isLoadingShareCount
+			});
+			setSharesCount(1);
+		}
+	}, [isRepostedEffective, sharesCount, isLoadingSharesCount, isLoadingShareCount, voiceNote.id]);
+
 	// Voice notes already come with stats data, fetchStats removed to prevent 404 errors
 
 	// Fetch the actual share count (fallback for individual updates)

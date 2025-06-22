@@ -87,6 +87,25 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 	const loadingIndicatorColor = useOnImageStyles ? colors.white : colors.tint;
 	const loadingIndicatorSize = 14;
 
+	// CONSISTENCY FIX: If user has reposted but count is 0, show at least 1
+	const displaySharesCount = isReposted && sharesCount === 0 ? 1 : sharesCount;
+
+	// Log inconsistency for debugging
+	if (isReposted && sharesCount === 0) {
+		console.warn(
+			"[DISPLAY CONSISTENCY FIX] User has reposted but count is 0, showing 1 instead:",
+			{
+				isReposted,
+				originalCount: sharesCount,
+				displayCount: displaySharesCount,
+				isLoadingShareCount,
+				isLoadingStats,
+				isLoadingRepostStatus,
+				timestamp: new Date().toISOString(),
+			}
+		);
+	}
+
 	return (
 		<View
 			style={[
@@ -255,7 +274,7 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 								},
 							]}
 						>
-							{formatNumber(sharesCount)}
+							{formatNumber(displaySharesCount)}
 						</Text>
 					)}
 				</View>

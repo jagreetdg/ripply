@@ -400,6 +400,18 @@ const checkUserShared = async (req, res) => {
 	}
 };
 
+/**
+ * Debug endpoint to verify updated code is running
+ * @route GET /api/voice-notes/debug/version
+ */
+const debugVersion = async (req, res) => {
+	res.status(200).json({
+		message: "Share count consistency fix is active",
+		timestamp: new Date().toISOString(),
+		version: "1.1",
+	});
+};
+
 module.exports = {
 	// Likes
 	getVoiceNoteLikes,
@@ -415,4 +427,6 @@ module.exports = {
 	shareVoiceNote,
 	getVoiceNoteShares,
 	checkUserShared,
+	// Debug
+	debugVersion,
 };
