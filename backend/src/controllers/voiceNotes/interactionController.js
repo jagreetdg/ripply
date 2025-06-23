@@ -348,12 +348,10 @@ const getVoiceNoteShares = async (req, res) => {
 			limit: parseInt(limit),
 		});
 
-		// Return both the detailed result and a simple shareCount for API compatibility
-		const shareCount = Array.isArray(result)
-			? result.length
-			: result.data
-			? result.data.length
-			: 0;
+		// Get the actual total share count (not just the paginated results)
+		const actualShareCount = await interactionService.getVoiceNoteShareCount(
+			voiceNoteId
+		);
 
 		// Also check if current user has shared it for consistency
 		let isShared = false;
@@ -370,7 +368,7 @@ const getVoiceNoteShares = async (req, res) => {
 
 		res.status(200).json({
 			...result,
-			shareCount: shareCount,
+			shareCount: actualShareCount,
 			isShared: isShared,
 		});
 	} catch (error) {
