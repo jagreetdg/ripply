@@ -20,8 +20,7 @@ async function getVoiceNotes(options = {}) {
         users:user_id (id, username, display_name, avatar_url, is_verified),
         likes:voice_note_likes (count),
         comments:voice_note_comments (count),
-        plays:voice_note_plays (count),
-        shares:voice_note_shares (count)
+        plays:voice_note_plays (count)
       `);
 
 		if (userId) {
@@ -36,7 +35,36 @@ async function getVoiceNotes(options = {}) {
 			throw error;
 		}
 
-		return data || [];
+		// Get actual share counts for all voice notes in parallel
+		const shareCountPromises = data.map(async (note) => {
+			try {
+				const { count } = await supabase
+					.from("voice_note_shares")
+					.select("*", { count: "exact", head: true })
+					.eq("voice_note_id", note.id);
+				return { voiceNoteId: note.id, shareCount: count || 0 };
+			} catch (error) {
+				console.warn(`Failed to get share count for ${note.id}:`, error);
+				return { voiceNoteId: note.id, shareCount: 0 };
+			}
+		});
+
+		const shareCounts = await Promise.all(shareCountPromises);
+		const shareCountMap = shareCounts.reduce(
+			(map, { voiceNoteId, shareCount }) => {
+				map[voiceNoteId] = shareCount;
+				return map;
+			},
+			{}
+		);
+
+		// Add actual share counts to the data
+		const processedData = data.map((note) => ({
+			...note,
+			shares: shareCountMap[note.id] || 0,
+		}));
+
+		return processedData || [];
 	} catch (error) {
 		console.error("Unexpected error:", error);
 		throw error;

@@ -252,6 +252,88 @@ The following frontend issues have been resolved:
 - `frontend/services/api/modules/*.ts` - Fixed authentication and parameters
 - All API modules now handle missing backend endpoints gracefully
 
+## Share Count Inconsistency Issue
+- **Problem**: Share counts showing 0 while loading, sometimes displaying incorrectly even when share icon is green
+- **Root Cause**: Data inconsistency between repost status checks and share count fetching
+- **Status**: ✅ **FIXED** - Implemented triple-layer consistency fix in frontend
+- **Solution**: Added multiple fallback layers in `useVoiceNoteCard.ts`, `VoiceNoteInteractions.tsx`, and search results
+
+## Profile Page Unshare Bug (NEW FIX)
+- **Problem**: When a user unshares someone else's voice note on that person's profile page, the voice note disappears temporarily but reappears on page reload
+- **Root Cause**: `handleUnshare` function in `useVoiceNotesList.ts` was completely removing voice notes from the list instead of just updating share status
+- **Status**: ✅ **FIXED** - Modified frontend logic to preserve voice notes on profile pages
+- **Solution**: 
+  - Updated `handleUnshare` to only update share count and repost flags instead of removing voice notes
+  - Updated `handleAfterShare` to maintain consistency with share count updates
+  - Added comprehensive logging for debugging
+- **Behavior**: Voice notes now stay visible on their creator's profile page when unshared, but share count correctly decreases
+
+## Photo Viewer Modal UI Issues  
+- **Problem**: Text alongside buttons making UI cluttered
+- **Status**: ✅ **FIXED** - Made buttons icon-only with proper styling
+
+## Profile Picture Loading Issues
+- **Problem**: Pictures not loading in PhotoViewerModal and edit profile page
+- **Status**: ✅ **PARTIALLY FIXED** - Enhanced debugging and better fallbacks
+
+## Search Section Share Count Issues
+- **Problem**: Same 0 share count issue in search results
+- **Status**: ✅ **FIXED** - Added consistency checks in `SearchResultsList.tsx`
+
+## Optimistic Updates for Share Button (NEW IMPROVEMENT)
+- **Problem**: User requested immediate UI feedback on share button press, with rollback on API failure
+- **Status**: ✅ **IMPLEMENTED** - Enhanced existing optimistic update pattern
+- **Implementation**: 
+  - **Step 1**: Immediately update UI (share count + icon highlight) when button pressed
+  - **Step 2**: Make API request in background
+  - **Step 3**: On SUCCESS - Only update if server response differs (prevents flickering)
+  - **Step 4**: On FAILURE - Revert to original state and show error message
+- **Files Updated**:
+  - `frontend/components/voice-note-card/hooks/useVoiceNoteCard.ts`
+  - `frontend/components/voice-note-card/hooks/useVoiceNoteSharing.ts`
+
+## Optimistic Update Loading Animation Bug (NEW FIX)
+- **Problem**: Loading animation was showing after optimistic update due to batch data loading
+- **Root Cause**: `loadInitialData` useEffect was running after user interaction and resetting loading states
+- **Status**: ✅ **FIXED** - Added check to skip reload if user has already interacted
+- **Solution**: Added `hasUserInteracted` guard in `loadInitialData` to preserve optimistic updates
+
+## Double Decrement on Unshare Bug (NEW FIX)
+- **Problem**: Share count was decreasing by 2 instead of 1 when unsharing
+- **Root Cause**: Both voice note card hook AND profile list hook were decrementing the count
+- **Status**: ✅ **FIXED** - Made profile list handlers only update status flags, not counts
+- **Solution**: 
+  - Voice note card hook handles all count changes
+  - Profile list hook only updates UI status flags (`isReposted`, `is_shared`, etc.)
+  - Prevents double counting while maintaining UI consistency
+
+## Optimistic Update Interference Bug (NEW FIX)
+- **Problem**: Loading animations and incorrect count changes were appearing after API response despite optimistic updates
+- **Root Cause**: Multiple sources of interference were overriding optimistic updates:
+  1. Batch loading applying "consistency fixes" that overrode correct optimistic state
+  2. Multiple consistency useEffects running after API responses
+  3. JavaScript errors in debug logs causing exceptions
+- **Status**: ✅ **FIXED** - Comprehensively resolved all sources of interference
+- **Solutions Applied**: 
+  - **Fixed root cause**: Voice note re-initialization useEffect was overriding optimistic updates with stale profile data
+  - **Removed problematic consistency check** from batch loading that was overriding optimistic updates with stale server data
+  - **Added `hasUserInteracted` guards** to all consistency check useEffects to prevent them from running during user interactions
+  - **Fixed JavaScript errors** in debug logs that referenced deleted variables (`userHasReposted`, `adjustedShareCount`)
+  - **Added 2-second timeout** to reset `hasUserInteracted` flag to allow future batch loads
+  - **Smart share count preservation**: Only update share count if incoming data is fresher (higher count) or we have no data
+- **Technical Details**:
+  - **Primary culprit**: Voice note initialization useEffect running when profile updates voice note object with stale share count
+  - **Secondary culprit**: Batch loading applying "consistency fixes" that overrode correct optimistic updates
+  - **Tertiary issues**: Multiple consistency useEffects running after API responses
+  - **Root cause flow**: User shares → optimistic count 11 → API success → profile updates voiceNote object with old count 10 → re-initialization triggers → count reverts to 10
+- **Result**: Perfect optimistic updates with no post-API interference
+- **Benefits**: 
+  - Instant visual feedback for better UX
+  - No loading animations after user interaction
+  - Automatic rollback on network errors
+  - Prevents visual flickering from unnecessary state updates
+  - Comprehensive error handling with user-friendly messages
+
 ---
 
 **Last Updated:** December 19, 2024  

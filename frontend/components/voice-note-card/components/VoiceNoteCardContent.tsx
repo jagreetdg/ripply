@@ -4,7 +4,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { VoiceNoteUserInfo } from "../VoiceNoteUserInfo";
 import { VoiceNoteProgressBar } from "../VoiceNoteProgressBar";
 import { VoiceNoteTags } from "../VoiceNoteTags";
-import { VoiceNoteInteractions } from "../VoiceNoteInteractions";
+import { VoiceNoteInteractionsNew } from "../VoiceNoteInteractionsNew";
 import { formatDuration } from "../VoiceNoteCardUtils";
 
 interface VoiceNoteCardContentProps {
@@ -33,6 +33,7 @@ interface VoiceNoteCardContentProps {
 	playsCount: number;
 	isReposted: boolean;
 	sharesCount: number;
+
 	isLoadingShareCount: boolean;
 	isLoadingStats: boolean;
 	isLoadingRepostStatus: boolean;
@@ -163,33 +164,18 @@ export const VoiceNoteCardContent: React.FC<VoiceNoteCardContentProps> = ({
 			/>
 
 			{/* Interaction buttons */}
-			<VoiceNoteInteractions
+			<VoiceNoteInteractionsNew
 				voiceNote={voiceNote}
 				styles={styles}
 				colors={colors}
 				hasBackgroundImage={hasBackgroundImage}
-				isLiked={isLiked}
-				likeScale={likeScale}
-				shareScale={shareScale}
-				commentScale={commentScale}
-				likePulse={likePulse}
-				sharePulse={sharePulse}
-				commentPulse={commentPulse}
-				likesCount={likesCount}
+				userId={userId}
 				commentsCount={commentsCount}
 				playsCount={playsCount}
-				isReposted={isReposted}
-				sharesCount={sharesCount}
-				isLoadingShareCount={isLoadingShareCount}
-				isLoadingStats={isLoadingStats}
-				handleLikePress={onLikePress}
-				handleCommentPress={onCommentPress}
-				handlePlaysPress={onPlaysPress}
-				handleRepostPress={onRepostPress}
-				handleShareCountLongPress={onShareCountLongPress}
-				isLoadingRepostStatus={isLoadingRepostStatus}
-				showRepostAttribution={showRepostAttribution}
-				sharedBy={sharedBy}
+				commentScale={commentScale}
+				commentPulse={commentPulse}
+				onCommentPress={onCommentPress}
+				onPlaysPress={onPlaysPress}
 			/>
 		</View>
 	);

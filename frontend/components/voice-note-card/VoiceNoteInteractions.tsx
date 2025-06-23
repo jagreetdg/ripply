@@ -27,7 +27,7 @@ interface VoiceNoteInteractionsProps {
 	sharesCount: number;
 	isLoadingShareCount: boolean;
 	isLoadingStats?: boolean; // Add loading state for all stats
-	isLoadingRepostStatus?: boolean; // Renamed from isLoadingShareStatus
+	isLoadingRepostStatus?: boolean; // Deprecated
 	showRepostAttribution?: boolean;
 	sharedBy?: any;
 	handleLikePress: () => void;
@@ -59,7 +59,7 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 	sharesCount,
 	isLoadingShareCount,
 	isLoadingStats = false,
-	isLoadingRepostStatus = false, // Renamed from isLoadingShareStatus
+	isLoadingRepostStatus = false,
 	showRepostAttribution,
 	sharedBy,
 	handleLikePress,
@@ -276,30 +276,22 @@ export const VoiceNoteInteractions: React.FC<VoiceNoteInteractionsProps> = ({
 				style={styles.interactionButton}
 				activeOpacity={0.7}
 				onPress={handlePlaysPress}
-				disabled={isLoadingStats}
+				disabled={false} // Plays don't have loading state
 			>
 				<View style={styles.interactionContent}>
 					<View>
 						<Feather name="headphones" size={18} color={iconColor} />
 					</View>
-					{isLoadingStats ? (
-						<ActivityIndicator
-							size={loadingIndicatorSize}
-							color={loadingIndicatorColor}
-							style={{ marginLeft: 5 }}
-						/>
-					) : (
-						<Text
-							style={[
-								useOnImageStyles
-									? styles.interactionTextOnImage
-									: styles.interactionText,
-								{ color: iconColor },
-							]}
-						>
-							{formatNumber(playsCount)}
-						</Text>
-					)}
+					<Text
+						style={[
+							useOnImageStyles
+								? styles.interactionTextOnImage
+								: styles.interactionText,
+							{ color: iconColor },
+						]}
+					>
+						{formatNumber(playsCount)}
+					</Text>
 				</View>
 			</TouchableOpacity>
 

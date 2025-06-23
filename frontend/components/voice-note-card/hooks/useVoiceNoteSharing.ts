@@ -101,6 +101,12 @@ export const useVoiceNoteSharing = ({
   ]);
 
   // Handle repost press with optimistic updates
+  // Handle repost press with optimistic updates
+  // OPTIMISTIC UPDATE PATTERN:
+  // 1. Immediately update UI (share count + icon highlight)
+  // 2. Make API request in background
+  // 3. On SUCCESS: Only update if server response differs (prevents flickering)
+  // 4. On FAILURE: Revert to original state and show error message
   const handleRepostPress = useCallback(async () => {
     if (!userId) {
       console.log('[SHARE DEBUG] handleRepostPress - No logged in user, showing alert');
@@ -113,7 +119,7 @@ export const useVoiceNoteSharing = ({
     const originalSharesCount = sharesCount;
     const originalHasUserInteracted = hasUserInteracted;
 
-    // OPTIMISTIC UPDATE: Immediately update UI
+    // STEP 1: OPTIMISTIC UPDATE - Immediately update UI
     const newRepostedState = !isRepostedEffective;
     const newSharesCount = newRepostedState ? sharesCount + 1 : Math.max(0, sharesCount - 1);
     
@@ -164,12 +170,15 @@ export const useVoiceNoteSharing = ({
     // Start animations immediately
     Animated.parallel([scaleAnimation, pulseAnimation]).start();
 
-    // API request in background
+    // STEP 2: API REQUEST - Make API call in background
     try {
       console.log('[SHARE DEBUG] handleRepostPress - Calling toggleRepost API');
       const result = await toggleRepost(voiceNote.id, userId);
       console.log('[SHARE DEBUG] handleRepostPress - toggleRepost result:', result);
       
+      // STEP 3: SUCCESS - Only update if the server response differs from our optimistic update
+      // This prevents unnecessary state changes that cause visual flickering
+      let hasServerDifference = false;
       const serverRepostedState = result.isReposted;
       
       // Update with server response if different from optimistic update
@@ -179,6 +188,7 @@ export const useVoiceNoteSharing = ({
           server: serverRepostedState
         });
         setInternalRepostedState(serverRepostedState);
+        hasServerDifference = true;
       }
       
       // Update share count from API response (this is the authoritative count)
@@ -188,6 +198,11 @@ export const useVoiceNoteSharing = ({
           server: result.repostCount
         });
         setSharesCount(result.repostCount);
+        hasServerDifference = true;
+      }
+      
+      if (!hasServerDifference) {
+        console.log('[SHARE DEBUG] handleRepostPress - Server response matches optimistic update, no changes needed');
       }
       
       if (onShareStatusChanged) {
@@ -210,7 +225,8 @@ export const useVoiceNoteSharing = ({
         errorStack: error instanceof Error ? error.stack : undefined
       });
       
-      // ROLLBACK: Revert optimistic update
+      // STEP 4: FAILURE - Revert optimistic update on error only
+      console.log('[SHARE DEBUG] handleRepostPress - Rolling back optimistic update due to error');
       setHasUserInteracted(originalHasUserInteracted);
       setInternalRepostedState(originalRepostedState);
       setSharesCount(originalSharesCount);

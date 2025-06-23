@@ -44,7 +44,6 @@ const getOriginalPosts = async (followingIds, options = {}) => {
 			likes:voice_note_likes (count),
 			comments:voice_note_comments (count),
 			plays:voice_note_plays (count),
-			shares:voice_note_shares (count),
 			tags:voice_note_tags (tag_name)
 		`
 		)
@@ -54,15 +53,43 @@ const getOriginalPosts = async (followingIds, options = {}) => {
 
 	if (error) throw error;
 
+	// Get actual share counts for all voice notes in parallel
+	const shareCountPromises = data.map(async (note) => {
+		try {
+			const { count } = await supabase
+				.from("voice_note_shares")
+				.select("*", { count: "exact", head: true })
+				.eq("voice_note_id", note.id);
+			return { voiceNoteId: note.id, shareCount: count || 0 };
+		} catch (error) {
+			console.warn(`Failed to get share count for ${note.id}:`, error);
+			return { voiceNoteId: note.id, shareCount: 0 };
+		}
+	});
+
+	const shareCounts = await Promise.all(shareCountPromises);
+	const shareCountMap = shareCounts.reduce(
+		(map, { voiceNoteId, shareCount }) => {
+			map[voiceNoteId] = shareCount;
+			return map;
+		},
+		{}
+	);
+
 	return data.map((note) => {
 		// Extract tags from the nested structure
 		const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
-		return {
+		const processedNote = {
 			...processVoiceNoteCounts(note),
 			tags,
 			is_shared: false,
 		};
+
+		// Override the share count with the actual count
+		processedNote.shares = shareCountMap[note.id] || 0;
+
+		return processedNote;
 	});
 };
 
@@ -103,13 +130,35 @@ const getSharedPosts = async (followingIds, options = {}) => {
 			likes:voice_note_likes (count),
 			comments:voice_note_comments (count),
 			plays:voice_note_plays (count),
-			shares:voice_note_shares (count),
 			tags:voice_note_tags (tag_name)
 		`
 			)
 			.in("id", sharedVoiceNoteIds);
 
 	if (sharedVoiceNotesError) throw sharedVoiceNotesError;
+
+	// Get actual share counts for all voice notes in parallel
+	const shareCountPromises = sharedVoiceNotes.map(async (note) => {
+		try {
+			const { count } = await supabase
+				.from("voice_note_shares")
+				.select("*", { count: "exact", head: true })
+				.eq("voice_note_id", note.id);
+			return { voiceNoteId: note.id, shareCount: count || 0 };
+		} catch (error) {
+			console.warn(`Failed to get share count for ${note.id}:`, error);
+			return { voiceNoteId: note.id, shareCount: 0 };
+		}
+	});
+
+	const shareCounts = await Promise.all(shareCountPromises);
+	const shareCountMap = shareCounts.reduce(
+		(map, { voiceNoteId, shareCount }) => {
+			map[voiceNoteId] = shareCount;
+			return map;
+		},
+		{}
+	);
 
 	// Get sharer info
 	const sharersData = await Promise.all(
@@ -131,13 +180,19 @@ const getSharedPosts = async (followingIds, options = {}) => {
 		const shareRecord = sharersData.find(
 			(share) => share.voice_note_id === note.id
 		);
-		return {
+
+		const processedNote = {
 			...processVoiceNoteCounts(note),
 			tags,
 			is_shared: true,
 			shared_at: shareRecord?.shared_at || new Date().toISOString(),
 			shared_by: shareRecord?.sharer || null,
 		};
+
+		// Override the share count with the actual count
+		processedNote.shares = shareCountMap[note.id] || 0;
+
+		return processedNote;
 	});
 };
 
@@ -249,7 +304,7 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 		),
 	];
 
-	// Build query for discovery posts
+	// Get discovery posts (exclude own posts and posts from followed users)
 	let query = supabase
 		.from("voice_notes")
 		.select(
@@ -259,7 +314,6 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 			likes:voice_note_likes (count),
 			comments:voice_note_comments (count),
 			plays:voice_note_plays (count),
-			shares:voice_note_shares (count),
 			tags:voice_note_tags (tag_name)
 		`
 		)
@@ -280,6 +334,29 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 		return [];
 	}
 
+	// Get actual share counts for all voice notes in parallel
+	const shareCountPromises = discoveryPosts.map(async (note) => {
+		try {
+			const { count } = await supabase
+				.from("voice_note_shares")
+				.select("*", { count: "exact", head: true })
+				.eq("voice_note_id", note.id);
+			return { voiceNoteId: note.id, shareCount: count || 0 };
+		} catch (error) {
+			console.warn(`Failed to get share count for ${note.id}:`, error);
+			return { voiceNoteId: note.id, shareCount: 0 };
+		}
+	});
+
+	const shareCounts = await Promise.all(shareCountPromises);
+	const shareCountMap = shareCounts.reduce(
+		(map, { voiceNoteId, shareCount }) => {
+			map[voiceNoteId] = shareCount;
+			return map;
+		},
+		{}
+	);
+
 	// Calculate discovery scores and sort
 	const processedPosts = discoveryPosts.map((post) => {
 		const scoredPost = calculateDiscoveryScore(
@@ -288,7 +365,10 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 			likedCreators
 		);
 		// Process the counts to convert from Supabase aggregation format to simple numbers
-		return processVoiceNoteCounts(scoredPost);
+		const processedPost = processVoiceNoteCounts(scoredPost);
+		// Override the share count with the actual count
+		processedPost.shares = shareCountMap[post.id] || 0;
+		return processedPost;
 	});
 
 	const finalPosts = processedPosts
@@ -415,7 +495,6 @@ const getPublicFeed = async (options = {}) => {
 			likes:voice_note_likes (count),
 			comments:voice_note_comments (count),
 			plays:voice_note_plays (count),
-			shares:voice_note_shares (count),
 			tags:voice_note_tags (tag_name)
 		`,
 			{ count: "exact" }
@@ -425,15 +504,43 @@ const getPublicFeed = async (options = {}) => {
 
 	if (error) throw error;
 
+	// Get actual share counts for all voice notes in parallel
+	const shareCountPromises = data.map(async (note) => {
+		try {
+			const { count } = await supabase
+				.from("voice_note_shares")
+				.select("*", { count: "exact", head: true })
+				.eq("voice_note_id", note.id);
+			return { voiceNoteId: note.id, shareCount: count || 0 };
+		} catch (error) {
+			console.warn(`Failed to get share count for ${note.id}:`, error);
+			return { voiceNoteId: note.id, shareCount: 0 };
+		}
+	});
+
+	const shareCounts = await Promise.all(shareCountPromises);
+	const shareCountMap = shareCounts.reduce(
+		(map, { voiceNoteId, shareCount }) => {
+			map[voiceNoteId] = shareCount;
+			return map;
+		},
+		{}
+	);
+
 	// Process voice note counts and tags
 	const processedData = data.map((note) => {
 		// Extract tags from the nested structure
 		const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
 
-		return {
+		const processedNote = {
 			...processVoiceNoteCounts(note),
 			tags,
 		};
+
+		// Override the share count with the actual count
+		processedNote.shares = shareCountMap[note.id] || 0;
+
+		return processedNote;
 	});
 
 	return {

@@ -65,13 +65,9 @@ export const useVoiceNoteCard = ({
 		typeof voiceNote.likes === "number" && voiceNote.likes > 0 ? voiceNote.likes : 0
 	);
 	const [sharesCount, setSharesCount] = useState(
-		// Only use the initial value if it's a valid number > 0, otherwise start with 0 but show loading
-		typeof voiceNote.shares === "number" && voiceNote.shares >= 0 ? voiceNote.shares : 0
+		typeof voiceNote.shares === "number" && voiceNote.shares > 0 ? voiceNote.shares : 0
 	);
-	const [isLoadingShareCount, setIsLoadingShareCount] = useState(
-		// Start with loading if we don't have reliable initial data
-		typeof voiceNote.shares !== "number" || !loggedInUserId
-	);
+	const [isLoadingShareCount, setIsLoadingShareCount] = useState(false);
 	const [showCommentPopup, setShowCommentPopup] = useState(false);
 	const [commentsCount, setCommentsCount] = useState(
 		typeof voiceNote.comments === "number" && voiceNote.comments > 0 ? voiceNote.comments : 0
@@ -83,15 +79,12 @@ export const useVoiceNoteCard = ({
 	// Comprehensive loading state management
 	const [isLoadingLikeStatus, setIsLoadingLikeStatus] = useState(false);
 	const [isLoadingRepostStatusInternal, setIsLoadingRepostStatusInternal] = useState(false);
-	const [isLoadingSharesCount, setIsLoadingSharesCount] = useState(
-		// Start with loading if we don't have reliable initial data or user
-		typeof voiceNote.shares !== "number" || !loggedInUserId
-	);
+	const [isLoadingSharesCount, setIsLoadingSharesCount] = useState(false);
 	const [statsLoaded, setStatsLoaded] = useState(false);
 	const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
-	// Calculate if ALL stats are loading - include shareCount in the calculation
-	const isLoadingAllStats = !initialDataLoaded || isLoadingLikeStatus || isLoadingRepostStatusInternal || isLoadingSharesCount || isLoadingShareCount;
+	// Calculate if ALL stats are loading - but NEVER during user interactions
+	const isLoadingAllStats = !hasUserInteracted && (!initialDataLoaded || isLoadingLikeStatus || isLoadingRepostStatusInternal || isLoadingSharesCount);
 
 	// Animation refs
 	const likeScale = useRef(new Animated.Value(1)).current;
@@ -122,39 +115,16 @@ export const useVoiceNoteCard = ({
 		setInternalRepostedState(Boolean(isRepostedProp));
 		setInitialDataLoaded(false);
 		setStatsLoaded(false);
-		
-		// Reset loading states based on data availability
-		const hasValidShares = typeof voiceNote.shares === "number";
-		setIsLoadingShareCount(!hasValidShares && !!loggedInUserId);
-		setIsLoadingSharesCount(!hasValidShares && !!loggedInUserId);
-		
-		// Use the processed shares value from voiceNote (which may have been corrected by search results or other components)
-		// Priority: voiceNote.shares (processed) > 0 (fallback)
-		const initialSharesValue = hasValidShares && voiceNote.shares >= 0 ? voiceNote.shares : 0;
-		
-		console.log(`[SHARE COUNT INIT DEBUG] ${voiceNote.id}:`, {
-			voiceNoteShares: voiceNote.shares,
-			hasValidShares,
-			initialSharesValue,
-			isRepostedProp,
-			loggedInUserId: !!loggedInUserId,
-		});
-		
-		setSharesCount(initialSharesValue);
-	}, [voiceNote.id, voiceNote.shares, isRepostedProp, loggedInUserId]);
+	}, [voiceNote.id, isRepostedProp]);
 
 	// Log state changes for debugging (simplified)
 	useEffect(() => {
 		console.log(`[SHARE DEBUG] State Change - ${voiceNote.id}:`, {
 			sharesCount,
 			isRepostedEffective,
-			isLoadingAllStats,
-			isLoadingShareCount,
-			isLoadingSharesCount,
-			initialSharesValue: voiceNote.shares,
-			hasLoggedInUser: !!loggedInUserId
+			isLoadingAllStats
 		});
-	}, [voiceNote.id, sharesCount, isRepostedEffective, isLoadingAllStats, isLoadingShareCount, isLoadingSharesCount, voiceNote.shares, loggedInUserId]);
+	}, [voiceNote.id, sharesCount, isRepostedEffective, isLoadingAllStats]);
 
 	// Fetch comments when needed
 	const fetchComments = useCallback(async () => {
@@ -378,6 +348,8 @@ export const useVoiceNoteCard = ({
 		setHasUserInteracted(true);
 		setInternalRepostedState(newRepostedState);
 		setSharesCount(newSharesCount);
+		
+		// CRITICAL: Do NOT set any loading states during user interactions
 
 		console.log("[SHARE DEBUG] handleRepostPress - Optimistic update applied:", {
 			voiceNoteId: voiceNote.id,
@@ -538,19 +510,22 @@ export const useVoiceNoteCard = ({
 	// Load initial data using batch API
 	useEffect(() => {
 		const loadInitialData = async () => {
+			// CRITICAL: Don't load data if user has recently interacted - preserve optimistic updates
+			if (hasUserInteracted) {
+				console.log("[BATCH DEBUG] loadInitialData - User has interacted, skipping to preserve optimistic update:", voiceNote.id);
+				return;
+			}
+			
 			if (!voiceNote.id || !loggedInUserId) {
 				console.log("[BATCH DEBUG] loadInitialData - Missing requirements:", {
 					hasVoiceNoteId: !!voiceNote.id,
 					hasLoggedInUserId: !!loggedInUserId
 				});
-							// If no user is logged in, we can still show the card but without personalized data
-			if (!loggedInUserId) {
-				setInitialDataLoaded(true);
-				setStatsLoaded(true);
-				// Stop loading states for shares since we'll use the initial data
-				setIsLoadingShareCount(false);
-				setIsLoadingSharesCount(false);
-			}
+				// If no user is logged in, we can still show the card but without personalized data
+				if (!loggedInUserId) {
+					setInitialDataLoaded(true);
+					setStatsLoaded(true);
+				}
 				return;
 			}
 
@@ -558,12 +533,6 @@ export const useVoiceNoteCard = ({
 			if (initialDataLoaded) {
 				console.log("[BATCH DEBUG] loadInitialData - Already loaded, skipping:", voiceNote.id);
 				return;
-			}
-			
-			// If we already have valid share data and this is the first load, we might not need to fetch
-			const hasValidInitialShares = typeof voiceNote.shares === "number" && voiceNote.shares >= 0;
-			if (hasValidInitialShares) {
-				console.log("[BATCH DEBUG] loadInitialData - Using valid initial share count:", voiceNote.shares);
 			}
 
 			console.log("[BATCH DEBUG] loadInitialData - Starting batch request for voice note:", {
@@ -604,31 +573,9 @@ export const useVoiceNoteCard = ({
 				setIsLoadingRepostStatusInternal(false);
 
 				// Update share count
-				const newShareCount = typeof batchResults.shareCount === "number" ? batchResults.shareCount : 0;
-				
-				// CONSISTENCY CHECK: If user has reposted but count is 0, fix it
-				const userHasReposted = batchResults.repostStatus === true;
-				const adjustedShareCount = userHasReposted && newShareCount === 0 ? 1 : newShareCount;
-				
-				if (adjustedShareCount !== newShareCount) {
-					console.warn("[SHARE DEBUG] CONSISTENCY FIX APPLIED:", {
-						voiceNoteId: voiceNote.id,
-						originalCount: newShareCount,
-						adjustedCount: adjustedShareCount,
-						userHasReposted,
-						reason: "User has reposted but count was 0"
-					});
-				}
-				
-				setSharesCount(adjustedShareCount);
+				setSharesCount(typeof batchResults.shareCount === "number" ? batchResults.shareCount : 0);
 				setIsLoadingSharesCount(false);
-				console.log("[BATCH DEBUG] Share count loaded:", {
-					received: batchResults.shareCount,
-					userHasReposted,
-					originalCount: newShareCount,
-					finalCount: adjustedShareCount,
-					voiceNoteId: voiceNote.id
-				});
+				console.log("[BATCH DEBUG] Share count loaded:", batchResults.shareCount);
 
 				// Share icon highlight status is determined by repost status, so mark it as loaded too
 				setIsLoadingShareCount(false);
@@ -654,60 +601,7 @@ export const useVoiceNoteCard = ({
 		};
 
 		loadInitialData();
-	}, [voiceNote.id, loggedInUserId, isRepostedProp, initialDataLoaded]);
-
-	// ADDITIONAL CONSISTENCY CHECK: Ensure share count reflects repost status
-	useEffect(() => {
-		// If user has reposted but count is 0, fix it immediately
-		if (isRepostedEffective && sharesCount === 0 && !isLoadingSharesCount && !isLoadingShareCount) {
-			console.warn("[HOOK CONSISTENCY FIX] User has reposted but count is 0, setting to 1:", {
-				voiceNoteId: voiceNote.id,
-				isRepostedEffective,
-				sharesCount,
-				isLoadingSharesCount,
-				isLoadingShareCount
-			});
-			setSharesCount(1);
-		}
-	}, [isRepostedEffective, sharesCount, isLoadingSharesCount, isLoadingShareCount, voiceNote.id]);
-
-	// AGGRESSIVE FRONTEND WORKAROUND: Override backend inconsistencies
-	useEffect(() => {
-		// If we have inconsistent data from backend APIs, force consistency
-		const voiceNoteShares = voiceNote.shares || 0;
-		const currentSharesCount = sharesCount;
-		
-		// BACKEND BUG WORKAROUND: If search results provided a higher count, trust it over batch API
-		if (voiceNoteShares > currentSharesCount) {
-			console.warn(`[BACKEND BUG WORKAROUND] Forcing share count from ${currentSharesCount} to ${voiceNoteShares} for ${voiceNote.id}`);
-			setSharesCount(voiceNoteShares);
-		}
-		
-		// REPOST STATUS INCONSISTENCY WORKAROUND: If we're told it's reposted but count is 0, force it to 1
-		if (isRepostedEffective && currentSharesCount === 0 && voiceNoteShares === 0) {
-			console.warn(`[BACKEND BUG WORKAROUND] Repost status true but count 0, forcing to 1 for ${voiceNote.id}`);
-			setSharesCount(1);
-		}
-	}, [voiceNote.shares, voiceNote.id, isRepostedEffective, sharesCount]);
-
-	// Initialize from voiceNote data on mount/change
-	useEffect(() => {
-		// If we have inconsistent data from backend APIs, force consistency
-		const voiceNoteShares = voiceNote.shares || 0;
-		const currentSharesCount = sharesCount;
-		
-		// BACKEND BUG WORKAROUND: If search results provided a higher count, trust it over batch API
-		if (voiceNoteShares > currentSharesCount) {
-			console.warn(`[BACKEND BUG WORKAROUND] Forcing share count from ${currentSharesCount} to ${voiceNoteShares} for ${voiceNote.id}`);
-			setSharesCount(voiceNoteShares);
-		}
-		
-		// REPOST STATUS INCONSISTENCY WORKAROUND: If we're told it's reposted but count is 0, force it to 1
-		if (isRepostedEffective && currentSharesCount === 0 && voiceNoteShares === 0) {
-			console.warn(`[BACKEND BUG WORKAROUND] Repost status true but count 0, forcing to 1 for ${voiceNote.id}`);
-			setSharesCount(1);
-		}
-	}, [voiceNote.shares, voiceNote.id, isRepostedEffective, sharesCount]);
+	}, [voiceNote.id, loggedInUserId, isRepostedProp, initialDataLoaded, hasUserInteracted]);
 
 	// Voice notes already come with stats data, fetchStats removed to prevent 404 errors
 

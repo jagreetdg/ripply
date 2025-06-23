@@ -1,13 +1,14 @@
 const supabase = require("../../config/supabase");
+const { processVoiceNoteCounts } = require("../../utils/voiceNotes/processors");
 
 /**
  * Service layer for basic voice note CRUD operations
  */
 
 /**
- * Get a single voice note by ID with all related data
+ * Get a single voice note by ID
  * @param {string} id - Voice note ID
- * @returns {Object|null} Voice note with user info and engagement counts, or null if not found
+ * @returns {Object|null} Voice note data with engagement stats or null if not found
  */
 const getVoiceNoteById = async (id) => {
 	const { data, error } = await supabase
@@ -19,7 +20,6 @@ const getVoiceNoteById = async (id) => {
 			likes:voice_note_likes (count),
 			comments:voice_note_comments (count),
 			plays:voice_note_plays (count),
-			shares:voice_note_shares (count),
 			tags:voice_note_tags (tag_name)
 		`
 		)
@@ -37,7 +37,25 @@ const getVoiceNoteById = async (id) => {
 		throw error;
 	}
 
-	return data;
+	// Get actual share count
+	try {
+		const { count: shareCount } = await supabase
+			.from("voice_note_shares")
+			.select("*", { count: "exact", head: true })
+			.eq("voice_note_id", id);
+
+		// Process the voice note and override share count
+		const processedNote = processVoiceNoteCounts(data);
+		processedNote.shares = shareCount || 0;
+
+		return processedNote;
+	} catch (shareError) {
+		console.warn(`Failed to get share count for ${id}:`, shareError);
+		// Process normally and set shares to 0
+		const processedNote = processVoiceNoteCounts(data);
+		processedNote.shares = 0;
+		return processedNote;
+	}
 };
 
 /**
@@ -68,7 +86,6 @@ const getVoiceNotes = async (options = {}) => {
 			likes:voice_note_likes (count),
 			comments:voice_note_comments (count),
 			plays:voice_note_plays (count),
-			shares:voice_note_shares (count),
 			tags:voice_note_tags (tag_name)
 		`,
 		{ count: "exact" }
@@ -84,8 +101,38 @@ const getVoiceNotes = async (options = {}) => {
 
 	if (error) throw error;
 
+	// Get actual share counts for all voice notes in parallel
+	const shareCountPromises = data.map(async (note) => {
+		try {
+			const { count } = await supabase
+				.from("voice_note_shares")
+				.select("*", { count: "exact", head: true })
+				.eq("voice_note_id", note.id);
+			return { voiceNoteId: note.id, shareCount: count || 0 };
+		} catch (error) {
+			console.warn(`Failed to get share count for ${note.id}:`, error);
+			return { voiceNoteId: note.id, shareCount: 0 };
+		}
+	});
+
+	const shareCounts = await Promise.all(shareCountPromises);
+	const shareCountMap = shareCounts.reduce(
+		(map, { voiceNoteId, shareCount }) => {
+			map[voiceNoteId] = shareCount;
+			return map;
+		},
+		{}
+	);
+
+	// Process data and override share counts
+	const processedData = data.map((note) => {
+		const processedNote = processVoiceNoteCounts(note);
+		processedNote.shares = shareCountMap[note.id] || 0;
+		return processedNote;
+	});
+
 	return {
-		data,
+		data: processedData,
 		pagination: {
 			page: parseInt(page),
 			limit: parseInt(limit),
@@ -169,7 +216,6 @@ const searchVoiceNotes = async (searchTerm, options = {}) => {
 			likes:voice_note_likes (count),
 			comments:voice_note_comments (count),
 			plays:voice_note_plays (count),
-			shares:voice_note_shares (count),
 			tags:voice_note_tags (tag_name)
 		`,
 		{ count: "exact" }
@@ -210,8 +256,38 @@ const searchVoiceNotes = async (searchTerm, options = {}) => {
 
 	if (error) throw error;
 
+	// Get actual share counts for all voice notes in parallel
+	const shareCountPromises = data.map(async (note) => {
+		try {
+			const { count } = await supabase
+				.from("voice_note_shares")
+				.select("*", { count: "exact", head: true })
+				.eq("voice_note_id", note.id);
+			return { voiceNoteId: note.id, shareCount: count || 0 };
+		} catch (error) {
+			console.warn(`Failed to get share count for ${note.id}:`, error);
+			return { voiceNoteId: note.id, shareCount: 0 };
+		}
+	});
+
+	const shareCounts = await Promise.all(shareCountPromises);
+	const shareCountMap = shareCounts.reduce(
+		(map, { voiceNoteId, shareCount }) => {
+			map[voiceNoteId] = shareCount;
+			return map;
+		},
+		{}
+	);
+
+	// Process data and override share counts
+	const processedData = data.map((note) => {
+		const processedNote = processVoiceNoteCounts(note);
+		processedNote.shares = shareCountMap[note.id] || 0;
+		return processedNote;
+	});
+
 	return {
-		data,
+		data: processedData,
 		pagination: {
 			page: parseInt(page),
 			limit: parseInt(limit),

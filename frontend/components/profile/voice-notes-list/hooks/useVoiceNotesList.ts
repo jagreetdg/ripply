@@ -30,6 +30,9 @@ export const useVoiceNotesList = ({
 	const [hasMore, setHasMore] = useState(true);
 	const [loadingStats, setLoadingStats] = useState(true);
 	const flatListRef = useRef<FlatList>(null);
+	
+	// Track recently interacted voice notes to prevent optimistic update interference
+	const [recentlyInteractedNotes, setRecentlyInteractedNotes] = useState<Set<string>>(new Set());
 
 	// Update local state when props change
 	useEffect(() => {
@@ -55,11 +58,24 @@ export const useVoiceNotesList = ({
 				for (let i = 0; i < updatedNotes.length; i++) {
 					const note = updatedNotes[i];
 					if (note.is_shared) {
+						// OPTIMISTIC UPDATE FIX: Skip fetching for recently interacted notes
+						// This prevents fresh data from overriding optimistic updates
+						if (recentlyInteractedNotes.has(note.id)) {
+							console.log("[PROFILE FETCH DEBUG] Skipping fetch for recently interacted note:", note.id);
+							continue;
+						}
+						
 						try {
 							const response = await getVoiceNoteById(note.id);
 							const latestData = response as unknown as VoiceNote;
 
 							if (latestData) {
+								console.log("[PROFILE FETCH DEBUG] Updating voice note data:", {
+									voiceNoteId: note.id,
+									oldShares: note.shares,
+									newShares: latestData.shares
+								});
+								
 								updatedNotes[i] = {
 									...note,
 									likes: typeof latestData.likes === "number" ? latestData.likes : 0,
@@ -87,7 +103,7 @@ export const useVoiceNotesList = ({
 		};
 
 		fetchRepostedNotesData();
-	}, [voiceNotes]);
+	}, [voiceNotes, recentlyInteractedNotes]);
 
 	// Voice notes already come with stats data, no need to fetch separately
 	useEffect(() => {
@@ -157,17 +173,71 @@ export const useVoiceNotesList = ({
 	}, [handlePlayVoiceNote]);
 
 	const handleAfterShare = useCallback((voiceNoteId: string, isShared: boolean) => {
+		console.log("[PROFILE] handleAfterShare called:", { voiceNoteId, isShared });
+		
+		// Track this voice note as recently interacted to prevent fetch interference
+		setRecentlyInteractedNotes(prev => new Set(prev).add(voiceNoteId));
+		
+		// Clear the tracking after 8 seconds to allow future fetches
+		setTimeout(() => {
+			setRecentlyInteractedNotes(prev => {
+				const newSet = new Set(prev);
+				newSet.delete(voiceNoteId);
+				return newSet;
+			});
+		}, 8000);
+		
 		setLocalVoiceNotes(prev => 
-			prev.map(note => 
-				note.id === voiceNoteId 
-					? { ...note, isReposted: isShared }
-					: note
-			)
+			prev.map(note => {
+				if (note.id === voiceNoteId) {
+					console.log("[PROFILE] Updating share status flags only (not count):", {
+						voiceNoteId,
+						isShared,
+						currentShareCount: note.shares
+					});
+					
+					return { 
+						...note, 
+						// DON'T modify shares count - let the voice note card handle that
+						// Only update status flags for UI consistency
+						isReposted: isShared,
+						currentUserHasShared: isShared,
+						is_shared: isShared
+					};
+				}
+				return note;
+			})
 		);
 	}, []);
 
 	const handleUnshare = useCallback((voiceNoteId: string) => {
-		setLocalVoiceNotes(prev => prev.filter(note => note.id !== voiceNoteId));
+		// PROFILE PAGE BUG FIX: Don't remove voice notes from profile pages when unshared
+		// Profile pages should show all voice notes created by the user, regardless of share status
+		// Only update the repost status flags - DON'T modify share count (voice note card handles that)
+		console.log("[PROFILE BUG FIX] handleUnshare called for voice note:", voiceNoteId);
+		
+		setLocalVoiceNotes(prev => 
+			prev.map(note => {
+				if (note.id === voiceNoteId) {
+					console.log("[PROFILE BUG FIX] Updating voice note status flags only (not count):", {
+						voiceNoteId,
+						currentShareCount: note.shares,
+						wasShared: note.is_shared || note.currentUserHasShared || note.isReposted
+					});
+					
+					return {
+						...note,
+						// DON'T modify shares count - let the voice note card handle that
+						// Only reset shared status flags for UI consistency
+						is_shared: false,
+						currentUserHasShared: false,
+						isReposted: false,
+						// Keep the voice note in the list since it belongs to this profile
+					};
+				}
+				return note;
+			})
+		);
 	}, []);
 
 	return {
