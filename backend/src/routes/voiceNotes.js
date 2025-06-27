@@ -143,6 +143,22 @@ router.get(
 	interactionController.checkUserShared
 );
 
+// ===== NEW CLEAN INTERACTION SYSTEM =====
+router.post(
+	"/:id/like-new",
+	authenticateToken,
+	interactionController.toggleLikeNew
+);
+router.post(
+	"/:id/share-new",
+	authenticateToken,
+	interactionController.toggleShareNew
+);
+router.get(
+	"/:id/interaction-status",
+	interactionController.getInteractionStatusNew
+);
+
 // ===== TEST ROUTES (for testing purposes) =====
 router.get("/test", (req, res) => {
 	res.json({ route: "voiceNotes" });

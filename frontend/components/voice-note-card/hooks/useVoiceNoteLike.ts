@@ -33,7 +33,7 @@ export const useVoiceNoteLike = ({
   
   // State
   const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(initialLikesCount);
+  const [likesCount, setLikesCount] = useState(initialLikesCount || 0); // Use correct initial value from props
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -75,7 +75,7 @@ export const useVoiceNoteLike = ({
     };
     
     loadLikeData();
-  }, [voiceNoteId, userId, initialLikesCount]);
+  }, [voiceNoteId, userId]); // Don't depend on initialLikesCount to avoid re-fetching with wrong values
   
   // Handle like button press with optimistic updates
   const handleLikePress = useCallback(async () => {

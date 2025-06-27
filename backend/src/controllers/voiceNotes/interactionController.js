@@ -410,6 +410,118 @@ const debugVersion = async (req, res) => {
 	});
 };
 
+// ===== NEW CLEAN INTERACTION ENDPOINTS =====
+
+/**
+ * Toggle like status (NEW SYSTEM)
+ * POST /api/voice-notes/:id/like-new
+ */
+const toggleLikeNew = async (req, res) => {
+	try {
+		const { id: voiceNoteId } = req.params;
+		const userId = req.user?.id;
+
+		if (!userId) {
+			return res.status(401).json({ message: "Authentication required" });
+		}
+
+		if (!voiceNoteId) {
+			return res.status(400).json({ message: "Voice note ID is required" });
+		}
+
+		console.log(
+			`[NEW LIKE CONTROLLER] Toggle like: voiceNoteId=${voiceNoteId}, userId=${userId}`
+		);
+
+		const result = await interactionService.toggleLikeNew(voiceNoteId, userId);
+
+		res.status(200).json({
+			success: true,
+			data: result,
+		});
+	} catch (error) {
+		console.error("[NEW LIKE CONTROLLER] Error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Failed to toggle like",
+			error: error.message,
+		});
+	}
+};
+
+/**
+ * Toggle share status (NEW SYSTEM)
+ * POST /api/voice-notes/:id/share-new
+ */
+const toggleShareNew = async (req, res) => {
+	try {
+		const { id: voiceNoteId } = req.params;
+		const userId = req.user?.id;
+
+		if (!userId) {
+			return res.status(401).json({ message: "Authentication required" });
+		}
+
+		if (!voiceNoteId) {
+			return res.status(400).json({ message: "Voice note ID is required" });
+		}
+
+		console.log(
+			`[NEW SHARE CONTROLLER] Toggle share: voiceNoteId=${voiceNoteId}, userId=${userId}`
+		);
+
+		const result = await interactionService.toggleShareNew(voiceNoteId, userId);
+
+		res.status(200).json({
+			success: true,
+			data: result,
+		});
+	} catch (error) {
+		console.error("[NEW SHARE CONTROLLER] Error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Failed to toggle share",
+			error: error.message,
+		});
+	}
+};
+
+/**
+ * Get interaction status (NEW SYSTEM)
+ * GET /api/voice-notes/:id/interaction-status
+ */
+const getInteractionStatusNew = async (req, res) => {
+	try {
+		const { id: voiceNoteId } = req.params;
+		const userId = req.user?.id; // Optional for logged out users
+
+		if (!voiceNoteId) {
+			return res.status(400).json({ message: "Voice note ID is required" });
+		}
+
+		console.log(
+			`[NEW STATUS CONTROLLER] Get status: voiceNoteId=${voiceNoteId}, userId=${userId}`
+		);
+
+		const result = await interactionService.getInteractionStatusNew(
+			voiceNoteId,
+			userId
+		);
+
+		res.status(200).json({
+			success: true,
+			data: result,
+		});
+	} catch (error) {
+		console.error("[NEW STATUS CONTROLLER] Error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Failed to get interaction status",
+			error: error.message,
+		});
+	}
+};
+
 module.exports = {
 	// Likes
 	getVoiceNoteLikes,
@@ -427,4 +539,8 @@ module.exports = {
 	checkUserShared,
 	// Debug
 	debugVersion,
+	// NEW CLEAN SYSTEM
+	toggleLikeNew,
+	toggleShareNew,
+	getInteractionStatusNew,
 };

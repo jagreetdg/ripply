@@ -40,7 +40,7 @@ export const useVoiceNoteShare = ({
   
   // State
   const [isShared, setIsShared] = useState(false);
-  const [sharesCount, setSharesCount] = useState(initialSharesCount);
+  const [sharesCount, setSharesCount] = useState(initialSharesCount || 0); // Use correct initial value from props
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -84,7 +84,7 @@ export const useVoiceNoteShare = ({
     };
     
     loadShareData();
-  }, [voiceNoteId, userId, initialSharesCount]);
+  }, [voiceNoteId, userId]); // Don't depend on initialSharesCount to avoid re-fetching with wrong values
   
   // Handle share button press with optimistic updates
   const handleSharePress = useCallback(async () => {

@@ -1,8 +1,16 @@
+export { useVoiceNoteCard } from './useVoiceNoteCard';
+export { useVoiceNoteCardSimple } from './useVoiceNoteCardSimple';
 export { useVoiceNoteLike } from './useVoiceNoteLike';
 export { useVoiceNoteShare } from './useVoiceNoteShare';
-export { useVoiceNoteCard } from './useVoiceNoteCard';
-export { useVoiceNoteAudio } from "./useVoiceNoteAudio";
-export { useVoiceNoteComments } from "./useVoiceNoteComments";
-export { useVoiceNoteInteractions } from "./useVoiceNoteInteractions";
-export { useVoiceNoteNavigation } from "./useVoiceNoteNavigation";
-export { useVoiceNoteSharing } from "./useVoiceNoteSharing";
+export { useVoiceNoteActions } from './useVoiceNoteActions';
+export { useVoiceNoteComments } from './useVoiceNoteComments';
+export { useVoiceNoteInteraction } from './useVoiceNoteInteraction';
+export { useVoiceNotePermissions } from './useVoiceNotePermissions';
+export { useVoiceNotePlayback } from './useVoiceNotePlayback';
+export { useVoiceNoteRepostAnalytics } from './useVoiceNoteRepostAnalytics';
+export { useVoiceNoteValidation } from './useVoiceNoteValidation';
+export { useVoiceNoteMenuPress } from './useVoiceNoteMenuPress';
+
+// NEW CLEAN HOOKS
+export { useVoiceNoteLikeNew } from './useVoiceNoteLikeNew';
+export { useVoiceNoteShareNew } from './useVoiceNoteShareNew';

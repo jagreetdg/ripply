@@ -373,6 +373,234 @@ const getVoiceNoteShareCount = async (voiceNoteId) => {
 	}
 };
 
+// ===== NEW CLEAN INTERACTION SYSTEM =====
+
+/**
+ * Toggle like status for a voice note (NEW SYSTEM)
+ * @param {string} voiceNoteId - Voice note ID
+ * @param {string} userId - User ID
+ * @returns {Object} {isLiked: boolean, likesCount: number}
+ */
+const toggleLikeNew = async (voiceNoteId, userId) => {
+	console.log(
+		`[NEW LIKE] Toggle like: voiceNoteId=${voiceNoteId}, userId=${userId}`
+	);
+
+	try {
+		// Check current like status
+		const { data: existingLike, error: checkError } = await supabase
+			.from("voice_note_likes")
+			.select("id")
+			.eq("voice_note_id", voiceNoteId)
+			.eq("user_id", userId)
+			.single();
+
+		if (checkError && checkError.code !== "PGRST116") {
+			throw checkError;
+		}
+
+		const isCurrentlyLiked = !!existingLike;
+		console.log(`[NEW LIKE] Current status: isLiked=${isCurrentlyLiked}`);
+
+		if (isCurrentlyLiked) {
+			// Remove like
+			const { error: deleteError } = await supabase
+				.from("voice_note_likes")
+				.delete()
+				.eq("voice_note_id", voiceNoteId)
+				.eq("user_id", userId);
+
+			if (deleteError) throw deleteError;
+		} else {
+			// Add like
+			const { error: insertError } = await supabase
+				.from("voice_note_likes")
+				.insert([{ voice_note_id: voiceNoteId, user_id: userId }]);
+
+			if (insertError) throw insertError;
+		}
+
+		// Get new count
+		const { count, error: countError } = await supabase
+			.from("voice_note_likes")
+			.select("*", { count: "exact", head: true })
+			.eq("voice_note_id", voiceNoteId);
+
+		if (countError) throw countError;
+
+		const newIsLiked = !isCurrentlyLiked;
+		const newCount = count || 0;
+
+		console.log(`[NEW LIKE] Result: isLiked=${newIsLiked}, count=${newCount}`);
+
+		return {
+			isLiked: newIsLiked,
+			likesCount: newCount,
+		};
+	} catch (error) {
+		console.error(`[NEW LIKE] Error:`, error);
+		throw error;
+	}
+};
+
+/**
+ * Toggle share status for a voice note (NEW SYSTEM)
+ * @param {string} voiceNoteId - Voice note ID
+ * @param {string} userId - User ID
+ * @returns {Object} {isShared: boolean, sharesCount: number}
+ */
+const toggleShareNew = async (voiceNoteId, userId) => {
+	console.log(
+		`[NEW SHARE] Toggle share: voiceNoteId=${voiceNoteId}, userId=${userId}`
+	);
+
+	try {
+		// Check current share status
+		const { data: existingShare, error: checkError } = await supabase
+			.from("voice_note_shares")
+			.select("id")
+			.eq("voice_note_id", voiceNoteId)
+			.eq("user_id", userId)
+			.single();
+
+		if (checkError && checkError.code !== "PGRST116") {
+			throw checkError;
+		}
+
+		const isCurrentlyShared = !!existingShare;
+		console.log(`[NEW SHARE] Current status: isShared=${isCurrentlyShared}`);
+
+		if (isCurrentlyShared) {
+			// Remove share
+			const { error: deleteError } = await supabase
+				.from("voice_note_shares")
+				.delete()
+				.eq("voice_note_id", voiceNoteId)
+				.eq("user_id", userId);
+
+			if (deleteError) throw deleteError;
+		} else {
+			// Add share
+			const shareId = randomUUID();
+			const { error: insertError } = await supabase
+				.from("voice_note_shares")
+				.insert([
+					{
+						id: shareId,
+						voice_note_id: voiceNoteId,
+						user_id: userId,
+						shared_at: new Date().toISOString(),
+					},
+				]);
+
+			if (insertError) throw insertError;
+		}
+
+		// Get new count
+		const { count, error: countError } = await supabase
+			.from("voice_note_shares")
+			.select("*", { count: "exact", head: true })
+			.eq("voice_note_id", voiceNoteId);
+
+		if (countError) throw countError;
+
+		const newIsShared = !isCurrentlyShared;
+		const newCount = count || 0;
+
+		console.log(
+			`[NEW SHARE] Result: isShared=${newIsShared}, count=${newCount}`
+		);
+
+		return {
+			isShared: newIsShared,
+			sharesCount: newCount,
+		};
+	} catch (error) {
+		console.error(`[NEW SHARE] Error:`, error);
+		throw error;
+	}
+};
+
+/**
+ * Get interaction status for a voice note (NEW SYSTEM)
+ * @param {string} voiceNoteId - Voice note ID
+ * @param {string} userId - User ID (optional)
+ * @returns {Object} {isLiked: boolean, likesCount: number, isShared: boolean, sharesCount: number}
+ */
+const getInteractionStatusNew = async (voiceNoteId, userId = null) => {
+	console.log(
+		`[NEW STATUS] Get interaction status: voiceNoteId=${voiceNoteId}, userId=${userId}`
+	);
+
+	try {
+		// Get counts in parallel
+		const [
+			{ count: likesCount, error: likesError },
+			{ count: sharesCount, error: sharesError },
+		] = await Promise.all([
+			supabase
+				.from("voice_note_likes")
+				.select("*", { count: "exact", head: true })
+				.eq("voice_note_id", voiceNoteId),
+			supabase
+				.from("voice_note_shares")
+				.select("*", { count: "exact", head: true })
+				.eq("voice_note_id", voiceNoteId),
+		]);
+
+		if (likesError) throw likesError;
+		if (sharesError) throw sharesError;
+
+		let isLiked = false;
+		let isShared = false;
+
+		// Check user status if userId provided
+		if (userId) {
+			const [
+				{ data: likeData, error: likeCheckError },
+				{ data: shareData, error: shareCheckError },
+			] = await Promise.all([
+				supabase
+					.from("voice_note_likes")
+					.select("id")
+					.eq("voice_note_id", voiceNoteId)
+					.eq("user_id", userId)
+					.single(),
+				supabase
+					.from("voice_note_shares")
+					.select("id")
+					.eq("voice_note_id", voiceNoteId)
+					.eq("user_id", userId)
+					.single(),
+			]);
+
+			// Ignore "not found" errors
+			if (likeCheckError && likeCheckError.code !== "PGRST116") {
+				throw likeCheckError;
+			}
+			if (shareCheckError && shareCheckError.code !== "PGRST116") {
+				throw shareCheckError;
+			}
+
+			isLiked = !!likeData;
+			isShared = !!shareData;
+		}
+
+		const result = {
+			isLiked,
+			likesCount: likesCount || 0,
+			isShared,
+			sharesCount: sharesCount || 0,
+		};
+
+		console.log(`[NEW STATUS] Result:`, result);
+		return result;
+	} catch (error) {
+		console.error(`[NEW STATUS] Error:`, error);
+		throw error;
+	}
+};
+
 module.exports = {
 	// Likes
 	checkUserLiked,
@@ -390,4 +618,8 @@ module.exports = {
 	unshareVoiceNote,
 	getVoiceNoteShares,
 	getVoiceNoteShareCount,
+	// NEW CLEAN SYSTEM
+	toggleLikeNew,
+	toggleShareNew,
+	getInteractionStatusNew,
 };

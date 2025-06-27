@@ -4,7 +4,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { VoiceNoteUserInfo } from "../VoiceNoteUserInfo";
 import { VoiceNoteProgressBar } from "../VoiceNoteProgressBar";
 import { VoiceNoteTags } from "../VoiceNoteTags";
-import { VoiceNoteInteractionsNew } from "../VoiceNoteInteractionsNew";
+import { VoiceNoteInteractionsClean } from "../VoiceNoteInteractionsClean";
 import { formatDuration } from "../VoiceNoteCardUtils";
 
 interface VoiceNoteCardContentProps {
@@ -21,22 +21,10 @@ interface VoiceNoteCardContentProps {
 	isPlaying: boolean;
 	progress: number;
 	progressContainerRef: React.RefObject<any>;
-	isLiked: boolean;
-	likeScale: any;
-	shareScale: any;
 	commentScale: any;
-	likePulse: any;
-	sharePulse: any;
 	commentPulse: any;
-	likesCount: number;
 	commentsCount: number;
 	playsCount: number;
-	isReposted: boolean;
-	sharesCount: number;
-
-	isLoadingShareCount: boolean;
-	isLoadingStats: boolean;
-	isLoadingRepostStatus: boolean;
 	showRepostAttribution?: boolean;
 	sharedBy?: any;
 	onProfilePress: () => void;
@@ -45,11 +33,10 @@ interface VoiceNoteCardContentProps {
 	onProgressBarDrag: (event: any) => void;
 	onProgressBarRelease: () => void;
 	onTagPress: (tag: string) => void;
-	onLikePress: () => void;
 	onCommentPress: () => void;
 	onPlaysPress: () => void;
-	onRepostPress: () => void;
-	onShareCountLongPress: () => void;
+	onShareStatusChanged?: (voiceNoteId: string, isShared: boolean) => void;
+	onVoiceNoteUnshared?: (voiceNoteId: string) => void;
 }
 
 export const VoiceNoteCardContent: React.FC<VoiceNoteCardContentProps> = ({
@@ -66,21 +53,10 @@ export const VoiceNoteCardContent: React.FC<VoiceNoteCardContentProps> = ({
 	isPlaying,
 	progress,
 	progressContainerRef,
-	isLiked,
-	likeScale,
-	shareScale,
 	commentScale,
-	likePulse,
-	sharePulse,
 	commentPulse,
-	likesCount,
 	commentsCount,
 	playsCount,
-	isReposted,
-	sharesCount,
-	isLoadingShareCount,
-	isLoadingStats,
-	isLoadingRepostStatus,
 	showRepostAttribution,
 	sharedBy,
 	onProfilePress,
@@ -89,11 +65,10 @@ export const VoiceNoteCardContent: React.FC<VoiceNoteCardContentProps> = ({
 	onProgressBarDrag,
 	onProgressBarRelease,
 	onTagPress,
-	onLikePress,
 	onCommentPress,
 	onPlaysPress,
-	onRepostPress,
-	onShareCountLongPress,
+	onShareStatusChanged,
+	onVoiceNoteUnshared,
 }) => {
 	const titleStyle = hasBackgroundImage ? styles.titleOnImage : styles.title;
 
@@ -164,18 +139,16 @@ export const VoiceNoteCardContent: React.FC<VoiceNoteCardContentProps> = ({
 			/>
 
 			{/* Interaction buttons */}
-			<VoiceNoteInteractionsNew
+			<VoiceNoteInteractionsClean
 				voiceNote={voiceNote}
-				styles={styles}
-				colors={colors}
-				hasBackgroundImage={hasBackgroundImage}
-				userId={userId}
-				commentsCount={commentsCount}
-				playsCount={playsCount}
-				commentScale={commentScale}
-				commentPulse={commentPulse}
-				onCommentPress={onCommentPress}
-				onPlaysPress={onPlaysPress}
+				onOpenComments={onCommentPress}
+				onLikeStatusChanged={(isLiked, likesCount) => {
+					// Optional: handle like status changes if needed
+				}}
+				onShareStatusChanged={(isShared, sharesCount) => {
+					// Call the parent callback if provided
+					onShareStatusChanged?.(voiceNote.id, isShared);
+				}}
 			/>
 		</View>
 	);

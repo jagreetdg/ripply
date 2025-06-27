@@ -5,7 +5,7 @@ import { BlurView } from "expo-blur";
 import { useTheme } from "../../context/ThemeContext";
 import Colors, { hexToRgba, opacityValues } from "../../constants/Colors";
 import { CommentPopup } from "../comments/CommentPopup";
-import { useVoiceNoteCard } from "./hooks/useVoiceNoteCard";
+import { useVoiceNoteCardSimple } from "./hooks/useVoiceNoteCardSimple";
 import { VoiceNoteCardContent, VoiceNoteRepostAttribution } from "./components";
 import { VoiceNoteCardProps } from "./VoiceNoteCardTypes";
 import { getStyles } from "./VoiceNoteCardStyles";
@@ -59,68 +59,39 @@ export function VoiceNoteCardImpl({
 	const effectiveAvatarUrl =
 		userAvatarUrl || voiceNoteUsers?.avatar_url || null;
 
-	// Use the custom hook for all business logic
+	// Use the simplified hook for non-interaction logic only
 	const {
+		loggedInUserId,
 		isPlaying,
 		progress,
 		isSeeking,
-		isLiked,
-		likesCount,
-		sharesCount,
-		isLoadingShareCount,
+		progressContainerRef,
 		showCommentPopup,
 		commentsCount,
 		comments,
 		isLoadingComments,
 		playsCount,
-		statsLoaded,
-		isRepostedEffective,
-		loggedInUserId,
-		progressContainerRef,
-		// Loading states
-		isLoadingAllStats,
-		isLoadingLikeStatus,
-		isLoadingRepostStatus,
-		isLoadingSharesCount,
-		initialDataLoaded,
-		// Animation values
-		likeScale,
-		shareScale,
 		commentScale,
-		likePulse,
-		sharePulse,
 		commentPulse,
-		// Handlers
 		handlePlayPress,
 		handleProfilePress,
-		handleLikePress,
 		handleCommentPress,
 		handlePlaysPress,
-		handleRepostPress,
-		handleShareCountLongPress,
 		handleTagPress,
 		handleProgressBarPress,
 		handleProgressBarDrag,
 		handleProgressBarRelease,
 		handleCloseCommentPopup,
 		handleCommentAdded,
-	} = useVoiceNoteCard({
+	} = useVoiceNoteCardSimple({
 		voiceNote,
 		userId,
 		currentUserId,
-		isReposted: isRepostedProp,
-		isLoadingRepostStatus: isLoadingRepostStatusProp,
 		onPlay,
 		onPlayPress,
 		onProfilePress,
 		onUserProfilePress,
-		onShare,
-		onShareStatusChanged,
-		onVoiceNoteUnshared,
 	});
-
-	// Use the comprehensive loading state from the hook
-	const isLoadingStats = isLoadingAllStats;
 
 	// Render the card
 	return (
@@ -175,21 +146,10 @@ export function VoiceNoteCardImpl({
 						isPlaying={isPlaying}
 						progress={progress}
 						progressContainerRef={progressContainerRef}
-						isLiked={isLiked}
-						likeScale={likeScale}
-						shareScale={shareScale}
 						commentScale={commentScale}
-						likePulse={likePulse}
-						sharePulse={sharePulse}
 						commentPulse={commentPulse}
-						likesCount={likesCount}
 						commentsCount={commentsCount}
 						playsCount={playsCount}
-						isReposted={isRepostedEffective}
-						sharesCount={sharesCount}
-						isLoadingShareCount={isLoadingSharesCount}
-						isLoadingStats={isLoadingStats}
-						isLoadingRepostStatus={isLoadingRepostStatus}
 						showRepostAttribution={showRepostAttribution}
 						sharedBy={sharedBy}
 						onProfilePress={handleProfilePress}
@@ -198,11 +158,10 @@ export function VoiceNoteCardImpl({
 						onProgressBarDrag={handleProgressBarDrag}
 						onProgressBarRelease={handleProgressBarRelease}
 						onTagPress={handleTagPress}
-						onLikePress={handleLikePress}
 						onCommentPress={handleCommentPress}
 						onPlaysPress={handlePlaysPress}
-						onRepostPress={handleRepostPress}
-						onShareCountLongPress={handleShareCountLongPress}
+						onShareStatusChanged={onShareStatusChanged}
+						onVoiceNoteUnshared={onVoiceNoteUnshared}
 					/>
 				</ImageBackground>
 			) : (
@@ -237,21 +196,10 @@ export function VoiceNoteCardImpl({
 						isPlaying={isPlaying}
 						progress={progress}
 						progressContainerRef={progressContainerRef}
-						isLiked={isLiked}
-						likeScale={likeScale}
-						shareScale={shareScale}
 						commentScale={commentScale}
-						likePulse={likePulse}
-						sharePulse={sharePulse}
 						commentPulse={commentPulse}
-						likesCount={likesCount}
 						commentsCount={commentsCount}
 						playsCount={playsCount}
-						isReposted={isRepostedEffective}
-						sharesCount={sharesCount}
-						isLoadingShareCount={isLoadingSharesCount}
-						isLoadingStats={isLoadingStats}
-						isLoadingRepostStatus={isLoadingRepostStatus}
 						showRepostAttribution={showRepostAttribution}
 						sharedBy={sharedBy}
 						onProfilePress={handleProfilePress}
@@ -260,11 +208,10 @@ export function VoiceNoteCardImpl({
 						onProgressBarDrag={handleProgressBarDrag}
 						onProgressBarRelease={handleProgressBarRelease}
 						onTagPress={handleTagPress}
-						onLikePress={handleLikePress}
 						onCommentPress={handleCommentPress}
 						onPlaysPress={handlePlaysPress}
-						onRepostPress={handleRepostPress}
-						onShareCountLongPress={handleShareCountLongPress}
+						onShareStatusChanged={onShareStatusChanged}
+						onVoiceNoteUnshared={onVoiceNoteUnshared}
 					/>
 				</View>
 			)}
