@@ -1,5 +1,6 @@
 const supabase = require("../../config/supabase");
 const { processVoiceNoteCounts } = require("../../utils/voiceNotes/processors");
+const { VOICE_NOTE_SELECT_QUERY } = require("../voiceNotes/voiceNoteService");
 
 /**
  * Service layer for user content management
@@ -17,19 +18,12 @@ const getUserVoiceNotes = async (userId, options = {}) => {
 
 	const { data, error, count } = await supabase
 		.from("voice_notes")
-		.select(
-			`
-			*,
-			likes:voice_note_likes (count),
-			comments:voice_note_comments (count),
-			plays:voice_note_plays (count),
-			tags:voice_note_tags (tag_name)
-		`,
-			{ count: "exact" }
-		)
+		.select(VOICE_NOTE_SELECT_QUERY, {
+			count: "exact",
+		})
 		.eq("user_id", userId)
 		.order("created_at", { ascending: false })
-		.range(offset, offset + parseInt(limit) - 1);
+		.range(offset, offset + limit - 1);
 
 	if (error) throw error;
 

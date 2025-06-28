@@ -5,6 +5,15 @@ const { processVoiceNoteCounts } = require("../../utils/voiceNotes/processors");
  * Service layer for basic voice note CRUD operations
  */
 
+const VOICE_NOTE_SELECT_QUERY = `
+	*,
+	users:user_id (id, username, display_name, avatar_url, is_verified),
+	likes:voice_note_likes (count),
+	comments:voice_note_comments (count),
+	plays:voice_note_plays (count),
+	tags:voice_note_tags (tag_name)
+`;
+
 /**
  * Get a single voice note by ID
  * @param {string} id - Voice note ID
@@ -73,34 +82,26 @@ const getVoiceNotes = async (options = {}) => {
 		page = 1,
 		limit = 10,
 		userId,
-		orderBy = "created_at",
-		ascending = false,
+		tag,
+		search,
+		discover,
+		currentUserId,
 	} = options;
-
 	const offset = (page - 1) * limit;
 
-	let query = supabase.from("voice_notes").select(
-		`
-			*,
-			users:user_id (id, username, display_name, avatar_url, is_verified),
-			likes:voice_note_likes (count),
-			comments:voice_note_comments (count),
-			plays:voice_note_plays (count),
-			tags:voice_note_tags (tag_name)
-		`,
-		{ count: "exact" }
-	);
+	let query = supabase.from("voice_notes").select(VOICE_NOTE_SELECT_QUERY, {
+		count: "exact",
+	});
 
 	if (userId) {
 		query = query.eq("user_id", userId);
 	}
 
-	const { data, error, count } = await query
-		.order(orderBy, { ascending })
-		.range(offset, offset + parseInt(limit) - 1);
+	query = query.order("created_at", { ascending: false });
+
+	const { data, error, count } = await query.range(offset, offset + limit - 1);
 
 	if (error) throw error;
-
 	// Get actual share counts for all voice notes in parallel
 	const shareCountPromises = data.map(async (note) => {
 		try {
@@ -206,55 +207,24 @@ const deleteVoiceNote = async (id) => {
  * @returns {Array} Matching voice notes
  */
 const searchVoiceNotes = async (searchTerm, options = {}) => {
-	const { page = 1, limit = 10, searchType = "title" } = options;
+	const { page = 1, limit = 10 } = options;
 	const offset = (page - 1) * limit;
 
-	let voiceNoteQuery = supabase.from("voice_notes").select(
-		`
-			*,
-			users:user_id (id, username, display_name, avatar_url, is_verified),
-			likes:voice_note_likes (count),
-			comments:voice_note_comments (count),
-			plays:voice_note_plays (count),
-			tags:voice_note_tags (tag_name)
-		`,
-		{ count: "exact" }
-	);
+	// Build the filter string for the .or() condition
+	// We want to find notes where the title matches OR where a linked tag matches
+	const filter = `title.ilike.%${searchTerm}%,voice_note_tags.tag_name.ilike.%${searchTerm}%`;
 
-	if (searchType === "tag") {
-		// Search by tags: first get voice note IDs that have matching tags
-		const { data: tagMatches, error: tagError } = await supabase
-			.from("voice_note_tags")
-			.select("voice_note_id")
-			.ilike("tag_name", `%${searchTerm}%`);
-
-		if (tagError) throw tagError;
-
-		if (!tagMatches || tagMatches.length === 0) {
-			return {
-				data: [],
-				pagination: {
-					page: parseInt(page),
-					limit: parseInt(limit),
-					total: 0,
-					totalPages: 0,
-				},
-			};
-		}
-
-		// Get the voice note IDs from the tag matches
-		const voiceNoteIds = tagMatches.map((match) => match.voice_note_id);
-		voiceNoteQuery = voiceNoteQuery.in("id", voiceNoteIds);
-	} else {
-		// Search by title (default)
-		voiceNoteQuery = voiceNoteQuery.ilike("title", `%${searchTerm}%`);
-	}
-
-	const { data, error, count } = await voiceNoteQuery
+	const { data, error, count } = await supabase
+		.from("voice_notes")
+		.select(VOICE_NOTE_SELECT_QUERY, { count: "exact" })
+		.or(filter, { foreignTable: "voice_note_tags" })
 		.order("created_at", { ascending: false })
 		.range(offset, offset + parseInt(limit) - 1);
 
-	if (error) throw error;
+	if (error) {
+		console.error("[SEARCH SERVICE ERROR]", error);
+		throw error;
+	}
 
 	// Get actual share counts for all voice notes in parallel
 	const shareCountPromises = data.map(async (note) => {
@@ -319,4 +289,5 @@ module.exports = {
 	deleteVoiceNote,
 	searchVoiceNotes,
 	getVoiceNotesByUser,
+	VOICE_NOTE_SELECT_QUERY,
 };

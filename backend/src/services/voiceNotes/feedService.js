@@ -4,6 +4,7 @@ const {
 	calculateDiscoveryScore,
 	calculateUserDiscoveryScore,
 } = require("../../utils/voiceNotes/processors");
+const { VOICE_NOTE_SELECT_QUERY } = require("./voiceNoteService"); // Import the golden query
 
 /**
  * Service layer for feed algorithms and discovery functionality
@@ -441,23 +442,25 @@ const getVoiceNotesByTag = async (tagName, options = {}) => {
 	const { page = 1, limit = 10 } = options;
 	const offset = (page - 1) * limit;
 
-	const { data, error, count } = await supabase
+	// First, find the voice_note_ids associated with the tag
+	const { data: tagData, error: tagError } = await supabase
 		.from("voice_note_tags")
-		.select(
-			`
-			tag_name,
-			voice_notes:voice_note_id (
-				*,
-				users:user_id (id, username, display_name, avatar_url, is_verified),
-				likes:voice_note_likes (count),
-				comments:voice_note_comments (count),
-				plays:voice_note_plays (count),
-				tags:voice_note_tags (tag_name)
-			)
-		`,
-			{ count: "exact" }
-		)
-		.eq("tag_name", tagName.toLowerCase())
+		.select("voice_note_id")
+		.eq("tag_name", tagName.toLowerCase());
+
+	if (tagError) throw tagError;
+	if (!tagData || tagData.length === 0) {
+		return { data: [], pagination: { total: 0, totalPages: 0, page, limit } };
+	}
+
+	const voiceNoteIds = tagData.map((t) => t.voice_note_id);
+
+	// Now, fetch the voice notes with those IDs
+	const { data, error, count } = await supabase
+		.from("voice_notes")
+		.select(VOICE_NOTE_SELECT_QUERY, { count: "exact" })
+		.in("id", voiceNoteIds)
+		.order("created_at", { ascending: false })
 		.range(offset, offset + limit - 1);
 
 	if (error) throw error;
@@ -495,24 +498,23 @@ const getVoiceNotesByTag = async (tagName, options = {}) => {
  * @returns {Object} Public voice notes with pagination
  */
 const getPublicFeed = async (options = {}) => {
-	const { page = 1, limit = 10 } = options;
+	const { page = 1, limit = 10, discover = "newest", currentUserId } = options;
 	const offset = (page - 1) * limit;
 
-	const { data, error, count } = await supabase
-		.from("voice_notes")
-		.select(
-			`
-			*,
-			users:user_id (id, username, display_name, avatar_url, is_verified),
-			likes:voice_note_likes (count),
-			comments:voice_note_comments (count),
-			plays:voice_note_plays (count),
-			tags:voice_note_tags (tag_name)
-		`,
-			{ count: "exact" }
-		)
-		.order("created_at", { ascending: false })
-		.range(offset, offset + parseInt(limit) - 1);
+	let query = supabase.from("voice_notes").select(VOICE_NOTE_SELECT_QUERY, {
+		count: "exact",
+	});
+
+	if (discover === "newest") {
+		query = query.order("created_at", { ascending: false });
+	} else if (discover === "oldest") {
+		query = query.order("created_at", { ascending: true });
+	}
+
+	const { data, error, count } = await query.range(
+		offset,
+		offset + parseInt(limit) - 1
+	);
 
 	if (error) throw error;
 
