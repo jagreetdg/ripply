@@ -451,7 +451,8 @@ const getVoiceNotesByTag = async (tagName, options = {}) => {
 				users:user_id (id, username, display_name, avatar_url, is_verified),
 				likes:voice_note_likes (count),
 				comments:voice_note_comments (count),
-				plays:voice_note_plays (count)
+				plays:voice_note_plays (count),
+				tags:voice_note_tags (tag_name)
 			)
 		`,
 			{ count: "exact" }
@@ -461,10 +462,21 @@ const getVoiceNotesByTag = async (tagName, options = {}) => {
 
 	if (error) throw error;
 
-	// Reshape the data to return just the voice notes
-	const voiceNotes = data.map((item) =>
-		processVoiceNoteCounts(item.voice_notes)
-	);
+	// Reshape the data to return just the voice notes with proper tag processing
+	const voiceNotes = data.map((item) => {
+		const voiceNote = item.voice_notes;
+		// Extract tags from the nested structure
+		const tags = voiceNote.tags
+			? voiceNote.tags.map((tag) => tag.tag_name)
+			: [];
+
+		const processedNote = {
+			...processVoiceNoteCounts(voiceNote),
+			tags,
+		};
+
+		return processedNote;
+	});
 
 	return {
 		data: voiceNotes,

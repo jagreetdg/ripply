@@ -21,13 +21,7 @@ const getAllVoiceNotes = async (req, res) => {
 
 		// Process voice note counts and tags
 		const processedData = result.data.map((note) => {
-			// Extract tags from the nested structure
-			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
-
-			return {
-				...processVoiceNoteCounts(note),
-				tags,
-			};
+			return processVoiceNoteCounts(note);
 		});
 
 		res.status(200).json({
@@ -54,15 +48,7 @@ const getVoiceNoteById = async (req, res) => {
 			return res.status(404).json({ message: "Voice note not found" });
 		}
 
-		// Extract tags from the nested structure
-		const tags = voiceNote.tags
-			? voiceNote.tags.map((tag) => tag.tag_name)
-			: [];
-
-		const processedVoiceNote = {
-			...processVoiceNoteCounts(voiceNote),
-			tags,
-		};
+		const processedVoiceNote = processVoiceNoteCounts(voiceNote);
 		res.status(200).json(processedVoiceNote);
 	} catch (error) {
 		console.error("Error fetching voice note:", error);
@@ -190,13 +176,7 @@ const searchVoiceNotes = async (req, res) => {
 
 			// Process voice note counts and tags
 			const processedData = result.data.map((note) => {
-				// Extract tags from the nested structure
-				const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
-
-				return {
-					...processVoiceNoteCounts(note),
-					tags,
-				};
+				return processVoiceNoteCounts(note);
 			});
 
 			return res.status(200).json({
@@ -213,13 +193,7 @@ const searchVoiceNotes = async (req, res) => {
 
 		// Process voice note counts and tags
 		const processedData = result.data.map((note) => {
-			// Extract tags from the nested structure
-			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
-
-			return {
-				...processVoiceNoteCounts(note),
-				tags,
-			};
+			return processVoiceNoteCounts(note);
 		});
 
 		res.status(200).json({
@@ -248,13 +222,7 @@ const getVoiceNotesByUser = async (req, res) => {
 
 		// Process voice note counts and tags
 		const processedData = result.data.map((note) => {
-			// Extract tags from the nested structure
-			const tags = note.tags ? note.tags.map((tag) => tag.tag_name) : [];
-
-			return {
-				...processVoiceNoteCounts(note),
-				tags,
-			};
+			return processVoiceNoteCounts(note);
 		});
 
 		res.status(200).json({

@@ -281,7 +281,11 @@ const searchVoiceNotes = async (searchTerm, options = {}) => {
 
 	// Process data and override share counts
 	const processedData = data.map((note) => {
-		const processedNote = processVoiceNoteCounts(note);
+		const processedNote = {
+			...processVoiceNoteCounts(note),
+		};
+
+		// Override the share count with the actual count
 		processedNote.shares = shareCountMap[note.id] || 0;
 		return processedNote;
 	});
