@@ -165,41 +165,33 @@ const deleteVoiceNote = async (req, res) => {
  */
 const searchVoiceNotes = async (req, res) => {
 	try {
-		const { term: searchTerm, searchType, page = 1, limit = 10 } = req.query;
+		const {
+			term: searchTerm,
+			searchType,
+			page = 1,
+			limit = 10,
+			currentUserId,
+		} = req.query;
 
-		// Allow search without query (return all public voice notes)
+		// This case is for when the search bar is empty.
 		if (!searchTerm) {
 			const result = await voiceNoteService.getVoiceNotes({
 				page: parseInt(page),
 				limit: parseInt(limit),
 			});
-
-			// Process voice note counts and tags
-			const processedData = result.data.map((note) => {
-				return processVoiceNoteCounts(note);
-			});
-
-			return res.status(200).json({
-				...result,
-				data: processedData,
-			});
+			return res.status(200).json(result);
 		}
 
 		const result = await voiceNoteService.searchVoiceNotes(searchTerm, {
 			page: parseInt(page),
 			limit: parseInt(limit),
 			searchType: searchType || "title",
+			currentUserId,
 		});
 
-		// Process voice note counts and tags
-		const processedData = result.data.map((note) => {
-			return processVoiceNoteCounts(note);
-		});
-
-		res.status(200).json({
-			...result,
-			data: processedData,
-		});
+		// The service now returns the data in the exact shape the frontend needs.
+		// No further processing is required here.
+		res.status(200).json(result);
 	} catch (error) {
 		console.error("Error searching voice notes:", error);
 		res.status(500).json({ message: "Server error", error: error.message });

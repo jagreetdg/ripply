@@ -207,7 +207,7 @@ const deleteVoiceNote = async (id) => {
  * @returns {Array} Matching voice notes
  */
 const searchVoiceNotes = async (searchTerm, options = {}) => {
-	const { page = 1, limit = 10, searchType = "title" } = options;
+	const { page = 1, limit = 10, searchType = "title", currentUserId } = options;
 	const offset = (page - 1) * limit;
 
 	let query;
@@ -223,18 +223,24 @@ const searchVoiceNotes = async (searchTerm, options = {}) => {
 		const voiceNoteIds = tagData.map((match) => match.voice_note_id);
 
 		if (voiceNoteIds.length === 0) {
-			return { data: [], pagination: { total: 0 } };
+			return { data: [], pagination: { total: 0, totalPages: 0 } };
 		}
 
+		// Since this path is simpler, we can use the standard query for consistency
 		query = supabase
 			.from("voice_notes")
 			.select(VOICE_NOTE_SELECT_QUERY, { count: "exact" })
 			.in("id", voiceNoteIds);
 	} else {
 		// This path uses the new RPC for unified title and tag text search
-		query = supabase
-			.rpc("search_voice_notes", { search_term: searchTerm })
-			.select(VOICE_NOTE_SELECT_QUERY, { count: "exact" });
+		query = supabase.rpc(
+			"search_voice_notes",
+			{
+				search_term: searchTerm,
+				current_user_id: currentUserId,
+			},
+			{ count: "exact" }
+		);
 	}
 
 	const { data, error, count } = await query
@@ -246,39 +252,66 @@ const searchVoiceNotes = async (searchTerm, options = {}) => {
 		throw error;
 	}
 
-	// Get actual share counts for all voice notes in parallel
-	const shareCountPromises = data.map(async (note) => {
-		try {
-			const { count } = await supabase
-				.from("voice_note_shares")
-				.select("*", { count: "exact", head: true })
-				.eq("voice_note_id", note.id);
-			return { voiceNoteId: note.id, shareCount: count || 0 };
-		} catch (error) {
-			console.warn(`Failed to get share count for ${note.id}:`, error);
-			return { voiceNoteId: note.id, shareCount: 0 };
-		}
-	});
-
-	const shareCounts = await Promise.all(shareCountPromises);
-	const shareCountMap = shareCounts.reduce(
-		(map, { voiceNoteId, shareCount }) => {
-			map[voiceNoteId] = shareCount;
-			return map;
-		},
-		{}
-	);
-
-	// Process data and override share counts
+	// For the RPC path, we need to restructure the data slightly to match
+	// the shape expected by the frontend (which was based on the standard query).
 	const processedData = data.map((note) => {
-		const processedNote = {
-			...processVoiceNoteCounts(note),
-		};
-
-		// Override the share count with the actual count
-		processedNote.shares = shareCountMap[note.id] || 0;
+		if (searchType !== "tag") {
+			// Data from RPC is already shaped, just need to rename fields
+			return {
+				id: note.id,
+				user_id: note.user_id,
+				title: note.title,
+				audio_url: note.audio_url,
+				waveform_data: note.waveform_data,
+				is_private: note.is_private,
+				created_at: note.created_at,
+				duration_seconds: note.duration_seconds,
+				users: note.users,
+				tags: note.tags || [], // Ensure tags is always an array
+				likes: [{ count: note.likes_count || 0 }],
+				comments: [{ count: note.comments_count || 0 }],
+				plays: [{ count: note.plays_count || 0 }],
+				shares: note.shares_count || 0,
+				user_has_liked: note.user_has_liked,
+				user_has_shared: note.user_has_shared,
+			};
+		}
+		// Data from the 'tag' search path needs the standard processing
+		const processedNote = processVoiceNoteCounts(note);
+		processedNote.shares = 0; // Will be replaced by exact count below
 		return processedNote;
 	});
+
+	// For the 'tag' search path, we still need to fetch exact share counts.
+	// The RPC path already includes this.
+	if (searchType === "tag") {
+		const shareCountPromises = processedData.map(async (note) => {
+			try {
+				const { count: shareCount } = await supabase
+					.from("voice_note_shares")
+					.select("*", { count: "exact", head: true })
+					.eq("voice_note_id", note.id);
+				return { voiceNoteId: note.id, shareCount: shareCount || 0 };
+			} catch (shareError) {
+				console.warn(`Failed to get share count for ${note.id}:`, shareError);
+				return { voiceNoteId: note.id, shareCount: 0 };
+			}
+		});
+
+		const shareCounts = await Promise.all(shareCountPromises);
+		const shareCountMap = shareCounts.reduce(
+			(map, { voiceNoteId, shareCount }) => {
+				map[voiceNoteId] = shareCount;
+				return map;
+			},
+			{}
+		);
+
+		// Apply the exact share counts
+		processedData.forEach((note) => {
+			note.shares = shareCountMap[note.id] || 0;
+		});
+	}
 
 	return {
 		data: processedData,
