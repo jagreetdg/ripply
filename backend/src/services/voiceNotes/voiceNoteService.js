@@ -207,22 +207,42 @@ const deleteVoiceNote = async (id) => {
  * @returns {Array} Matching voice notes
  */
 const searchVoiceNotes = async (searchTerm, options = {}) => {
-	const { page = 1, limit = 10 } = options;
+	const { page = 1, limit = 10, searchType = "title" } = options;
 	const offset = (page - 1) * limit;
 
-	// Build the filter string for the .or() condition
-	// We want to find notes where the title matches OR where a linked tag matches
-	const filter = `title.ilike.%${searchTerm}%,voice_note_tags.tag_name.ilike.%${searchTerm}%`;
+	let query;
 
-	const { data, error, count } = await supabase
-		.from("voice_notes")
-		.select(VOICE_NOTE_SELECT_QUERY, { count: "exact" })
-		.or(filter, { foreignTable: "voice_note_tags" })
+	if (searchType === "tag") {
+		// This path is for specific tag searches (e.g., from clicking a tag)
+		const { data: tagData, error: tagError } = await supabase
+			.from("voice_note_tags")
+			.select("voice_note_id")
+			.ilike("tag_name", `%${searchTerm}%`);
+
+		if (tagError) throw tagError;
+		const voiceNoteIds = tagData.map((match) => match.voice_note_id);
+
+		if (voiceNoteIds.length === 0) {
+			return { data: [], pagination: { total: 0 } };
+		}
+
+		query = supabase
+			.from("voice_notes")
+			.select(VOICE_NOTE_SELECT_QUERY, { count: "exact" })
+			.in("id", voiceNoteIds);
+	} else {
+		// This path uses the new RPC for unified title and tag text search
+		query = supabase
+			.rpc("search_voice_notes", { search_term: searchTerm })
+			.select(VOICE_NOTE_SELECT_QUERY, { count: "exact" });
+	}
+
+	const { data, error, count } = await query
 		.order("created_at", { ascending: false })
-		.range(offset, offset + parseInt(limit) - 1);
+		.range(offset, offset + limit - 1);
 
 	if (error) {
-		console.error("[SEARCH SERVICE ERROR]", error);
+		console.error("[SEARCH SERVICE ERROR]", { searchType, searchTerm }, error);
 		throw error;
 	}
 

@@ -102,3 +102,20 @@ CREATE POLICY IF NOT EXISTS "Users can delete their own follows" ON public.follo
 CREATE POLICY IF NOT EXISTS "Users can delete their own voice note comments" ON public.voice_note_comments FOR DELETE USING (auth.uid() = user_id);
 CREATE POLICY IF NOT EXISTS "Users can delete their own voice note plays" ON public.voice_note_plays FOR DELETE USING (auth.uid() = user_id);
 CREATE POLICY IF NOT EXISTS "Users can delete their own voice note tags" ON public.voice_note_tags FOR DELETE USING (auth.uid() IN (SELECT user_id FROM public.voice_notes WHERE id = voice_note_id));
+
+-- =================================================================
+-- Add search function for titles and tags
+-- =================================================================
+
+CREATE OR REPLACE FUNCTION search_voice_notes(search_term TEXT)
+RETURNS SETOF voice_notes AS $$
+BEGIN
+  RETURN QUERY
+  SELECT DISTINCT vn.*
+  FROM voice_notes vn
+  LEFT JOIN voice_note_tags vnt ON vn.id = vnt.voice_note_id
+  WHERE
+    vn.title ILIKE '%' || search_term || '%' OR
+    vnt.tag_name ILIKE '%' || search_term || '%';
+END;
+$$ LANGUAGE plpgsql;
