@@ -156,6 +156,7 @@ router.post(
 );
 router.get(
 	"/:id/interaction-status",
+	authenticateToken,
 	interactionController.getInteractionStatusNew
 );
 

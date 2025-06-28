@@ -35,6 +35,10 @@ async function getVoiceNotes(options = {}) {
 			throw error;
 		}
 
+		if (!data || data.length === 0) {
+			return [];
+		}
+
 		// Get actual share counts for all voice notes in parallel
 		const shareCountPromises = data.map(async (note) => {
 			try {
