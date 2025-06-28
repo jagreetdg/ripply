@@ -268,9 +268,9 @@ const searchVoiceNotes = async (searchTerm, options = {}) => {
 				duration_seconds: note.duration_seconds,
 				users: note.users,
 				tags: note.tags || [], // Ensure tags is always an array
-				likes: [{ count: note.likes_count || 0 }],
-				comments: [{ count: note.comments_count || 0 }],
-				plays: [{ count: note.plays_count || 0 }],
+				likes: note.likes_count || 0,
+				comments: note.comments_count || 0,
+				plays: note.plays_count || 0,
 				shares: note.shares_count || 0,
 				user_has_liked: note.user_has_liked,
 				user_has_shared: note.user_has_shared,
