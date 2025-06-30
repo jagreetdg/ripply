@@ -12,6 +12,7 @@ const { setSocialAuthCookie } = require("../../utils/auth/tokenUtils");
  */
 const googleAuth = passport.authenticate("google", {
 	scope: ["profile", "email"],
+	prompt: "select_account", // Force Google to show account selection screen instead of auto-login
 });
 
 /**
