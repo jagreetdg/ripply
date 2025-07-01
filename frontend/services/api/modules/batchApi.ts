@@ -1,4 +1,5 @@
-import { checkLikeStatus, hasUserRepostedVoiceNote, getRepostCount } from './index';
+import { checkLikeStatus } from "./voiceNoteApi";
+import { hasUserRepostedVoiceNote, getRepostCount } from "./repostApi";
 
 interface BatchRequestItem {
   voiceNoteId: string;

@@ -95,17 +95,17 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
 	return (
-		<ThemeProvider>
-			<ThemedRoot>
-				<GlobalToastProvider>
+		<GlobalToastProvider>
+			<ThemeProvider>
+				<ThemedRoot>
 					<UserProvider>
 						<RequireAuth>
 							<Slot />
 						</RequireAuth>
 					</UserProvider>
-				</GlobalToastProvider>
-			</ThemedRoot>
-		</ThemeProvider>
+				</ThemedRoot>
+			</ThemeProvider>
+		</GlobalToastProvider>
 	);
 }
 

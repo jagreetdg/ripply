@@ -16,7 +16,7 @@ import { formatDuration } from "../utils";
 export const VoiceBioPlayer: React.FC<
 	VoiceBioPlayerProps & {
 		audioRef: React.RefObject<HTMLAudioElement>;
-		progressContainerRef: React.RefObject<any>;
+		progressContainerRef: React.RefObject<View>;
 	}
 > = ({
 	voiceBio,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { newInteractionApi } from '../../../services/api/modules/interactionApi';
 
 interface UseVoiceNoteLikeNewProps {
@@ -16,33 +16,40 @@ export const useVoiceNoteLikeNew = ({
   initialIsLiked = false,
   onLikeStatusChanged,
 }: UseVoiceNoteLikeNewProps) => {
-  // State
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialIsLiked);
   const [isProcessing, setIsProcessing] = useState(false);
+  const callbackRef = useRef(onLikeStatusChanged);
 
-  console.log(`[NEW LIKE HOOK] Initialize: voiceNoteId=${voiceNoteId}, userId=${userId}`);
+  useEffect(() => {
+    if (initialIsLiked !== isLiked) {
+      setIsLiked(initialIsLiked);
+    }
+    if (initialLikesCount !== likesCount) {
+      setLikesCount(initialLikesCount);
+    }
+  }, [initialIsLiked, initialLikesCount]);
 
-  // Load initial status
+  useEffect(() => {
+    callbackRef.current = onLikeStatusChanged;
+  }, [onLikeStatusChanged]);
+
   useEffect(() => {
     const loadStatus = async () => {
+      if (!userId) {
+        setIsLoading(false);
+        return;
+      }
       try {
-        setIsLoading(true);
-        console.log(`[NEW LIKE HOOK] Loading status for ${voiceNoteId}`);
-        
-        const status = await newInteractionApi.getInteractionStatus(voiceNoteId);
-        
-        console.log(`[NEW LIKE HOOK] Status loaded:`, status);
-        
+        const status = await newInteractionApi.getInteractionStatus(
+          voiceNoteId
+        );
         setIsLiked(status.isLiked);
         setLikesCount(status.likesCount);
-        
-        // Notify parent component
-        onLikeStatusChanged?.(status.isLiked, status.likesCount);
+        callbackRef.current?.(status.isLiked, status.likesCount);
       } catch (error) {
-        console.error(`[NEW LIKE HOOK] Failed to load status:`, error);
-        // Keep initial values if API fails
+        console.error("Failed to sync like status:", error);
       } finally {
         setIsLoading(false);
       }
@@ -51,55 +58,45 @@ export const useVoiceNoteLikeNew = ({
     if (voiceNoteId) {
       loadStatus();
     }
-  }, [voiceNoteId, onLikeStatusChanged]);
+  }, [voiceNoteId, userId]);
 
-  // Toggle like function
   const toggleLike = useCallback(async () => {
-    if (!userId) {
-      console.warn(`[NEW LIKE HOOK] No user ID provided`);
+    if (!userId || isProcessing) {
       return;
     }
 
-    if (isProcessing) {
-      console.warn(`[NEW LIKE HOOK] Already processing like toggle`);
-      return;
-    }
+    setIsProcessing(true);
+    const previousState = { isLiked, likesCount };
+
+    const newIsLiked = !isLiked;
+    const optimisticCount = newIsLiked
+      ? likesCount + 1
+      : Math.max(0, likesCount - 1);
+
+    setIsLiked(newIsLiked);
+    setLikesCount(optimisticCount);
+    callbackRef.current?.(newIsLiked, optimisticCount);
 
     try {
-      setIsProcessing(true);
-      
-      // Optimistic update
-      const newIsLiked = !isLiked;
-      const optimisticCount = newIsLiked ? likesCount + 1 : Math.max(0, likesCount - 1);
-      
-      console.log(`[NEW LIKE HOOK] Optimistic update: ${isLiked} -> ${newIsLiked}, count: ${likesCount} -> ${optimisticCount}`);
-      
-      setIsLiked(newIsLiked);
-      setLikesCount(optimisticCount);
-      onLikeStatusChanged?.(newIsLiked, optimisticCount);
-
-      // API call
       const result = await newInteractionApi.toggleLike(voiceNoteId);
-      
-      console.log(`[NEW LIKE HOOK] API result:`, result);
-      
-      // Update with actual values from server
       setIsLiked(result.isLiked);
       setLikesCount(result.likesCount);
-      onLikeStatusChanged?.(result.isLiked, result.likesCount);
-      
+      callbackRef.current?.(result.isLiked, result.likesCount);
     } catch (error) {
-      console.error(`[NEW LIKE HOOK] Toggle failed:`, error);
-      
-      // Rollback optimistic update
-      setIsLiked(!isLiked);
-      setLikesCount(likesCount);
-      onLikeStatusChanged?.(isLiked, likesCount);
-      
+      console.error(
+        `[LIKE API] Error toggling like for note ${voiceNoteId}:`,
+        error
+      );
+      setIsLiked(previousState.isLiked);
+      setLikesCount(previousState.likesCount);
+      callbackRef.current?.(
+        previousState.isLiked,
+        previousState.likesCount
+      );
     } finally {
       setIsProcessing(false);
     }
-  }, [voiceNoteId, userId, isLiked, likesCount, isProcessing, onLikeStatusChanged]);
+  }, [voiceNoteId, userId, isProcessing, isLiked, likesCount]);
 
   return {
     isLiked,

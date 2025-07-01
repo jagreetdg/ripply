@@ -126,82 +126,17 @@ export const SearchResultsList = ({
 
 	// Render post item
 	const renderPostItem = ({ item }: { item: any }) => {
-		// Extract user data with fallbacks
-		const userData = item.users || {};
-
-		// Create a voiceNote object with stable data
+		// The backend now provides a consistent and complete data structure.
+		// We can trust the item and pass it directly with minimal processing.
 		const voiceNoteData = {
 			...item,
-			// Handle counts properly - backend already processes these to numbers
-			// If they're still in array format, extract the count, otherwise use as-is
-			likes: Array.isArray(item.likes)
-				? item.likes[0]?.count || 0
-				: typeof item.likes === "number"
-				? item.likes
-				: 0,
-			comments: Array.isArray(item.comments)
-				? item.comments[0]?.count || 0
-				: typeof item.comments === "number"
-				? item.comments
-				: 0,
-			plays: Array.isArray(item.plays)
-				? item.plays[0]?.count || 0
-				: typeof item.plays === "number"
-				? item.plays
-				: 0,
-			shares: Array.isArray(item.shares)
-				? item.shares[0]?.count || 0
-				: typeof item.shares === "number"
-				? item.shares
-				: 0,
-			// Ensure user data is properly structured
-			user_id: item.user_id || userData.id,
-			users: userData,
+			likes: item.likes || 0,
+			comments: item.comments || 0,
+			plays: item.plays || 0,
+			shares: item.shares || 0,
+			tags: item.tags || [],
 		};
 
-		// AGGRESSIVE SEARCH CONSISTENCY FIX: Apply multiple checks
-		const userHasShared = sharedStatusMap[item.id] || false;
-		const originalShares = voiceNoteData.shares;
-
-		// Check if this is likely a shared post that should have at least 1 share
-		const shouldHaveShares =
-			userHasShared ||
-			item.currentUserHasShared ||
-			item.isReposted ||
-			item.is_shared;
-
-		// CRITICAL FIX: Apply fix even more aggressively
-		if (shouldHaveShares && voiceNoteData.shares === 0) {
-			console.warn(
-				`[SEARCH CONSISTENCY FIX] Fixing share count from 0 to 1 for ${item.id}:`,
-				{
-					userHasShared,
-					currentUserHasShared: item.currentUserHasShared,
-					isReposted: item.isReposted,
-					isShared: item.is_shared,
-					originalShares,
-				}
-			);
-			voiceNoteData.shares = 1;
-		}
-
-		// EXTRA AGGRESSIVE FIX: Also check search results data integrity
-		if (originalShares > 0 && voiceNoteData.shares === 0) {
-			console.error(
-				`[SEARCH CRITICAL FIX] Share count was corrupted, restoring from ${originalShares}:`,
-				{
-					voiceNoteId: item.id,
-					originalShares,
-					corruptedShares: voiceNoteData.shares,
-				}
-			);
-			voiceNoteData.shares = originalShares;
-		}
-
-		// Determine repost attribution props
-		const isRepostedItem = Boolean(
-			item.is_shared || item.shared_by || item.sharer_id
-		);
 		const sharedByData = item.shared_by
 			? {
 					id: item.shared_by.id,
@@ -209,56 +144,26 @@ export const SearchResultsList = ({
 					displayName: item.shared_by.display_name,
 					avatarUrl: item.shared_by.avatar_url,
 			  }
-			: item.sharer_id
-			? {
-					id: item.sharer_id,
-					username: item.sharer_username || "user",
-					displayName:
-						item.sharer_display_name || item.sharer_username || "User",
-					avatarUrl: item.sharer_avatar_url || null,
-			  }
 			: null;
-
-		console.log(`[SEARCH DEBUG] Processing voice note ${item.id}:`, {
-			originalShares: item.shares,
-			processedShares: voiceNoteData.shares,
-			sharesType: typeof item.shares,
-			isArray: Array.isArray(item.shares),
-			userHasShared,
-			sharedStatusFromMap: sharedStatusMap[item.id],
-			shouldHaveShares,
-			wasFixed: originalShares !== voiceNoteData.shares,
-			isRepostedItem,
-			hasSharedByData: !!sharedByData,
-			sharedByUsername: sharedByData?.username,
-		});
 
 		return (
 			<View style={styles.postItemContainer}>
 				<VoiceNoteCard
 					voiceNote={voiceNoteData}
 					userId={voiceNoteData.user_id}
-					displayName={userData.display_name}
-					username={userData.username}
-					userAvatarUrl={userData.avatar_url}
+					displayName={voiceNoteData.users?.display_name}
+					username={voiceNoteData.users?.username}
+					userAvatarUrl={voiceNoteData.users?.avatar_url}
 					timePosted={formatTimeAgo(item.created_at)}
 					currentUserId={currentUserId}
-					isReposted={sharedStatusMap[item.id] || false}
-					showRepostAttribution={isRepostedItem}
+					isReposted={voiceNoteData.user_has_shared}
+					showRepostAttribution={!!sharedByData}
 					sharedBy={sharedByData}
 					onUserProfilePress={
-						userData.username
-							? () => handleUserProfilePress(userData.username)
+						voiceNoteData.users?.username
+							? () => handleUserProfilePress(voiceNoteData.users.username)
 							: undefined
 					}
-					onShareStatusChanged={(voiceNoteId: string, isShared: boolean) => {
-						console.log(
-							`[SEARCH] Share status changed for ${voiceNoteId}: ${isShared}`
-						);
-					}}
-					onVoiceNoteUnshared={(voiceNoteId: string) => {
-						console.log(`[SEARCH] Voice note unshared: ${voiceNoteId}`);
-					}}
 				/>
 			</View>
 		);

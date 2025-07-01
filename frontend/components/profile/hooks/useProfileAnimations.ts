@@ -1,5 +1,5 @@
 import { useRef, useCallback } from 'react';
-import { Animated, ScrollView } from 'react-native';
+import { Animated, ScrollView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 
 interface ProfileAnimationsState {
   scrollY: Animated.Value;
@@ -10,7 +10,7 @@ interface ProfileAnimationsState {
 
 interface ProfileAnimationsActions {
   scrollToTop: () => void;
-  getScrollEventConfig: () => any;
+  getScrollEventConfig: () => (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
 export const useProfileAnimations = (): ProfileAnimationsState & ProfileAnimationsActions => {
@@ -37,7 +37,9 @@ export const useProfileAnimations = (): ProfileAnimationsState & ProfileAnimatio
   }, []);
 
   const getScrollEventConfig = useCallback(() => {
-    return Animated.event(
+    return Animated.event<
+      NativeSyntheticEvent<NativeScrollEvent>
+    >(
       [{ nativeEvent: { contentOffset: { y: scrollY } } }],
       { useNativeDriver: false }
     );

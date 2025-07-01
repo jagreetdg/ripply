@@ -149,7 +149,7 @@ export const useSearch = ({
 
       if (tab === 'posts') {
         console.log('[SEARCH DEBUG] Searching posts...');
-        posts = await searchVoiceNotes(query);
+        posts = await searchVoiceNotes(query, userId);
         setPostResults(posts);
         console.log('[SEARCH DEBUG] Post search completed:', posts.length, 'results');
       }

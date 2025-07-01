@@ -19,6 +19,7 @@ import { useRouter } from "expo-router";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import { getComments, addComment } from "../../services/api/voiceNoteService";
+import DefaultAvatar from "../DefaultAvatar";
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -169,19 +170,16 @@ export function CommentPopup({
 				<TouchableOpacity
 					onPress={() => handleProfilePress(item.user_id, username)}
 					activeOpacity={0.7}
+					style={styles.avatarWrapper}
 				>
-					<View style={[styles.avatar, { backgroundColor: colors.tint }]}>
-						{user?.avatar_url ? (
-							<Image
-								source={{ uri: user.avatar_url }}
-								style={styles.avatarImage}
-							/>
-						) : (
-							<Text style={styles.avatarText}>
-								{displayName.charAt(0).toUpperCase()}
-							</Text>
-						)}
-					</View>
+					{user?.avatar_url ? (
+						<Image
+							source={{ uri: user.avatar_url }}
+							style={styles.avatarImage}
+						/>
+					) : (
+						<DefaultAvatar userId={item.user_id} size={40} />
+					)}
 				</TouchableOpacity>
 
 				<View style={styles.commentContent}>
@@ -392,23 +390,13 @@ const styles = StyleSheet.create({
 		marginVertical: 4,
 		borderRadius: 12,
 	},
-	avatar: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		justifyContent: "center",
-		alignItems: "center",
+	avatarWrapper: {
 		marginRight: 12,
 	},
 	avatarImage: {
 		width: 40,
 		height: 40,
 		borderRadius: 20,
-	},
-	avatarText: {
-		color: "white",
-		fontSize: 16,
-		fontWeight: "600",
 	},
 	commentContent: {
 		flex: 1,

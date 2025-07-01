@@ -22,7 +22,12 @@ interface LoginResponse {
 		id: string;
 		username: string;
 		email: string;
-		[key: string]: any; // For any other properties the user object might have
+		display_name?: string;
+		avatar_url?: string;
+		bio?: string;
+		is_verified?: boolean;
+		created_at?: string;
+		updated_at?: string;
 	};
 	token: string;
 }

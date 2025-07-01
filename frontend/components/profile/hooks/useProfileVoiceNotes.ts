@@ -1,12 +1,21 @@
 import { useState, useCallback } from 'react';
 import { getUserVoiceNotes, getUserSharedVoiceNotes } from '../../../services/api';
 
+export interface VoiceNoteDetails {
+  likes?: { count: number }[];
+  comments?: { count: number }[];
+  plays?: { count: number }[];
+  shares?: { count: number }[];
+  tags?: { tag_name: string }[];
+  // Add other properties of voice_notes object as needed
+}
+
 export interface VoiceNote {
   id: string;
   created_at: string;
   shared_at?: string;
   is_shared?: boolean;
-  [key: string]: any; // For other voice note properties
+  voice_notes?: VoiceNoteDetails; // Use the new interface
 }
 
 interface ProfileVoiceNotesState {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { newInteractionApi } from '../../../services/api/modules/interactionApi';
 
 interface UseVoiceNoteShareNewProps {
@@ -16,33 +16,40 @@ export const useVoiceNoteShareNew = ({
   initialIsShared = false,
   onShareStatusChanged,
 }: UseVoiceNoteShareNewProps) => {
-  // State
   const [isShared, setIsShared] = useState(initialIsShared);
   const [sharesCount, setSharesCount] = useState(initialSharesCount);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialIsShared);
   const [isProcessing, setIsProcessing] = useState(false);
+  const callbackRef = useRef(onShareStatusChanged);
 
-  console.log(`[NEW SHARE HOOK] Initialize: voiceNoteId=${voiceNoteId}, userId=${userId}`);
+  useEffect(() => {
+    if (initialIsShared !== isShared) {
+      setIsShared(initialIsShared);
+    }
+    if (initialSharesCount !== sharesCount) {
+      setSharesCount(initialSharesCount);
+    }
+  }, [initialIsShared, initialSharesCount]);
 
-  // Load initial status
+  useEffect(() => {
+    callbackRef.current = onShareStatusChanged;
+  }, [onShareStatusChanged]);
+
   useEffect(() => {
     const loadStatus = async () => {
+      if (!userId) {
+        setIsLoading(false);
+        return;
+      }
       try {
-        setIsLoading(true);
-        console.log(`[NEW SHARE HOOK] Loading status for ${voiceNoteId}`);
-        
-        const status = await newInteractionApi.getInteractionStatus(voiceNoteId);
-        
-        console.log(`[NEW SHARE HOOK] Status loaded:`, status);
-        
+        const status = await newInteractionApi.getInteractionStatus(
+          voiceNoteId
+        );
         setIsShared(status.isShared);
         setSharesCount(status.sharesCount);
-        
-        // Notify parent component
-        onShareStatusChanged?.(status.isShared, status.sharesCount);
+        callbackRef.current?.(status.isShared, status.sharesCount);
       } catch (error) {
-        console.error(`[NEW SHARE HOOK] Failed to load status:`, error);
-        // Keep initial values if API fails
+        console.error("Failed to sync share status:", error);
       } finally {
         setIsLoading(false);
       }
@@ -51,55 +58,45 @@ export const useVoiceNoteShareNew = ({
     if (voiceNoteId) {
       loadStatus();
     }
-  }, [voiceNoteId, onShareStatusChanged]);
+  }, [voiceNoteId, userId]);
 
-  // Toggle share function
   const toggleShare = useCallback(async () => {
-    if (!userId) {
-      console.warn(`[NEW SHARE HOOK] No user ID provided`);
+    if (!userId || isProcessing) {
       return;
     }
 
-    if (isProcessing) {
-      console.warn(`[NEW SHARE HOOK] Already processing share toggle`);
-      return;
-    }
+    setIsProcessing(true);
+    const previousState = { isShared, sharesCount };
+
+    const newIsShared = !isShared;
+    const optimisticCount = newIsShared
+      ? sharesCount + 1
+      : Math.max(0, sharesCount - 1);
+
+    setIsShared(newIsShared);
+    setSharesCount(optimisticCount);
+    callbackRef.current?.(newIsShared, optimisticCount);
 
     try {
-      setIsProcessing(true);
-      
-      // Optimistic update
-      const newIsShared = !isShared;
-      const optimisticCount = newIsShared ? sharesCount + 1 : Math.max(0, sharesCount - 1);
-      
-      console.log(`[NEW SHARE HOOK] Optimistic update: ${isShared} -> ${newIsShared}, count: ${sharesCount} -> ${optimisticCount}`);
-      
-      setIsShared(newIsShared);
-      setSharesCount(optimisticCount);
-      onShareStatusChanged?.(newIsShared, optimisticCount);
-
-      // API call
       const result = await newInteractionApi.toggleShare(voiceNoteId);
-      
-      console.log(`[NEW SHARE HOOK] API result:`, result);
-      
-      // Update with actual values from server
       setIsShared(result.isShared);
       setSharesCount(result.sharesCount);
-      onShareStatusChanged?.(result.isShared, result.sharesCount);
-      
+      callbackRef.current?.(result.isShared, result.sharesCount);
     } catch (error) {
-      console.error(`[NEW SHARE HOOK] Toggle failed:`, error);
-      
-      // Rollback optimistic update
-      setIsShared(!isShared);
-      setSharesCount(sharesCount);
-      onShareStatusChanged?.(isShared, sharesCount);
-      
+      console.error(
+        `[SHARE API] Error toggling share for note ${voiceNoteId}:`,
+        error
+      );
+      setIsShared(previousState.isShared);
+      setSharesCount(previousState.sharesCount);
+      callbackRef.current?.(
+        previousState.isShared,
+        previousState.sharesCount
+      );
     } finally {
       setIsProcessing(false);
     }
-  }, [voiceNoteId, userId, isShared, sharesCount, isProcessing, onShareStatusChanged]);
+  }, [voiceNoteId, userId, isProcessing, isShared, sharesCount]);
 
   return {
     isShared,

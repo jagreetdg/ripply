@@ -1,10 +1,7 @@
 export { useVoiceNoteCard } from './useVoiceNoteCard';
 export { useVoiceNoteCardSimple } from './useVoiceNoteCardSimple';
-export { useVoiceNoteLike } from './useVoiceNoteLike';
-export { useVoiceNoteShare } from './useVoiceNoteShare';
 export { useVoiceNoteActions } from './useVoiceNoteActions';
 export { useVoiceNoteComments } from './useVoiceNoteComments';
-export { useVoiceNoteInteraction } from './useVoiceNoteInteraction';
 export { useVoiceNotePermissions } from './useVoiceNotePermissions';
 export { useVoiceNotePlayback } from './useVoiceNotePlayback';
 export { useVoiceNoteRepostAnalytics } from './useVoiceNoteRepostAnalytics';

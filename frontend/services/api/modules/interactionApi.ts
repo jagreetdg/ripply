@@ -2,7 +2,6 @@
  * Voice Note Interaction API functions
  */
 import { ENDPOINTS, apiRequest } from "../config";
-import { api } from '../config';
 import { InteractionStatus } from './types/interactionTypes';
 
 
@@ -106,14 +105,17 @@ export interface InteractionStatusResponse {
 export const toggleLike = async (voiceNoteId: string): Promise<ToggleLikeResponse> => {
   console.log(`[NEW API] Toggle like: ${voiceNoteId}`);
   
-  const response = await api.post(`/voice-notes/${voiceNoteId}/like-new`);
+  const response = await apiRequest(`/api/voice-notes/${voiceNoteId}/like-new`, {
+    method: 'POST',
+    requiresAuth: true
+  });
   
-  if (!response.data.success) {
-    throw new Error(response.data.message || 'Failed to toggle like');
+  if (!response.success) {
+    throw new Error(response.message || 'Failed to toggle like');
   }
   
-  console.log(`[NEW API] Like response:`, response.data.data);
-  return response.data.data;
+  console.log(`[NEW API] Like response:`, response.data);
+  return response.data;
 };
 
 /**
@@ -122,14 +124,17 @@ export const toggleLike = async (voiceNoteId: string): Promise<ToggleLikeRespons
 export const toggleShare = async (voiceNoteId: string): Promise<ToggleShareResponse> => {
   console.log(`[NEW API] Toggle share: ${voiceNoteId}`);
   
-  const response = await api.post(`/voice-notes/${voiceNoteId}/share-new`);
+  const response = await apiRequest(`/api/voice-notes/${voiceNoteId}/share-new`, {
+    method: 'POST',
+    requiresAuth: true
+  });
   
-  if (!response.data.success) {
-    throw new Error(response.data.message || 'Failed to toggle share');
+  if (!response.success) {
+    throw new Error(response.message || 'Failed to toggle share');
   }
   
-  console.log(`[NEW API] Share response:`, response.data.data);
-  return response.data.data;
+  console.log(`[NEW API] Share response:`, response.data);
+  return response.data;
 };
 
 /**
@@ -138,14 +143,17 @@ export const toggleShare = async (voiceNoteId: string): Promise<ToggleShareRespo
 export const getInteractionStatus = async (voiceNoteId: string): Promise<InteractionStatusResponse> => {
   console.log(`[NEW API] Get interaction status: ${voiceNoteId}`);
   
-  const response = await api.get(`/voice-notes/${voiceNoteId}/interaction-status`);
+  const response = await apiRequest(`/api/voice-notes/${voiceNoteId}/interaction-status`, {
+    method: 'GET',
+    requiresAuth: true
+  });
   
-  if (!response.data.success) {
-    throw new Error(response.data.message || 'Failed to get interaction status');
+  if (!response.success) {
+    throw new Error(response.message || 'Failed to get interaction status');
   }
   
-  console.log(`[NEW API] Status response:`, response.data.data);
-  return response.data.data;
+  console.log(`[NEW API] Status response:`, response.data);
+  return response.data;
 };
 
 // Export the new clean API

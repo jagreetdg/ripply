@@ -22,7 +22,6 @@ import Colors from "../constants/Colors";
 export default function LandingPage() {
 	const [loginModalVisible, setLoginModalVisible] = useState(false);
 	const [signupModalVisible, setSignupModalVisible] = useState(false);
-	const [hasNavigated, setHasNavigated] = useState(false);
 	const router = useRouter();
 
 	const { user, loading: userLoading } = useUser();
@@ -35,42 +34,7 @@ export default function LandingPage() {
 	// Combine loading states
 	const isAuthLoading = userLoading || socialAuthLoading;
 
-	// Redirect authenticated users to home page
-	useEffect(() => {
-		if (!userLoading && user && !hasNavigated) {
-			console.log(
-				"[DEBUG] LandingPage - User is authenticated, redirecting to home"
-			);
-			setHasNavigated(true);
-
-			// Use a more robust navigation approach
-			const navigateToHome = () => {
-				try {
-					router.replace("/(tabs)/home");
-				} catch (error) {
-					console.error("[DEBUG] LandingPage - Navigation error:", error);
-					// Retry after a short delay
-					setTimeout(() => {
-						try {
-							router.replace("/(tabs)/home");
-						} catch (retryError) {
-							console.error(
-								"[DEBUG] LandingPage - Retry navigation failed:",
-								retryError
-							);
-						}
-					}, 100);
-				}
-			};
-
-			// Use requestAnimationFrame to ensure navigation happens after render
-			if (Platform.OS === "web") {
-				requestAnimationFrame(navigateToHome);
-			} else {
-				setTimeout(navigateToHome, 0);
-			}
-		}
-	}, [userLoading, user, router, hasNavigated]);
+	// Remove the redirect logic - RequireAuth handles this now
 
 	const handleLoginModalOpen = () => {
 		setLoginModalVisible(true);
@@ -89,15 +53,8 @@ export default function LandingPage() {
 		);
 	}
 
-	// Don't render landing page if user is authenticated
-	// (they should be redirected to home)
-	if (user) {
-		return (
-			<View style={styles.container}>
-				<Text style={styles.loadingText}>Redirecting...</Text>
-			</View>
-		);
-	}
+	// Let RequireAuth handle the redirect logic instead of duplicating it here
+	// Just render the landing page content
 
 	return (
 		<View style={styles.container}>

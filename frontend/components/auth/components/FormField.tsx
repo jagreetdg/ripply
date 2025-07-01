@@ -45,8 +45,8 @@ export const FormField: React.FC<FormFieldProps> = ({
 			<Text style={styles.label}>{label}</Text>
 			<View style={[styles.inputWrapper, hasError && styles.inputError]}>
 				<Feather
-					name={icon as any}
-					size={20}
+				name={icon as React.ComponentProps<typeof Feather>["name"]}
+				size={20}
 					color={hasError ? "#e74c3c" : "#999"}
 					style={styles.inputIcon}
 				/>

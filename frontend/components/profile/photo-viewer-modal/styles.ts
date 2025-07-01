@@ -1,0 +1,160 @@
+import { StyleSheet, Dimensions, Platform } from "react-native";
+
+export const getStyles = (colors: any, isDarkMode: boolean) => {
+	const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+
+	return StyleSheet.create({
+		container: {
+			flex: 1,
+			justifyContent: "center",
+			alignItems: "center",
+			backgroundColor: "rgba(0, 0, 0, 0.85)",
+		},
+		closeButton: {
+			position: "absolute",
+			top: Platform.OS === "web" ? 20 : 50,
+			right: 20,
+			zIndex: 10,
+		},
+		imageContainer: {
+			borderRadius: 15,
+			overflow: "hidden",
+			borderWidth: 2,
+			borderColor: colors.border,
+			backgroundColor: "transparent",
+			alignSelf: "center",
+			shadowColor: "#000",
+			shadowOffset: { width: 0, height: 2 },
+			shadowOpacity: 0.25,
+			shadowRadius: 4,
+			elevation: 5,
+		},
+		profileImage: {
+			width: screenWidth * 0.8,
+			height: screenWidth * 0.8,
+			maxWidth: 400,
+			maxHeight: 400,
+		},
+		coverImage: {
+			width: screenWidth * 0.9,
+			height: (screenWidth * 0.9) / 3,
+			maxWidth: 600,
+			maxHeight: 200,
+		},
+		placeholderContainer: {
+			width: screenWidth * 0.8,
+			height: screenWidth * 0.8,
+			maxWidth: 400,
+			maxHeight: 400,
+			justifyContent: "center",
+			alignItems: "center",
+			backgroundColor: "transparent",
+			borderRadius: 15,
+		},
+		placeholderContainerCover: {
+			width: screenWidth * 0.9,
+			height: (screenWidth * 0.9) / 3,
+			maxWidth: 600,
+			maxHeight: 200,
+			justifyContent: "center",
+			alignItems: "center",
+			backgroundColor: "transparent",
+			borderRadius: 15,
+		},
+		loadingOverlay: {
+			...StyleSheet.absoluteFillObject,
+			justifyContent: "center",
+			alignItems: "center",
+			backgroundColor: "rgba(0,0,0,0.7)",
+			zIndex: 1,
+		},
+		loadingText: {
+			color: "#FFF",
+			marginTop: 15,
+			fontSize: 18,
+			fontWeight: "bold",
+		},
+		actionsContainer: {
+			flexDirection: "row",
+			justifyContent: "space-around",
+			alignItems: "center",
+			paddingHorizontal: 40,
+			paddingVertical: 20,
+		},
+		actionsContainerSingle: {
+			flexDirection: "row",
+			justifyContent: "center",
+			alignItems: "center",
+			paddingHorizontal: 40,
+			paddingVertical: 20,
+		},
+		button: {
+			flexDirection: "row",
+			alignItems: "center",
+			justifyContent: "center",
+			backgroundColor: "rgba(0,0,0,0.6)",
+			paddingVertical: 12,
+			paddingHorizontal: 20,
+			borderRadius: 25,
+		},
+		buttonText: {
+			color: "#FFF",
+			fontSize: 16,
+			fontWeight: "bold",
+			marginLeft: 10,
+		},
+		deleteButton: {
+			backgroundColor: "rgba(200, 30, 30, 0.75)",
+		},
+		// Confirmation styles
+		confirmationText: {
+			color: colors.textSecondary,
+			fontSize: 16,
+			marginBottom: 15,
+		},
+		confirmDeleteButton: {
+			backgroundColor: colors.error,
+		},
+		cancelButton: {
+			backgroundColor: colors.mediumGrey,
+		},
+		iconButton: {
+			width: 50,
+			height: 50,
+			borderRadius: 25,
+			justifyContent: "center",
+			alignItems: "center",
+			backgroundColor: "rgba(255, 255, 255, 0.15)",
+		},
+		bottomContainer: {
+			position: "absolute",
+			bottom: 0,
+			left: 0,
+			right: 0,
+			padding: 20,
+		},
+		topContainer: {
+			position: "absolute",
+			top: 60,
+			left: 20,
+			right: 20,
+			zIndex: 1000,
+		},
+		errorContainer: {
+			backgroundColor: "rgba(255, 0, 0, 0.9)",
+			padding: 12,
+			borderRadius: 8,
+			shadowColor: "#000",
+			shadowOffset: { width: 0, height: 2 },
+			shadowOpacity: 0.25,
+			shadowRadius: 4,
+			elevation: 5,
+		},
+		errorText: {
+			color: "#FFF",
+			textAlign: "center",
+			fontSize: 14,
+			fontWeight: "600",
+		},
+	});
+}; 

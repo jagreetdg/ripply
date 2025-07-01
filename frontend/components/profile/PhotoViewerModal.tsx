@@ -32,15 +32,24 @@ import {
 	confirmationPresets,
 } from "../../hooks/useConfirmation";
 import { processImageUrl, getFallbackImageUrl } from "../../utils/imageUtils";
+import { getStyles } from "./photo-viewer-modal/styles";
+import { useImageUpload } from "./photo-viewer-modal/useImageUpload";
+import { PhotoViewerHeader } from "./photo-viewer-modal/PhotoViewerHeader";
+import { PhotoViewerImage } from "./photo-viewer-modal/PhotoViewerImage";
+import { PhotoViewerActions } from "./photo-viewer-modal/PhotoViewerActions";
 
 interface PhotoViewerModalProps {
 	visible: boolean;
 	onClose: () => void;
-	photoType: "profile" | "cover" | null;
+	photoType: "profile" | "cover";
 	imageUrl?: string | null;
 	userId: string;
 	isOwnProfile: boolean;
-	onPhotoUpdated?: (type: "profile" | "cover", newUrl: string | null) => void;
+	onPhotoUpdated?: (
+		type: "profile" | "cover",
+		newUrl: string | null,
+		localUri?: string
+	) => void;
 }
 
 // File size constants
@@ -290,432 +299,90 @@ export function PhotoViewerModal({
 	onPhotoUpdated,
 }: PhotoViewerModalProps) {
 	const { colors, isDarkMode } = useTheme();
-	const { user, setUser } = useUser();
-	const { showToast } = useGlobalToast();
-	const { showConfirmation } = useConfirmation();
-
-	const [loading, setLoading] = useState(false);
-	const [deleteLoading, setDeleteLoading] = useState(false);
-	const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
-	const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-	const [hasTriedFallback, setHasTriedFallback] = useState(false);
-
-	const defaultImageUrl =
-		photoType === "profile"
-			? require("../../assets/images/logo_transparent.png")
-			: null; // No default for cover photos
-
-	// Memoize the computed URLs to prevent recalculation loops
-	const modalImageUrl = useMemo(() => {
-		const processed = processImageUrl(imageUrl);
-		console.log(`[PHOTO VIEWER DEBUG] modalImageUrl processed:`, {
-			originalUrl: imageUrl,
-			processedUrl: processed,
-			photoType,
-		});
-		return processed;
-	}, [imageUrl, photoType]);
-
-	const fallbackImageUrl = useMemo(() => {
-		if (photoType === "profile") {
-			return getFallbackImageUrl(
-				userId,
-				user?.display_name || "User",
-				"avatar"
-			);
-		}
-		return null; // No fallbacks for cover photos
-	}, [photoType, userId, user?.display_name]);
-
-	// Single effect to handle modal state changes
-	useEffect(() => {
-		if (visible) {
-			StatusBar.setHidden(true);
-			setHasTriedFallback(false);
-			setShowDeleteConfirm(false);
-
-			console.log(`[PHOTO VIEWER DEBUG] Opening modal:`, {
-				photoType,
-				imageUrl,
-				userId,
-				modalImageUrl,
-				fallbackImageUrl,
-			});
-
-			// Only set loading if we have a URL to load
-			if (modalImageUrl) {
-				setCurrentImageUrl(modalImageUrl);
-				setLoading(true);
-			} else {
-				setCurrentImageUrl(null);
-				setLoading(false);
-			}
-		} else {
-			StatusBar.setHidden(false);
-			setShowDeleteConfirm(false);
-			setLoading(false);
-			setHasTriedFallback(false);
-			setCurrentImageUrl(null);
-		}
-	}, [visible, modalImageUrl, fallbackImageUrl]); // Only depend on these stable values
-
 	const styles = useMemo(
 		() => getStyles(colors, isDarkMode),
 		[colors, isDarkMode]
 	);
+	const [error, setError] = useState<string | null>(null);
+	const [localUri, setLocalUri] = useState<string | null>(null);
 
-	// Listen for orientation changes
+	// When modal is closed, reset local state
 	useEffect(() => {
-		const subscription = Dimensions.addEventListener("change", ({ window }) => {
-			setImageSize(window);
-		});
+		if (!visible) {
+			setLocalUri(null);
+			setError(null);
+		}
+	}, [visible]);
 
-		return () => subscription?.remove();
-	}, []);
-
-	// Handle escape key press to close modal (web only)
+	// When the imageUrl prop changes (e.g., on first open), check if it's a blob
+	// and process it to a stable data URI if needed.
 	useEffect(() => {
-		if (!visible) return;
-
-		const handleKeyPress = (event: KeyboardEvent) => {
-			if (event.key === "Escape") {
-				onClose();
-			}
-		};
-
-		if (Platform.OS === "web") {
-			document.addEventListener("keydown", handleKeyPress);
-			return () => {
-				document.removeEventListener("keydown", handleKeyPress);
-			};
+		if (imageUrl && imageUrl.startsWith("blob:")) {
+			console.log("[MODAL] Detected blob URL, processing to data URI...");
+			ensureDataUri(imageUrl)
+				.then((dataUri) => {
+					setLocalUri(dataUri);
+					console.log("[MODAL] Blob URL successfully converted.");
+				})
+				.catch((err) => {
+					console.error("[MODAL] Blob URL conversion failed:", err);
+					setError("Could not load image preview.");
+				});
 		}
-	}, [visible, onClose]);
+	}, [imageUrl]);
 
-	if (!visible || !photoType) {
-		return null;
-	}
-
-	// Responsive calculations
-	const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = imageSize;
-	const isLandscape = SCREEN_WIDTH > SCREEN_HEIGHT;
-	const isTablet = SCREEN_WIDTH >= 768;
-	const isLargeScreen = SCREEN_WIDTH >= 1024;
-
-	// Dynamic sizing based on device and orientation
-	const getImageDimensions = () => {
-		if (photoType === "profile") {
-			// Profile photo sizing
-			if (isLargeScreen) {
-				return { width: 400, height: 400 };
-			} else if (isTablet) {
-				return {
-					width: isLandscape ? SCREEN_WIDTH * 0.4 : SCREEN_WIDTH * 0.6,
-					height: isLandscape ? SCREEN_WIDTH * 0.4 : SCREEN_WIDTH * 0.6,
-				};
-			} else {
-				return {
-					width: isLandscape ? SCREEN_WIDTH * 0.5 : SCREEN_WIDTH * 0.8,
-					height: isLandscape ? SCREEN_WIDTH * 0.5 : SCREEN_WIDTH * 0.8,
-				};
-			}
-		} else {
-			// Cover photo sizing (3:1 aspect ratio)
-			if (isLargeScreen) {
-				return { width: 600, height: 200 };
-			} else if (isTablet) {
-				const width = isLandscape ? SCREEN_WIDTH * 0.7 : SCREEN_WIDTH * 0.85;
-				return { width, height: width / 3 };
-			} else {
-				const width = isLandscape ? SCREEN_WIDTH * 0.8 : SCREEN_WIDTH * 0.9;
-				return { width, height: width / 3 };
-			}
+	// Clear error message after a delay
+	useEffect(() => {
+		if (error) {
+			const timer = setTimeout(() => setError(null), 3500);
+			return () => clearTimeout(timer);
 		}
-	};
+	}, [error]);
 
-	// Dynamic padding and spacing
-	const getSpacing = () => {
-		if (isLargeScreen) {
-			return {
-				headerPadding: 40,
-				contentPadding: 40,
-				bottomPadding: 60,
-				buttonGap: 24,
-			};
-		} else if (isTablet) {
-			return {
-				headerPadding: 30,
-				contentPadding: 30,
-				bottomPadding: 50,
-				buttonGap: 20,
-			};
-		} else {
-			return {
-				headerPadding: 20,
-				contentPadding: 20,
-				bottomPadding: Platform.OS === "ios" ? 40 : 20,
-				buttonGap: 16,
-			};
+	const onUploadSuccess = (newUrl: string, localUri: string) => {
+		if (onPhotoUpdated) {
+			onPhotoUpdated(photoType, newUrl, localUri);
 		}
-	};
-
-	// Dynamic font sizes
-	const getFontSizes = () => {
-		if (isLargeScreen) {
-			return {
-				headerTitle: 24,
-				placeholderText: 20,
-				buttonText: 18,
-			};
-		} else if (isTablet) {
-			return {
-				headerTitle: 22,
-				placeholderText: 19,
-				buttonText: 17,
-			};
-		} else {
-			return {
-				headerTitle: 20,
-				placeholderText: 18,
-				buttonText: 16,
-			};
-		}
-	};
-
-	// Dynamic icon and button sizes
-	const getSizes = () => {
-		if (isLargeScreen) {
-			return {
-				closeButton: 52,
-				closeIcon: 28,
-				placeholderIcon: 120,
-				placeholderIconSize: 56,
-				actionButtonHeight: 56,
-				actionButtonPadding: 32,
-				padding: 40,
-				borderRadius: 15,
-				actionMarginTop: 40,
-				buttonBorderRadius: 25,
-			};
-		} else if (isTablet) {
-			return {
-				closeButton: 48,
-				closeIcon: 26,
-				placeholderIcon: 110,
-				placeholderIconSize: 52,
-				actionButtonHeight: 52,
-				actionButtonPadding: 28,
-				padding: 30,
-				borderRadius: 15,
-				actionMarginTop: 30,
-				buttonBorderRadius: 25,
-			};
-		} else {
-			return {
-				closeButton: 44,
-				closeIcon: 24,
-				placeholderIcon: 100,
-				placeholderIconSize: 48,
-				actionButtonHeight: 48,
-				actionButtonPadding: 24,
-				padding: 20,
-				borderRadius: 15,
-				actionMarginTop: 20,
-				buttonBorderRadius: 25,
-			};
-		}
-	};
-
-	const imageDimensions = getImageDimensions();
-	const spacing = getSpacing();
-	const fontSizes = getFontSizes();
-	const sizes = getSizes();
-
-	const handleImagePicker = async () => {
-		try {
-			setLoading(true);
-
-			if (Platform.OS !== "web") {
-				const { status } =
-					await ImagePicker.requestMediaLibraryPermissionsAsync();
-				if (status !== "granted") {
-					Alert.alert(
-						"Permission needed",
-						"Please grant permission to access your photos to continue."
-					);
-					return;
-				}
-			}
-
-			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ImagePicker.MediaTypeOptions.Images,
-				allowsEditing: true,
-				aspect: photoType === "profile" ? [1, 1] : [16, 9],
-				quality: 1, // Start with highest quality before our compression
-			});
-
-			if (result.canceled) {
-				return;
-			}
-
-			const pickedUri = result.assets[0].uri;
-			showToast("Processing image...", "info", 3000);
-
-			const compressionResult = await compressImageIfNeeded(
-				pickedUri,
-				photoType
-			);
-
-			if (compressionResult.error) {
-				showToast(compressionResult.error, "error");
-				return;
-			}
-
-			await updatePhoto(compressionResult.uri);
-		} catch (error) {
-			console.error("Error picking image:", error);
-			showToast("Failed to pick image. Please try again.", "error");
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const updatePhoto = async (newImageUri: string) => {
-		if (!user) return;
-		setLoading(true);
-		console.log(
-			`[UPLOAD] Starting photo update for ${photoType} with URI: ${newImageUri.substring(
-				0,
-				100
-			)}...`
-		);
-
-		try {
-			const base64 = await FileSystem.readAsStringAsync(newImageUri, {
-				encoding: FileSystem.EncodingType.Base64,
-			});
-			const base64Uri = `data:image/jpeg;base64,${base64}`;
-
-			const updateData: UpdateUserProfileParams =
-				photoType === "profile"
-					? { avatar_url: base64Uri }
-					: { cover_photo_url: base64Uri };
-
-			const updatedProfile = await updateUserProfile(user.id, updateData);
-
-			const updatedUser = { ...user, ...updatedProfile };
-			setUser(updatedUser as User);
-			await AsyncStorage.setItem("@ripply_user", JSON.stringify(updatedUser));
-
-			const newUrl =
-				photoType === "profile"
-					? updatedProfile.avatar_url
-					: updatedProfile.cover_photo_url;
-			setCurrentImageUrl(newUrl || defaultImageUrl);
-
-			if (onPhotoUpdated) {
-				onPhotoUpdated(photoType, newUrl || null);
-			}
-
-			showToast("Photo updated successfully!", "success");
+		setLocalUri(null); // Clear local URI on success
+		// If deletion was successful, the urls will be empty. Close the modal.
+		if (newUrl === "" && localUri === "") {
 			onClose();
-		} catch (error) {
-			console.error("Failed to update photo:", error);
-			showToast("Upload failed. The image might still be too large.", "error");
-		} finally {
-			setLoading(false);
 		}
 	};
 
-	const handleDeletePhoto = async () => {
-		if (!user) return;
-
-		// This is the first click, just show the confirmation buttons
-		if (!showDeleteConfirm) {
-			setShowDeleteConfirm(true);
-			return;
-		}
-
-		// This is the second click (confirmation)
-		setDeleteLoading(true);
-		try {
-			const updateData: UpdateUserProfileParams =
-				photoType === "profile"
-					? { avatar_url: null }
-					: { cover_photo_url: null };
-
-			const updatedProfile = await updateUserProfile(user.id, updateData);
-
-			const updatedUser = { ...user, ...updatedProfile };
-			setUser(updatedUser as User);
-			await AsyncStorage.setItem("@ripply_user", JSON.stringify(updatedUser));
-
-			setCurrentImageUrl(defaultImageUrl);
-			if (onPhotoUpdated) {
-				onPhotoUpdated(photoType, null);
-			}
-
-			showToast("Photo removed successfully", "success");
-			setShowDeleteConfirm(false); // Hide confirmation on success
-			onClose();
-		} catch (error) {
-			console.error("Failed to delete photo:", error);
-			showToast("Failed to remove photo. Please try again.", "error");
-			setShowDeleteConfirm(false); // Also hide on error
-		} finally {
-			setDeleteLoading(false);
-		}
+	const onUploadError = (message: string) => {
+		setError(message);
 	};
 
-	const renderActionButtons = () => {
-		if (!isOwnProfile) return null;
-
-		if (showDeleteConfirm) {
-			return (
-				<View style={styles.actionsContainer}>
-					<Text style={styles.confirmationText}>Are you sure?</Text>
-					<TouchableOpacity
-						style={[styles.button, styles.cancelButton]}
-						onPress={() => setShowDeleteConfirm(false)} // Just hide the confirmation
-						disabled={deleteLoading}
-					>
-						<Text style={styles.buttonText}>Cancel</Text>
-					</TouchableOpacity>
-					<TouchableOpacity
-						style={[styles.button, styles.confirmDeleteButton]}
-						onPress={handleDeletePhoto}
-						disabled={deleteLoading}
-					>
-						{deleteLoading ? (
-							<ActivityIndicator size="small" color="#FFF" />
-						) : (
-							<Text style={styles.buttonText}>Delete</Text>
-						)}
-					</TouchableOpacity>
-				</View>
-			);
-		}
-
-		return (
-			<View style={styles.actionsContainer}>
-				<TouchableOpacity
-					style={[styles.button, styles.iconButton]}
-					onPress={handleImagePicker}
-				>
-					<Feather name="upload" size={20} color="#FFF" />
-				</TouchableOpacity>
-				{currentImageUrl &&
-					!currentImageUrl.includes("your-default-") && ( // Don't show delete for default
-						<TouchableOpacity
-							style={[styles.button, styles.deleteButton, styles.iconButton]}
-							onPress={handleDeletePhoto}
-						>
-							<Feather name="trash-2" size={20} color="#FFF" />
-						</TouchableOpacity>
-					)}
-			</View>
-		);
+	const onPickImage = (uri: string) => {
+		setLocalUri(uri);
 	};
+
+	// This is the single source of truth for whether an image exists.
+	// It's true if we have a persisted URL from the server, OR a temporary local image.
+	const hasImage =
+		!!(localUri || imageUrl) &&
+		!(localUri?.startsWith("blob:") || imageUrl?.startsWith("blob:"));
+
+	// Only log when modal becomes visible to avoid spam
+	useEffect(() => {
+		if (visible) {
+			console.log("[PhotoViewerModal] Opening:", {
+				photoType,
+				hasImage,
+				imageUrl: imageUrl ? `${imageUrl.substring(0, 50)}...` : imageUrl,
+			});
+		}
+	}, [visible, photoType, hasImage]);
+
+	const {
+		loading: uploadLoading,
+		action: currentAction,
+		handleImagePicker,
+		handleDelete,
+	} = useImageUpload(photoType, onUploadSuccess, onUploadError, onPickImage);
+
+	if (!visible) return null;
 
 	return (
 		<Modal
@@ -727,214 +394,40 @@ export function PhotoViewerModal({
 			<StatusBar hidden={visible} />
 			<TouchableWithoutFeedback onPress={onClose}>
 				<View style={styles.container}>
-					<TouchableOpacity
-						style={styles.closeButton}
-						onPress={onClose}
-						hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-					>
-						<Ionicons name="close-circle" size={32} color={colors.text} />
-					</TouchableOpacity>
-
-					<View
-						style={[styles.imageContainer, { width: imageDimensions.width }]}
-					>
-						{loading && (
-							<View style={styles.loadingOverlay}>
-								<ActivityIndicator size="large" color={colors.tint} />
-								<Text style={styles.loadingText}>Processing...</Text>
+					<PhotoViewerHeader onClose={onClose} />
+					{error && (
+						<View style={styles.topContainer}>
+							<View style={styles.errorContainer}>
+								<Text style={styles.errorText}>{error}</Text>
 							</View>
+						</View>
+					)}
+					<PhotoViewerImage
+						imageUrl={
+							localUri ||
+							(imageUrl && !imageUrl.startsWith("blob:") ? imageUrl : null)
+						}
+						fallbackImageUrl={getFallbackImageUrl(
+							userId,
+							"",
+							photoType === "profile" ? "avatar" : "cover"
 						)}
-
-						{/* Only render Image if we have a valid URL */}
-						{currentImageUrl || modalImageUrl || fallbackImageUrl ? (
-							<Image
-								source={{
-									uri: currentImageUrl || modalImageUrl || fallbackImageUrl,
-								}}
-								style={{
-									width: imageDimensions.width,
-									height: imageDimensions.height,
-								}}
-								resizeMode="cover"
-								onLoad={() => {
-									const loadedUrl =
-										currentImageUrl || modalImageUrl || fallbackImageUrl;
-									console.log(
-										`[PHOTO VIEWER DEBUG] Image loaded successfully:`,
-										loadedUrl
-									);
-									setLoading(false);
-								}}
-								onError={(error) => {
-									const failedUrl = currentImageUrl || modalImageUrl;
-									console.error(`[PHOTO VIEWER DEBUG] Failed to load image:`, {
-										failedUrl,
-										currentImageUrl,
-										modalImageUrl,
-										fallbackImageUrl,
-										photoType,
-										userId,
-										hasTriedFallback,
-										error: error.nativeEvent?.error,
-									});
-
-									setLoading(false);
-
-									// Only try fallback once for profile pics
-									if (
-										photoType === "profile" &&
-										!hasTriedFallback &&
-										fallbackImageUrl &&
-										failedUrl !== fallbackImageUrl
-									) {
-										console.log(
-											`[PHOTO VIEWER DEBUG] Switching to fallback URL:`,
-											fallbackImageUrl
-										);
-										setCurrentImageUrl(fallbackImageUrl);
-										setHasTriedFallback(true);
-										setLoading(true);
-									}
-								}}
-								onLoadStart={() => {
-									const loadingUrl =
-										currentImageUrl || modalImageUrl || fallbackImageUrl;
-									console.log(
-										`[PHOTO VIEWER DEBUG] Starting to load image:`,
-										loadingUrl
-									);
-									if (loadingUrl) {
-										setLoading(true);
-									}
-								}}
+						loading={uploadLoading}
+						action={currentAction}
+						photoType={photoType}
+					/>
+					<View style={styles.bottomContainer}>
+						{isOwnProfile && (
+							<PhotoViewerActions
+								onUpload={handleImagePicker}
+								onDelete={handleDelete}
+								loading={uploadLoading}
+								hasImage={hasImage}
 							/>
-						) : (
-							// Show placeholder for missing cover photos or failed profile pics
-							<View
-								style={{
-									width: imageDimensions.width,
-									height: imageDimensions.height,
-									justifyContent: "center",
-									alignItems: "center",
-									backgroundColor: colors.lightGrey,
-								}}
-							>
-								<Feather
-									name={photoType === "profile" ? "user" : "image"}
-									size={64}
-									color={colors.textSecondary}
-								/>
-								<Text
-									style={[
-										styles.loadingText,
-										{
-											color: colors.textSecondary,
-											marginTop: 10,
-											fontSize: 16,
-										},
-									]}
-								>
-									{photoType === "profile"
-										? "No Profile Picture"
-										: "No Cover Photo"}
-								</Text>
-							</View>
 						)}
 					</View>
-
-					{renderActionButtons()}
 				</View>
 			</TouchableWithoutFeedback>
 		</Modal>
 	);
 }
-
-const getStyles = (colors: any, isDarkMode: boolean) => {
-	const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
-
-	return StyleSheet.create({
-		container: {
-			flex: 1,
-			justifyContent: "center",
-			alignItems: "center",
-			backgroundColor: "rgba(0, 0, 0, 0.85)",
-		},
-		closeButton: {
-			position: "absolute",
-			top: Platform.OS === "web" ? 20 : 50,
-			right: 20,
-			zIndex: 10,
-		},
-		imageContainer: {
-			borderRadius: 15,
-			overflow: "hidden",
-			borderWidth: 2,
-			borderColor: colors.border,
-			backgroundColor: colors.card,
-		},
-		loadingOverlay: {
-			...StyleSheet.absoluteFillObject,
-			justifyContent: "center",
-			alignItems: "center",
-			backgroundColor: "rgba(0,0,0,0.7)",
-			zIndex: 1,
-		},
-		loadingText: {
-			color: "#FFF",
-			marginTop: 15,
-			fontSize: 18,
-			fontWeight: "bold",
-		},
-		actionsContainer: {
-			position: "absolute",
-			bottom: Platform.OS === "ios" ? 50 : 30,
-			width: "100%",
-			flexDirection: "row",
-			justifyContent: "space-evenly",
-			alignItems: "center",
-		},
-		button: {
-			flexDirection: "row",
-			alignItems: "center",
-			justifyContent: "center",
-			backgroundColor: "rgba(0,0,0,0.6)",
-			paddingVertical: 12,
-			paddingHorizontal: 20,
-			borderRadius: 25,
-		},
-		iconButton: {
-			width: 50,
-			height: 50,
-			borderRadius: 25,
-			padding: 0,
-			flexDirection: "row",
-			alignItems: "center",
-			justifyContent: "center",
-		},
-		buttonText: {
-			color: "#FFF",
-			fontSize: 16,
-			fontWeight: "bold",
-			marginLeft: 10,
-		},
-		deleteButton: {
-			backgroundColor: colors.error,
-		},
-		// Confirmation styles
-		confirmationText: {
-			color: colors.textSecondary,
-			fontSize: 16,
-			marginBottom: 15,
-		},
-		confirmDeleteButton: {
-			backgroundColor: colors.error,
-		},
-		cancelButton: {
-			backgroundColor: colors.mediumGrey,
-		},
-		iconButton: {
-			padding: 0,
-			borderRadius: 25,
-		},
-	});
-};

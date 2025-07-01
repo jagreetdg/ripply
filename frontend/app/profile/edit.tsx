@@ -13,6 +13,7 @@ import {
 	Platform,
 	Animated,
 	ImageBackground,
+	ViewStyle,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -44,7 +45,13 @@ const HoverableView = ({
 	onHoverOut,
 	style,
 	...props
-}: any) => {
+}: {
+	children: React.ReactNode;
+	onHoverIn: () => void;
+	onHoverOut: () => void;
+	style?: ViewStyle;
+	[key: string]: any;
+}) => {
 	// Only add hover styles on web platform
 	if (Platform.OS === "web") {
 		return (
@@ -346,7 +353,7 @@ export default function EditProfileScreen() {
 	};
 
 	// Update user in AsyncStorage to maintain consistent state
-	const updateLocalUserData = async (updatedUser: any) => {
+	const updateLocalUserData = async (updatedUser: UserProfile) => {
 		console.log("[EDIT PROFILE] updateLocalUserData called with:", updatedUser);
 		try {
 			const USER_KEY = "@ripply_user";
@@ -369,7 +376,7 @@ export default function EditProfileScreen() {
 					? { id: parsedData.id, username: parsedData.username }
 					: "null"
 			);
-		} catch (error: any) {
+		} catch (error: Error) {
 			console.error("[EDIT PROFILE] ❌ Error updating local user data:", error);
 			console.log("[EDIT PROFILE] AsyncStorage error details:", error.message);
 		}
@@ -453,7 +460,10 @@ export default function EditProfileScreen() {
 			}
 
 			// Call API to update profile
-			const result = (await updateUserProfile(user.id, userData)) as any;
+			const result = (await updateUserProfile(
+				user.id,
+				userData
+			)) as UserProfile;
 
 			console.log("[EDIT PROFILE] API response received:", result);
 
@@ -534,7 +544,7 @@ export default function EditProfileScreen() {
 				console.log("[EDIT PROFILE] Showing error toast:", errorMessage);
 				showToast(errorMessage, "error");
 			}
-		} catch (error: any) {
+		} catch (error: Error) {
 			console.log("[EDIT PROFILE] ❌ Exception during save:", error);
 			console.error("[EDIT PROFILE] Full error object:", error);
 			console.log("[EDIT PROFILE] Error message:", error.message);

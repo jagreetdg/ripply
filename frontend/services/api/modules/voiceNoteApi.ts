@@ -237,48 +237,65 @@ export const recordPlay = async (voiceNoteId: string, userId: string): Promise<P
 };
 
 // Search voice notes
-export const searchVoiceNotes = async (query: string): Promise<VoiceNote[]> => {
-  try {
-    // Check if this is a tag search (starts with #)
-    const isTagSearch = query.startsWith('#');
-    const searchTerm = isTagSearch ? query.slice(1) : query; // Remove # for tag searches
-    const searchType = isTagSearch ? 'tag' : 'title';
-    
-    const url = `${ENDPOINTS.SEARCH_VOICE_NOTES}?term=${encodeURIComponent(searchTerm)}&searchType=${searchType}`;
-    console.log("[SEARCH DEBUG] Searching voice notes:", { 
-      originalQuery: query, 
-      searchTerm, 
-      searchType, 
-      isTagSearch,
-      url 
-    });
-    
-    const response = await apiRequest<VoiceNote[] | { data: VoiceNote[], pagination: any }>(url, { requiresAuth: false });
-    
-    // Handle different response formats
-    let data: VoiceNote[];
-    if (Array.isArray(response)) {
-      data = response;
-    } else if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
-      data = response.data;
-    } else {
-      console.error("[SEARCH DEBUG] Unexpected response format:", response);
-      data = [];
-    }
-    
-    console.log("[SEARCH DEBUG] Voice notes search response:", { 
-      originalQuery: query,
-      searchTerm,
-      searchType,
-      resultCount: data?.length || 0,
-      results: data?.slice(0, 3) // First 3 results for debugging
-    });
-    
-    return data || [];
-  } catch (error) {
-    console.error("[SEARCH DEBUG] Error searching voice notes:", { query, error });
-    return [];
-  }
+export const searchVoiceNotes = async (
+	query: string,
+	userId?: string
+): Promise<VoiceNote[]> => {
+	try {
+		// Check if this is a tag search (starts with #)
+		const isTagSearch = query.startsWith("#");
+		const searchTerm = isTagSearch ? query.slice(1) : query; // Remove # for tag searches
+		const searchType = isTagSearch ? "tag" : "title";
+
+		const params = new URLSearchParams({
+			term: searchTerm,
+			searchType: searchType,
+		});
+
+		if (userId) {
+			params.append("currentUserId", userId);
+		}
+
+		const url = `${ENDPOINTS.SEARCH_VOICE_NOTES}?${params.toString()}`;
+
+		console.log("[SEARCH DEBUG] Searching voice notes:", {
+			originalQuery: query,
+			searchTerm,
+			searchType,
+			userId,
+			url,
+		});
+
+		const response = await apiRequest<{ data: VoiceNote[] }>(url, {
+			requiresAuth: false,
+		});
+
+		console.log(
+			"[SEARCH DEBUG] Search response received:",
+			response.data.length,
+			"items"
+		);
+		return response.data;
+	} catch (error) {
+		console.error("Error searching voice notes:", error);
+		return [];
+	}
 };
+
+/**
+ * Get a user's voice bio
+ */
+// export const getVoiceBio = async (userId: string): Promise<string> => {
+//   try {
+//     const response = await apiRequest<{ bio: string }>(
+//       `${ENDPOINTS.VOICE_NOTES}/bio/${userId}`,
+//       { requiresAuth: false }
+//     );
+//     return response.bio;
+//   } catch (error) {
+//     console.error("Error fetching voice bio:", error);
+//     return "";
+//   }
+// };
 
  

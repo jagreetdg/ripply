@@ -26,6 +26,26 @@ import ProfileStats from "./components/ProfileStats";
 import ProfileActionButton from "./components/ProfileActionButton";
 import ProfileFloatingActionButton from "./components/ProfileFloatingActionButton";
 
+interface UserProfile {
+	id: string;
+	username: string;
+	display_name: string;
+	avatar_url: string;
+	cover_photo_url: string;
+	bio: string;
+	is_verified: boolean;
+}
+
+interface VoiceNote {
+	id: string;
+	title: string;
+	user_id: string;
+	is_shared: boolean;
+	shared_at: string;
+	created_at: string;
+	voice_notes: any;
+}
+
 export default function ProfileByUsernameScreen() {
 	const { colors } = useTheme();
 	const params = useLocalSearchParams<{ username: string }>();
@@ -34,8 +54,8 @@ export default function ProfileByUsernameScreen() {
 	const { user: currentUser } = useUser();
 
 	// Profile data state
-	const [userProfile, setUserProfile] = useState<any>(null);
-	const [voiceNotes, setVoiceNotes] = useState<any[]>([]);
+	const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+	const [voiceNotes, setVoiceNotes] = useState<VoiceNote[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [refreshing, setRefreshing] = useState(false);
 	const [userNotFound, setUserNotFound] = useState(false);
@@ -219,6 +239,21 @@ export default function ProfileByUsernameScreen() {
 		profileData.setShowFollowingPopup(false);
 	}, [profileData.setShowFollowingPopup]);
 
+	const handlePhotoUpdated = (
+		type: "profile" | "cover",
+		newUrl: string | null,
+		localUri?: string
+	) => {
+		setUserProfile((currentProfile) => {
+			if (!currentProfile) return null;
+			const updatedProfile = {
+				...currentProfile,
+				[type === "profile" ? "avatar_url" : "cover_photo_url"]: newUrl,
+			};
+			return updatedProfile;
+		});
+	};
+
 	// Loading state
 	if (profileData.loading) {
 		return (
@@ -302,6 +337,10 @@ export default function ProfileByUsernameScreen() {
 					postCount={profileData.voiceNotes.length}
 					isOwnProfile={profileData.isOwnProfile}
 					onHeaderPress={handleHeaderPress}
+					onFollowersPress={handleFollowersPress}
+					onFollowingPress={handleFollowingPress}
+					isOwnProfile={profileData.isOwnProfile}
+					onPhotoUpdated={handlePhotoUpdated}
 				/>
 			</Animated.View>
 
@@ -337,6 +376,7 @@ export default function ProfileByUsernameScreen() {
 						isCollapsed={false}
 						postCount={profileData.voiceNotes.length}
 						isOwnProfile={profileData.isOwnProfile}
+						onPhotoUpdated={handlePhotoUpdated}
 					/>
 				</Animated.View>
 
@@ -353,7 +393,7 @@ export default function ProfileByUsernameScreen() {
 				<ProfileActionButton
 					isOwnProfile={profileData.isOwnProfile}
 					userId={profileData.userProfile.id}
-					onFollowChange={profileData.updateFollowerCount}
+					onFollowersUpdate={profileData.updateFollowerCount}
 				/>
 
 				{/* Voice notes list */}
@@ -370,7 +410,10 @@ export default function ProfileByUsernameScreen() {
 			</Animated.ScrollView>
 
 			{/* Floating action button */}
-			<ProfileFloatingActionButton />
+			<ProfileFloatingActionButton
+				userId={profileData.userProfile?.id || ""}
+				isOwnProfile={profileData.isOwnProfile}
+			/>
 
 			{/* Modals */}
 			{profileData.userProfile && profileData.showFollowersPopup && (

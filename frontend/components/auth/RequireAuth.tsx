@@ -18,7 +18,6 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 	const { colors } = useTheme();
 	const router = useRouter();
 	const pathname = usePathname();
-	const [hasNavigated, setHasNavigated] = useState(false);
 
 	// Public routes that don't require authentication
 	const publicRoutes = [
@@ -39,61 +38,27 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 	// Handle authentication-based routing
 	useEffect(() => {
 		// Wait for loading to complete before making routing decisions
-		if (loading || hasNavigated) return;
-
-		const navigateWithRetry = (path: string, reason: string) => {
-			console.log(`[DEBUG] RequireAuth - ${reason}`);
-			setHasNavigated(true);
-
-			const navigate = () => {
-				try {
-					router.replace(path as any);
-				} catch (error) {
-					console.error(`[DEBUG] RequireAuth - Navigation error:`, error);
-					// Retry after a short delay
-					setTimeout(() => {
-						try {
-							router.replace(path as any);
-						} catch (retryError) {
-							console.error(
-								`[DEBUG] RequireAuth - Retry navigation failed:`,
-								retryError
-							);
-						}
-					}, 100);
-				}
-			};
-
-			// Use requestAnimationFrame for web, setTimeout for native
-			if (Platform.OS === "web") {
-				requestAnimationFrame(navigate);
-			} else {
-				setTimeout(navigate, 0);
-			}
-		};
+		if (loading) return;
 
 		// Case 1: User is NOT authenticated and trying to access protected route
 		if (!user && !isPublicRoute) {
-			navigateWithRetry(
-				"/",
-				"Unauthenticated user on protected route, redirecting to landing"
+			console.log(
+				"[DEBUG] RequireAuth - Unauthenticated user on protected route, redirecting to landing"
 			);
+			router.replace("/");
+			return;
 		}
 
 		// Case 2: User IS authenticated and on landing page
 		// Only redirect if we're specifically on the root path to avoid conflicts
 		if (user && pathname === "/") {
-			navigateWithRetry(
-				"/(tabs)/home",
-				"Authenticated user on landing page, redirecting to home"
+			console.log(
+				"[DEBUG] RequireAuth - Authenticated user on landing page, redirecting to home"
 			);
+			router.replace("/(tabs)/home");
+			return;
 		}
-	}, [user, loading, router, pathname, isPublicRoute, hasNavigated]);
-
-	// Reset navigation flag when pathname changes
-	useEffect(() => {
-		setHasNavigated(false);
-	}, [pathname]);
+	}, [user, loading, router, pathname, isPublicRoute]);
 
 	// Show loading if we're still loading user data
 	if (loading) {

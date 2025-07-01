@@ -17,7 +17,6 @@ export function VoiceNotesList({
 	voiceNotes = [],
 	onPlayVoiceNote,
 	onRefresh,
-	isSharedList = false,
 	showRepostAttribution = false,
 	listHeaderComponent,
 	isOwnProfile,
@@ -37,8 +36,6 @@ export function VoiceNotesList({
 		handleShare,
 		handleUserProfilePress,
 		handleLoadMore,
-		handleAfterShare,
-		handleUnshare,
 	} = useVoiceNotesList({
 		userId,
 		voiceNotes,
@@ -61,9 +58,7 @@ export function VoiceNotesList({
 			showRepostAttribution={showRepostAttribution}
 			onPlayPress={handlePlayVoiceNote}
 			onShare={handleShare}
-			onShareStatusChanged={handleAfterShare}
 			onUserProfilePress={handleUserProfilePress}
-			onVoiceNoteUnshared={handleUnshare}
 		/>
 	);
 

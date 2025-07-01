@@ -192,12 +192,19 @@ export const apiRequest = async <T = any>(
     if (token) {
       requestHeaders.Authorization = `Bearer ${token}`;
       if (isShareRelated) {
-        console.log('[SHARE DEBUG] API Request - Auth token present');
+        console.log("[SHARE DEBUG] API Request - Auth token present");
       }
     } else {
+      // If auth is required but no token is found, throw an error
+      const error = {
+        status: 401,
+        message: "Authentication token not found. Please log in again.",
+        data: null,
+      };
       if (isShareRelated) {
         console.log(`[SHARE DEBUG] API Request - No auth token found`);
       }
+      throw error; // Stop the request
     }
   }
 
@@ -212,8 +219,6 @@ export const apiRequest = async <T = any>(
     requestOptions.body = JSON.stringify(body);
   }
 
-
-
   try {
     const response = await fetch(url, requestOptions);
 
@@ -223,7 +228,17 @@ export const apiRequest = async <T = any>(
 
     // Handle non-ok responses
     if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+      // If the error is 401 Unauthorized, clear token and force re-login
+      if (response.status === 401) {
+        await removeAuthToken();
+        await removeStoredUser();
+        // In an Expo app, we shouldn't force a page redirect here
+        // Instead, let the UserContext handle the authentication state
+        // The RequireAuth component will handle the proper redirect
+        console.log("[API CONFIG] 401 Unauthorized - Cleared auth data, UserContext will handle redirect");
+      }
       
       // Try to get error details from response body
       try {

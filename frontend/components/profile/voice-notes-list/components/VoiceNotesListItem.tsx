@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { VoiceNoteCard } from "../../../voice-note-card/VoiceNoteCard";
 import { VoiceNote } from "../VoiceNotesListTypes";
 import { formatTimeAgo } from "../../../../utils/timeUtils";
-import { hasUserRepostedVoiceNote } from "../../../../services/api";
 
 interface VoiceNotesListItemProps {
 	item: VoiceNote;
@@ -14,9 +13,7 @@ interface VoiceNotesListItemProps {
 	showRepostAttribution?: boolean;
 	onPlayPress: (voiceNoteId: string) => void;
 	onShare: (voiceNoteId: string) => void;
-	onShareStatusChanged: (voiceNoteId: string, isShared: boolean) => void;
 	onUserProfilePress?: (username: string) => void;
-	onVoiceNoteUnshared: (voiceNoteId: string) => void;
 }
 
 export const VoiceNotesListItem: React.FC<VoiceNotesListItemProps> = ({
@@ -29,55 +26,12 @@ export const VoiceNotesListItem: React.FC<VoiceNotesListItemProps> = ({
 	showRepostAttribution,
 	onPlayPress,
 	onShare,
-	onShareStatusChanged,
 	onUserProfilePress,
-	onVoiceNoteUnshared,
 }) => {
-	const [isRepostedByCurrentUser, setIsRepostedByCurrentUser] =
-		useState<boolean>(false);
-	const [isLoadingRepostStatus, setIsLoadingRepostStatus] =
-		useState<boolean>(true);
-
-	// Check if the current user has reposted this note
-	useEffect(() => {
-		const checkRepostStatus = async () => {
-			if (!currentUserId) {
-				setIsLoadingRepostStatus(false);
-				return;
-			}
-
-			setIsLoadingRepostStatus(true);
-
-			try {
-				console.log(
-					`[PROFILE] Checking repost status for note ${item.id} by user ${currentUserId}`
-				);
-				const hasReposted = await hasUserRepostedVoiceNote(
-					item.id,
-					currentUserId
-				);
-				console.log(`[PROFILE] Note ${item.id} repost status: ${hasReposted}`);
-				setIsRepostedByCurrentUser(hasReposted);
-			} catch (error) {
-				console.error(
-					`[PROFILE] Error checking repost status for note ${item.id}:`,
-					error
-				);
-				setIsRepostedByCurrentUser(false);
-			} finally {
-				setIsLoadingRepostStatus(false);
-			}
-		};
-
-		checkRepostStatus();
-	}, [item.id, currentUserId]);
-
-	// Determine if this is a reposted item
 	const isRepostedItem = Boolean(
 		item.is_shared || item.shared_by || item.sharer_id
 	);
 
-	// Create the voice note object for the card
 	const cardVoiceNote = {
 		id: item.id,
 		title: item.title,
@@ -91,9 +45,12 @@ export const VoiceNotesListItem: React.FC<VoiceNotesListItemProps> = ({
 		user_id: item.user_id,
 		users: item.users,
 		backgroundImage: item.background_image || null,
+		tags: item.tags || [],
+		// Pass initial like/share status to the card
+		is_liked: item.is_liked,
+		is_shared: item.is_shared,
 	};
 
-	// Determine shared by information
 	let sharedByProp = undefined;
 	if (isRepostedItem && showRepostAttribution) {
 		if (item.shared_by) {
@@ -114,9 +71,6 @@ export const VoiceNotesListItem: React.FC<VoiceNotesListItemProps> = ({
 		}
 	}
 
-	// Determine if the current user is the owner of the note
-	const isOwnerOfDisplayedNote = item.user_id === currentUserId;
-
 	return (
 		<VoiceNoteCard
 			key={item.id}
@@ -132,24 +86,14 @@ export const VoiceNotesListItem: React.FC<VoiceNotesListItemProps> = ({
 			onShare={(voiceNoteId) => {
 				onShare(voiceNoteId);
 			}}
-			onShareStatusChanged={(voiceNoteId, isShared) => {
-				console.log(
-					`[PROFILE] Share status changed for note ${voiceNoteId}: ${isShared}`
-				);
-				setIsRepostedByCurrentUser(isShared);
-				onShareStatusChanged(voiceNoteId, isShared);
-			}}
 			onUserProfilePress={
 				item.users?.username
 					? () => onUserProfilePress?.(item.users?.username!)
 					: undefined
 			}
 			currentUserId={currentUserId}
-			isReposted={isRepostedByCurrentUser}
-			isLoadingRepostStatus={isLoadingRepostStatus}
 			sharedBy={sharedByProp}
 			showRepostAttribution={isRepostedItem}
-			onVoiceNoteUnshared={onVoiceNoteUnshared}
 		/>
 	);
 };

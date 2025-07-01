@@ -147,7 +147,14 @@ export const useVoiceNoteCardSimple = ({
 
 	// Handle tag press
 	const handleTagPress = useCallback((tag: string) => {
-		router.push(`/search?query=%23${encodeURIComponent(tag)}`);
+		router.push({
+			pathname: "/(tabs)/search",
+			params: { 
+				tag: tag,
+				searchType: "tag",
+				timestamp: Date.now().toString()
+			},
+		});
 	}, [router]);
 
 	// Handle progress bar interactions

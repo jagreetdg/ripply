@@ -43,7 +43,7 @@ export default function TabLayout() {
 
 	// Function to navigate to a tab
 	const navigateToTab = (path: string) => {
-		router.push(path as any);
+		router.push(path as never);
 	};
 
 	return (

@@ -132,7 +132,9 @@ export const logout = async (): Promise<void> => {
 // Verify token
 export const verifyToken = async (): Promise<AuthResponse> => {
   try {
-    const data = await apiRequest<AuthResponse>(ENDPOINTS.VERIFY_TOKEN);
+    const data = await apiRequest<AuthResponse>(ENDPOINTS.VERIFY_TOKEN, {
+      requiresAuth: true,
+    });
     return data;
   } catch (error) {
     console.error("Error verifying token:", error);

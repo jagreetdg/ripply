@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Animated, Platform } from "react-native";
-import { getVoiceBio } from "../../../../services/api";
+import { getVoiceBio } from "../../../../services/api/modules/voiceBioApi";
 import { ProfileHeaderProps, ProfileHeaderState, VoiceBio } from "../types";
+import { useUser } from "../../../../context/UserContext";
 
 export const useProfileHeader = ({
 	userId,
 	avatarUrl,
 	coverPhotoUrl,
 }: Pick<ProfileHeaderProps, "userId" | "avatarUrl" | "coverPhotoUrl">) => {
+	const { user } = useUser();
+	
 	const [state, setState] = useState<ProfileHeaderState>({
 		isVoiceBioPlaying: false,
 		isExpanded: false,
@@ -29,14 +32,22 @@ export const useProfileHeader = ({
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const progressContainerRef = useRef<any>(null);
 
-	// Sync local state with props
+	// Sync local state with props AND global user state
 	useEffect(() => {
+		// For own profile, prioritize UserContext over props
+		// For other profiles, use props
+		const isOwnProfile = user && user.id === userId;
+		
 		setState(prev => ({
 			...prev,
-			localAvatarUrl: avatarUrl || null,
-			localCoverPhotoUrl: coverPhotoUrl || null,
+			localAvatarUrl: isOwnProfile 
+				? (user?.avatar_url || null) 
+				: (avatarUrl || null),
+			localCoverPhotoUrl: isOwnProfile 
+				? (user?.cover_photo_url || null) 
+				: (coverPhotoUrl || null),
 		}));
-	}, [avatarUrl, coverPhotoUrl]);
+	}, [avatarUrl, coverPhotoUrl, user, userId]);
 
 	// Fetch voice bio data
 	useEffect(() => {
@@ -154,12 +165,20 @@ export const useProfileHeader = ({
 		type: "profile" | "cover",
 		newUrl: string | null
 	) => {
+		// Update local state immediately for visual feedback
 		if (type === "profile") {
 			setState(prev => ({ ...prev, localAvatarUrl: newUrl }));
 		} else {
 			setState(prev => ({ ...prev, localCoverPhotoUrl: newUrl }));
 		}
-	}, []);
+		
+		// Update UserContext if this is the current user's profile
+		const isOwnProfile = user && user.id === userId;
+		if (isOwnProfile && user) {
+			// Import setUser from useUser hook at the top level
+			// This will be handled by the PhotoViewerModal instead
+		}
+	}, [user, userId]);
 
 	const handleToggleVoiceBio = useCallback(() => {
 		setState(prev => ({ ...prev, isVoiceBioPlaying: !prev.isVoiceBioPlaying }));

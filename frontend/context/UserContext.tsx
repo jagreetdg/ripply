@@ -11,6 +11,7 @@ import {
 	logout as apiLogout,
 } from "../services/api";
 import { setStoredUser, removeStoredUser } from "../services/api/config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Define the User interface
 export interface User {
@@ -101,68 +102,83 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 		console.log(Date.now(), "[PERF] UserContext - refreshUser started");
 		setLoading(true);
 		setError(null);
-		// console.log("[DEBUG] UserContext - refreshUser started"); // Original log, commented for PERF focus
 
 		// Set a timeout to avoid loading state hanging indefinitely
 		const loadingTimeout = setTimeout(() => {
 			console.log(
-				Date.now(), // Added timestamp
+				Date.now(),
 				"[PERF] UserContext - Loading timeout (3s) reached, forcing loading to false"
 			);
 			setLoading(false);
 		}, 3000); // 3 seconds max loading time
 
 		try {
-			console.log(Date.now(), "[PERF] UserContext - Calling getCurrentUser()");
-			const userData = await getCurrentUser();
+			// First check if we have a token stored
+			const token = await AsyncStorage.getItem("@ripply_auth_token");
+
+			if (!token) {
+				console.log(
+					Date.now(),
+					"[PERF] UserContext - No auth token found, setting user to null"
+				);
+				clearTimeout(loadingTimeout);
+				await setUser(null);
+				return;
+			}
+
 			console.log(
 				Date.now(),
-				"[PERF] UserContext - getCurrentUser() done. User data exists:",
-				!!userData
+				"[PERF] UserContext - Auth token found, verifying with server"
 			);
 
-			if (userData) {
+			// If we have a token, verify it with the server first
+			try {
+				const verifiedUser = await verifyToken();
 				console.log(
 					Date.now(),
-					"[PERF] UserContext - Setting user from getCurrentUser"
+					"[PERF] UserContext - verifyToken() done. Verified user exists:",
+					!!verifiedUser
 				);
-				await setUser(userData as User); // setUser also sets loading to false
-			} else {
-				console.log(
-					Date.now(),
-					"[PERF] UserContext - No user from getCurrentUser. Calling verifyToken()"
-				);
-				try {
-					const verifiedUser = await verifyToken();
+
+				if (verifiedUser && "user" in verifiedUser) {
 					console.log(
-						Date.now(), // Added timestamp
-						"[PERF] UserContext - verifyToken() done. Verified user exists:",
-						!!verifiedUser
-					);
-					if (verifiedUser && "user" in verifiedUser) {
-						console.log(
-							Date.now(),
-							"[PERF] UserContext - Setting user from verifyToken"
-						);
-						await setUser(verifiedUser.user as User); // setUser also sets loading to false
-					} else {
-						console.log(
-							Date.now(), // Added timestamp
-							"[PERF] UserContext - No user from verifyToken, setting user to null via setUser"
-						);
-						await setUser(null); // setUser also sets loading to false
-					}
-				} catch (verifyError) {
-					console.error(
 						Date.now(),
-						"[PERF] UserContext - Token verification failed inside refreshUser:",
-						verifyError
+						"[PERF] UserContext - Setting user from verifyToken"
 					);
+					await setUser(verifiedUser.user as User);
+				} else {
 					console.log(
-						Date.now(), // Added timestamp
-						"[PERF] UserContext - Token verification failed, setting user to null via setUser"
+						Date.now(),
+						"[PERF] UserContext - No user from verifyToken, setting user to null"
 					);
-					await setUser(null); // setUser also sets loading to false
+					await setUser(null);
+				}
+			} catch (verifyError) {
+				console.error(
+					Date.now(),
+					"[PERF] UserContext - Token verification failed:",
+					verifyError
+				);
+
+				// If token verification fails, try to use cached data as fallback
+				console.log(
+					Date.now(),
+					"[PERF] UserContext - Trying cached user data as fallback"
+				);
+				const userData = await getCurrentUser();
+
+				if (userData) {
+					console.log(
+						Date.now(),
+						"[PERF] UserContext - Using cached user data (token may be expired)"
+					);
+					await setUser(userData as User);
+				} else {
+					console.log(
+						Date.now(),
+						"[PERF] UserContext - No cached user data, setting user to null"
+					);
+					await setUser(null);
 				}
 			}
 		} catch (err) {
@@ -173,26 +189,19 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 			);
 			setError("Failed to load user data");
 			console.log(
-				Date.now(), // Added timestamp
-				"[PERF] UserContext - Error in refreshUser, setting user to null via setUser"
+				Date.now(),
+				"[PERF] UserContext - Error in refreshUser, setting user to null"
 			);
-			await setUser(null); // setUser also sets loading to false
+			await setUser(null);
 		} finally {
 			clearTimeout(loadingTimeout);
-			// setLoading(false); // setUser above should handle this, or it might cause a flicker if called too early
 			console.log(
-				Date.now(), // Added timestamp
+				Date.now(),
 				"[PERF] UserContext - refreshUser completed (finally block). Current loading state:",
 				loading
 			);
-			// If setUser(null) was the last thing called, loading should be false already.
-			// If a user was found and set, loading should be false.
-			// Explicitly setting it false again IF NOT ALREADY HANDLED might be redundant or cause issues.
-			// However, to be absolutely sure the loading flag from this context is cleared, we might need it here.
-			// Let's test without it first as setUser now handles it.
-			// Re-adding for safety if setUser isn't always hit or if a path exists where loading stays true
+
 			if (loading) {
-				// Only set if still true, to prevent unnecessary re-renders
 				setLoading(false);
 				console.log(
 					Date.now(),
