@@ -22,18 +22,27 @@ import DefaultCoverPhoto from "../DefaultCoverPhoto";
 import { useTheme } from "../../context/ThemeContext";
 import { PhotoViewerModal } from "./PhotoViewerModal";
 
+interface UserProfile {
+	id: string;
+	username: string;
+	display_name: string;
+	avatar_url: string | null;
+	cover_photo_url: string | null;
+	bio: string | null;
+	is_verified: boolean;
+}
+
 interface ProfileHeaderProps {
-	userId: string;
+	userProfile: UserProfile;
 	isCollapsed?: boolean;
 	postCount?: number;
-	displayName: string;
-	avatarUrl?: string | null;
-	coverPhotoUrl?: string | null;
-	bio?: string;
-	isVerified?: boolean;
 	isOwnProfile?: boolean;
-	username?: string;
-	onHeaderPress?: () => void; // For scroll-to-top functionality in collapsed header
+	onHeaderPress?: () => void;
+	onPhotoUpdated: (
+		type: "profile" | "cover",
+		newUrl: string | null,
+		localUri?: string
+	) => void;
 }
 
 interface VoiceBio {
@@ -99,18 +108,22 @@ const formatDuration = (seconds: number): string => {
 };
 
 export function ProfileHeader({
-	userId,
+	userProfile,
 	isCollapsed = false,
 	postCount = 0,
-	displayName,
-	avatarUrl = null,
-	coverPhotoUrl = null,
-	bio = "",
-	isVerified = false,
 	isOwnProfile = false,
-	username = "",
 	onHeaderPress,
+	onPhotoUpdated,
 }: ProfileHeaderProps) {
+	const {
+		id: userId,
+		username,
+		display_name: displayName,
+		avatar_url: avatarUrl,
+		cover_photo_url: coverPhotoUrl,
+		bio,
+		is_verified: isVerified,
+	} = userProfile;
 	const router = useRouter();
 	const { colors, isDarkMode } = useTheme();
 	const [isVoiceBioPlaying, setIsVoiceBioPlaying] = useState(false);
@@ -291,14 +304,19 @@ export function ProfileHeader({
 		setModalVisible(true);
 	};
 
-	const handlePhotoUpdated = (
+	const handlePhotoUpdatedInHeader = (
 		type: "profile" | "cover",
-		newUrl: string | null
+		newUrl: string | null,
+		localUri?: string
 	) => {
 		if (type === "profile") {
-			setLocalAvatarUrl(newUrl);
+			setLocalAvatarUrl(localUri || newUrl);
 		} else {
-			setLocalCoverPhotoUrl(newUrl);
+			setLocalCoverPhotoUrl(localUri || newUrl);
+		}
+		// Pass the update up to the parent screen
+		if (onPhotoUpdated) {
+			onPhotoUpdated(type, newUrl, localUri);
 		}
 	};
 
@@ -717,11 +735,17 @@ export function ProfileHeader({
 						{localAvatarUrl ? (
 							<Image
 								source={{ uri: localAvatarUrl }}
-								style={styles.avatar}
-								resizeMode="cover"
+								style={[styles.avatar, isCollapsed && styles.avatarSmall]}
 							/>
 						) : (
-							<DefaultAvatar userId={userId} size={80} />
+							<DefaultAvatar
+								userId={userId}
+								size={80}
+								style={[
+									styles.defaultAvatar,
+									isCollapsed && styles.avatarSmall,
+								]}
+							/>
 						)}
 					</TouchableOpacity>
 				</View>
@@ -734,8 +758,8 @@ export function ProfileHeader({
 							{isVerified && (
 								<MaterialIcons
 									name="verified"
-									size={16}
-									color={colors.tint}
+									size={18}
+									color={colors.primary}
 									style={styles.verifiedBadge}
 								/>
 							)}
@@ -882,7 +906,7 @@ export function ProfileHeader({
 				}
 				userId={userId}
 				isOwnProfile={isOwnProfile}
-				onPhotoUpdated={handlePhotoUpdated}
+				onPhotoUpdated={handlePhotoUpdatedInHeader}
 			/>
 		</View>
 	);

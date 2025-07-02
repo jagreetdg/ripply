@@ -48,85 +48,87 @@ export function ConfirmationModal({
 			transparent
 			animationType="fade"
 			statusBarTranslucent
+			presentationStyle="overFullScreen"
 		>
-			{/* Backdrop */}
-			<Pressable style={styles.backdrop} onPress={onCancel}>
-				<View style={styles.backdropOverlay} />
-			</Pressable>
-
-			{/* Modal Container */}
+			{/* Modal Container with backdrop */}
 			<View style={styles.container}>
-				<View
-					style={[
-						styles.modal,
-						{
-							backgroundColor: colors.card,
-							borderColor: colors.border,
-						},
-					]}
-				>
-					{/* Header with Icon */}
-					{icon && (
-						<View style={styles.iconContainer}>
-							<View
+				{/* Backdrop overlay */}
+				<Pressable style={styles.backdropOverlay} onPress={onCancel} />
+
+				{/* Centered modal content */}
+				<View style={styles.modalWrapper}>
+					<View
+						style={[
+							styles.modal,
+							{
+								backgroundColor: colors.card,
+								borderColor: colors.border,
+							},
+						]}
+					>
+						{/* Header with Icon */}
+						{icon && (
+							<View style={styles.iconContainer}>
+								<View
+									style={[
+										styles.iconCircle,
+										{
+											backgroundColor: isDestructive
+												? "#ff475720"
+												: `${colors.tint}20`,
+										},
+									]}
+								>
+									<Feather
+										name={icon}
+										size={24}
+										color={isDestructive ? "#ff4757" : colors.tint}
+									/>
+								</View>
+							</View>
+						)}
+
+						{/* Title */}
+						<Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+
+						{/* Message */}
+						<Text style={[styles.message, { color: colors.textSecondary }]}>
+							{message}
+						</Text>
+
+						{/* Buttons */}
+						<View style={styles.buttonContainer}>
+							{/* Cancel Button */}
+							<TouchableOpacity
 								style={[
-									styles.iconCircle,
+									styles.button,
+									styles.cancelButton,
 									{
-										backgroundColor: isDestructive
-											? "#ff475720"
-											: `${colors.tint}20`,
+										backgroundColor: colors.background,
+										borderColor: colors.border,
 									},
 								]}
+								onPress={onCancel}
+								activeOpacity={0.7}
 							>
-								<Feather
-									name={icon}
-									size={24}
-									color={isDestructive ? "#ff4757" : colors.tint}
-								/>
-							</View>
-						</View>
-					)}
+								<Text style={[styles.cancelButtonText, { color: colors.text }]}>
+									{cancelText}
+								</Text>
+							</TouchableOpacity>
 
-					{/* Title */}
-					<Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-
-					{/* Message */}
-					<Text style={[styles.message, { color: colors.textSecondary }]}>
-						{message}
-					</Text>
-
-					{/* Buttons */}
-					<View style={styles.buttonContainer}>
-						{/* Cancel Button */}
-						<TouchableOpacity
-							style={[
-								styles.button,
-								styles.cancelButton,
-								{
-									backgroundColor: colors.background,
-									borderColor: colors.border,
-								},
-							]}
-							onPress={onCancel}
-							activeOpacity={0.7}
-						>
-							<Text style={[styles.cancelButtonText, { color: colors.text }]}>
-								{cancelText}
-							</Text>
-						</TouchableOpacity>
-
-						{/* Confirm Button */}
-						<TouchableOpacity
-							style={[
-								styles.button,
-								styles.confirmButton,
-								{ backgroundColor: finalConfirmColor },
-							]}
-							onPress={onConfirm}
-							activeOpacity={0.8}
-						>
+							{/* Confirm Button */}
+							<TouchableOpacity
+								style={[
+									styles.button,
+									styles.confirmButton,
+									{ backgroundColor: finalConfirmColor },
+								]}
+								onPress={onConfirm}
+								activeOpacity={0.8}
+							>
 								<Text style={styles.confirmButtonText}>{confirmText}</Text>
-						</TouchableOpacity>
+							</TouchableOpacity>
+						</View>
 					</View>
 				</View>
 			</View>
@@ -135,23 +137,28 @@ export function ConfirmationModal({
 }
 
 const styles = StyleSheet.create({
-	backdrop: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		zIndex: 9999,
-	},
-	backdropOverlay: {
-		...StyleSheet.absoluteFillObject,
-		backgroundColor: "rgba(0, 0, 0, 0.6)",
-		zIndex: 9999,
-	},
 	container: {
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
 		paddingHorizontal: 20,
-		zIndex: 10000,
+		zIndex: 100000,
+	},
+	backdropOverlay: {
+		...StyleSheet.absoluteFillObject,
+		backgroundColor: "rgba(0, 0, 0, 0.6)",
+		zIndex: 99999,
+	},
+	modalWrapper: {
+		justifyContent: "center",
+		alignItems: "center",
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		paddingHorizontal: 20,
+		zIndex: 100001,
 	},
 	modal: {
 		width: "100%",
@@ -163,7 +170,8 @@ const styles = StyleSheet.create({
 		shadowOffset: { width: 0, height: 8 },
 		shadowOpacity: 0.25,
 		shadowRadius: 16,
-		elevation: 8,
+		elevation: 20,
+		zIndex: 100002,
 	},
 	iconContainer: {
 		alignItems: "center",

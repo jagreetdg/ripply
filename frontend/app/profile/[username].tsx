@@ -326,20 +326,11 @@ export default function ProfileByUsernameScreen() {
 			>
 				<View style={{ height: insets.top }} />
 				<ProfileHeader
-					userId={profileData.userProfile.id}
-					username={profileData.userProfile.username}
-					displayName={profileData.userProfile.display_name}
-					avatarUrl={profileData.userProfile.avatar_url}
-					coverPhotoUrl={profileData.userProfile.cover_photo_url}
-					bio={profileData.userProfile.bio || undefined}
-					isVerified={profileData.userProfile.is_verified}
+					userProfile={userProfile}
 					isCollapsed={true}
-					postCount={profileData.voiceNotes.length}
-					isOwnProfile={profileData.isOwnProfile}
+					postCount={voiceNotes.length}
+					isOwnProfile={isOwnProfile}
 					onHeaderPress={handleHeaderPress}
-					onFollowersPress={handleFollowersPress}
-					onFollowingPress={handleFollowingPress}
-					isOwnProfile={profileData.isOwnProfile}
 					onPhotoUpdated={handlePhotoUpdated}
 				/>
 			</Animated.View>
@@ -366,16 +357,10 @@ export default function ProfileByUsernameScreen() {
 				<Animated.View style={{ opacity: animations.headerOpacity }}>
 					<View style={{ paddingTop: insets.top }} />
 					<ProfileHeader
-						userId={profileData.userProfile.id}
-						username={profileData.userProfile.username}
-						displayName={profileData.userProfile.display_name}
-						avatarUrl={profileData.userProfile.avatar_url}
-						coverPhotoUrl={profileData.userProfile.cover_photo_url}
-						bio={profileData.userProfile.bio || undefined}
-						isVerified={profileData.userProfile.is_verified}
+						userProfile={userProfile}
 						isCollapsed={false}
-						postCount={profileData.voiceNotes.length}
-						isOwnProfile={profileData.isOwnProfile}
+						postCount={voiceNotes.length}
+						isOwnProfile={isOwnProfile}
 						onPhotoUpdated={handlePhotoUpdated}
 					/>
 				</Animated.View>
@@ -385,15 +370,15 @@ export default function ProfileByUsernameScreen() {
 					followerCount={followerCount}
 					voiceNotesCount={voiceNotes.length}
 					followingCount={followingCount}
-					onFollowersPress={() => setShowFollowersPopup(true)}
-					onFollowingPress={() => setShowFollowingPopup(true)}
+					onFollowersPress={handleFollowersPress}
+					onFollowingPress={handleFollowingPress}
 				/>
 
 				{/* Action button */}
 				<ProfileActionButton
 					isOwnProfile={profileData.isOwnProfile}
 					userId={profileData.userProfile.id}
-					onFollowersUpdate={profileData.updateFollowerCount}
+					onFollowChange={profileData.updateFollowerCount}
 				/>
 
 				{/* Voice notes list */}
@@ -406,6 +391,7 @@ export default function ProfileByUsernameScreen() {
 					showRepostAttribution={true}
 					isOwnProfile={profileData.isOwnProfile}
 					loadingNotes={profileData.loadingVoiceNotes}
+					profileId={profileData.userProfile.id}
 				/>
 			</Animated.ScrollView>
 

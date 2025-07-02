@@ -305,6 +305,7 @@ export function PhotoViewerModal({
 	);
 	const [error, setError] = useState<string | null>(null);
 	const [localUri, setLocalUri] = useState<string | null>(null);
+	const [showingConfirmation, setShowingConfirmation] = useState(false);
 	const { user, setUser } = useUser();
 	const { showConfirmation, ConfirmationComponent } = useConfirmation();
 
@@ -313,6 +314,7 @@ export function PhotoViewerModal({
 		if (!visible) {
 			setLocalUri(null);
 			setError(null);
+			setShowingConfirmation(false);
 		}
 	}, [visible]);
 
@@ -346,10 +348,7 @@ export function PhotoViewerModal({
 			onPhotoUpdated(photoType, newUrl, localUri);
 		}
 		setLocalUri(null); // Clear local URI on success
-		// If deletion was successful, the urls will be empty. Close the modal.
-		if (newUrl === "" && localUri === "") {
-			onClose();
-		}
+		onClose(); // Close modal on any successful update (upload or delete)
 	};
 
 	const onUploadError = (message: string) => {
@@ -396,13 +395,21 @@ export function PhotoViewerModal({
 		console.log("[DELETE] Showing confirmation for:", photoName);
 
 		try {
+			// Temporarily hide photo modal to show confirmation cleanly
+			setShowingConfirmation(true);
+
 			console.log("[DELETE] Calling showConfirmation...");
 			const confirmed = await showConfirmation(
 				confirmationPresets.delete(photoName)
 			);
 
 			console.log("[DELETE] Confirmation result:", confirmed);
-			if (!confirmed) return;
+
+			// Restore photo modal if user cancelled
+			if (!confirmed) {
+				setShowingConfirmation(false);
+				return;
+			}
 
 			console.log("[DELETE] Starting deletion process");
 			const updateData: UpdateUserProfileParams =
@@ -424,11 +431,13 @@ export function PhotoViewerModal({
 				onPhotoUpdated(photoType, "", "");
 			}
 
-			console.log("[DELETE] Closing modal");
+			// Close modal only after successful deletion
+			setShowingConfirmation(false);
 			onClose();
 		} catch (error) {
 			console.error("[DELETE] Failed:", error);
 			setError("Failed to delete photo. Please try again.");
+			setShowingConfirmation(false);
 		}
 	};
 
@@ -437,50 +446,52 @@ export function PhotoViewerModal({
 	if (!visible) return null;
 
 	return (
-		<Modal
-			transparent={true}
-			animationType="fade"
-			visible={visible}
-			onRequestClose={onClose}
-		>
-			<StatusBar hidden={visible} />
-			<TouchableWithoutFeedback onPress={onClose}>
-				<View style={styles.container}>
-					<PhotoViewerHeader onClose={onClose} />
-					{error && (
-						<View style={styles.topContainer}>
-							<View style={styles.errorContainer}>
-								<Text style={styles.errorText}>{error}</Text>
+		<>
+			<Modal
+				transparent={true}
+				animationType="fade"
+				visible={visible && !showingConfirmation}
+				onRequestClose={onClose}
+			>
+				<StatusBar hidden={visible} />
+				<TouchableWithoutFeedback onPress={onClose}>
+					<View style={styles.container}>
+						<PhotoViewerHeader onClose={onClose} />
+						{error && (
+							<View style={styles.topContainer}>
+								<View style={styles.errorContainer}>
+									<Text style={styles.errorText}>{error}</Text>
+								</View>
 							</View>
+						)}
+						<PhotoViewerImage
+							imageUrl={
+								localUri ||
+								(imageUrl && !imageUrl.startsWith("blob:") ? imageUrl : null)
+							}
+							fallbackImageUrl={getFallbackImageUrl(
+								userId,
+								"",
+								photoType === "profile" ? "avatar" : "cover"
+							)}
+							loading={uploadLoading}
+							action={currentAction}
+							photoType={photoType}
+						/>
+						<View style={styles.bottomContainer}>
+							{isOwnProfile && (
+								<PhotoViewerActions
+									onUpload={handleImagePicker}
+									onDelete={handleDelete}
+									loading={uploadLoading}
+									hasImage={hasImage}
+								/>
+							)}
 						</View>
-					)}
-					<PhotoViewerImage
-						imageUrl={
-							localUri ||
-							(imageUrl && !imageUrl.startsWith("blob:") ? imageUrl : null)
-						}
-						fallbackImageUrl={getFallbackImageUrl(
-							userId,
-							"",
-							photoType === "profile" ? "avatar" : "cover"
-						)}
-						loading={uploadLoading}
-						action={currentAction}
-						photoType={photoType}
-					/>
-					<View style={styles.bottomContainer}>
-						{isOwnProfile && (
-							<PhotoViewerActions
-								onUpload={handleImagePicker}
-								onDelete={handleDelete}
-								loading={uploadLoading}
-								hasImage={hasImage}
-							/>
-						)}
 					</View>
-				</View>
-			</TouchableWithoutFeedback>
+				</TouchableWithoutFeedback>
+			</Modal>
 			<ConfirmationComponent />
-		</Modal>
+		</>
 	);
 }

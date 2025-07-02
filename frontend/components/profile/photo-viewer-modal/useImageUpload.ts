@@ -69,7 +69,7 @@ const compressImageIfNeeded = async (
     // Use platform-aware dimensions
     let currentMaxWidth;
     if (Platform.OS === "web") {
-      currentMaxWidth = photoType === "cover" ? 400 : 200;
+      currentMaxWidth = photoType === "cover" ? 250 : 200;
     } else {
       currentMaxWidth = photoType === "cover" ? 1000 : 600;
     }
