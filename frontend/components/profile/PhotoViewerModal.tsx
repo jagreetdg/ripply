@@ -305,6 +305,8 @@ export function PhotoViewerModal({
 	);
 	const [error, setError] = useState<string | null>(null);
 	const [localUri, setLocalUri] = useState<string | null>(null);
+	const { user, setUser } = useUser();
+	const { showConfirmation, ConfirmationComponent } = useConfirmation();
 
 	// When modal is closed, reset local state
 	useEffect(() => {
@@ -360,9 +362,7 @@ export function PhotoViewerModal({
 
 	// This is the single source of truth for whether an image exists.
 	// It's true if we have a persisted URL from the server, OR a temporary local image.
-	const hasImage =
-		!!(localUri || imageUrl) &&
-		!(localUri?.startsWith("blob:") || imageUrl?.startsWith("blob:"));
+	const hasImage = !!(localUri || imageUrl);
 
 	// Only log when modal becomes visible to avoid spam
 	useEffect(() => {
@@ -370,17 +370,69 @@ export function PhotoViewerModal({
 			console.log("[PhotoViewerModal] Opening:", {
 				photoType,
 				hasImage,
+				localUri: localUri ? `${localUri.substring(0, 50)}...` : localUri,
 				imageUrl: imageUrl ? `${imageUrl.substring(0, 50)}...` : imageUrl,
+				isOwnProfile,
 			});
 		}
 	}, [visible, photoType, hasImage]);
 
-	const {
-		loading: uploadLoading,
-		action: currentAction,
-		handleImagePicker,
-		handleDelete,
-	} = useImageUpload(photoType, onUploadSuccess, onUploadError, onPickImage);
+	const { loading: uploadLoading, handleImagePicker } = useImageUpload(
+		photoType,
+		onUploadSuccess,
+		onUploadError
+	);
+
+	// Delete photo functionality
+	const handleDelete = async () => {
+		console.log("[DELETE] Delete button clicked");
+
+		if (!user) {
+			console.log("[DELETE] No user found, aborting");
+			return;
+		}
+
+		const photoName = photoType === "profile" ? "profile photo" : "cover photo";
+		console.log("[DELETE] Showing confirmation for:", photoName);
+
+		try {
+			console.log("[DELETE] Calling showConfirmation...");
+			const confirmed = await showConfirmation(
+				confirmationPresets.delete(photoName)
+			);
+
+			console.log("[DELETE] Confirmation result:", confirmed);
+			if (!confirmed) return;
+
+			console.log("[DELETE] Starting deletion process");
+			const updateData: UpdateUserProfileParams =
+				photoType === "profile"
+					? { avatar_url: null }
+					: { cover_photo_url: null };
+
+			console.log("[DELETE] Calling updateUserProfile with:", updateData);
+			const updatedProfile = await updateUserProfile(user.id, updateData);
+			console.log("[DELETE] Profile updated successfully");
+
+			const updatedUser = { ...user, ...updatedProfile };
+			setUser(updatedUser as any);
+			await AsyncStorage.setItem("@ripply_user", JSON.stringify(updatedUser));
+
+			// Call success callback with empty values to indicate deletion
+			if (onPhotoUpdated) {
+				console.log("[DELETE] Calling onPhotoUpdated");
+				onPhotoUpdated(photoType, "", "");
+			}
+
+			console.log("[DELETE] Closing modal");
+			onClose();
+		} catch (error) {
+			console.error("[DELETE] Failed:", error);
+			setError("Failed to delete photo. Please try again.");
+		}
+	};
+
+	const currentAction = uploadLoading ? "upload" : null;
 
 	if (!visible) return null;
 
@@ -428,6 +480,7 @@ export function PhotoViewerModal({
 					</View>
 				</View>
 			</TouchableWithoutFeedback>
+			<ConfirmationComponent />
 		</Modal>
 	);
 }

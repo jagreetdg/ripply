@@ -1,0 +1,244 @@
+# Ripply Feature PRD Template
+
+## Overview
+[Brief description of the feature and its purpose in the Ripply social media ecosystem]
+
+---
+
+## Architecture Context
+
+### System Layer
+- [ ] **Frontend** (React Native + Expo)
+- [ ] **Backend** (Express.js + MVC)
+- [ ] **Database** (Supabase PostgreSQL)
+- [ ] **Storage** (Supabase Storage)
+
+### Architecture Patterns to Follow
+- **Frontend**: [Reference specific component patterns from ARCHITECTURE.md]
+- **Backend**: [Reference specific service layer patterns from ARCHITECTURE.md]
+- **Database**: [Reference specific schema patterns from ARCHITECTURE.md]
+- **Security**: [Reference specific security patterns from ARCHITECTURE.md]
+
+### Existing Components to Integrate With
+- [List existing services, components, or APIs this feature will use]
+- [Reference established patterns that should be followed]
+
+---
+
+## Feature Requirements
+
+### Core Functionality
+1. [Primary requirement following established patterns]
+2. [Secondary requirement with architecture reference]
+3. [Additional requirements with security considerations]
+
+### User Experience
+- **Mobile First**: [How this works on mobile devices]
+- **Performance**: [Performance requirements and considerations]
+- **Accessibility**: [Accessibility requirements]
+
+### Technical Requirements
+- **Authentication**: [How this integrates with existing auth system]
+- **Data Flow**: [How data moves between frontend, backend, and database]
+- **Real-time**: [Any real-time requirements using established WebSocket patterns]
+- **Media Handling**: [If applicable, how media storage is handled]
+
+---
+
+## Architecture Integration
+
+### Frontend Components
+- **New Components**: [Components to be created following architecture patterns]
+- **Modified Components**: [Existing components to be updated]
+- **State Management**: [How this integrates with React Context patterns]
+- **Navigation**: [How this fits into Expo Router structure]
+
+### Backend Services
+- **Controllers**: [New or modified controllers following MVC pattern]
+- **Services**: [Business logic services following established patterns]
+- **Routes**: [API endpoints following RESTful patterns]
+- **Middleware**: [Any middleware requirements following security patterns]
+
+### Database Changes
+- **Schema Updates**: [Tables, columns, indexes following schema patterns]
+- **RLS Policies**: [Row Level Security policies following security architecture]
+- **Functions**: [Database functions or triggers if needed]
+- **Storage**: [Media storage requirements following storage architecture]
+
+---
+
+## Security Considerations
+
+### Authentication & Authorization
+- [How this feature handles user authentication]
+- [Authorization requirements and role-based access]
+- [Integration with existing JWT token system]
+
+### Data Protection
+- [Data validation and sanitization requirements]
+- [Encryption requirements for sensitive data]
+- [Privacy considerations and data handling]
+
+### API Security
+- [Rate limiting requirements]
+- [Input validation patterns]
+- [Security headers and CORS considerations]
+
+---
+
+## Performance Requirements
+
+### Frontend Performance
+- [Loading time requirements]
+- [Memory usage considerations]
+- [Offline functionality if applicable]
+
+### Backend Performance
+- [Response time requirements]
+- [Database query optimization needs]
+- [Caching strategy integration]
+
+### Scalability
+- [How this feature scales with user growth]
+- [Database scaling considerations]
+- [CDN and media storage scaling]
+
+---
+
+## Testing Strategy
+
+### Frontend Testing
+- [Component testing requirements following established patterns]
+- [Integration testing with API calls]
+- [User flow testing requirements]
+
+### Backend Testing
+- [Unit testing for services and controllers]
+- [API endpoint testing requirements]
+- [Database interaction testing]
+
+### End-to-End Testing
+- [Critical user flows to test]
+- [Security testing requirements]
+- [Performance testing benchmarks]
+
+---
+
+## Dependencies
+
+### Technical Dependencies
+- [External libraries or services required]
+- [Version compatibility requirements]
+- [Integration with existing dependencies]
+
+### Feature Dependencies
+- [Other features this depends on]
+- [Features that depend on this]
+- [Order of implementation requirements]
+
+---
+
+## Implementation Phases
+
+### Phase 1: Foundation
+- [Database schema and core backend services]
+- [Basic API endpoints following REST patterns]
+- [Core business logic following service patterns]
+
+### Phase 2: Integration
+- [Frontend component development following architecture]
+- [API integration and data flow implementation]
+- [Authentication and security integration]
+
+### Phase 3: Enhancement
+- [UI/UX polish and optimization]
+- [Performance optimization]
+- [Advanced features and edge cases]
+
+---
+
+## Success Metrics
+
+### Technical Metrics
+- [Performance benchmarks to achieve]
+- [Security compliance requirements]
+- [Code quality standards to maintain]
+
+### User Metrics
+- [User engagement metrics to track]
+- [Feature adoption requirements]
+- [User satisfaction indicators]
+
+---
+
+## Risk Assessment
+
+### Technical Risks
+- [Potential technical challenges and mitigation strategies]
+- [Architecture impact and compatibility risks]
+- [Performance and scalability risks]
+
+### Security Risks
+- [Security vulnerabilities and prevention measures]
+- [Data protection and privacy risks]
+- [Authentication and authorization risks]
+
+---
+
+## Documentation Requirements
+
+### Code Documentation
+- [API documentation requirements]
+- [Component documentation standards]
+- [Architecture decision documentation]
+
+### User Documentation
+- [User guide updates required]
+- [Help documentation needs]
+- [Admin documentation if applicable]
+
+---
+
+## Acceptance Criteria
+
+### Must Have
+- [ ] [Core functionality working according to architecture patterns]
+- [ ] [Security requirements fully implemented]
+- [ ] [Performance benchmarks met]
+- [ ] [Testing coverage requirements achieved]
+
+### Should Have
+- [ ] [Enhanced UX features]
+- [ ] [Optimization implementations]
+- [ ] [Advanced functionality]
+
+### Could Have
+- [ ] [Nice-to-have features]
+- [ ] [Future enhancement foundations]
+- [ ] [Additional integrations]
+
+---
+
+## Implementation Notes
+
+### Architecture Compliance
+- All implementations must follow established patterns in ARCHITECTURE.md
+- Security implementations must align with security architecture
+- Database changes must follow schema architecture patterns
+- Frontend components must follow component architecture patterns
+
+### Code Quality
+- Follow established coding standards from .roo/rules/
+- Implement proper error handling and validation
+- Include comprehensive testing following testing patterns
+- Maintain documentation standards
+
+### Review Requirements
+- Architecture review against established patterns
+- Security review for compliance
+- Performance review against benchmarks
+- Code review following quality standards
+
+---
+
+*This PRD template ensures all features are designed and implemented consistently with Ripply's established architecture patterns and development workflow.* 

@@ -45,6 +45,19 @@ alwaysApply: true
   - Remove outdated patterns
   - Cross-reference related rules
 
+- **Rule Maintenance:**
+  - Write the absolute minimum code required
+  - ABSOLUTELY DO NOT RUN ANY "npm start" / "npm run" / BASICALLY ANY SERVER/FRONTEND START COMMANDS
+  - DO NOT AUTOMATICALLY COMMIT/PUSH TO GIT UNLESS EXPLICITLY STATED SO
+  - No sweeping changes
+  - No unrelated edits - focus on just the task you're on
+  - Make code precise, modular, testable
+  - Dont break existing functionality
+  - If I need to do anything (e.g. Supabase/AWS config), tell me clearly  "
+
+- **Live Codebase Updates**
+  - Every codebase architectural change/ future change/ change so far should be clearly referenced from and documented in [ARCHITECTURE.md](mdc:.devdocs/ARCHITECTURE.md)
+
 - **Best Practices:**
   - Use bullet points for clarity
   - Keep descriptions concise

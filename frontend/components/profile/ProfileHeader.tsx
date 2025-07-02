@@ -34,11 +34,6 @@ interface ProfileHeaderProps {
 	isOwnProfile?: boolean;
 	username?: string;
 	onHeaderPress?: () => void; // For scroll-to-top functionality in collapsed header
-	onPhotoUpdated?: (
-		type: "profile" | "cover",
-		newUrl: string | null,
-		localUri?: string
-	) => void;
 }
 
 interface VoiceBio {
@@ -115,7 +110,6 @@ export function ProfileHeader({
 	isOwnProfile = false,
 	username = "",
 	onHeaderPress,
-	onPhotoUpdated,
 }: ProfileHeaderProps) {
 	const router = useRouter();
 	const { colors, isDarkMode } = useTheme();
@@ -299,19 +293,12 @@ export function ProfileHeader({
 
 	const handlePhotoUpdated = (
 		type: "profile" | "cover",
-		newUrl: string | null,
-		localUri?: string
+		newUrl: string | null
 	) => {
-		// Update local state for immediate UI feedback
 		if (type === "profile") {
 			setLocalAvatarUrl(newUrl);
 		} else {
 			setLocalCoverPhotoUrl(newUrl);
-		}
-
-		// Notify parent component of the change
-		if (onPhotoUpdated) {
-			onPhotoUpdated(type, newUrl, localUri);
 		}
 	};
 

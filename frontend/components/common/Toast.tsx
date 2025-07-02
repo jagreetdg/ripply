@@ -118,21 +118,20 @@ export const Toast: React.FC<ToastProps> = ({
 	if (!visible) return null;
 
 	return (
-		<View
+		<Animated.View
 			style={{
 				position: "absolute",
-				top: 50,
+				top: 0,
 				left: 0,
 				right: 0,
 				zIndex: 2147483647,
+				transform: [{ translateY: slideAnim }],
 				alignItems: "center", // Center the toast horizontally
-				paddingHorizontal: 20, // Add horizontal padding
-				pointerEvents: "box-none", // Allow touches to pass through the container
+				paddingHorizontal: 20, // Add horizontal padding to prevent edge touching
 			}}
 		>
-			<Animated.View
+			<View
 				style={{
-					transform: [{ translateY: slideAnim }],
 					backgroundColor: toastStyles.backgroundColor,
 					padding: 16,
 					borderRadius: 8,
@@ -146,8 +145,8 @@ export const Toast: React.FC<ToastProps> = ({
 					shadowOpacity: 0.25,
 					shadowRadius: 3.84,
 					elevation: 5,
-					maxWidth: 350, // Fixed maximum width in pixels
-					minWidth: 200, // Minimum width for very short messages
+					maxWidth: "90%", // Limit maximum width to 90% of screen
+					minWidth: 250, // Set minimum width for very short messages
 				}}
 			>
 				<MaterialIcons
@@ -159,11 +158,10 @@ export const Toast: React.FC<ToastProps> = ({
 				<Text
 					style={{
 						color: "white",
-						fontSize: 15,
+						fontSize: 16,
 						fontWeight: "500",
-						flex: 1, // Take available space
-						marginRight: 8,
-						lineHeight: 20,
+						flexShrink: 1, // Allow text to shrink if needed
+						marginRight: 8, // Add some space before the close button
 					}}
 				>
 					{message}
@@ -171,8 +169,8 @@ export const Toast: React.FC<ToastProps> = ({
 				<TouchableOpacity onPress={hideToast}>
 					<MaterialIcons name="close" size={20} color="white" />
 				</TouchableOpacity>
-			</Animated.View>
-		</View>
+			</View>
+		</Animated.View>
 	);
 };
 
