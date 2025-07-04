@@ -1,0 +1,331 @@
+---
+description: Comprehensive UI/UX design guidelines for consistent visual design and user experience
+globs: frontend/components/**/*.tsx, frontend/app/**/*.tsx, frontend/**/*.ts
+alwaysApply: true
+---
+
+---
+description: Psychology-driven UI/UX design guidelines for consistent visual design and user experience
+globs: frontend/components/**/*.tsx, frontend/app/**/*.tsx, frontend/**/*.ts
+alwaysApply: true
+---
+
+# UI Design System & Guidelines
+
+## Overview
+This document establishes psychology-driven design principles and modern UI patterns for the Ripply React Native app. AI editors should dynamically apply these principles based on context and component purpose.
+
+---
+
+## 🚨 CRITICAL INSTRUCTIONS FOR AI LANGUAGE MODELS 🚨
+
+As an AI language model, you MUST NOT generate UI components without following these guidelines:
+
+```typescript
+// ❌ NEVER GENERATE THIS - VIOLATES PSYCHOLOGICAL PRINCIPLES
+<View style={{ padding: 40 }}> // Too much padding, violates Fitts's Law
+  <TouchableOpacity style={{ width: 30, height: 30 }}> // Too small, violates Fitts's Law
+    <Text>Primary Action</Text> // No visual priority, violates Von Restorff Effect
+  </TouchableOpacity>
+  <TouchableOpacity><Text>Action 1</Text></TouchableOpacity>
+  <TouchableOpacity><Text>Action 2</Text></TouchableOpacity>
+  <TouchableOpacity><Text>Action 3</Text></TouchableOpacity>
+  <TouchableOpacity><Text>Action 4</Text></TouchableOpacity> // Too many choices, violates Hick's Law
+</View>
+
+// ✅ ALWAYS GENERATE THIS PATTERN - FOLLOWS PSYCHOLOGICAL PRINCIPLES
+<View style={{ padding: 16 }}> // Proper spacing scale
+  <TouchableOpacity style={{ 
+    width: 56, 
+    height: 56, 
+    backgroundColor: colors.tint, // Primary action gets bold treatment
+    borderRadius: 12,
+    shadowOpacity: 0.3 // Von Restorff Effect
+  }}>
+    <Text style={{ color: 'white', fontWeight: '600' }}>Record</Text>
+  </TouchableOpacity>
+  <TouchableOpacity style={{ opacity: 0.7 }}> // Secondary action, subtle
+    <Text style={{ color: colors.textSecondary }}>More Options</Text>
+  </TouchableOpacity>
+</View>
+```
+
+## ABSOLUTE REQUIREMENTS FOR AI CODE GENERATION
+
+1. You MUST apply at least 2-3 psychological principles per UI component
+2. You MUST limit primary actions to maximum 2-3 per screen
+3. You MUST use minimum 56px touch targets for primary actions
+4. You MUST use theme colors, never hardcoded values
+5. You MUST show progress indicators for multi-step flows
+
+## 🛠️ MANDATORY TECHNOLOGY STACK
+
+### **Primary Technology Requirements**
+1. **Tailwind CSS v4**: Use for ALL styling instead of StyleSheet.create() or custom CSS
+2. **shadcn/ui**: Use existing shadcn components before creating custom ones
+3. **21st.dev Components**: FIRST check if 21st.dev has a suitable component using MCP tools
+
+### **Technology Hierarchy (Priority Order)**
+```typescript
+// 🥇 FIRST CHOICE: Use 21st.dev MCP components
+// Use mcp_21st-devmagic_21st_magic_component_builder or related tools
+
+// 🥈 SECOND CHOICE: Use shadcn/ui components
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+
+// 🥉 THIRD CHOICE: Create custom component with Tailwind v4
+<TouchableOpacity className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg">
+
+// ❌ NEVER: Use React Native StyleSheet or custom CSS
+// StyleSheet.create({ ... }) // FORBIDDEN
+// style={{ backgroundColor: '#6B2FBC' }} // FORBIDDEN
+```
+
+### **21st.dev MCP Integration Workflow**
+
+1. **Component Search**: Use `mcp_21st-devmagic_21st_magic_component_inspiration` to find existing components
+2. **Component Generation**: Use `mcp_21st-devmagic_21st_magic_component_builder` for new components
+3. **Integration**: Adapt 21st.dev components to follow psychological principles
+
+```typescript
+// Example workflow for creating a button component:
+// 1. First, search 21st.dev for button components
+// 2. If found, integrate with psychological principles:
+
+const PsychologyDrivenButton = ({ isPrimary, children, ...props }) => {
+  // Apply Von Restorff Effect - only primary buttons get bold treatment
+  const baseClasses = "px-6 py-3 rounded-lg font-medium transition-all duration-200";
+  const primaryClasses = "bg-purple-600 hover:bg-purple-700 text-white shadow-lg scale-105"; // Bold treatment
+  const secondaryClasses = "bg-gray-100 hover:bg-gray-200 text-gray-700"; // Subtle treatment
+  
+  return (
+    <TouchableOpacity 
+      className={`${baseClasses} ${isPrimary ? primaryClasses : secondaryClasses}`}
+      // Fitts's Law - minimum 56px height for primary actions
+      style={{ minHeight: isPrimary ? 56 : 48 }}
+      {...props}
+    >
+      {children}
+    </TouchableOpacity>
+  );
+};
+```
+
+## AI MODEL VERIFICATION STEPS
+
+Before generating any UI code, you MUST verify:
+
+1. **Technology Check**: Did you check 21st.dev components first using MCP tools?
+2. **Styling Method**: Are you using Tailwind v4 classes instead of StyleSheet/custom CSS?
+3. **Component Source**: Are you using shadcn/ui components where available?
+4. **Principle Selection**: Which 2-3 psychological principles apply to this specific component?
+5. **Action Hierarchy**: Are there max 2-3 primary actions? Do secondary actions stay subtle?
+6. **Touch Targets**: Are primary actions minimum 56px? Are they in thumb-friendly zones?
+7. **Progress Indication**: For multi-step flows, is progress clearly shown?
+
+## CONSEQUENCES OF INCORRECT IMPLEMENTATION
+
+If you generate UI code that violates these principles:
+
+1. **User Experience Suffers**: Poor usability, decision paralysis, missed actions
+2. **Design Inconsistency**: Visual chaos, broken brand experience
+3. **Accessibility Issues**: Poor touch targets, contrast problems
+4. **Psychology Violations**: Users feel frustrated, overwhelmed, or lost
+
+## AI MODEL RESPONSE TEMPLATE
+
+When asked about UI implementation, you MUST:
+
+1. **Check 21st.dev first**: Use `mcp_21st-devmagic_21st_magic_component_builder` or inspiration tools
+2. **Fallback to shadcn/ui**: If no suitable 21st.dev component exists
+3. **Use Tailwind v4**: For all custom styling with proper classes
+4. **Identify the psychological context** (onboarding vs navigation vs content, etc.)
+5. **Select relevant principles** from the 7 psychology rules above
+6. **Apply modern UI trends** where appropriate (bento grid, progressive blue, etc.)
+7. **Generate code that demonstrates** the principles in action
+8. **Verify your response** against the technology and psychology checklist above
+
+Remember: There are NO EXCEPTIONS to these rules for UI/UX components.
+
+---
+
+## 🧠 Psychology-Driven Design Principles
+
+### **1. Zeigarnik Effect - Exploit Unfinished Business**
+- **Rule**: Always show progress for incomplete tasks with clear next steps
+- **Apply when**: Onboarding flows, profile setup, daily goals, multi-step forms
+- **Pattern**: Progress indicators + "What's next" messaging + completion rewards
+
+### **2. Von Restorff Effect - Make Only Primary Actions Pop**
+- **Rule**: Maximum 1-2 primary elements per screen get bold treatment, everything else stays subtle/grayscale
+- **Apply when**: Revenue-driving actions (follow, record, share, upgrade)
+- **Pattern**: Primary = bold colors + shadows + larger size, Secondary = subtle gray tones
+
+### **3. Hick's Law - Minimize Choice Overload**
+- **Rule**: Limit primary actions to 2-3 per screen, use progressive disclosure for complexity
+- **Apply when**: Navigation design, form layouts, action menus
+- **Pattern**: Essential actions visible + "More" or settings for advanced options
+
+### **4. Fitts's Law - Optimize for Touch**
+- **Rule**: Bigger + closer = faster interaction. Primary actions 56px minimum in thumb zones
+- **Apply when**: Button sizing, navigation placement, action positioning
+- **Pattern**: Bottom 1/3 screen for frequent actions, group related actions within 12px
+
+### **5. Social Proof & Loss Aversion**
+- **Rule**: Show social activity and introduce streak mechanics to prevent abandonment
+- **Apply when**: User engagement features, retention mechanics
+- **Pattern**: Activity counters + streak indicators + FOMO messaging
+
+### **6. IKEA Effect - Let Users Customize**
+- **Rule**: Provide customization options for workspaces, profiles, and preferences
+- **Apply when**: Profile setup, dashboard layouts, settings
+- **Pattern**: User-created content + personalization options + ownership language
+
+### **7. Jakob's Law - Follow Familiar Patterns**
+- **Rule**: Use established UI conventions users expect from other apps
+- **Apply when**: Navigation, gestures, iconography, interaction patterns
+- **Pattern**: iOS/Android standards + common social media UX patterns
+
+---
+
+## 🎯 Modern UI Trends
+
+### **1. Bento Grid Layout**
+- **Rule**: Create responsive grid layouts that become single column on mobile
+- **Apply when**: Dashboard designs, content grids, feature showcases
+- **Pattern**: Mixed card sizes on desktop, stacked single column on mobile
+
+### **2. Progressive Blue Accents**
+- **Rule**: Use progressive blue (#3B82F6) for secondary actions and info states
+- **Apply when**: Secondary buttons, info cards, progress indicators
+- **Pattern**: Blue for information, purple for primary brand actions
+
+### **3. Minimalist Focus**
+- **Rule**: Emphasize whitespace, subtle borders, and single focal points per section
+- **Apply when**: Content-heavy screens, reading interfaces, forms
+- **Pattern**: Generous padding + subtle dividers + focused typography
+
+### **4. Light Rays & Storytelling**
+- **Rule**: Use subtle gradients and visual hierarchy to guide user narrative
+- **Apply when**: Onboarding flows, feature introductions, success states
+- **Pattern**: Gradient overlays + directional lighting + story progression
+
+---
+
+## 🎨 Color System Guidelines
+
+### **Brand Colors**
+- **Primary**: `#6B2FBC` (Ripply Purple) - Main brand actions
+- **Secondary**: `#9D7BC7` (Medium Purple) - Supporting elements
+- **Progressive Blue**: `#3B82F6` - Information and secondary actions
+- **Success**: `#10B981` - Positive feedback, achievements
+- **Error**: `#EF4444` - Errors, destructive actions
+- **Warning**: `#F59E0B` - Streak indicators, urgency
+
+### **Color Application Rules (Tailwind v4)**
+- **Primary actions**: `bg-purple-600 hover:bg-purple-700` with `shadow-lg`
+- **Secondary actions**: `bg-gray-100 hover:bg-gray-200` or `bg-blue-500`
+- **Text hierarchy**: `text-gray-900` → `text-gray-600` → `text-gray-400`
+- **Brand colors**: Use custom Tailwind config for Ripply purple variants
+- **Accessibility**: Ensure 4.5:1 contrast ratio with Tailwind color combinations
+
+```typescript
+// ✅ DO: Use Tailwind v4 classes
+<TouchableOpacity className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg">
+  
+// ❌ DON'T: Use style props or theme colors
+<TouchableOpacity style={{ backgroundColor: colors.tint }}>
+```
+
+---
+
+## 📐 Spacing & Layout Rules
+
+### **Spacing Scale (Tailwind v4 Classes)**
+- **xs**: `p-1` (4px) - Icon margins, tight spacing
+- **sm**: `p-2` (8px) - Element gaps, small padding  
+- **md**: `p-3` (12px) - Default component padding
+- **lg**: `p-4` (16px) - Section padding, card margins
+- **xl**: `p-6` (24px) - Major section separation
+- **2xl**: `p-8` (32px) - Screen-level padding
+
+```typescript
+// ✅ DO: Use Tailwind spacing classes
+<View className="p-4 mb-6 gap-3">
+  
+// ❌ DON'T: Use style props for spacing
+<View style={{ padding: 16, marginBottom: 24 }}>
+```
+
+### **Touch Targets (Enhanced with Fitts's Law)**
+- **Primary Actions**: `56px × 56px` minimum (larger than Apple's 44px)
+- **Secondary Actions**: `48px × 48px` minimum  
+- **Thumb Zone Optimization**: Place key actions in bottom 1/3 of screen
+- **Proximity Grouping**: Related actions should be close together (max 12px apart)
+
+---
+
+## 📝 Typography Hierarchy
+
+### **Font Scale**
+- **Hero**: `32px` - Landing page headers
+- **H1**: `28px` - Main screen titles
+- **H2**: `24px` - Section headers
+- **H3**: `20px` - Subsection titles
+- **Body**: `16px` - Default text size
+- **Caption**: `14px` - Supporting text
+- **Small**: `12px` - Timestamps, metadata
+
+### **Font Weight Rules**
+- **Bold (700)**: Only for primary CTAs and critical information
+- **Semibold (600)**: Section headers, emphasized text
+- **Medium (500)**: Default body text
+- **Regular (400)**: Secondary text, captions
+
+---
+
+## ✅ Implementation Checklist
+
+### **When Creating Components**
+- [ ] **First**: Check 21st.dev using MCP tools for existing components
+- [ ] **Second**: Use shadcn/ui components if available
+- [ ] **Third**: Create custom components with Tailwind v4 classes only
+- [ ] Apply relevant psychological principles (2-3 minimum)
+- [ ] Use Tailwind color classes (no hardcoded values or style props)
+- [ ] Implement proper touch target sizes (56px+ for primary actions)
+- [ ] Add accessibility labels and ARIA properties
+- [ ] Support both light/dark modes with Tailwind variants
+- [ ] Follow Tailwind spacing scale (p-1, p-2, p-3, etc.)
+- [ ] Limit primary actions to 2-3 per screen
+- [ ] Show progress for multi-step flows
+- [ ] Group related actions by proximity
+
+### **When Designing Flows**
+- [ ] Apply Zeigarnik Effect for incomplete tasks
+- [ ] Use Von Restorff Effect for key actions
+- [ ] Follow Jakob's Law for familiar patterns
+- [ ] Implement social proof where relevant
+- [ ] Add streak mechanics for retention
+- [ ] Provide customization options (IKEA Effect)
+- [ ] Minimize choice overload (Hick's Law)
+
+---
+
+## 🚫 Anti-Patterns to Avoid
+
+### **Technology Anti-Patterns**
+- **Using StyleSheet.create()**: Always use Tailwind v4 classes
+- **Style props**: Never use `style={{ backgroundColor: 'red' }}`
+- **Custom CSS**: Avoid writing custom styles outside Tailwind
+- **Ignoring 21st.dev**: Not checking for existing components first
+- **Skipping shadcn/ui**: Creating custom components when shadcn equivalents exist
+
+### **Design Anti-Patterns** 
+- **Too many primary actions**: Max 2-3 per screen
+- **Small touch targets**: Minimum 56px for primary actions
+- **Choice overload**: Hide advanced options behind "More"
+- **Ignoring thumb zones**: Key actions should be easily reachable
+- **No progress indication**: Always show completion status
+- **Missing social proof**: Include activity indicators where relevant
+- **Hardcoded values**: Use Tailwind classes instead of magic numbers

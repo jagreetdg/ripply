@@ -353,6 +353,7 @@ Once a task has been broken down into subtasks using `expand_task` or similar me
 
 1.  **Understand the Goal (Preparation):**
     *   Use `get_task` / `task-master show <subtaskId>` (see [`taskmaster.mdc`](mdc:.cursor/rules/taskmaster.mdc)) to thoroughly understand the specific goals and requirements of the subtask.
+    *   **For UI/UX Tasks**: Review [ui-design.mdc](mdc:.cursor/rules/ui-design.mdc) to determine which psychological principles apply to the specific component/flow being implemented.
 
 2.  **Initial Exploration & Planning (Iteration 1):**
     *   This is the first attempt at creating a concrete implementation plan.
@@ -385,6 +386,7 @@ Once a task has been broken down into subtasks using `expand_task` or similar me
 
 7.  **Review & Update Rules (Post-Implementation):**
     *   Once the implementation for the subtask is functionally complete, review all code changes and the relevant chat history.
+    *   **For UI/UX Components**: Verify implementation follows [ui-design.mdc](mdc:.cursor/rules/ui-design.mdc) psychological principles and modern UI patterns.
     *   Identify any new or modified code patterns, conventions, or best practices established during the implementation.
     *   Create new or update existing rules following internal guidelines (previously linked to `cursor_rules.mdc` and `self_improve.mdc`).
 
