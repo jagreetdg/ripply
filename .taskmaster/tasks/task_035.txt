@@ -1,0 +1,40 @@
+# Task ID: 35
+# Title: Implement Voice Comment Feature
+# Status: pending
+# Dependencies: 9, 31
+# Priority: high
+# Description: Enable users to record and attach voice comments to posts, with a maximum duration of 20 seconds. This feature will enhance user engagement and provide a more expressive way to interact with content.
+# Details:
+1.  **Frontend Implementation:**
+    *   Add a "Record Voice Comment" button/icon to the comment input area.
+    *   Implement a voice recording interface using the browser's MediaRecorder API, similar to Task 9.
+    *   Limit the recording duration to 20 seconds, displaying a countdown timer.
+    *   Implement a playback feature to allow users to review their recording before submitting.
+    *   Upon submission, upload the voice comment to Supabase storage.
+    *   Attach the voice comment URL to the comment data and send it to the backend.
+2.  **Backend Implementation:**
+    *   Create a new API endpoint for submitting voice comments (e.g., `/api/comments/:postId/voice`).
+    *   Implement authentication and authorization to ensure only logged-in users can submit comments.
+    *   Store the voice comment URL in the database, associated with the comment and the user.
+    *   Implement validation to ensure the uploaded file is a valid audio file and its duration is within the 20-second limit (reusing validation logic from Task 31).
+3.  **Database:**
+    *   Update the `comments` table to include a `voice_comment_url` column (nullable).
+4.  **UI Integration:**
+    *   Display a playback button/icon next to the comment to allow users to listen to the voice comment.
+    *   Implement audio playback using a library like Howler.js or the native Audio element.
+
+# Test Strategy:
+1.  **Successful Voice Comment Submission:**
+    *   Log in as a user and navigate to a voice post.
+    *   Click the "Record Voice Comment" button and record a voice comment within the 20-second limit.
+    *   Verify that the voice comment is uploaded successfully and a playback button appears next to the comment.
+    *   Verify that other users can listen to the voice comment.
+2.  **Duration Limit:**
+    *   Attempt to record a voice comment longer than 20 seconds. Verify that the recording stops automatically at 20 seconds and the user is prevented from submitting a longer recording.
+3.  **Invalid Audio Type:**
+    *   Attempt to upload an invalid audio file as a voice comment. Verify that the server rejects the upload with an appropriate error message.
+4.  **Playback Functionality:**
+    *   Verify that the voice comment plays correctly when the playback button is clicked.
+    *   Test playback on different browsers and devices.
+5.  **Database Verification:**
+    *   Check the `comments` table in the database to ensure that the `voice_comment_url` is stored correctly for the submitted voice comment.

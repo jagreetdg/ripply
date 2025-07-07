@@ -1,0 +1,20 @@
+# Task ID: 24
+# Title: Configure .env for Secrets
+# Status: pending
+# Dependencies: 3
+# Priority: high
+# Description: Configure the .env file to securely store all secrets, including Supabase keys, JWT secrets, and OAuth credentials, ensuring they are not exposed in the codebase.
+# Details:
+1. Create a `.env` file in the root directory of both the frontend and backend projects.
+2. Add all sensitive information as key-value pairs in the `.env` file. Examples include: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `JWT_SECRET`, `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`.
+3. Use a library like `dotenv` (Node.js) or similar mechanisms in Next.js to load environment variables into the application.
+4. Update the codebase to use `process.env.VARIABLE_NAME` to access the secrets instead of hardcoding them.
+5. Ensure the `.env` file is added to `.gitignore` to prevent it from being committed to the repository.
+6. For production environments, configure environment variables directly on the server or using a secrets management service.
+
+# Test Strategy:
+1. Verify that the application can successfully read the environment variables from the `.env` file in both development and production environments.
+2. Ensure that sensitive information is not hardcoded in the codebase.
+3. Confirm that the `.env` file is not committed to the Git repository.
+4. Test the application's functionality to ensure that all secrets are being used correctly (e.g., Supabase connection, authentication).
+5. Simulate different environments (development, staging, production) to ensure the correct environment variables are loaded in each environment.

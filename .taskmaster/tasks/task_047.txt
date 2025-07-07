@@ -1,0 +1,31 @@
+# Task ID: 47
+# Title: Implement Voice Story Recorder with 15s Limit
+# Status: pending
+# Dependencies: 9, 33
+# Priority: medium
+# Description: Implement a voice story recorder feature with a 15-second limit, specifically for ephemeral stories that disappear after a set time. This task involves creating a separate recording component and integrating it into the story creation flow.
+# Details:
+1.  **Create a new React component** called `StoryRecorder` that handles audio recording.
+2.  **Use the MediaRecorder API** to capture audio from the user's microphone.
+3.  **Implement a timer** to limit the recording duration to 15 seconds.
+4.  **Display a countdown timer** in the UI to indicate the remaining recording time.
+5.  **Implement a visual indicator** (e.g., waveform) to show audio input level.
+6.  **Add a 'Record' button** to start and stop recording.
+7.  **Add a 'Play' button** to preview the recorded audio.
+8.  **Add a 'Discard' button** to delete the recording and start over.
+9.  **Add a 'Next' button** to proceed to the story posting screen.
+10. **Integrate with the Global Playback Manager** (Task 33) to ensure only one audio source plays at a time.
+11. **Upload the recorded audio** to Supabase storage via private bucket using signed URLs, similar to Task 9.
+12. **Create a new API endpoint** for handling story uploads.
+13. **Store story metadata** (audio URL, user ID, timestamp) in the database.
+14. **Implement logic** to automatically delete stories after a set time (e.g., 24 hours).
+
+# Test Strategy:
+1.  **Verify recording duration:** Ensure the recording stops automatically after 15 seconds.
+2.  **Test audio quality:** Check the quality of the recorded audio on different devices and browsers.
+3.  **Test playback functionality:** Verify that the 'Play' button correctly plays the recorded audio.
+4.  **Test discard functionality:** Ensure the 'Discard' button clears the recording and resets the UI.
+5.  **Test upload functionality:** Verify that the recorded audio is successfully uploaded to Supabase storage.
+6.  **Test story deletion:** Confirm that stories are automatically deleted after the set time (e.g., 24 hours).
+7.  **Test Global Playback Manager integration:** Ensure that playing a story pauses any other currently playing audio.
+8.  **Test different browsers and devices:** Ensure the recorder works consistently across various platforms.

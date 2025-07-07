@@ -3,111 +3,51 @@ description: Guidelines for creating and maintaining Cursor rules to ensure cons
 globs: .cursor/rules/*.mdc
 alwaysApply: true
 ---
-# **Cursor Rules Creation & Maintenance Guidelines**
 
-## **Required Rule Structure**
+- **Required Rule Structure:**
+  ```markdown
+  ---
+  description: Clear, one-line description of what the rule enforces
+  globs: path/to/files/*.ext, other/path/**/*
+  alwaysApply: boolean
+  ---
 
-Every Cursor rule must follow this exact frontmatter structure:
+  - **Main Points in Bold**
+    - Sub-points with details
+    - Examples and explanations
+  ```
 
-```markdown
----
-description: Clear, one-line description of what the rule enforces
-globs: path/to/files/*.ext, other/path/**/*
-alwaysApply: boolean
----
-
-## **Main Points in Bold**
-- Sub-points with details
-- Examples and explanations
-```
-
-## **File References**
-
-- **Rule References**: Use `[filename](mdc:path/to/file)` format
+- **File References:**
+  - Use `[filename](mdc:path/to/file)` ([filename](mdc:filename)) to reference files
   - Example: [prisma.mdc](mdc:.cursor/rules/prisma.mdc) for rule references
-  - Example: [ui-design.mdc](mdc:.cursor/rules/ui-design.mdc) for design guidelines
-
-- **Code References**: Link to actual code files
   - Example: [schema.prisma](mdc:prisma/schema.prisma) for code references
-  - Example: [UserContext.tsx](mdc:frontend/context/UserContext.tsx) for React contexts
 
-## **Code Examples**
+- **Code Examples:**
+  - Use language-specific code blocks
+  ```typescript
+  // ✅ DO: Show good examples
+  const goodExample = true;
+  
+  // ❌ DON'T: Show anti-patterns
+  const badExample = false;
+  ```
 
-Always use language-specific code blocks with clear DO/DON'T patterns:
+- **Rule Content Guidelines:**
+  - Start with high-level overview
+  - Include specific, actionable requirements
+  - Show examples of correct implementation
+  - Reference existing code when possible
+  - Keep rules DRY by referencing other rules
 
-```typescript
-// ✅ DO: Show good examples with clear benefits
-const properImplementation = {
-  readable: true,
-  maintainable: true,
-  followsPatterns: true
-};
+- **Rule Maintenance:**
+  - Update rules when new patterns emerge
+  - Add examples from actual codebase
+  - Remove outdated patterns
+  - Cross-reference related rules
 
-// ❌ DON'T: Show anti-patterns with explanations
-const badImplementation = {
-  unclear: true,
-  violatesPattern: true,
-  hardToMaintain: true
-};
-```
-
-## **Rule Content Guidelines**
-
-- **Start with Overview**: High-level purpose and context
-- **Specific Requirements**: Actionable, measurable guidelines
-- **Implementation Examples**: Show correct patterns from actual codebase
-- **Cross-References**: Link to related rules and code
-- **DRY Principle**: Reference other rules instead of duplicating content
-
-## **Development Workflow Rules**
-
-- **Minimal Code**: Write only what's absolutely required
-- **No Auto-Execution**: 
-  - NEVER run `npm start`, `npm run dev`, or server commands
-  - NEVER automatically commit/push to Git
-- **Focused Changes**: 
-  - No sweeping refactors
-  - No unrelated edits
-  - Stay on task
-- **Code Quality**: 
-  - Make code modular and testable
-  - Don't break existing functionality
-  - Follow established patterns
-
-## **Architecture Documentation**
-
-- **Central Reference**: All architectural changes must be documented in [ARCHITECTURE.md](mdc:.devdocs/ARCHITECTURE.md)
-- **Update Requirements**: 
-  - Document new patterns as they emerge
-  - Keep examples current with codebase
-  - Remove outdated practices
-  - Maintain cross-references between rules
-
-## **Rule Maintenance**
-
-- **When to Update**:
-  - New patterns emerge in 3+ files
-  - Common bugs could be prevented
-  - Code reviews show repeated feedback
-  - New technologies are adopted
-
-- **Quality Checks**:
-  - Rules should be actionable and specific
-  - Examples should come from actual code
-  - References should be current
-  - Patterns should be consistently enforced
-
-- **Lifecycle Management**:
-  - Mark outdated patterns as deprecated
-  - Remove rules that no longer apply
-  - Document migration paths for old patterns
-  - Keep rule dependencies updated
-
-## **Best Practices**
-
-- **Formatting**: Use bullet points for clarity and consistent structure
-- **Language**: Keep descriptions concise and actionable
-- **Examples**: Include both positive and negative examples
-- **References**: Link to actual code over theoretical examples
-- **Consistency**: Follow the same formatting patterns across all rules
-- **Maintenance**: Regular reviews and updates to keep rules current 
+- **Best Practices:**
+  - Use bullet points for clarity
+  - Keep descriptions concise
+  - Include both DO and DON'T examples
+  - Reference actual code over theoretical examples
+  - Use consistent formatting across rules 

@@ -1,0 +1,41 @@
+# Task ID: 34
+# Title: Implement Delete Post Flow
+# Status: pending
+# Dependencies: 3, 8, 9
+# Priority: medium
+# Description: Implement the ability for users to delete their own voice posts. This includes adding a delete button to the voice post UI and implementing the backend logic to remove the post from storage and the database.
+# Details:
+1.  **Frontend Implementation:**
+    *   Add a "Delete" button/icon to the voice post UI, visible only to the post's author.
+    *   Implement a confirmation dialog to prevent accidental deletions.
+    *   Upon confirmation, trigger an API call to the backend to delete the post.
+    *   Upon successful deletion, remove the post from the UI.
+2.  **Backend Implementation:**
+    *   Create a new API endpoint for deleting voice posts (e.g., `/api/posts/:postId`).
+    *   Implement authentication and authorization to ensure only the post's author can delete it.
+    *   Retrieve the post from the database using the `postId`.
+    *   Remove the audio file from Supabase storage.
+    *   Delete the post record from the database.
+    *   Return a success/error response to the frontend.
+3.  **Error Handling:**
+    *   Handle cases where the post does not exist or the user is not authorized to delete it.
+    *   Display appropriate error messages to the user.
+4.  **Security Considerations:**
+    *   Ensure proper authorization checks to prevent unauthorized deletion of posts.
+    *   Implement logging for deletion events for auditing purposes.
+
+# Test Strategy:
+1.  **Successful Deletion:**
+    *   Log in as a user and create a voice post.
+    *   Verify that the "Delete" button is visible on the post.
+    *   Click the "Delete" button and confirm the deletion.
+    *   Verify that the post is removed from the UI and no longer accessible.
+2.  **Unauthorized Deletion:**
+    *   Log in as a different user.
+    *   Attempt to delete the voice post created by the first user (e.g., by manually calling the API endpoint with the post ID).
+    *   Verify that the backend returns an error indicating that the user is not authorized to delete the post.
+3.  **Non-Existent Post:**
+    *   Attempt to delete a post with an invalid `postId`.
+    *   Verify that the backend returns an error indicating that the post does not exist.
+4.  **Database and Storage Verification:**
+    *   After deleting a post, verify that the corresponding record is removed from the database and the audio file is removed from Supabase storage.

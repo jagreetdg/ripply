@@ -1,0 +1,11 @@
+# Task ID: 10
+# Title: Implement Home and Explore Feeds
+# Status: pending
+# Dependencies: 4, 9
+# Priority: medium
+# Description: Implement the Home Feed (from followed users) and Explore Feed (random + trending mix).
+# Details:
+Query the Supabase database to retrieve voice posts for the Home Feed (from followed users) and Explore Feed (random + trending mix). Implement pagination for both feeds. Display voice posts with waveform UI and user information.
+
+# Test Strategy:
+Verify that the Home Feed displays voice posts from followed users. Check that the Explore Feed displays a mix of random and trending voice posts. Test pagination and waveform UI.

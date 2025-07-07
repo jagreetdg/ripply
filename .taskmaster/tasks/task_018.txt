@@ -1,0 +1,11 @@
+# Task ID: 18
+# Title: Build Onboarding Flow
+# Status: pending
+# Dependencies: None
+# Priority: medium
+# Description: Build the onboarding flow to guide new users through the app and encourage them to create their first voice post.
+# Details:
+Create a series of screens or modals to introduce the app's features and functionality. Request microphone permission from the user. Provide instructions on how to record and share a voice post. Offer incentives or rewards for completing the onboarding flow.
+
+# Test Strategy:
+Verify the onboarding flow is smooth and intuitive. Ensure microphone permission is requested correctly. Track user completion rates and identify areas for improvement.

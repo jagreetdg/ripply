@@ -1,0 +1,11 @@
+# Task ID: 2
+# Title: Initialize Express.js Backend
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Set up the Express.js backend API with necessary middleware and configurations.
+# Details:
+Use `express-generator` or similar to create a basic Express.js project. Configure middleware for CORS, JSON parsing, and request logging. Define basic API routes.
+
+# Test Strategy:
+Verify the Express.js server starts without errors. Test basic API endpoints using tools like Postman or curl.

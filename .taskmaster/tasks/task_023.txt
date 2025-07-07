@@ -1,0 +1,11 @@
+# Task ID: 23
+# Title: Implement Like Feature
+# Status: pending
+# Dependencies: 20
+# Priority: medium
+# Description: Implement the Like feature to allow users to like voice posts.
+# Details:
+Create a `likes` table in the database to store the relationships between users and voice posts. Implement an API endpoint to like and unlike a voice post. Update the like count on the voice post in the database. Display the like count on the voice post in the UI.
+
+# Test Strategy:
+Verify users can like and unlike voice posts. Ensure the like count is updated correctly in the database and UI. Test the like feature with different users and voice posts.

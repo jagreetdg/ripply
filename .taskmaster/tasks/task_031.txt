@@ -1,0 +1,34 @@
+# Task ID: 31
+# Title: Validate Audio Type and Duration
+# Status: pending
+# Dependencies: 3, 9
+# Priority: high
+# Description: Implement validation for audio uploads, ensuring they meet the specified type and duration constraints. This includes enforcing a 60-second limit for posts and a 20-second limit for comments.
+# Details:
+1.  **Audio Type Validation:**
+    *   Implement server-side validation to ensure that uploaded files are of an accepted audio format (e.g., mp3, wav, ogg). Reject uploads with invalid file types.
+    *   Use a library like `file-type` to accurately determine the MIME type of the uploaded file.
+2.  **Duration Validation:**
+    *   Implement server-side validation to check the duration of the audio file.
+    *   Use a library like `fluent-ffmpeg` or `node-audi длительность` to extract the duration of the audio file.
+    *   Enforce a 60-second duration limit for audio posts.
+    *   Enforce a 20-second duration limit for audio comments.
+    *   Return an appropriate error message to the client if the audio duration exceeds the limit.
+3.  **Frontend Integration:**
+    *   Provide visual feedback to the user during the recording process, indicating the remaining recording time.
+    *   Disable the recording button once the maximum duration is reached.
+    *   Display clear error messages to the user if the uploaded audio file is invalid or exceeds the duration limit.
+
+# Test Strategy:
+1.  **Invalid Audio Type:**
+    *   Attempt to upload files with invalid audio types (e.g., .txt, .jpg) and verify that the server rejects the upload with an appropriate error message.
+2.  **Valid Audio Type, Exceeds Duration (Post):**
+    *   Record an audio file longer than 60 seconds and attempt to upload it as a post. Verify that the server rejects the upload with an appropriate error message.
+3.  **Valid Audio Type, Exceeds Duration (Comment):**
+    *   Record an audio file longer than 20 seconds and attempt to upload it as a comment. Verify that the server rejects the upload with an appropriate error message.
+4.  **Valid Audio Type, Within Duration (Post):**
+    *   Record an audio file shorter than 60 seconds and upload it as a post. Verify that the upload is successful.
+5.  **Valid Audio Type, Within Duration (Comment):**
+    *   Record an audio file shorter than 20 seconds and upload it as a comment. Verify that the upload is successful.
+6.  **Boundary Cases:**
+    *   Test with audio files that are exactly 60 seconds and 20 seconds long to ensure that the validation works correctly at the boundaries.

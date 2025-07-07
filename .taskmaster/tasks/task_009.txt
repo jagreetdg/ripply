@@ -1,0 +1,11 @@
+# Task ID: 9
+# Title: Implement Voice Post Recorder
+# Status: pending
+# Dependencies: 3, 8
+# Priority: high
+# Description: Implement voice post recording functionality with a limit of 60 seconds.
+# Details:
+Use the browser's MediaRecorder API to record audio from the user's microphone. Implement a timer to limit the recording duration to 60 seconds. Validate audio type and duration. Upload to Supabase storage via private bucket using signed URLs.
+
+# Test Strategy:
+Test voice post recording on different browsers and devices. Verify that the recording duration is limited to 60 seconds. Check audio type validation and successful upload to Supabase storage.

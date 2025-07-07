@@ -1,0 +1,33 @@
+# Task ID: 49
+# Title: Implement Story Expiration Logic
+# Status: pending
+# Dependencies: 47, 48
+# Priority: medium
+# Description: Implement logic to automatically delete voice stories after 24 hours from the time of creation. This involves setting up a scheduled task to identify and remove expired stories from the database and storage.
+# Details:
+1.  **Implement a background task scheduler:**
+    *   Use a library like `node-cron` or `agenda` to schedule a daily task that runs at a specific time (e.g., midnight).
+2.  **Query the database for expired stories:**
+    *   Write a database query to select all stories that were created more than 24 hours ago.
+    *   Ensure the query is optimized for performance to avoid slowing down the database.
+3.  **Delete expired stories from storage:**
+    *   For each expired story, delete the corresponding audio file from Supabase storage using the storage helpers.
+    *   Handle potential errors during file deletion, such as network issues or file not found.
+4.  **Delete expired stories from the database:**
+    *   After successfully deleting the audio file, delete the story record from the database.
+    *   Use a transaction to ensure that the file deletion and database record deletion are atomic operations.
+5.  **Logging and monitoring:**
+    *   Add logging to track the number of stories deleted each day and any errors that occur during the process.
+    *   Monitor the task scheduler to ensure it is running correctly and not encountering any issues.
+
+# Test Strategy:
+1.  **Manual Verification:**
+    *   Create a test story and set its creation timestamp to be older than 24 hours.
+    *   Run the scheduled task manually and verify that the story is deleted from both the database and storage.
+2.  **Automated Testing:**
+    *   Write an automated test case that creates a test story, waits for 24 hours, and then verifies that the story is deleted.
+    *   Use a mock clock to speed up the testing process.
+3.  **Error Handling:**
+    *   Simulate errors during file deletion (e.g., by temporarily disabling storage access) and verify that the task scheduler handles the errors gracefully and logs them appropriately.
+4.  **Performance Testing:**
+    *   Test the performance of the task scheduler with a large number of stories to ensure it does not impact the overall performance of the application.

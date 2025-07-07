@@ -1,0 +1,47 @@
+# Task ID: 40
+# Title: Implement Report/Flag Content Moderation System
+# Status: pending
+# Dependencies: 4, 36, 35, 37
+# Priority: medium
+# Description: Implement a content moderation system that allows users to report voice posts and text comments for review. This system will enable administrators to review flagged content and take appropriate actions.
+# Details:
+1.  **Database Schema Extension:**
+    *   Add a `reports` table to the Supabase schema. This table should include fields such as `report_id` (primary key), `report_type` (enum: 'voice_post', 'text_comment'), `reported_id` (foreign key referencing the ID of the reported item), `reporter_id` (foreign key referencing the user who reported the item), `reason` (text field for the reporting reason), `status` (enum: 'pending', 'reviewed', 'resolved'), and `created_at` (timestamp).
+2.  **Reporting API Endpoints:**
+    *   Create API endpoints for reporting voice posts (`/api/report/voice_post`) and text comments (`/api/report/comment`).
+    *   These endpoints should accept the `reported_id` and `reason` as input, and store the report in the `reports` table.
+    *   Implement rate limiting to prevent abuse.
+3.  **Admin Interface:**
+    *   Create an admin interface (or extend an existing one) to display a list of pending reports.
+    *   The interface should allow administrators to view the reported content, the reporting reason, and the reporter.
+    *   Implement actions for administrators to take, such as:
+        *   "Approve Report": Removes the reported content (voice post or text comment) and marks the report as resolved.
+        *   "Reject Report": Marks the report as resolved without taking any action on the reported content.
+        *   "Take Action": Allows administrators to take other actions, such as suspending the user who created the reported content.
+4.  **Frontend Integration:**
+    *   Add a "Report" button/icon to voice posts and text comments.
+    *   When the button is clicked, display a modal or popover asking the user to select a reason for reporting.
+    *   Send the report to the appropriate API endpoint.
+    *   Display a confirmation message to the user after the report is submitted.
+5.  **Notification System (Optional):**
+    *   Implement a notification system to notify administrators when a new report is submitted.
+
+# Test Strategy:
+1.  **Report Submission Test:**
+    *   Log in as a user and navigate to a voice post or text comment.
+    *   Click the "Report" button and select a reason for reporting.
+    *   Verify that the report is submitted successfully and a confirmation message is displayed.
+    *   Verify that the report is stored in the `reports` table in Supabase.
+2.  **Admin Interface Test:**
+    *   Log in as an administrator and navigate to the admin interface.
+    *   Verify that the list of pending reports is displayed correctly.
+    *   Click on a report to view the reported content, the reporting reason, and the reporter.
+    *   Test the "Approve Report" action: Verify that the reported content is removed and the report is marked as resolved.
+    *   Test the "Reject Report" action: Verify that the report is marked as resolved without taking any action on the reported content.
+3.  **Rate Limiting Test:**
+    *   Submit multiple reports in a short period of time.
+    *   Verify that the rate limiting mechanism prevents abuse.
+4.  **Edge Cases:**
+    *   Test reporting content that has already been reported.
+    *   Test reporting content with different reporting reasons.
+    *   Test reporting content as different users.

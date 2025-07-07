@@ -1,0 +1,38 @@
+# Task ID: 62
+# Title: Build Voice Post Preview Screen
+# Status: pending
+# Dependencies: 9, 32
+# Priority: medium
+# Description: Create a voice post preview screen where users can listen to their recording, see the waveform visualization, and confirm or re-record before publishing. This screen allows users to review their voice post before making it public.
+# Details:
+1.  **Create UI Component:**
+    *   Develop a new React component for the voice post preview screen.
+    *   Include an audio player to play the recorded voice post.
+    *   Integrate the waveform visualization component (from Task 32) to display the audio waveform.
+    *   Add buttons for 'Confirm' and 'Re-record'.
+2.  **Audio Playback:**
+    *   Load the recorded audio data into the audio player.
+    *   Implement play/pause functionality.
+    *   Synchronize the waveform visualization with the audio playback.
+3.  **'Confirm' Action:**
+    *   Upon confirmation, navigate the user to the voice post publishing flow (Task 47).
+    *   Pass the audio data to the publishing flow.
+4.  **'Re-record' Action:**
+    *   Upon re-record, navigate the user back to the voice post recorder (Task 9).
+    *   Clear the existing audio data.
+5.  **Styling and Responsiveness:**
+    *   Ensure the preview screen is visually appealing and responsive across different devices.
+
+# Test Strategy:
+1.  **Audio Playback Test:**
+    *   Record a voice post and navigate to the preview screen.
+    *   Verify that the audio plays correctly in the preview screen.
+    *   Check that the waveform visualization is displayed and synchronized with the audio playback.
+2.  **'Confirm' Action Test:**
+    *   Confirm the voice post and verify that the user is navigated to the publishing flow.
+    *   Ensure that the audio data is passed correctly to the publishing flow.
+3.  **'Re-record' Action Test:**
+    *   Click the 'Re-record' button and verify that the user is navigated back to the voice post recorder.
+    *   Check that the existing audio data is cleared.
+4.  **UI Responsiveness Test:**
+    *   Test the preview screen on different devices and screen sizes to ensure it is responsive and visually appealing.

@@ -1,0 +1,11 @@
+# Task ID: 7
+# Title: Design Landing Page
+# Status: pending
+# Dependencies: 1
+# Priority: medium
+# Description: Design and deploy a responsive landing page with a call to action (sign up, preview feed).
+# Details:
+Create a visually appealing landing page using Next.js components and styling libraries like Tailwind CSS or Material UI. Include a clear call to action to encourage users to sign up or preview the feed.
+
+# Test Strategy:
+Verify the landing page is responsive on different screen sizes. Check that the call to action is prominent and leads to the signup/preview flow.

@@ -1,0 +1,44 @@
+# Task ID: 63
+# Title: Implement Language Detection and Auto-Tagging for Voice Posts
+# Status: pending
+# Dependencies: 9, 62, 52
+# Priority: medium
+# Description: Implement language detection and auto-tagging for voice posts after user confirms recording (post-preview step). This feature will automatically detect the language of the voice post and add relevant tags to improve discoverability and content organization.
+# Details:
+1. **Integrate Language Detection API:**
+    * Choose a suitable language detection API (e.g., Google Cloud Translation API, Azure Text Analytics API, or a lightweight library like `franc`).
+    * Implement the API integration in the backend to analyze the recorded voice post's audio (after confirmation in the preview screen).
+    * Ensure the API key is securely stored using environment variables (Task 24).
+2. **Audio Transcription (if necessary):**
+    * If the language detection API requires text input, implement audio transcription using a service like Google Cloud Speech-to-Text or AssemblyAI.
+    * Handle potential transcription errors gracefully.
+3. **Tag Generation:**
+    * Based on the detected language, generate relevant tags for the voice post.
+    * Use a predefined list of tags or a more sophisticated tag generation algorithm (e.g., using NLP techniques to extract keywords from the transcribed text).
+    * Consider incorporating user-defined tags as well.
+4. **Frontend Integration:**
+    * Display the detected language and auto-generated tags on the post-preview screen (Task 62).
+    * Allow users to review and edit the tags before publishing the voice post.
+    * Implement a UI component for managing tags (adding, removing, editing).
+5. **Backend Storage:**
+    * Store the detected language and tags in the database along with the voice post metadata.
+    * Ensure the database schema is updated to accommodate the new fields.
+6. **i18n Considerations:**
+    * Ensure the tag generation process is compatible with the i18n implementation (Task 52).
+    * Provide translations for the tags in different languages.
+
+# Test Strategy:
+1. **Language Detection Accuracy:**
+    * Record voice posts in different languages (English, Japanese, etc.) and verify that the language detection API correctly identifies the language.
+    * Test with different accents and speaking styles.
+2. **Tag Relevance:**
+    * Verify that the auto-generated tags are relevant to the content of the voice post.
+    * Check for any inappropriate or irrelevant tags.
+3. **Tag Editing:**
+    * Ensure that users can successfully edit the auto-generated tags on the post-preview screen.
+    * Verify that the changes are saved correctly in the database.
+4. **Database Storage:**
+    * Check that the detected language and tags are stored correctly in the database.
+5. **Error Handling:**
+    * Test the error handling for the language detection API (e.g., API unavailable, invalid API key).
+    * Ensure that the application handles these errors gracefully and provides informative error messages to the user.

@@ -1,0 +1,40 @@
+# Task ID: 39
+# Title: Implement Voice Post Share Feature
+# Status: pending
+# Dependencies: 9, 23
+# Priority: medium
+# Description: Implement the share feature for voice posts, allowing users to generate and share external links to specific voice posts. This includes generating a shareable link and providing options to share via various social media platforms.
+# Details:
+1.  **Generate Shareable Link:**
+    *   Create an API endpoint that generates a unique, short URL for a given voice post ID.
+    *   Use a URL shortening service (e.g., Bitly, TinyURL, or a custom solution) to create short, manageable links.
+    *   Store the mapping between the voice post ID and the shortened URL in the database.
+2.  **Implement Share UI:**
+    *   Add a "Share" button/icon to the voice post UI.
+    *   When the button is clicked, display a modal or popover with the following options:
+        *   Copy the shareable link to the clipboard.
+        *   Share directly to social media platforms (e.g., Twitter, Facebook, etc.) using their respective APIs or web sharing flows.
+3.  **Social Media Integration:**
+    *   Use social media sharing APIs or web sharing flows to pre-populate the share message with the voice post title and link.
+    *   Ensure the shared link directs users to the specific voice post within the application.
+4.  **Link Preview Generation:**
+    *   Implement metadata tags (Open Graph, Twitter Cards) on the voice post page to generate rich previews when the link is shared on social media.
+    *   Include the voice post title, author, and a relevant image in the metadata.
+
+# Test Strategy:
+1.  **Link Generation and Redirection:**
+    *   Create a voice post and generate a shareable link.
+    *   Verify that the generated link is a valid URL.
+    *   Open the generated link in a new browser tab or window.
+    *   Ensure that the link redirects to the correct voice post within the application.
+2.  **Social Media Sharing:**
+    *   Share a voice post to different social media platforms (e.g., Twitter, Facebook).
+    *   Verify that the shared post includes the correct title, link, and image preview.
+    *   Click on the shared link and ensure it redirects to the correct voice post.
+3.  **Clipboard Copy:**
+    *   Click the "Copy to Clipboard" button.
+    *   Paste the contents of the clipboard into a text editor or other application.
+    *   Verify that the correct shareable link is copied to the clipboard.
+4.  **Performance:**
+    *   Test the link generation API endpoint with a large number of requests.
+    *   Ensure that the API responds quickly and efficiently.

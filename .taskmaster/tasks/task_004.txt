@@ -1,0 +1,11 @@
+# Task ID: 4
+# Title: Setup Supabase Schema
+# Status: pending
+# Dependencies: 3
+# Priority: high
+# Description: Define the Supabase schema for users, voice notes, comments, and notifications.
+# Details:
+Create tables in Supabase with appropriate columns and data types. Define relationships between tables using foreign keys. Consider using Supabase's GUI or CLI for schema management.
+
+# Test Strategy:
+Verify the schema is created correctly in Supabase. Test basic CRUD operations on each table.

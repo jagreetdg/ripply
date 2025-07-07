@@ -1,0 +1,11 @@
+# Task ID: 22
+# Title: Implement Explore Feed
+# Status: pending
+# Dependencies: 20
+# Priority: medium
+# Description: Implement the Explore Feed to display a mix of random and trending voice posts for discovery.
+# Details:
+Query the database to retrieve a mix of random and trending voice posts. Implement a trending algorithm based on likes, comments, and shares. Display the posts in a list or grid format with the author's name, timestamp, and audio player.
+
+# Test Strategy:
+Verify the Explore Feed displays a mix of random and trending voice posts. Ensure the trending algorithm is working correctly. Test the pagination and loading of more posts.

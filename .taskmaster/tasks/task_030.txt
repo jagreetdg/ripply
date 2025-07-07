@@ -1,0 +1,47 @@
+# Task ID: 30
+# Title: Implement Profile Picture and Cover Photo Upload
+# Status: pending
+# Dependencies: 25
+# Priority: medium
+# Description: Implement profile picture and cover photo upload functionality, allowing users to customize their profiles with images. This includes both frontend UI elements and backend storage and retrieval mechanisms.
+# Details:
+1.  **Frontend Implementation:**
+    *   Add UI elements for uploading profile pictures and cover photos on the user profile page.
+    *   Implement image preview functionality before uploading.
+    *   Use a library like `react-dropzone` or similar for drag-and-drop upload functionality.
+    *   Implement client-side image resizing and cropping to optimize image sizes before upload.
+    *   Display appropriate error messages for invalid file types or sizes.
+2.  **Backend Implementation:**
+    *   Create API endpoints for uploading profile pictures and cover photos.
+    *   Use Supabase storage to store the uploaded images in dedicated buckets (profile_pictures, cover_photos).
+    *   Generate signed URLs for accessing the images.
+    *   Store the image URLs in the `users` table in the database.
+    *   Implement logic to handle different image sizes and formats.
+    *   Consider using a background job queue (e.g., BullMQ) for image processing tasks.
+3.  **Database Updates:**
+    *   Modify the `users` table to include columns for `profile_picture_url` and `cover_photo_url`.
+4.  **Security Considerations:**
+    *   Implement proper authentication and authorization to ensure only the user can update their own profile pictures and cover photos.
+    *   Validate file types and sizes on the backend to prevent malicious uploads.
+    *   Sanitize image URLs before storing them in the database to prevent XSS attacks.
+
+# Test Strategy:
+1.  **Profile Picture Upload:**
+    *   Verify that users can upload profile pictures successfully.
+    *   Ensure the uploaded image is displayed correctly on the user's profile.
+    *   Test different image formats (e.g., JPEG, PNG, GIF) and sizes.
+    *   Verify that the image is stored in the correct Supabase bucket.
+    *   Ensure the image URL is stored correctly in the `users` table.
+2.  **Cover Photo Upload:**
+    *   Verify that users can upload cover photos successfully.
+    *   Ensure the uploaded image is displayed correctly on the user's profile.
+    *   Test different image formats (e.g., JPEG, PNG, GIF) and sizes.
+    *   Verify that the image is stored in the correct Supabase bucket.
+    *   Ensure the image URL is stored correctly in the `users` table.
+3.  **Image Resizing and Cropping:**
+    *   Verify that client-side image resizing and cropping are working correctly.
+    *   Ensure that the uploaded images are optimized for different screen sizes.
+4.  **Security Tests:**
+    *   Attempt to upload invalid file types (e.g., executable files) and verify that the backend rejects them.
+    *   Attempt to upload large files and verify that the backend handles them gracefully.
+    *   Test the authentication and authorization mechanisms to ensure only the user can update their own profile pictures and cover photos.

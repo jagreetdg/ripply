@@ -1,0 +1,38 @@
+# Task ID: 45
+# Title: Add Voice Bio Upload Functionality (Max 30s)
+# Status: pending
+# Dependencies: 25
+# Priority: medium
+# Description: Implement voice bio upload functionality, limiting recordings to a maximum of 30 seconds. This includes UI elements for recording, stopping, and uploading the audio, as well as backend logic to handle the file upload and storage.
+# Details:
+1.  **Frontend Implementation:**
+    *   Add a "Record Voice Bio" button to the user profile settings page.
+    *   Implement a recording interface using the browser's MediaRecorder API.
+    *   Display a timer during recording, limiting the maximum recording time to 30 seconds.
+    *   Provide controls to start, stop, and play back the recording.
+    *   Implement functionality to upload the recorded audio file to Supabase storage using the storage helpers.
+2.  **Backend Implementation:**
+    *   Utilize the storage helpers created in Task 25 to handle the file upload to the voice notes bucket.
+    *   Generate a signed URL for the uploaded voice bio.
+    *   Store the signed URL in the user's profile in the database.
+    *   Ensure proper error handling for file uploads and storage.
+3.  **UI Considerations:**
+    *   Provide visual feedback during recording (e.g., a waveform display).
+    *   Display a progress indicator during file upload.
+    *   Handle potential errors gracefully and provide informative error messages to the user.
+
+# Test Strategy:
+1.  **Recording Test:**
+    *   Verify that the recording interface functions correctly.
+    *   Ensure that the recording stops automatically after 30 seconds.
+    *   Test the playback functionality to ensure the recording can be played back.
+2.  **Upload Test:**
+    *   Upload a voice bio recording.
+    *   Verify that the file is uploaded to the correct Supabase storage bucket.
+    *   Ensure that a signed URL is generated for the uploaded file.
+    *   Check that the signed URL is stored in the user's profile in the database.
+3.  **Error Handling Test:**
+    *   Simulate upload errors (e.g., network disconnection) and verify that appropriate error messages are displayed to the user.
+4.  **Security Test:**
+ * Verify that the signed URL is only valid for a limited time.
+ * Ensure that only authenticated users can access the voice bio upload functionality.

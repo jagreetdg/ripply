@@ -1,0 +1,11 @@
+# Task ID: 20
+# Title: Upload Voice Posts to Supabase Storage
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Upload voice posts to Supabase storage via a private bucket and generate signed URLs for secure access.
+# Details:
+Create a private bucket in Supabase storage to store voice posts. Upload the recorded audio file to the bucket using the Supabase client library. Generate a signed URL for the uploaded file with a limited expiration time. Store the signed URL in the database for playback.
+
+# Test Strategy:
+Verify voice posts are uploaded to the private bucket in Supabase storage. Ensure signed URLs are generated correctly and can be used to access the audio files. Test the expiration of signed URLs and ensure they become invalid after the specified time.

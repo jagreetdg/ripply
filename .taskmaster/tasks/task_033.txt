@@ -1,0 +1,44 @@
+# Task ID: 33
+# Title: Implement Global Playback Manager
+# Status: pending
+# Dependencies: 9, 32
+# Priority: high
+# Description: Implement a global playback manager to ensure only one audio source plays at a time and pauses playback when the user scrolls away from a voice post. This will improve the user experience by preventing audio overlap and ensuring content is only played when in view.
+# Details:
+1.  **Create a Playback Manager Service:**
+    *   Implement a singleton service or context that manages the currently playing audio source.
+    *   This service should hold the reference to the active audio player instance (e.g., Howler.js, native Audio element).
+    *   Provide methods to play, pause, and stop audio, as well as set the current audio source.
+2.  **Implement Pause on Scroll:**
+    *   Use an Intersection Observer to detect when a voice post is no longer in the viewport.
+    *   When a voice post scrolls out of view, pause the audio playback if it's the currently active source.
+    *   Consider a threshold to avoid frequent pausing/resuming when the post is partially visible.
+3.  **Ensure Single Audio Source:**
+    *   Before playing a new audio source, check if another audio source is currently playing.
+    *   If another source is playing, pause or stop it before starting the new source.
+    *   Update the playback manager's active audio source to the newly playing source.
+4.  **Integrate with Voice Post Components:**
+    *   Modify the voice post components to use the playback manager service for audio playback.
+    *   When a user clicks play on a voice post, call the playback manager's play method with the audio source.
+    *   Implement the Intersection Observer logic within the voice post component or a parent container.
+5.  **Handle Edge Cases:**
+    *   Consider scenarios where the user switches to a different tab or minimizes the browser window.
+    *   Implement logic to pause audio playback in these cases as well (e.g., using the `visibilitychange` event).
+
+
+# Test Strategy:
+1.  **Single Audio Source Test:**
+    *   Play one voice post and then play another. Verify that the first voice post pauses automatically.
+    *   Test with multiple voice posts to ensure only one plays at a time.
+2.  **Pause on Scroll Test:**
+    *   Play a voice post and then scroll it out of view. Verify that the audio pauses automatically.
+    *   Scroll the voice post back into view and verify that the audio remains paused.
+3.  **Tab Switching Test:**
+    *   Play a voice post and then switch to a different browser tab. Verify that the audio pauses automatically.
+    *   Switch back to the original tab and verify that the audio remains paused.
+4.  **Minimization Test:**
+    *   Play a voice post and then minimize the browser window. Verify that the audio pauses automatically.
+    *   Restore the browser window and verify that the audio remains paused.
+5.  **Concurrency Test:**
+ * Open multiple browser windows or tabs, each playing a voice post. Ensure that only one voice post plays audio at any given time across all windows/tabs.
+

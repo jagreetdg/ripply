@@ -32,15 +32,12 @@ Internal Taskmaster operations and templates.
 | **[example_prd.txt](.taskmaster/templates/example_prd.txt)** | Generic PRD template | For any project, basic structure |
 | **[ripply_prd_template.txt](.taskmaster/templates/ripply_prd_template.txt)** | Ripply-specific PRD template | For Ripply features, includes architecture context |
 
-### 📁 `.roo/rules/` - Development Workflow & Code Standards
-Roo-specific development patterns and tool configurations.
+### 📁 `.devdocs/` - Development Patterns & Code Standards
+Consolidated development patterns and coding standards.
 
 | Document | Purpose | When to Reference |
 |----------|---------|-------------------|
-| **[dev_workflow.md](.roo/rules/dev_workflow.md)** | Development workflow patterns | When setting up development processes |
-| **[next-supabase-auth.md](.roo/rules/next-supabase-auth.md)** | Supabase authentication patterns | When working on auth features |
-| **[react-native.md](.roo/rules/react-native.md)** | React Native development standards | For all frontend development |
-| **[taskmaster.md](.roo/rules/taskmaster.md)** | Taskmaster integration with Roo | For understanding tool integration |
+| **[SUPABASE_AUTH_PATTERNS.md](SUPABASE_AUTH_PATTERNS.md)** | Supabase authentication patterns | When working on auth features |
 
 ---
 
@@ -54,7 +51,7 @@ Roo-specific development patterns and tool configurations.
 
 ### 🔄 **During Task Development**
 1. **Reference Architecture**: Link to specific [ARCHITECTURE.md](.devdocs/ARCHITECTURE.md) sections
-2. **Follow Code Standards**: Use [.roo/rules/](#roorules---development-workflow--code-standards) for implementation
+2. **Follow Code Standards**: Use established patterns for implementation
 3. **Security Check**: Verify against security patterns in architecture
 4. **Integration Verify**: Ensure compatibility with existing patterns
 
@@ -180,13 +177,13 @@ Before completing any major work:
 ### 🔍 **Finding Information**
 1. **Architecture Questions**: [ARCHITECTURE.md](.devdocs/ARCHITECTURE.md)
 2. **Task Creation**: [TASKMASTER_RULES.md](.devdocs/TASKMASTER_RULES.md)
-3. **Implementation Standards**: [.roo/rules/](#roorules---development-workflow--code-standards)
+3. **Implementation Standards**: Use established patterns in codebase
 4. **Operational Guidance**: [SYSTEM_RULES.md](.taskmaster/docs/SYSTEM_RULES.md)
 
 ### 🐛 **Common Issues**
 - **Task doesn't follow patterns**: Check [TASKMASTER_RULES.md](.devdocs/TASKMASTER_RULES.md)
 - **Architecture conflicts**: Reference [ARCHITECTURE.md](.devdocs/ARCHITECTURE.md)
-- **Implementation confusion**: Check [.roo/rules/](#roorules---development-workflow--code-standards)
+- **Implementation confusion**: Check established patterns in codebase
 - **Template issues**: Use correct template from [.taskmaster/templates/](#taskmastertemplates)
 
 ---

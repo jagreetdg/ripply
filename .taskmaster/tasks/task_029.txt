@@ -1,0 +1,19 @@
+# Task ID: 29
+# Title: Enhance Onboarding: Mic Permission and First Post
+# Status: pending
+# Dependencies: 3, 8, 18
+# Priority: medium
+# Description: Enhance the onboarding flow to specifically request microphone permissions and encourage users to create their first voice post. This task builds upon the existing onboarding flow by adding specific prompts and guidance related to voice recording.
+# Details:
+1. **Modify Onboarding Screens:** Update the existing onboarding screens (from Task 18) to include a dedicated step for microphone permission. Clearly explain why the app needs microphone access and how it will be used.
+2. **Implement Microphone Permission Request:** Use the appropriate platform-specific APIs (e.g., `navigator.mediaDevices.getUserMedia` for web, native APIs for iOS/Android) to request microphone permission from the user. Handle cases where the user grants, denies, or has previously denied permission.
+3. **First Voice Post Encouragement:** Add a screen or modal after microphone permission is granted that encourages the user to create their first voice post. Provide clear instructions on how to record, preview, and share a voice post.
+4. **Incentivize First Post:** Consider offering a small incentive (e.g., virtual badge, points) for creating the first voice post to further encourage user engagement.
+5. **Analytics Tracking:** Implement analytics tracking to monitor user progress through the onboarding flow, including microphone permission acceptance rates and first voice post creation rates. Use this data to identify areas for improvement.
+
+# Test Strategy:
+1. **Verify Microphone Permission Request:** Ensure that the microphone permission request is displayed at the appropriate time during the onboarding flow.
+2. **Test Permission Grant/Denial:** Test both granting and denying microphone permission. Verify that the app handles both cases gracefully and provides appropriate feedback to the user.
+3. **Verify First Post Encouragement:** Ensure that the first voice post encouragement screen is displayed after microphone permission is granted.
+4. **Test Incentive Implementation:** If an incentive is offered, verify that it is correctly awarded to the user after creating their first voice post.
+5. **Verify Analytics Tracking:** Ensure that analytics events are correctly tracked for each step of the onboarding flow, including microphone permission requests and first voice post creation.

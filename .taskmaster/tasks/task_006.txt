@@ -1,0 +1,11 @@
+# Task ID: 6
+# Title: Setup Rate Limiter
+# Status: pending
+# Dependencies: 2
+# Priority: medium
+# Description: Implement rate limiting on all backend endpoints to prevent abuse and protect against denial-of-service attacks.
+# Details:
+Use a rate limiting middleware like `express-rate-limit` to limit the number of requests from a single IP address within a given time window. Configure different rate limits for different endpoints based on their sensitivity.
+
+# Test Strategy:
+Test rate limiting by sending multiple requests to the same endpoint within a short period. Verify that requests are blocked after exceeding the rate limit.

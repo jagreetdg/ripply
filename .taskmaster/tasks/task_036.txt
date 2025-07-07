@@ -1,0 +1,41 @@
+# Task ID: 36
+# Title: Implement Text Comment Feature
+# Status: pending
+# Dependencies: 4, 23
+# Priority: medium
+# Description: Enable users to add text-based comments to voice posts, allowing for detailed feedback and discussions. This feature will complement the voice comment feature and provide an alternative communication method.
+# Details:
+1.  **Frontend Implementation:**
+    *   Add a text input field below each voice post, along with a "Post Comment" button.
+    *   Implement client-side validation to ensure the comment is not empty and within a reasonable length limit (e.g., 500 characters).
+    *   Upon submission, send the comment text and the associated voice post ID to the backend API.
+    *   Display the new comment in the comment section below the voice post.
+2.  **Backend Implementation:**
+    *   Create a `comments` table in the database with columns for comment text, user ID, voice post ID, and timestamp.
+    *   Implement an API endpoint to create new comments (e.g., `/api/comments`).
+    *   Implement authentication and authorization to ensure only logged-in users can post comments.
+    *   Store the comment text, user ID, voice post ID, and timestamp in the `comments` table.
+    *   Implement API endpoints to retrieve comments for a specific voice post.
+3.  **Database Considerations:**
+    *   Ensure proper indexing on the `comments` table for efficient retrieval of comments for a given voice post.
+    *   Consider implementing pagination for comments if a voice post is expected to have a large number of comments.
+4.  **Security Considerations:**
+    *   Sanitize user input to prevent XSS attacks.
+    *   Implement rate limiting to prevent comment spamming.
+
+# Test Strategy:
+1.  **Successful Comment Submission:**
+    *   Log in as a user and navigate to a voice post.
+    *   Enter a text comment in the input field and click the "Post Comment" button.
+    *   Verify that the comment is displayed below the voice post.
+    *   Verify that the comment is stored in the `comments` table in the database.
+2.  **Empty Comment Submission:**
+    *   Attempt to submit an empty comment and verify that an error message is displayed.
+3.  **Comment Length Limit:**
+    *   Attempt to submit a comment exceeding the length limit and verify that an error message is displayed.
+4.  **Unauthorized Comment Submission:**
+    *   Attempt to submit a comment without being logged in and verify that an error message is displayed.
+5.  **Comment Retrieval:**
+    *   Verify that all comments for a given voice post are retrieved and displayed correctly.
+6.  **XSS Prevention:**
+    *   Attempt to submit a comment containing malicious HTML or JavaScript code and verify that it is properly sanitized and does not execute in the browser.

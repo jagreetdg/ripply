@@ -1,0 +1,24 @@
+# Task ID: 25
+# Title: Setup Storage Helpers for Supabase Buckets with Signed URLs
+# Status: pending
+# Dependencies: 20
+# Priority: high
+# Description: Set up storage helpers for Supabase buckets (profile pictures, cover photos, voice notes) with signed URLs as per STORAGE_ARCHITECTURE.md. This task involves creating utility functions to manage file uploads and generate secure signed URLs for different storage buckets.
+# Details:
+1.  **Review STORAGE_ARCHITECTURE.md:** Understand the defined storage architecture for profile pictures, cover photos, and voice notes.
+2.  **Create Storage Helper Functions:** Implement helper functions for each bucket type (profile pictures, cover photos, voice notes) to handle file uploads and signed URL generation.
+3.  **Implement Signed URL Generation:** Use Supabase's storage API to generate signed URLs with appropriate expiration times for each file type. Consider different expiration times based on the use case.
+4.  **Secure Bucket Access:** Ensure that the buckets are private and only accessible via signed URLs.
+5.  **Error Handling:** Implement robust error handling for file uploads and signed URL generation.
+6.  **Configuration:** Store bucket names and other configuration parameters in environment variables.
+7.  **Integration with Backend:** Integrate the storage helper functions into the backend API endpoints for user profile updates, voice note uploads, etc.
+8.  **Consider using a dedicated service or library:** Explore using existing libraries or services that simplify signed URL generation and management with Supabase storage.
+
+# Test Strategy:
+1.  **Upload Files to Each Bucket:** Upload test files (images, audio) to each bucket (profile pictures, cover photos, voice notes) using the helper functions.
+2.  **Verify Signed URL Generation:** Ensure that signed URLs are generated correctly for each uploaded file.
+3.  **Access Files via Signed URLs:** Verify that the files can be accessed using the generated signed URLs.
+4.  **Test URL Expiration:** Confirm that the signed URLs expire after the specified time and become invalid.
+5.  **Test Unauthorized Access:** Ensure that direct access to the files in the buckets is denied without a valid signed URL.
+6.  **Test Error Handling:** Verify that appropriate error messages are returned for invalid file uploads or failed signed URL generation.
+7.  **Integration Tests:** Test the integration of the storage helper functions with the backend API endpoints.

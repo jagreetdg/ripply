@@ -1,0 +1,11 @@
+# Task ID: 3
+# Title: Connect to Supabase
+# Status: pending
+# Dependencies: 1, 2
+# Priority: high
+# Description: Connect the frontend and backend to Supabase for authentication, database, and storage.
+# Details:
+Install the Supabase client library in both frontend and backend. Configure Supabase credentials using environment variables. Initialize Supabase client in both applications.
+
+# Test Strategy:
+Verify successful connection to Supabase from both frontend and backend. Test basic database operations.

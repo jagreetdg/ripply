@@ -1,34 +1,651 @@
 {
-	"metadata": {
-		"projectName": "Ripply",
-		"version": "0.1.0",
-		"created": "2025-01-20",
-		"lastModified": "2025-01-20"
-	},
-	"tags": {
-		"master": {
-			"metadata": {
-				"name": "master",
-				"description": "Main development tasks",
-				"created": "2025-01-20",
-				"lastModified": "2025-01-20"
-			},
-			"tasks": [
-				{
-					"id": 1,
-					"title": "✅ Gemini API Test - SUCCESS!",
-					"description": "Test AI task creation with Google Gemini Pro Preview",
-					"status": "done",
-					"priority": "high",
-					"dependencies": [],
-					"details": "This task confirms that Google Gemini 2.5 Pro Preview is working correctly for AI-powered Taskmaster features. Research function returned: 'React Native is a JavaScript framework for writing real, natively rendering mobile applications for iOS and Android.' Total cost: $0.000064 USD.",
-					"testStrategy": "Verify AI responses and cost tracking are working.",
-					"subtasks": []
-				}
-			]
-		}
-	},
-	"global": {
-		"defaultTag": "master"
-	}
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Initialize Next.js Frontend",
+        "description": "Initialize the Next.js frontend project with necessary configurations.",
+        "details": "Use `create-next-app` to bootstrap the project. Configure basic styling, routing, and folder structure. Set up TypeScript and ESLint for code quality. Initialize Git repository.",
+        "testStrategy": "Verify the Next.js application starts without errors. Check basic routing and styling.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Initialize Express.js Backend",
+        "description": "Set up the Express.js backend API with necessary middleware and configurations.",
+        "details": "Use `express-generator` or similar to create a basic Express.js project. Configure middleware for CORS, JSON parsing, and request logging. Define basic API routes.",
+        "testStrategy": "Verify the Express.js server starts without errors. Test basic API endpoints using tools like Postman or curl.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Connect to Supabase",
+        "description": "Connect the frontend and backend to Supabase for authentication, database, and storage.",
+        "details": "Install the Supabase client library in both frontend and backend. Configure Supabase credentials using environment variables. Initialize Supabase client in both applications.",
+        "testStrategy": "Verify successful connection to Supabase from both frontend and backend. Test basic database operations.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Setup Supabase Schema",
+        "description": "Define the Supabase schema for users, voice notes, comments, and notifications.",
+        "details": "Create tables in Supabase with appropriate columns and data types. Define relationships between tables using foreign keys. Consider using Supabase's GUI or CLI for schema management.",
+        "testStrategy": "Verify the schema is created correctly in Supabase. Test basic CRUD operations on each table.",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Create RLS Policies",
+        "description": "Implement Row Level Security (RLS) policies for Supabase tables to ensure data privacy and security.",
+        "details": "Define RLS policies for each table to control access based on user roles and permissions. Ensure that users can only access their own data or data they are authorized to access.",
+        "testStrategy": "Test RLS policies by attempting to access data from different user accounts. Verify that unauthorized access is denied.",
+        "priority": "high",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Setup Rate Limiter",
+        "description": "Implement rate limiting on all backend endpoints to prevent abuse and protect against denial-of-service attacks.",
+        "details": "Use a rate limiting middleware like `express-rate-limit` to limit the number of requests from a single IP address within a given time window. Configure different rate limits for different endpoints based on their sensitivity.",
+        "testStrategy": "Test rate limiting by sending multiple requests to the same endpoint within a short period. Verify that requests are blocked after exceeding the rate limit.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Design Landing Page",
+        "description": "Design and deploy a responsive landing page with a call to action (sign up, preview feed).",
+        "details": "Create a visually appealing landing page using Next.js components and styling libraries like Tailwind CSS or Material UI. Include a clear call to action to encourage users to sign up or preview the feed.",
+        "testStrategy": "Verify the landing page is responsive on different screen sizes. Check that the call to action is prominent and leads to the signup/preview flow.",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement User Authentication",
+        "description": "Implement user signup and login functionality with email and social login options.",
+        "details": "Use Supabase Auth to handle user authentication. Implement email signup and login using Supabase's built-in methods. Integrate social login providers like Google and Facebook using Supabase's OAuth support. Add CAPTCHA to signup/login flow.",
+        "testStrategy": "Test signup and login with email and social login providers. Verify that user accounts are created and authenticated correctly. Check CAPTCHA integration.",
+        "priority": "high",
+        "dependencies": [
+          3,
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Implement Voice Post Recorder",
+        "description": "Implement voice post recording functionality with a limit of 60 seconds.",
+        "details": "Use the browser's MediaRecorder API to record audio from the user's microphone. Implement a timer to limit the recording duration to 60 seconds. Validate audio type and duration. Upload to Supabase storage via private bucket using signed URLs.",
+        "testStrategy": "Test voice post recording on different browsers and devices. Verify that the recording duration is limited to 60 seconds. Check audio type validation and successful upload to Supabase storage.",
+        "priority": "high",
+        "dependencies": [
+          3,
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Implement Home and Explore Feeds",
+        "description": "Implement the Home Feed (from followed users) and Explore Feed (random + trending mix).",
+        "details": "Query the Supabase database to retrieve voice posts for the Home Feed (from followed users) and Explore Feed (random + trending mix). Implement pagination for both feeds. Display voice posts with waveform UI and user information.",
+        "testStrategy": "Verify that the Home Feed displays voice posts from followed users. Check that the Explore Feed displays a mix of random and trending voice posts. Test pagination and waveform UI.",
+        "priority": "medium",
+        "dependencies": [
+          4,
+          9
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "Build Onboarding Flow",
+        "description": "Build the onboarding flow to guide new users through the app and encourage them to create their first voice post.",
+        "details": "Create a series of screens or modals to introduce the app's features and functionality. Request microphone permission from the user. Provide instructions on how to record and share a voice post. Offer incentives or rewards for completing the onboarding flow.",
+        "testStrategy": "Verify the onboarding flow is smooth and intuitive. Ensure microphone permission is requested correctly. Track user completion rates and identify areas for improvement.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "Upload Voice Posts to Supabase Storage",
+        "description": "Upload voice posts to Supabase storage via a private bucket and generate signed URLs for secure access.",
+        "details": "Create a private bucket in Supabase storage to store voice posts. Upload the recorded audio file to the bucket using the Supabase client library. Generate a signed URL for the uploaded file with a limited expiration time. Store the signed URL in the database for playback.",
+        "testStrategy": "Verify voice posts are uploaded to the private bucket in Supabase storage. Ensure signed URLs are generated correctly and can be used to access the audio files. Test the expiration of signed URLs and ensure they become invalid after the specified time.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 21,
+        "title": "Implement Home Feed",
+        "description": "Implement the Home Feed to display voice posts from followed users.",
+        "details": "Query the database to retrieve voice posts from users that the current user is following. Order the posts by creation date in descending order. Display the posts in a list or grid format with the author's name, timestamp, and audio player.",
+        "testStrategy": "Verify the Home Feed displays voice posts from followed users correctly. Ensure the posts are ordered by creation date. Test the pagination and loading of more posts.",
+        "priority": "medium",
+        "dependencies": [
+          20
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 22,
+        "title": "Implement Explore Feed",
+        "description": "Implement the Explore Feed to display a mix of random and trending voice posts for discovery.",
+        "details": "Query the database to retrieve a mix of random and trending voice posts. Implement a trending algorithm based on likes, comments, and shares. Display the posts in a list or grid format with the author's name, timestamp, and audio player.",
+        "testStrategy": "Verify the Explore Feed displays a mix of random and trending voice posts. Ensure the trending algorithm is working correctly. Test the pagination and loading of more posts.",
+        "priority": "medium",
+        "dependencies": [
+          20
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 23,
+        "title": "Implement Like Feature",
+        "description": "Implement the Like feature to allow users to like voice posts.",
+        "details": "Create a `likes` table in the database to store the relationships between users and voice posts. Implement an API endpoint to like and unlike a voice post. Update the like count on the voice post in the database. Display the like count on the voice post in the UI.",
+        "testStrategy": "Verify users can like and unlike voice posts. Ensure the like count is updated correctly in the database and UI. Test the like feature with different users and voice posts.",
+        "priority": "medium",
+        "dependencies": [
+          20
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 24,
+        "title": "Configure .env for Secrets",
+        "description": "Configure the .env file to securely store all secrets, including Supabase keys, JWT secrets, and OAuth credentials, ensuring they are not exposed in the codebase.",
+        "details": "1. Create a `.env` file in the root directory of both the frontend and backend projects.\n2. Add all sensitive information as key-value pairs in the `.env` file. Examples include: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `JWT_SECRET`, `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`.\n3. Use a library like `dotenv` (Node.js) or similar mechanisms in Next.js to load environment variables into the application.\n4. Update the codebase to use `process.env.VARIABLE_NAME` to access the secrets instead of hardcoding them.\n5. Ensure the `.env` file is added to `.gitignore` to prevent it from being committed to the repository.\n6. For production environments, configure environment variables directly on the server or using a secrets management service.",
+        "testStrategy": "1. Verify that the application can successfully read the environment variables from the `.env` file in both development and production environments.\n2. Ensure that sensitive information is not hardcoded in the codebase.\n3. Confirm that the `.env` file is not committed to the Git repository.\n4. Test the application's functionality to ensure that all secrets are being used correctly (e.g., Supabase connection, authentication).\n5. Simulate different environments (development, staging, production) to ensure the correct environment variables are loaded in each environment.",
+        "status": "pending",
+        "dependencies": [
+          3
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 25,
+        "title": "Setup Storage Helpers for Supabase Buckets with Signed URLs",
+        "description": "Set up storage helpers for Supabase buckets (profile pictures, cover photos, voice notes) with signed URLs as per STORAGE_ARCHITECTURE.md. This task involves creating utility functions to manage file uploads and generate secure signed URLs for different storage buckets.",
+        "details": "1.  **Review STORAGE_ARCHITECTURE.md:** Understand the defined storage architecture for profile pictures, cover photos, and voice notes.\n2.  **Create Storage Helper Functions:** Implement helper functions for each bucket type (profile pictures, cover photos, voice notes) to handle file uploads and signed URL generation.\n3.  **Implement Signed URL Generation:** Use Supabase's storage API to generate signed URLs with appropriate expiration times for each file type. Consider different expiration times based on the use case.\n4.  **Secure Bucket Access:** Ensure that the buckets are private and only accessible via signed URLs.\n5.  **Error Handling:** Implement robust error handling for file uploads and signed URL generation.\n6.  **Configuration:** Store bucket names and other configuration parameters in environment variables.\n7.  **Integration with Backend:** Integrate the storage helper functions into the backend API endpoints for user profile updates, voice note uploads, etc.\n8.  **Consider using a dedicated service or library:** Explore using existing libraries or services that simplify signed URL generation and management with Supabase storage.",
+        "testStrategy": "1.  **Upload Files to Each Bucket:** Upload test files (images, audio) to each bucket (profile pictures, cover photos, voice notes) using the helper functions.\n2.  **Verify Signed URL Generation:** Ensure that signed URLs are generated correctly for each uploaded file.\n3.  **Access Files via Signed URLs:** Verify that the files can be accessed using the generated signed URLs.\n4.  **Test URL Expiration:** Confirm that the signed URLs expire after the specified time and become invalid.\n5.  **Test Unauthorized Access:** Ensure that direct access to the files in the buckets is denied without a valid signed URL.\n6.  **Test Error Handling:** Verify that appropriate error messages are returned for invalid file uploads or failed signed URL generation.\n7.  **Integration Tests:** Test the integration of the storage helper functions with the backend API endpoints.",
+        "status": "pending",
+        "dependencies": [
+          20
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 26,
+        "title": "Implement CAPTCHA for Signup/Login",
+        "description": "Integrate CAPTCHA (e.g., reCAPTCHA) into the user signup and login flows to prevent bot registrations and automated attacks. This will enhance the security and integrity of the platform by reducing spam and fake accounts.",
+        "details": "1. **Choose a CAPTCHA Provider:** Select a CAPTCHA provider (e.g., Google reCAPTCHA v2/v3, hCaptcha) based on security, user experience, and cost considerations.\n2. **Frontend Integration:**\n    *   Include the CAPTCHA script in the signup and login forms.\n    *   Display the CAPTCHA widget to the user.\n    *   Handle user interaction with the CAPTCHA widget.\n    *   Send the CAPTCHA response token to the backend for verification.\n3. **Backend Integration:**\n    *   Create an API endpoint to verify the CAPTCHA response token with the CAPTCHA provider's API.\n    *   Implement server-side validation to ensure the CAPTCHA response is valid before processing the signup or login request.\n    *   Handle cases where the CAPTCHA verification fails (e.g., display an error message to the user).\n4. **Error Handling and User Feedback:**\n    *   Provide clear and user-friendly error messages if the CAPTCHA verification fails.\n    *   Implement retry mechanisms for CAPTCHA verification.\n5. **Configuration:**\n    *   Store CAPTCHA API keys and secrets securely using environment variables.\n    *   Make CAPTCHA configurable (e.g., enable/disable CAPTCHA, adjust difficulty level).",
+        "testStrategy": "1. **Signup Flow:**\n    *   Verify that the CAPTCHA widget is displayed on the signup form.\n    *   Test successful signup with a valid CAPTCHA response.\n    *   Test failed signup with an invalid or missing CAPTCHA response.\n    *   Ensure appropriate error messages are displayed to the user.\n2. **Login Flow:**\n    *   Verify that the CAPTCHA widget is displayed on the login form.\n    *   Test successful login with a valid CAPTCHA response.\n    *   Test failed login with an invalid or missing CAPTCHA response.\n    *   Ensure appropriate error messages are displayed to the user.\n3. **Automated Testing:**\n    *   Implement automated tests to simulate bot behavior and verify that CAPTCHA effectively blocks automated signup/login attempts.\n4. **Load Testing:**\n    *   Perform load testing to ensure that CAPTCHA integration does not negatively impact the performance of the signup/login flows.\n5. **Accessibility Testing:**\n    *   Ensure that the CAPTCHA implementation is accessible to users with disabilities (e.g., provide alternative CAPTCHA options).",
+        "status": "pending",
+        "dependencies": [
+          3
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 27,
+        "title": "Implement Logging and Analytics",
+        "description": "Implement centralized logging for the backend API and integrate Vercel analytics to monitor application performance and user behavior. This will enable effective debugging, performance analysis, and proactive issue resolution.",
+        "details": "1. **Choose a Logging Library:** Select a suitable logging library for Node.js (e.g., Winston, Morgan, Bunyan) that supports different log levels (debug, info, warn, error) and customizable output formats.\n2. **Implement Logging Middleware:** Create Express.js middleware to log incoming requests, including request method, URL, headers, and body. Log responses, including status code, response time, and response body (if applicable).\n3. **Centralized Log Management:** Configure the logging library to output logs to a centralized location, such as a file, a dedicated logging server (e.g., Graylog, ELK stack), or a cloud-based logging service (e.g., Datadog, Splunk).\n4. **Integrate Vercel Analytics:** Enable Vercel analytics in the Vercel project settings. Use the `vercel/analytics` package to track page views, custom events, and performance metrics.\n5. **Implement Error Tracking:** Implement error tracking using a service like Sentry or Bugsnag to capture and report unhandled exceptions and errors in the backend API.\n6. **Configure Log Levels:** Set appropriate log levels for different environments (development, staging, production). Use debug level for detailed debugging information in development, and info/warn/error levels for production.\n7. **Secure Sensitive Information:** Ensure that sensitive information (e.g., passwords, API keys) is not logged. Sanitize or mask sensitive data before logging.\n8. **Implement Log Rotation:** Configure log rotation to prevent log files from growing indefinitely. Use a library like `rotating-file-stream` to automatically rotate log files based on size or time intervals.",
+        "testStrategy": "1. **Verify Request Logging:** Send requests to different API endpoints and verify that the requests are logged with the correct information (method, URL, headers, body).\n2. **Verify Response Logging:** Verify that responses are logged with the correct information (status code, response time, body).\n3. **Verify Log Levels:** Ensure that log levels are correctly configured for different environments. Verify that debug logs are only enabled in development.\n4. **Verify Error Tracking:** Simulate errors and exceptions in the backend API and verify that they are captured and reported by the error tracking service.\n5. **Verify Vercel Analytics Integration:** Deploy the application to Vercel and verify that page views and custom events are being tracked in the Vercel analytics dashboard.\n6. **Test Log Rotation:** Generate a large amount of log data and verify that log rotation is working correctly.\n7. **Test Centralized Logging:** Check the centralized logging system to ensure logs are being sent and stored correctly.",
+        "status": "pending",
+        "dependencies": [
+          2,
+          24
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 28,
+        "title": "Optimize Landing Page with A/B Testing and Analytics",
+        "description": "Refine the landing page based on analytics data and implement A/B testing for the call to action to optimize conversion rates. This task involves analyzing user behavior and iterating on the landing page design to improve its effectiveness.",
+        "details": "1. **Analyze Vercel Analytics Data:** Review the data collected by Vercel analytics to identify areas for improvement on the landing page, such as bounce rate, time on page, and click-through rates on the call to action.\n2. **Implement A/B Testing for Call to Action:** Use a tool like Vercel's A/B testing feature or a third-party solution to create variations of the call to action (e.g., different text, colors, placement).  Ensure that the logging and analytics capture the A/B test variations.\n3. **Design Iterations:** Based on the analytics data and A/B test results, create design iterations for the landing page. Focus on improving the clarity and persuasiveness of the call to action, optimizing the layout for better user engagement, and addressing any usability issues identified in the analytics data.\n4. **Implement Changes:** Implement the design iterations using Next.js components and styling libraries. Ensure that the changes are responsive and work well on different screen sizes.\n5. **Monitor Performance:** Continuously monitor the performance of the landing page using Vercel analytics and A/B testing. Track key metrics such as conversion rates, bounce rates, and time on page to assess the impact of the changes.",
+        "testStrategy": "1. **Verify Analytics Integration:** Ensure that Vercel analytics is correctly tracking user behavior on the landing page, including page views, clicks, and conversions.\n2. **Test A/B Testing Setup:** Verify that the A/B testing setup is correctly configured and that different variations of the call to action are being displayed to users.\n3. **Validate Design Iterations:** Ensure that the design iterations are implemented correctly and that the landing page is responsive on different screen sizes.\n4. **Monitor Conversion Rates:** Track the conversion rates for different variations of the call to action to determine which version performs best.\n5. **Analyze User Feedback:** Collect user feedback on the landing page design and use it to inform future iterations.",
+        "status": "pending",
+        "dependencies": [
+          7,
+          26,
+          27
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 29,
+        "title": "Enhance Onboarding: Mic Permission and First Post",
+        "description": "Enhance the onboarding flow to specifically request microphone permissions and encourage users to create their first voice post. This task builds upon the existing onboarding flow by adding specific prompts and guidance related to voice recording.",
+        "details": "1. **Modify Onboarding Screens:** Update the existing onboarding screens (from Task 18) to include a dedicated step for microphone permission. Clearly explain why the app needs microphone access and how it will be used.\n2. **Implement Microphone Permission Request:** Use the appropriate platform-specific APIs (e.g., `navigator.mediaDevices.getUserMedia` for web, native APIs for iOS/Android) to request microphone permission from the user. Handle cases where the user grants, denies, or has previously denied permission.\n3. **First Voice Post Encouragement:** Add a screen or modal after microphone permission is granted that encourages the user to create their first voice post. Provide clear instructions on how to record, preview, and share a voice post.\n4. **Incentivize First Post:** Consider offering a small incentive (e.g., virtual badge, points) for creating the first voice post to further encourage user engagement.\n5. **Analytics Tracking:** Implement analytics tracking to monitor user progress through the onboarding flow, including microphone permission acceptance rates and first voice post creation rates. Use this data to identify areas for improvement.",
+        "testStrategy": "1. **Verify Microphone Permission Request:** Ensure that the microphone permission request is displayed at the appropriate time during the onboarding flow.\n2. **Test Permission Grant/Denial:** Test both granting and denying microphone permission. Verify that the app handles both cases gracefully and provides appropriate feedback to the user.\n3. **Verify First Post Encouragement:** Ensure that the first voice post encouragement screen is displayed after microphone permission is granted.\n4. **Test Incentive Implementation:** If an incentive is offered, verify that it is correctly awarded to the user after creating their first voice post.\n5. **Verify Analytics Tracking:** Ensure that analytics events are correctly tracked for each step of the onboarding flow, including microphone permission requests and first voice post creation.",
+        "status": "pending",
+        "dependencies": [
+          3,
+          8,
+          18
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 30,
+        "title": "Implement Profile Picture and Cover Photo Upload",
+        "description": "Implement profile picture and cover photo upload functionality, allowing users to customize their profiles with images. This includes both frontend UI elements and backend storage and retrieval mechanisms.",
+        "details": "1.  **Frontend Implementation:**\n    *   Add UI elements for uploading profile pictures and cover photos on the user profile page.\n    *   Implement image preview functionality before uploading.\n    *   Use a library like `react-dropzone` or similar for drag-and-drop upload functionality.\n    *   Implement client-side image resizing and cropping to optimize image sizes before upload.\n    *   Display appropriate error messages for invalid file types or sizes.\n2.  **Backend Implementation:**\n    *   Create API endpoints for uploading profile pictures and cover photos.\n    *   Use Supabase storage to store the uploaded images in dedicated buckets (profile_pictures, cover_photos).\n    *   Generate signed URLs for accessing the images.\n    *   Store the image URLs in the `users` table in the database.\n    *   Implement logic to handle different image sizes and formats.\n    *   Consider using a background job queue (e.g., BullMQ) for image processing tasks.\n3.  **Database Updates:**\n    *   Modify the `users` table to include columns for `profile_picture_url` and `cover_photo_url`.\n4.  **Security Considerations:**\n    *   Implement proper authentication and authorization to ensure only the user can update their own profile pictures and cover photos.\n    *   Validate file types and sizes on the backend to prevent malicious uploads.\n    *   Sanitize image URLs before storing them in the database to prevent XSS attacks.",
+        "testStrategy": "1.  **Profile Picture Upload:**\n    *   Verify that users can upload profile pictures successfully.\n    *   Ensure the uploaded image is displayed correctly on the user's profile.\n    *   Test different image formats (e.g., JPEG, PNG, GIF) and sizes.\n    *   Verify that the image is stored in the correct Supabase bucket.\n    *   Ensure the image URL is stored correctly in the `users` table.\n2.  **Cover Photo Upload:**\n    *   Verify that users can upload cover photos successfully.\n    *   Ensure the uploaded image is displayed correctly on the user's profile.\n    *   Test different image formats (e.g., JPEG, PNG, GIF) and sizes.\n    *   Verify that the image is stored in the correct Supabase bucket.\n    *   Ensure the image URL is stored correctly in the `users` table.\n3.  **Image Resizing and Cropping:**\n    *   Verify that client-side image resizing and cropping are working correctly.\n    *   Ensure that the uploaded images are optimized for different screen sizes.\n4.  **Security Tests:**\n    *   Attempt to upload invalid file types (e.g., executable files) and verify that the backend rejects them.\n    *   Attempt to upload large files and verify that the backend handles them gracefully.\n    *   Test the authentication and authorization mechanisms to ensure only the user can update their own profile pictures and cover photos.",
+        "status": "pending",
+        "dependencies": [
+          25
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 31,
+        "title": "Validate Audio Type and Duration",
+        "description": "Implement validation for audio uploads, ensuring they meet the specified type and duration constraints. This includes enforcing a 60-second limit for posts and a 20-second limit for comments.",
+        "details": "1.  **Audio Type Validation:**\n    *   Implement server-side validation to ensure that uploaded files are of an accepted audio format (e.g., mp3, wav, ogg). Reject uploads with invalid file types.\n    *   Use a library like `file-type` to accurately determine the MIME type of the uploaded file.\n2.  **Duration Validation:**\n    *   Implement server-side validation to check the duration of the audio file.\n    *   Use a library like `fluent-ffmpeg` or `node-audi длительность` to extract the duration of the audio file.\n    *   Enforce a 60-second duration limit for audio posts.\n    *   Enforce a 20-second duration limit for audio comments.\n    *   Return an appropriate error message to the client if the audio duration exceeds the limit.\n3.  **Frontend Integration:**\n    *   Provide visual feedback to the user during the recording process, indicating the remaining recording time.\n    *   Disable the recording button once the maximum duration is reached.\n    *   Display clear error messages to the user if the uploaded audio file is invalid or exceeds the duration limit.",
+        "testStrategy": "1.  **Invalid Audio Type:**\n    *   Attempt to upload files with invalid audio types (e.g., .txt, .jpg) and verify that the server rejects the upload with an appropriate error message.\n2.  **Valid Audio Type, Exceeds Duration (Post):**\n    *   Record an audio file longer than 60 seconds and attempt to upload it as a post. Verify that the server rejects the upload with an appropriate error message.\n3.  **Valid Audio Type, Exceeds Duration (Comment):**\n    *   Record an audio file longer than 20 seconds and attempt to upload it as a comment. Verify that the server rejects the upload with an appropriate error message.\n4.  **Valid Audio Type, Within Duration (Post):**\n    *   Record an audio file shorter than 60 seconds and upload it as a post. Verify that the upload is successful.\n5.  **Valid Audio Type, Within Duration (Comment):**\n    *   Record an audio file shorter than 20 seconds and upload it as a comment. Verify that the upload is successful.\n6.  **Boundary Cases:**\n    *   Test with audio files that are exactly 60 seconds and 20 seconds long to ensure that the validation works correctly at the boundaries.",
+        "status": "pending",
+        "dependencies": [
+          3,
+          9
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 32,
+        "title": "Display Waveform UI on Voice Post Playback",
+        "description": "Display a waveform visualization of the audio during voice post playback. This will provide users with a visual representation of the audio content.",
+        "details": "1.  **Frontend Integration:**\n    *   Integrate a waveform library (e.g., wavesurfer.js, waveform-playlist) into the frontend.\n    *   Fetch the audio data for the voice post from Supabase storage.\n    *   Use the waveform library to generate a waveform visualization from the audio data.\n    *   Display the waveform below the voice post during playback.\n    *   Synchronize the waveform display with the audio playback progress.\n2.  **Backend Considerations:**\n    *   Ensure the backend provides the necessary audio metadata (e.g., duration) to the frontend.\n    *   Optimize audio data delivery for efficient waveform generation.\n3.  **UI/UX Considerations:**\n    *   Design an intuitive and visually appealing waveform display.\n    *   Ensure the waveform is responsive and adapts to different screen sizes.\n    *   Provide clear visual cues for playback progress on the waveform.",
+        "testStrategy": "1.  **Verify Waveform Display:**\n    *   Play a voice post and verify that the waveform is displayed correctly.\n    *   Test different voice posts with varying audio characteristics (e.g., volume, frequency) to ensure the waveform accurately represents the audio.\n2.  **Test Playback Synchronization:**\n    *   Play a voice post and verify that the waveform display is synchronized with the audio playback progress.\n    *   Pause, resume, and seek within the audio to ensure the waveform updates accordingly.\n3.  **Test Responsiveness:**\n    *   Resize the browser window and verify that the waveform adapts to different screen sizes.\n4.  **Test Error Handling:**\n    *   Test cases where the audio data is unavailable or corrupted and verify that the app handles the errors gracefully.",
+        "status": "pending",
+        "dependencies": [
+          9,
+          31
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 33,
+        "title": "Implement Global Playback Manager",
+        "description": "Implement a global playback manager to ensure only one audio source plays at a time and pauses playback when the user scrolls away from a voice post. This will improve the user experience by preventing audio overlap and ensuring content is only played when in view.",
+        "details": "1.  **Create a Playback Manager Service:**\n    *   Implement a singleton service or context that manages the currently playing audio source.\n    *   This service should hold the reference to the active audio player instance (e.g., Howler.js, native Audio element).\n    *   Provide methods to play, pause, and stop audio, as well as set the current audio source.\n2.  **Implement Pause on Scroll:**\n    *   Use an Intersection Observer to detect when a voice post is no longer in the viewport.\n    *   When a voice post scrolls out of view, pause the audio playback if it's the currently active source.\n    *   Consider a threshold to avoid frequent pausing/resuming when the post is partially visible.\n3.  **Ensure Single Audio Source:**\n    *   Before playing a new audio source, check if another audio source is currently playing.\n    *   If another source is playing, pause or stop it before starting the new source.\n    *   Update the playback manager's active audio source to the newly playing source.\n4.  **Integrate with Voice Post Components:**\n    *   Modify the voice post components to use the playback manager service for audio playback.\n    *   When a user clicks play on a voice post, call the playback manager's play method with the audio source.\n    *   Implement the Intersection Observer logic within the voice post component or a parent container.\n5.  **Handle Edge Cases:**\n    *   Consider scenarios where the user switches to a different tab or minimizes the browser window.\n    *   Implement logic to pause audio playback in these cases as well (e.g., using the `visibilitychange` event).\n",
+        "testStrategy": "1.  **Single Audio Source Test:**\n    *   Play one voice post and then play another. Verify that the first voice post pauses automatically.\n    *   Test with multiple voice posts to ensure only one plays at a time.\n2.  **Pause on Scroll Test:**\n    *   Play a voice post and then scroll it out of view. Verify that the audio pauses automatically.\n    *   Scroll the voice post back into view and verify that the audio remains paused.\n3.  **Tab Switching Test:**\n    *   Play a voice post and then switch to a different browser tab. Verify that the audio pauses automatically.\n    *   Switch back to the original tab and verify that the audio remains paused.\n4.  **Minimization Test:**\n    *   Play a voice post and then minimize the browser window. Verify that the audio pauses automatically.\n    *   Restore the browser window and verify that the audio remains paused.\n5.  **Concurrency Test:**\n * Open multiple browser windows or tabs, each playing a voice post. Ensure that only one voice post plays audio at any given time across all windows/tabs.\n",
+        "status": "pending",
+        "dependencies": [
+          9,
+          32
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 34,
+        "title": "Implement Delete Post Flow",
+        "description": "Implement the ability for users to delete their own voice posts. This includes adding a delete button to the voice post UI and implementing the backend logic to remove the post from storage and the database.",
+        "details": "1.  **Frontend Implementation:**\n    *   Add a \"Delete\" button/icon to the voice post UI, visible only to the post's author.\n    *   Implement a confirmation dialog to prevent accidental deletions.\n    *   Upon confirmation, trigger an API call to the backend to delete the post.\n    *   Upon successful deletion, remove the post from the UI.\n2.  **Backend Implementation:**\n    *   Create a new API endpoint for deleting voice posts (e.g., `/api/posts/:postId`).\n    *   Implement authentication and authorization to ensure only the post's author can delete it.\n    *   Retrieve the post from the database using the `postId`.\n    *   Remove the audio file from Supabase storage.\n    *   Delete the post record from the database.\n    *   Return a success/error response to the frontend.\n3.  **Error Handling:**\n    *   Handle cases where the post does not exist or the user is not authorized to delete it.\n    *   Display appropriate error messages to the user.\n4.  **Security Considerations:**\n    *   Ensure proper authorization checks to prevent unauthorized deletion of posts.\n    *   Implement logging for deletion events for auditing purposes.",
+        "testStrategy": "1.  **Successful Deletion:**\n    *   Log in as a user and create a voice post.\n    *   Verify that the \"Delete\" button is visible on the post.\n    *   Click the \"Delete\" button and confirm the deletion.\n    *   Verify that the post is removed from the UI and no longer accessible.\n2.  **Unauthorized Deletion:**\n    *   Log in as a different user.\n    *   Attempt to delete the voice post created by the first user (e.g., by manually calling the API endpoint with the post ID).\n    *   Verify that the backend returns an error indicating that the user is not authorized to delete the post.\n3.  **Non-Existent Post:**\n    *   Attempt to delete a post with an invalid `postId`.\n    *   Verify that the backend returns an error indicating that the post does not exist.\n4.  **Database and Storage Verification:**\n    *   After deleting a post, verify that the corresponding record is removed from the database and the audio file is removed from Supabase storage.",
+        "status": "pending",
+        "dependencies": [
+          3,
+          8,
+          9
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 35,
+        "title": "Implement Voice Comment Feature",
+        "description": "Enable users to record and attach voice comments to posts, with a maximum duration of 20 seconds. This feature will enhance user engagement and provide a more expressive way to interact with content.",
+        "details": "1.  **Frontend Implementation:**\n    *   Add a \"Record Voice Comment\" button/icon to the comment input area.\n    *   Implement a voice recording interface using the browser's MediaRecorder API, similar to Task 9.\n    *   Limit the recording duration to 20 seconds, displaying a countdown timer.\n    *   Implement a playback feature to allow users to review their recording before submitting.\n    *   Upon submission, upload the voice comment to Supabase storage.\n    *   Attach the voice comment URL to the comment data and send it to the backend.\n2.  **Backend Implementation:**\n    *   Create a new API endpoint for submitting voice comments (e.g., `/api/comments/:postId/voice`).\n    *   Implement authentication and authorization to ensure only logged-in users can submit comments.\n    *   Store the voice comment URL in the database, associated with the comment and the user.\n    *   Implement validation to ensure the uploaded file is a valid audio file and its duration is within the 20-second limit (reusing validation logic from Task 31).\n3.  **Database:**\n    *   Update the `comments` table to include a `voice_comment_url` column (nullable).\n4.  **UI Integration:**\n    *   Display a playback button/icon next to the comment to allow users to listen to the voice comment.\n    *   Implement audio playback using a library like Howler.js or the native Audio element.",
+        "testStrategy": "1.  **Successful Voice Comment Submission:**\n    *   Log in as a user and navigate to a voice post.\n    *   Click the \"Record Voice Comment\" button and record a voice comment within the 20-second limit.\n    *   Verify that the voice comment is uploaded successfully and a playback button appears next to the comment.\n    *   Verify that other users can listen to the voice comment.\n2.  **Duration Limit:**\n    *   Attempt to record a voice comment longer than 20 seconds. Verify that the recording stops automatically at 20 seconds and the user is prevented from submitting a longer recording.\n3.  **Invalid Audio Type:**\n    *   Attempt to upload an invalid audio file as a voice comment. Verify that the server rejects the upload with an appropriate error message.\n4.  **Playback Functionality:**\n    *   Verify that the voice comment plays correctly when the playback button is clicked.\n    *   Test playback on different browsers and devices.\n5.  **Database Verification:**\n    *   Check the `comments` table in the database to ensure that the `voice_comment_url` is stored correctly for the submitted voice comment.",
+        "status": "pending",
+        "dependencies": [
+          9,
+          31
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 36,
+        "title": "Implement Text Comment Feature",
+        "description": "Enable users to add text-based comments to voice posts, allowing for detailed feedback and discussions. This feature will complement the voice comment feature and provide an alternative communication method.",
+        "details": "1.  **Frontend Implementation:**\n    *   Add a text input field below each voice post, along with a \"Post Comment\" button.\n    *   Implement client-side validation to ensure the comment is not empty and within a reasonable length limit (e.g., 500 characters).\n    *   Upon submission, send the comment text and the associated voice post ID to the backend API.\n    *   Display the new comment in the comment section below the voice post.\n2.  **Backend Implementation:**\n    *   Create a `comments` table in the database with columns for comment text, user ID, voice post ID, and timestamp.\n    *   Implement an API endpoint to create new comments (e.g., `/api/comments`).\n    *   Implement authentication and authorization to ensure only logged-in users can post comments.\n    *   Store the comment text, user ID, voice post ID, and timestamp in the `comments` table.\n    *   Implement API endpoints to retrieve comments for a specific voice post.\n3.  **Database Considerations:**\n    *   Ensure proper indexing on the `comments` table for efficient retrieval of comments for a given voice post.\n    *   Consider implementing pagination for comments if a voice post is expected to have a large number of comments.\n4.  **Security Considerations:**\n    *   Sanitize user input to prevent XSS attacks.\n    *   Implement rate limiting to prevent comment spamming.",
+        "testStrategy": "1.  **Successful Comment Submission:**\n    *   Log in as a user and navigate to a voice post.\n    *   Enter a text comment in the input field and click the \"Post Comment\" button.\n    *   Verify that the comment is displayed below the voice post.\n    *   Verify that the comment is stored in the `comments` table in the database.\n2.  **Empty Comment Submission:**\n    *   Attempt to submit an empty comment and verify that an error message is displayed.\n3.  **Comment Length Limit:**\n    *   Attempt to submit a comment exceeding the length limit and verify that an error message is displayed.\n4.  **Unauthorized Comment Submission:**\n    *   Attempt to submit a comment without being logged in and verify that an error message is displayed.\n5.  **Comment Retrieval:**\n    *   Verify that all comments for a given voice post are retrieved and displayed correctly.\n6.  **XSS Prevention:**\n    *   Attempt to submit a comment containing malicious HTML or JavaScript code and verify that it is properly sanitized and does not execute in the browser.",
+        "status": "pending",
+        "dependencies": [
+          4,
+          23
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 37,
+        "title": "Implement User and Voice Post Search Functionality",
+        "description": "Implement search functionality to allow users to search for other users and voice posts. This includes both frontend and backend implementation to handle search queries and display results.",
+        "details": "1.  **Backend Implementation:**\n    *   Create API endpoints for searching users and voice posts (e.g., `/api/search/users?query=`, `/api/search/posts?query=`).\n    *   Implement search queries in the database to find users and voice posts matching the search query. Consider using full-text search capabilities of Supabase.\n    *   Implement pagination for search results.\n    *   Ensure proper indexing for efficient searching.\n2.  **Frontend Implementation:**\n    *   Add a search bar in the UI.\n    *   Implement search functionality to call the backend API endpoints when the user enters a search query.\n    *   Display search results in a list or grid format with user profiles and voice post previews.\n    *   Implement loading indicators and error handling for search requests.\n    *   Implement infinite scroll or pagination for displaying large search result sets.\n3.  **User Search:**\n    *   Search users by username, display name, or email.\n    *   Display user profiles with avatars and usernames.\n4.  **Voice Post Search:**\n    *   Search voice posts by title, description, or tags.\n    *   Display voice post previews with audio players and author information.\n5.  **Performance Considerations:**\n    *   Optimize database queries for fast search results.\n    *   Implement caching for frequently searched terms.\n    *   Use debounce or throttling to limit the number of search requests sent to the backend.",
+        "testStrategy": "1.  **User Search Test:**\n    *   Search for existing users by username, display name, and email.\n    *   Verify that the search results display the correct user profiles.\n    *   Test search with different casing and partial matches.\n2.  **Voice Post Search Test:**\n    *   Search for voice posts by title, description, and tags.\n    *   Verify that the search results display the correct voice post previews.\n    *   Test search with different casing and partial matches.\n3.  **Pagination Test:**\n    *   Search for a term with a large number of results.\n    *   Verify that the search results are paginated correctly.\n    *   Test loading more results with infinite scroll or pagination buttons.\n4.  **Error Handling Test:**\n    *   Test search with invalid search queries.\n    *   Verify that appropriate error messages are displayed.\n5.  **Performance Test:**\n    *   Measure the time it takes to perform search queries with different data volumes.\n    *   Identify and address any performance bottlenecks.",
+        "status": "pending",
+        "dependencies": [
+          21,
+          22
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 38,
+        "title": "Implement User Profile View and Edit Functionality",
+        "description": "Implement user profile view and edit functionality, allowing users to view their profile information and make changes. This includes both frontend UI elements and backend API endpoints to handle profile updates.",
+        "details": "1. **Frontend Implementation:**\n    *   Create a user profile page displaying user information such as username, email, profile picture, cover photo, and other relevant details.\n    *   Implement an edit mode for the profile page, allowing users to modify their information.\n    *   Add input fields for editable profile attributes (e.g., display name, bio, location).\n    *   Integrate with the profile picture and cover photo upload functionality (Task 30).\n    *   Implement client-side validation for input fields to ensure data integrity.\n    *   Use React forms and state management to handle user input and updates.\n    *   Implement a \"Save Changes\" button to submit the updated profile information to the backend.\n    *   Display success or error messages upon saving or encountering issues.\n2.  **Backend Implementation:**\n    *   Create API endpoints for retrieving user profile information (e.g., `/api/users/:userId`).\n    *   Create API endpoints for updating user profile information (e.g., `/api/users/:userId`).\n    *   Implement authentication and authorization to ensure users can only access and modify their own profiles.\n    *   Validate the incoming data from the frontend to prevent malicious input.\n    *   Update the user's profile information in the database.\n    *   Handle errors gracefully and return appropriate HTTP status codes and error messages.\n    *   Consider using Supabase's built-in user management features to simplify profile updates.\n3.  **Database Considerations:**\n    *   Ensure the `users` table in Supabase includes all necessary profile attributes (e.g., display name, bio, location, profile picture URL, cover photo URL).\n    *   Consider adding indexes to frequently queried profile attributes to improve performance.\n    *   Implement database migrations to update the schema if necessary.",
+        "testStrategy": "1.  **Profile View Test:**\n    *   Log in as a user and navigate to the profile page.\n    *   Verify that all profile information is displayed correctly.\n    *   Test with different user accounts to ensure the correct profile is displayed for each user.\n2.  **Profile Edit Test:**\n    *   Log in as a user and navigate to the profile edit mode.\n    *   Modify profile attributes and click the \"Save Changes\" button.\n    *   Verify that the changes are saved successfully and reflected on the profile page.\n    *   Test with different input values, including valid and invalid data.\n    *   Verify that client-side and server-side validation are working correctly.\n    *   Test error handling for invalid input or database errors.\n3.  **Authorization Test:**\n    *   Attempt to access or modify another user's profile.\n    *   Verify that the user is not authorized to access or modify the profile.",
+        "status": "pending",
+        "dependencies": [
+          3,
+          8,
+          25
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 39,
+        "title": "Implement Voice Post Share Feature",
+        "description": "Implement the share feature for voice posts, allowing users to generate and share external links to specific voice posts. This includes generating a shareable link and providing options to share via various social media platforms.",
+        "details": "1.  **Generate Shareable Link:**\n    *   Create an API endpoint that generates a unique, short URL for a given voice post ID.\n    *   Use a URL shortening service (e.g., Bitly, TinyURL, or a custom solution) to create short, manageable links.\n    *   Store the mapping between the voice post ID and the shortened URL in the database.\n2.  **Implement Share UI:**\n    *   Add a \"Share\" button/icon to the voice post UI.\n    *   When the button is clicked, display a modal or popover with the following options:\n        *   Copy the shareable link to the clipboard.\n        *   Share directly to social media platforms (e.g., Twitter, Facebook, etc.) using their respective APIs or web sharing flows.\n3.  **Social Media Integration:**\n    *   Use social media sharing APIs or web sharing flows to pre-populate the share message with the voice post title and link.\n    *   Ensure the shared link directs users to the specific voice post within the application.\n4.  **Link Preview Generation:**\n    *   Implement metadata tags (Open Graph, Twitter Cards) on the voice post page to generate rich previews when the link is shared on social media.\n    *   Include the voice post title, author, and a relevant image in the metadata.",
+        "testStrategy": "1.  **Link Generation and Redirection:**\n    *   Create a voice post and generate a shareable link.\n    *   Verify that the generated link is a valid URL.\n    *   Open the generated link in a new browser tab or window.\n    *   Ensure that the link redirects to the correct voice post within the application.\n2.  **Social Media Sharing:**\n    *   Share a voice post to different social media platforms (e.g., Twitter, Facebook).\n    *   Verify that the shared post includes the correct title, link, and image preview.\n    *   Click on the shared link and ensure it redirects to the correct voice post.\n3.  **Clipboard Copy:**\n    *   Click the \"Copy to Clipboard\" button.\n    *   Paste the contents of the clipboard into a text editor or other application.\n    *   Verify that the correct shareable link is copied to the clipboard.\n4.  **Performance:**\n    *   Test the link generation API endpoint with a large number of requests.\n    *   Ensure that the API responds quickly and efficiently.",
+        "status": "pending",
+        "dependencies": [
+          9,
+          23
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 40,
+        "title": "Implement Report/Flag Content Moderation System",
+        "description": "Implement a content moderation system that allows users to report voice posts and text comments for review. This system will enable administrators to review flagged content and take appropriate actions.",
+        "details": "1.  **Database Schema Extension:**\n    *   Add a `reports` table to the Supabase schema. This table should include fields such as `report_id` (primary key), `report_type` (enum: 'voice_post', 'text_comment'), `reported_id` (foreign key referencing the ID of the reported item), `reporter_id` (foreign key referencing the user who reported the item), `reason` (text field for the reporting reason), `status` (enum: 'pending', 'reviewed', 'resolved'), and `created_at` (timestamp).\n2.  **Reporting API Endpoints:**\n    *   Create API endpoints for reporting voice posts (`/api/report/voice_post`) and text comments (`/api/report/comment`).\n    *   These endpoints should accept the `reported_id` and `reason` as input, and store the report in the `reports` table.\n    *   Implement rate limiting to prevent abuse.\n3.  **Admin Interface:**\n    *   Create an admin interface (or extend an existing one) to display a list of pending reports.\n    *   The interface should allow administrators to view the reported content, the reporting reason, and the reporter.\n    *   Implement actions for administrators to take, such as:\n        *   \"Approve Report\": Removes the reported content (voice post or text comment) and marks the report as resolved.\n        *   \"Reject Report\": Marks the report as resolved without taking any action on the reported content.\n        *   \"Take Action\": Allows administrators to take other actions, such as suspending the user who created the reported content.\n4.  **Frontend Integration:**\n    *   Add a \"Report\" button/icon to voice posts and text comments.\n    *   When the button is clicked, display a modal or popover asking the user to select a reason for reporting.\n    *   Send the report to the appropriate API endpoint.\n    *   Display a confirmation message to the user after the report is submitted.\n5.  **Notification System (Optional):**\n    *   Implement a notification system to notify administrators when a new report is submitted.",
+        "testStrategy": "1.  **Report Submission Test:**\n    *   Log in as a user and navigate to a voice post or text comment.\n    *   Click the \"Report\" button and select a reason for reporting.\n    *   Verify that the report is submitted successfully and a confirmation message is displayed.\n    *   Verify that the report is stored in the `reports` table in Supabase.\n2.  **Admin Interface Test:**\n    *   Log in as an administrator and navigate to the admin interface.\n    *   Verify that the list of pending reports is displayed correctly.\n    *   Click on a report to view the reported content, the reporting reason, and the reporter.\n    *   Test the \"Approve Report\" action: Verify that the reported content is removed and the report is marked as resolved.\n    *   Test the \"Reject Report\" action: Verify that the report is marked as resolved without taking any action on the reported content.\n3.  **Rate Limiting Test:**\n    *   Submit multiple reports in a short period of time.\n    *   Verify that the rate limiting mechanism prevents abuse.\n4.  **Edge Cases:**\n    *   Test reporting content that has already been reported.\n    *   Test reporting content with different reporting reasons.\n    *   Test reporting content as different users.",
+        "status": "pending",
+        "dependencies": [
+          4,
+          36,
+          35,
+          37
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 41,
+        "title": "Implement Push Notifications for Likes, Comments, and Follows",
+        "description": "Implement push notifications for likes, comments, and follows to enhance user engagement and provide real-time updates. This task involves setting up the necessary backend infrastructure and integrating with a push notification service.",
+        "details": "1.  **Backend Implementation:**\n    *   Set up Firebase Cloud Messaging (FCM) or another push notification service.\n    *   Create API endpoints to handle device token registration and unregistration.\n    *   Implement logic to trigger push notifications when a user receives a like, comment, or follow.\n    *   Store user device tokens in the database, associating them with user accounts.\n    *   Configure notification payloads with relevant data (e.g., sender, content, timestamp).\n    *   Implement a notification queue to handle large volumes of notifications.\n2.  **Frontend Implementation:**\n    *   Request permission to send push notifications from the user.\n    *   Obtain the device token from FCM or the chosen service.\n    *   Send the device token to the backend for registration.\n    *   Handle incoming push notifications and display them to the user.\n    *   Implement logic to navigate the user to the relevant content when a notification is clicked.\n3.  **Database Schema Extension:**\n    *   Add a `device_tokens` table to the Supabase schema. This table should include fields such as `user_id` (foreign key referencing the user ID), `device_token` (text field for the device token), `platform` (enum: 'ios', 'android', 'web'), and `created_at` (timestamp).\n4.  **Considerations:**\n    *   Handle different notification types (e.g., likes, comments, follows) with appropriate content and actions.\n    *   Implement rate limiting to prevent abuse.\n    *   Provide users with options to customize their notification preferences.\n    *   Ensure compliance with privacy regulations regarding user data and notification permissions.",
+        "testStrategy": "1.  **Like Notification Test:**\n    *   Log in as two different users (User A and User B).\n    *   User A likes a voice post or comment made by User B.\n    *   Verify that User B receives a push notification indicating that User A liked their content.\n    *   Click on the notification and ensure it navigates to the correct voice post or comment.\n2.  **Comment Notification Test:**\n    *   Log in as two different users (User A and User B).\n    *   User A comments on a voice post made by User B.\n    *   Verify that User B receives a push notification indicating that User A commented on their voice post.\n    *   Click on the notification and ensure it navigates to the correct voice post and comment.\n3.  **Follow Notification Test:**\n    *   Log in as two different users (User A and User B).\n    *   User A follows User B.\n    *   Verify that User B receives a push notification indicating that User A followed them.\n    *   Click on the notification and ensure it navigates to User A's profile.\n4.  **Device Token Registration Test:**\n    *   Log in as a user and verify that the device token is successfully registered in the `device_tokens` table.\n    *   Log out and log in again to ensure the device token is still registered.\n5.  **Notification Preference Test:**\n    *   Implement notification preference settings for each user.\n    *   Test that users only receive notifications for the types they have enabled.",
+        "status": "pending",
+        "dependencies": [
+          4,
+          36,
+          35,
+          23,
+          3
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 42,
+        "title": "Implement Refined Trending/Popular Posts Algorithm",
+        "description": "Refine the trending/popular posts algorithm to consider recency, user engagement, and content quality. Implement a scoring system and caching mechanism to optimize performance and ensure accurate trending results.",
+        "details": "1.  **Refine Trending Algorithm:**\n    *   Incorporate recency into the trending score. Newer posts should have a higher initial score.\n    *   Weight user engagement metrics (likes, shares, comments) based on their relative importance.\n    *   Consider content quality by analyzing audio characteristics (e.g., clarity, length, uniqueness).\n    *   Implement a decay function to reduce the score of older posts over time.\n2.  **Implement Scoring System:**\n    *   Assign numerical scores to each post based on the trending algorithm.\n    *   Store the trending score in the database or a caching layer.\n    *   Update the score periodically (e.g., every hour) using a background job or scheduled task.\n3.  **Implement Caching Mechanism:**\n    *   Cache the trending posts in Redis or a similar in-memory data store.\n    *   Use a Least Recently Used (LRU) or Time-To-Live (TTL) eviction policy to manage the cache size.\n    *   Invalidate the cache when new posts are created, liked, shared, or commented on.\n4.  **Integrate with Explore Feed:**\n    *   Update the Explore Feed to use the refined trending algorithm and cached trending posts.\n    *   Ensure the Explore Feed displays a mix of random and trending posts.\n5.  **Optimize Performance:**\n    *   Profile the trending algorithm and identify performance bottlenecks.\n    *   Optimize database queries and caching strategies to minimize latency.\n    *   Implement pagination and lazy loading to improve the user experience.",
+        "testStrategy": "1.  **Algorithm Accuracy Test:**\n    *   Create a set of test posts with varying recency, engagement, and content quality.\n    *   Verify that the trending algorithm ranks the posts correctly based on the defined criteria.\n    *   Compare the trending scores with expected values to ensure accuracy.\n2.  **Caching Test:**\n    *   Verify that trending posts are cached correctly in Redis or the chosen caching layer.\n    *   Measure the cache hit rate and latency of retrieving trending posts from the cache.\n    *   Test cache invalidation when new posts are created, liked, shared, or commented on.\n3.  **Performance Test:**\n    *   Measure the time it takes to calculate the trending scores for a large number of posts.\n    *   Profile the trending algorithm and identify performance bottlenecks.\n    *   Optimize database queries and caching strategies to minimize latency.\n4.  **Explore Feed Integration Test:**\n    *   Verify that the Explore Feed displays a mix of random and trending posts.\n    *   Ensure the trending posts in the Explore Feed are ranked correctly based on the refined algorithm.\n    *   Test pagination and lazy loading in the Explore Feed.",
+        "status": "pending",
+        "dependencies": [
+          23,
+          20,
+          33
+        ],
+        "priority": "low",
+        "subtasks": []
+      },
+      {
+        "id": 43,
+        "title": "Add PWA Support (Install Prompt, Offline Caching)",
+        "description": "Implement PWA support to enable install prompt and offline caching capabilities. This will enhance user experience by allowing users to install the app and access content even when offline.",
+        "details": "1.  **Install PWA Dependencies:** Add `next-pwa` package to the project.\n2.  **Configure `next-pwa`:** Configure `next-pwa` in `next.config.js` to enable service worker generation and caching strategies.\n3.  **Implement Install Prompt:** Detect when the app is running in a browser and prompt the user to install the app. Use `beforeinstallprompt` event to handle the install prompt.\n4.  **Implement Offline Caching:** Configure caching strategies for static assets, API responses, and dynamic content using the service worker. Use `cacheFirst` or `networkFirst` strategies as appropriate.\n5.  **Test Offline Functionality:** Verify that the app can be accessed and used offline. Ensure that cached content is available and that API requests are handled gracefully when offline.",
+        "testStrategy": "1.  **Installability Test:**\n    *   Open the app in a browser (Chrome, Safari, etc.).\n    *   Verify that the install prompt appears after a few seconds.\n    *   Install the app and ensure it is added to the home screen.\n2.  **Offline Caching Test:**\n    *   Open the app and navigate to different pages.\n    *   Disable the network connection (go offline).\n    *   Verify that the app continues to function and that cached content is displayed correctly.\n    *   Test with different types of content (static assets, API responses, dynamic content).\n3.  **Service Worker Update Test:**\n    *   Make changes to the app and deploy a new version.\n    *   Open the app and verify that the service worker is updated automatically.\n    *   Ensure that the new version of the app is loaded correctly.",
+        "status": "pending",
+        "dependencies": [
+          1,
+          3
+        ],
+        "priority": "low",
+        "subtasks": []
+      },
+      {
+        "id": 44,
+        "title": "Deploy Frontend and Backend to Production",
+        "description": "Deploy the Next.js frontend to Vercel and the Express.js backend to Railway. This task ensures the application is live and accessible to users.",
+        "details": "1. **Vercel Frontend Deployment:**\n   - Configure Vercel project settings to connect to the Next.js repository.\n   - Set up environment variables in Vercel to match the frontend's requirements (e.g., API endpoints).\n   - Trigger a deployment through Vercel's Git integration or CLI.\n   - Verify successful deployment by accessing the Vercel-provided URL.\n2. **Railway Backend Deployment:**\n   - Create a new project in Railway and connect it to the Express.js backend repository.\n   - Configure environment variables in Railway to match the backend's requirements (e.g., database connection string, API keys).\n   - Deploy the backend application through Railway's Git integration or CLI.\n   - Verify successful deployment by checking the Railway logs and accessing the backend API endpoints.\n3. **Domain Configuration:**\n   - Configure a custom domain for both the frontend and backend (if applicable).\n   - Update DNS records to point to the Vercel and Railway deployments.\n4. **Monitoring and Logging:**\n   - Set up monitoring and logging for both the frontend and backend to track performance and errors.\n   - Integrate with tools like Sentry or Datadog for error tracking and performance monitoring.",
+        "testStrategy": "1. **Frontend Verification:**\n   - Access the Vercel-deployed frontend URL.\n   - Verify that the landing page loads correctly and all components are functional.\n   - Test user authentication flow (signup, login, logout).\n   - Check that data is being fetched and displayed correctly from the backend.\n   - Ensure the application is responsive on different screen sizes.\n2. **Backend Verification:**\n   - Access the Railway-deployed backend API endpoints using tools like Postman or curl.\n   - Verify that the API endpoints return the expected responses.\n   - Test database connectivity and data retrieval.\n   - Check rate limiting functionality by sending multiple requests.\n3. **End-to-End Testing:**\n   - Perform end-to-end testing by interacting with the frontend and verifying that data is being passed correctly to the backend and vice versa.\n   - Monitor logs and error tracking tools to identify any issues.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 45,
+        "title": "Add Voice Bio Upload Functionality (Max 30s)",
+        "description": "Implement voice bio upload functionality, limiting recordings to a maximum of 30 seconds. This includes UI elements for recording, stopping, and uploading the audio, as well as backend logic to handle the file upload and storage.",
+        "details": "1.  **Frontend Implementation:**\n    *   Add a \"Record Voice Bio\" button to the user profile settings page.\n    *   Implement a recording interface using the browser's MediaRecorder API.\n    *   Display a timer during recording, limiting the maximum recording time to 30 seconds.\n    *   Provide controls to start, stop, and play back the recording.\n    *   Implement functionality to upload the recorded audio file to Supabase storage using the storage helpers.\n2.  **Backend Implementation:**\n    *   Utilize the storage helpers created in Task 25 to handle the file upload to the voice notes bucket.\n    *   Generate a signed URL for the uploaded voice bio.\n    *   Store the signed URL in the user's profile in the database.\n    *   Ensure proper error handling for file uploads and storage.\n3.  **UI Considerations:**\n    *   Provide visual feedback during recording (e.g., a waveform display).\n    *   Display a progress indicator during file upload.\n    *   Handle potential errors gracefully and provide informative error messages to the user.",
+        "testStrategy": "1.  **Recording Test:**\n    *   Verify that the recording interface functions correctly.\n    *   Ensure that the recording stops automatically after 30 seconds.\n    *   Test the playback functionality to ensure the recording can be played back.\n2.  **Upload Test:**\n    *   Upload a voice bio recording.\n    *   Verify that the file is uploaded to the correct Supabase storage bucket.\n    *   Ensure that a signed URL is generated for the uploaded file.\n    *   Check that the signed URL is stored in the user's profile in the database.\n3.  **Error Handling Test:**\n    *   Simulate upload errors (e.g., network disconnection) and verify that appropriate error messages are displayed to the user.\n4.  **Security Test:**\n * Verify that the signed URL is only valid for a limited time.\n * Ensure that only authenticated users can access the voice bio upload functionality.",
+        "status": "pending",
+        "dependencies": [
+          25
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 46,
+        "title": "Implement Silence Trimming for Voice Clips",
+        "description": "Implement silence trimming on recorded voice clips to improve audio quality and reduce storage space. This task involves analyzing audio clips and removing leading and trailing silence.",
+        "details": "1.  **Analyze Audio Clips:**\n    *   Use an audio processing library (e.g., Librosa, WaveSurfer.js) to analyze the recorded audio clips.\n    *   Detect silence at the beginning and end of the audio clip by identifying periods where the amplitude is below a certain threshold.\n2.  **Implement Silence Trimming:**\n    *   Implement a function to trim the silence from the beginning and end of the audio clip.\n    *   Ensure that the trimming process does not remove any actual speech or important audio content.\n3.  **Integrate with Voice Post and Bio Upload:**\n    *   Integrate the silence trimming functionality into the voice post recording (Task 9) and voice bio upload (Task 45) processes.\n    *   Apply silence trimming before uploading the audio clip to Supabase storage.\n4.  **Configuration:**\n    *   Make the silence threshold configurable to allow for adjustments based on different recording environments and microphone sensitivities.\n    *   Consider adding a minimum silence duration to avoid trimming very short pauses within speech.\n5.  **Error Handling:**\n    *   Implement error handling to gracefully handle cases where audio analysis fails or the trimming process encounters issues.\n    *   Log any errors for debugging purposes.",
+        "testStrategy": "1.  **Silence Trimming Accuracy Test:**\n    *   Record voice clips with varying amounts of leading and trailing silence.\n    *   Verify that the silence trimming functionality correctly removes the silence without affecting the actual speech content.\n    *   Measure the amount of silence removed and compare it with the expected values.\n2.  **Audio Quality Test:**\n    *   Compare the audio quality of the trimmed audio clips with the original audio clips.\n    *   Ensure that the trimming process does not introduce any artifacts or distortions.\n    *   Use subjective listening tests to assess the perceived audio quality.\n3.  **Integration Test:**\n    *   Test the silence trimming functionality in the context of voice post recording and voice bio upload.\n    *   Verify that the trimmed audio clips are uploaded to Supabase storage correctly.\n    *   Ensure that the playback functionality works as expected with the trimmed audio clips.\n4.  **Performance Test:**\n    *   Measure the time taken to analyze and trim the audio clips.\n    *   Optimize the silence trimming functionality to minimize processing time.",
+        "status": "pending",
+        "dependencies": [
+          9,
+          45
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 47,
+        "title": "Implement Voice Story Recorder with 15s Limit",
+        "description": "Implement a voice story recorder feature with a 15-second limit, specifically for ephemeral stories that disappear after a set time. This task involves creating a separate recording component and integrating it into the story creation flow.",
+        "details": "1.  **Create a new React component** called `StoryRecorder` that handles audio recording.\n2.  **Use the MediaRecorder API** to capture audio from the user's microphone.\n3.  **Implement a timer** to limit the recording duration to 15 seconds.\n4.  **Display a countdown timer** in the UI to indicate the remaining recording time.\n5.  **Implement a visual indicator** (e.g., waveform) to show audio input level.\n6.  **Add a 'Record' button** to start and stop recording.\n7.  **Add a 'Play' button** to preview the recorded audio.\n8.  **Add a 'Discard' button** to delete the recording and start over.\n9.  **Add a 'Next' button** to proceed to the story posting screen.\n10. **Integrate with the Global Playback Manager** (Task 33) to ensure only one audio source plays at a time.\n11. **Upload the recorded audio** to Supabase storage via private bucket using signed URLs, similar to Task 9.\n12. **Create a new API endpoint** for handling story uploads.\n13. **Store story metadata** (audio URL, user ID, timestamp) in the database.\n14. **Implement logic** to automatically delete stories after a set time (e.g., 24 hours).",
+        "testStrategy": "1.  **Verify recording duration:** Ensure the recording stops automatically after 15 seconds.\n2.  **Test audio quality:** Check the quality of the recorded audio on different devices and browsers.\n3.  **Test playback functionality:** Verify that the 'Play' button correctly plays the recorded audio.\n4.  **Test discard functionality:** Ensure the 'Discard' button clears the recording and resets the UI.\n5.  **Test upload functionality:** Verify that the recorded audio is successfully uploaded to Supabase storage.\n6.  **Test story deletion:** Confirm that stories are automatically deleted after the set time (e.g., 24 hours).\n7.  **Test Global Playback Manager integration:** Ensure that playing a story pauses any other currently playing audio.\n8.  **Test different browsers and devices:** Ensure the recorder works consistently across various platforms.",
+        "status": "pending",
+        "dependencies": [
+          9,
+          33
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 48,
+        "title": "Build Story viewer with autoplay functionality",
+        "description": "Implement a story viewer with autoplay functionality to automatically play through a sequence of voice stories. This includes UI components for displaying stories and controls for pausing/resuming autoplay.",
+        "details": "1.  **Create Story Viewer Component:**\n    *   Develop a React component to display voice stories in a sequence.\n    *   Fetch story data, including voice post URLs and user information.\n    *   Implement UI elements for displaying the current story, such as the author's avatar and username.\n2.  **Implement Autoplay Functionality:**\n    *   Use `setTimeout` or `setInterval` to automatically advance to the next story after a set duration (e.g., 5 seconds).\n    *   Provide a pause/resume button to control the autoplay.\n    *   Implement logic to handle the end of the story sequence, either looping back to the beginning or stopping the autoplay.\n3.  **Integrate with Voice Story Recorder:**\n    *   Ensure compatibility with the voice story recorder (Task 47) for seamless story creation and viewing.\n4.  **Error Handling:**\n    *   Implement error handling for cases where a story fails to load or play.\n5.  **Accessibility:**\n    *   Ensure the story viewer is accessible to users with disabilities, including keyboard navigation and screen reader compatibility.",
+        "testStrategy": "1.  **Autoplay Functionality Test:**\n    *   Verify that the story viewer automatically advances to the next story after the specified duration.\n    *   Test the pause/resume functionality to ensure it correctly pauses and resumes the autoplay.\n    *   Check that the story sequence loops correctly or stops at the end, as designed.\n2.  **Voice Story Playback Test:**\n    *   Ensure that voice stories play correctly within the story viewer.\n    *   Test the audio quality and volume.\n3.  **Error Handling Test:**\n    *   Simulate errors during story loading or playback and verify that appropriate error messages are displayed.\n4.  **Responsiveness Test:**\n    *   Test the story viewer on different devices and screen sizes to ensure it is responsive and displays correctly.\n5. **Integration Test:**\n * Verify that the story viewer correctly displays voice stories uploaded via Task 20.",
+        "status": "pending",
+        "dependencies": [
+          47,
+          20
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 49,
+        "title": "Implement Story Expiration Logic",
+        "description": "Implement logic to automatically delete voice stories after 24 hours from the time of creation. This involves setting up a scheduled task to identify and remove expired stories from the database and storage.",
+        "details": "1.  **Implement a background task scheduler:**\n    *   Use a library like `node-cron` or `agenda` to schedule a daily task that runs at a specific time (e.g., midnight).\n2.  **Query the database for expired stories:**\n    *   Write a database query to select all stories that were created more than 24 hours ago.\n    *   Ensure the query is optimized for performance to avoid slowing down the database.\n3.  **Delete expired stories from storage:**\n    *   For each expired story, delete the corresponding audio file from Supabase storage using the storage helpers.\n    *   Handle potential errors during file deletion, such as network issues or file not found.\n4.  **Delete expired stories from the database:**\n    *   After successfully deleting the audio file, delete the story record from the database.\n    *   Use a transaction to ensure that the file deletion and database record deletion are atomic operations.\n5.  **Logging and monitoring:**\n    *   Add logging to track the number of stories deleted each day and any errors that occur during the process.\n    *   Monitor the task scheduler to ensure it is running correctly and not encountering any issues.",
+        "testStrategy": "1.  **Manual Verification:**\n    *   Create a test story and set its creation timestamp to be older than 24 hours.\n    *   Run the scheduled task manually and verify that the story is deleted from both the database and storage.\n2.  **Automated Testing:**\n    *   Write an automated test case that creates a test story, waits for 24 hours, and then verifies that the story is deleted.\n    *   Use a mock clock to speed up the testing process.\n3.  **Error Handling:**\n    *   Simulate errors during file deletion (e.g., by temporarily disabling storage access) and verify that the task scheduler handles the errors gracefully and logs them appropriately.\n4.  **Performance Testing:**\n    *   Test the performance of the task scheduler with a large number of stories to ensure it does not impact the overall performance of the application.",
+        "status": "pending",
+        "dependencies": [
+          47,
+          48
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 50,
+        "title": "Implement User Follow/Unfollow System",
+        "description": "Implement the ability for users to follow and unfollow other users. This includes updating the database to reflect these relationships and providing UI elements for users to manage their followed users.",
+        "details": "1.  **Database Schema Update:**\n    *   Create a `followers` table in the database to store follower-followee relationships. This table should include columns for `follower_id` (user initiating the follow), `followee_id` (user being followed), and `created_at` (timestamp of when the follow action occurred).\n    *   Ensure proper indexing on `follower_id` and `followee_id` for efficient querying.\n2.  **API Endpoints:**\n    *   Implement a `/api/follow` endpoint that accepts a `followee_id` and creates a new entry in the `followers` table.\n    *   Implement an `/api/unfollow` endpoint that accepts a `followee_id` and deletes the corresponding entry from the `followers` table.\n    *   Implement an `/api/followers` endpoint that returns a list of users following a specific user (accepts a `user_id` as a parameter).\n    *   Implement an `/api/following` endpoint that returns a list of users that a specific user is following (accepts a `user_id` as a parameter).\n3.  **Frontend Implementation:**\n    *   Add a \"Follow\"/\"Unfollow\" button to user profiles.\n    *   When the button is clicked, call the appropriate API endpoint (`/api/follow` or `/api/unfollow`).\n    *   Update the button state (Follow/Unfollow) based on the API response.\n    *   Implement a \"Following\" list on the user's profile page to display the users they are following.\n4.  **Error Handling:**\n    *   Handle cases where a user tries to follow themselves.\n    *   Handle cases where a user tries to follow the same user multiple times.\n    *   Implement proper error messages for API failures.",
+        "testStrategy": "1.  **Follow/Unfollow Functionality:**\n    *   Verify that users can successfully follow and unfollow other users.\n    *   Ensure that the `followers` table is updated correctly when a user follows or unfollows another user.\n    *   Check that the \"Follow\"/\"Unfollow\" button state is updated correctly in the UI.\n2.  **API Endpoint Tests:**\n    *   Test the `/api/follow` endpoint with valid and invalid `followee_id` values.\n    *   Test the `/api/unfollow` endpoint with valid and invalid `followee_id` values.\n    *   Test the `/api/followers` and `/api/following` endpoints to ensure they return the correct lists of users.\n3.  **Edge Cases:**\n    *   Verify that a user cannot follow themselves.\n    *   Ensure that a user cannot follow the same user multiple times.\n4.  **Performance:**\n    *   Test the performance of the API endpoints with a large number of followers and followees.\n    *   Ensure that the database queries are optimized for performance.",
+        "status": "pending",
+        "dependencies": [
+          8,
+          23
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 51,
+        "title": "Implement In-App Notification Panel",
+        "description": "Implement an in-app notification panel to display user activity such as likes, follows, and comments. This panel will provide users with a centralized location to view and manage their notifications.",
+        "details": "1.  **Create a Notification Panel Component:**\n    *   Develop a React component to display notifications in a visually appealing manner.\n    *   Design the UI to accommodate different types of notifications (likes, follows, comments).\n    *   Implement pagination or infinite scrolling to handle a large number of notifications.\n    *   Include timestamps for each notification to indicate when the activity occurred.\n2.  **Fetch Notifications from the Backend:**\n    *   Create an API endpoint to retrieve notifications for the current user.\n    *   Implement logic to fetch notifications from the database, ordered by timestamp.\n    *   Optimize the query to efficiently retrieve notifications without impacting performance.\n3.  **Integrate with Push Notifications:**\n    *   When a push notification is received (via Task 41), also add the notification to the in-app notification panel.\n    *   Ensure that the notification panel is updated in real-time when new notifications arrive.\n4.  **Implement Mark as Read Functionality:**\n    *   Allow users to mark individual notifications as read.\n    *   Implement an API endpoint to update the notification status in the database.\n    *   Provide a \"Mark All as Read\" button to clear all notifications.\n5.  **Link to Relevant Content:**\n    *   Make notifications clickable, linking users to the relevant content (e.g., the voice post that was liked, the user who followed them, the comment that was made).\n6.  **Visual Indicators:**\n    *   Display a badge on the notification panel icon to indicate the presence of unread notifications.\n    *   Use different icons or styling to differentiate between notification types.",
+        "testStrategy": "1.  **Notification Display Test:**\n    *   Log in as a user and perform actions that trigger notifications (e.g., like a voice post, follow another user, receive a comment).\n    *   Verify that the notifications are displayed correctly in the notification panel.\n    *   Check that the timestamps are accurate and the notifications are ordered correctly.\n2.  **Mark as Read Functionality Test:**\n    *   Mark individual notifications as read and verify that their status is updated correctly.\n    *   Click the \"Mark All as Read\" button and ensure that all notifications are marked as read.\n    *   Refresh the page and verify that the notification status persists.\n3.  **Link Navigation Test:**\n    *   Click on different notifications and ensure that they navigate to the correct content.\n    *   Verify that the correct voice post, user profile, or comment is displayed.\n4.  **Real-time Update Test:**\n    *   Use two different user accounts. Have one user perform an action that generates a notification for the other user.\n    *   Verify that the notification appears in the second user's notification panel in real-time without requiring a page refresh.\n5.  **Performance Test:**\n    *   Simulate a large number of notifications and verify that the notification panel loads efficiently without performance issues.",
+        "status": "pending",
+        "dependencies": [
+          41,
+          50
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 52,
+        "title": "Implement i18n with English/Japanese Language Toggle",
+        "description": "Implement internationalization (i18n) support in the application, allowing users to switch between English and Japanese languages. This includes setting up the i18n library, configuring language files, and implementing a language toggle in the UI.",
+        "details": "1.  **Install i18n Library:**\n    *   Install a suitable i18n library for Next.js, such as `next-i18next` or `react-intl`.\n2.  **Configure i18n:**\n    *   Create language files (e.g., `en.json`, `ja.json`) containing translations for all text in the application.\n    *   Configure the i18n library to load these language files and set the default language to English.\n    *   Set up locale detection to automatically determine the user's preferred language based on browser settings or user preferences.\n3.  **Implement Language Toggle:**\n    *   Add a language toggle component in the UI (e.g., a dropdown menu or a button) that allows users to switch between English and Japanese.\n    *   Update the application's locale when the user selects a different language.\n4.  **Translate Text:**\n    *   Replace all hardcoded text in the application with calls to the i18n library to retrieve the appropriate translation based on the current locale.\n    *   Ensure that all text, including labels, messages, and error messages, is translated.\n5.  **Handle Plurals and Gender:**\n    *   If necessary, implement support for plurals and gender-specific translations using the i18n library's features.\n6.  **Optimize for SEO:**\n    *   Configure the i18n library to generate language-specific URLs for SEO purposes (e.g., `/en/home`, `/ja/home`).",
+        "testStrategy": "1.  **Language Switching Test:**\n    *   Verify that users can switch between English and Japanese languages using the language toggle.\n    *   Ensure that all text in the application is updated to the selected language.\n2.  **Translation Accuracy Test:**\n    *   Review all translations to ensure they are accurate and grammatically correct.\n    *   Pay special attention to translations that involve plurals, gender, or cultural nuances.\n3.  **Locale Detection Test:**\n    *   Test the locale detection functionality to ensure that the application correctly detects the user's preferred language based on browser settings or user preferences.\n4.  **SEO Test:**\n    *   Verify that the application generates language-specific URLs for SEO purposes.\n    *   Check that search engines can crawl and index the different language versions of the application.",
+        "status": "pending",
+        "dependencies": [
+          1
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 61,
+        "title": "Implement Landing Page CTAs for Signup and Preview Feed",
+        "description": "Implement landing page call-to-action buttons for user signup and voice post preview, ensuring a seamless user flow from the landing page to the respective functionalities.",
+        "details": "1.  **Integrate Signup CTA:**\n    *   Link the 'Sign Up' button on the landing page (Task 7) to the email/social login functionality (Task 60).\n    *   Ensure a smooth transition to the signup form or social login providers (Google, Apple).\n    *   Track user clicks on the 'Sign Up' button using analytics to monitor conversion rates (Task 28).\n2.  **Integrate Voice Post Preview CTA:**\n    *   Link the 'Preview Feed' button on the landing page to the voice post preview functionality (Task 53).\n    *   Guide new users through a brief tutorial or onboarding flow explaining how to record and share voice posts.\n    *   Implement a clear call to action within the preview feed to encourage users to create their own voice posts.\n3.  **User Flow Optimization:**\n    *   Design a user-friendly flow from the landing page to the signup/preview features.\n    *   Minimize the number of steps required to complete the signup or preview process.\n    *   Provide clear instructions and feedback to guide users through the process.\n    *   Implement error handling to gracefully handle invalid inputs or unexpected issues.\n4.  **UI/UX Considerations:**\n    *   Ensure the CTAs are visually appealing and consistent with the overall landing page design.\n    *   Optimize the CTAs for mobile devices to ensure a seamless experience on smaller screens.\n    *   Use clear and concise language to communicate the value proposition of signing up or previewing the feed.",
+        "testStrategy": "1.  **Signup Flow Testing:**\n    *   Verify that the 'Sign Up' button on the landing page correctly redirects users to the signup form or social login providers.\n    *   Test the signup process with valid and invalid email addresses and passwords.\n    *   Ensure that new users are successfully created and logged in.\n    *   Verify that user data is stored correctly in Supabase.\n2.  **Voice Post Preview Flow Testing:**\n    *   Verify that the 'Preview Feed' button on the landing page correctly redirects users to the voice post preview functionality.\n    *   Test the voice post preview functionality with different voice posts.\n    *   Ensure that users can successfully listen to voice posts and interact with the preview feed.\n    *   Verify that the call to action within the preview feed encourages users to create their own voice posts.\n3.  **Analytics Verification:**\n    *   Verify that user clicks on the CTAs are correctly tracked using analytics.\n    *   Monitor conversion rates to assess the effectiveness of the landing page and CTAs.\n4.  **Responsiveness Testing:**\n    *   Test the landing page and CTAs on different screen sizes and devices to ensure a consistent user experience.",
+        "status": "pending",
+        "dependencies": [
+          7
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 62,
+        "title": "Build Voice Post Preview Screen",
+        "description": "Create a voice post preview screen where users can listen to their recording, see the waveform visualization, and confirm or re-record before publishing. This screen allows users to review their voice post before making it public.",
+        "details": "1.  **Create UI Component:**\n    *   Develop a new React component for the voice post preview screen.\n    *   Include an audio player to play the recorded voice post.\n    *   Integrate the waveform visualization component (from Task 32) to display the audio waveform.\n    *   Add buttons for 'Confirm' and 'Re-record'.\n2.  **Audio Playback:**\n    *   Load the recorded audio data into the audio player.\n    *   Implement play/pause functionality.\n    *   Synchronize the waveform visualization with the audio playback.\n3.  **'Confirm' Action:**\n    *   Upon confirmation, navigate the user to the voice post publishing flow (Task 47).\n    *   Pass the audio data to the publishing flow.\n4.  **'Re-record' Action:**\n    *   Upon re-record, navigate the user back to the voice post recorder (Task 9).\n    *   Clear the existing audio data.\n5.  **Styling and Responsiveness:**\n    *   Ensure the preview screen is visually appealing and responsive across different devices.",
+        "testStrategy": "1.  **Audio Playback Test:**\n    *   Record a voice post and navigate to the preview screen.\n    *   Verify that the audio plays correctly in the preview screen.\n    *   Check that the waveform visualization is displayed and synchronized with the audio playback.\n2.  **'Confirm' Action Test:**\n    *   Confirm the voice post and verify that the user is navigated to the publishing flow.\n    *   Ensure that the audio data is passed correctly to the publishing flow.\n3.  **'Re-record' Action Test:**\n    *   Click the 'Re-record' button and verify that the user is navigated back to the voice post recorder.\n    *   Check that the existing audio data is cleared.\n4.  **UI Responsiveness Test:**\n    *   Test the preview screen on different devices and screen sizes to ensure it is responsive and visually appealing.",
+        "status": "pending",
+        "dependencies": [
+          9,
+          32
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 63,
+        "title": "Implement Language Detection and Auto-Tagging for Voice Posts",
+        "description": "Implement language detection and auto-tagging for voice posts after user confirms recording (post-preview step). This feature will automatically detect the language of the voice post and add relevant tags to improve discoverability and content organization.",
+        "details": "1. **Integrate Language Detection API:**\n    * Choose a suitable language detection API (e.g., Google Cloud Translation API, Azure Text Analytics API, or a lightweight library like `franc`).\n    * Implement the API integration in the backend to analyze the recorded voice post's audio (after confirmation in the preview screen).\n    * Ensure the API key is securely stored using environment variables (Task 24).\n2. **Audio Transcription (if necessary):**\n    * If the language detection API requires text input, implement audio transcription using a service like Google Cloud Speech-to-Text or AssemblyAI.\n    * Handle potential transcription errors gracefully.\n3. **Tag Generation:**\n    * Based on the detected language, generate relevant tags for the voice post.\n    * Use a predefined list of tags or a more sophisticated tag generation algorithm (e.g., using NLP techniques to extract keywords from the transcribed text).\n    * Consider incorporating user-defined tags as well.\n4. **Frontend Integration:**\n    * Display the detected language and auto-generated tags on the post-preview screen (Task 62).\n    * Allow users to review and edit the tags before publishing the voice post.\n    * Implement a UI component for managing tags (adding, removing, editing).\n5. **Backend Storage:**\n    * Store the detected language and tags in the database along with the voice post metadata.\n    * Ensure the database schema is updated to accommodate the new fields.\n6. **i18n Considerations:**\n    * Ensure the tag generation process is compatible with the i18n implementation (Task 52).\n    * Provide translations for the tags in different languages.",
+        "testStrategy": "1. **Language Detection Accuracy:**\n    * Record voice posts in different languages (English, Japanese, etc.) and verify that the language detection API correctly identifies the language.\n    * Test with different accents and speaking styles.\n2. **Tag Relevance:**\n    * Verify that the auto-generated tags are relevant to the content of the voice post.\n    * Check for any inappropriate or irrelevant tags.\n3. **Tag Editing:**\n    * Ensure that users can successfully edit the auto-generated tags on the post-preview screen.\n    * Verify that the changes are saved correctly in the database.\n4. **Database Storage:**\n    * Check that the detected language and tags are stored correctly in the database.\n5. **Error Handling:**\n    * Test the error handling for the language detection API (e.g., API unavailable, invalid API key).\n    * Ensure that the application handles these errors gracefully and provides informative error messages to the user.",
+        "status": "pending",
+        "dependencies": [
+          9,
+          62,
+          52
+        ],
+        "priority": "medium",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-06T09:32:37.993Z",
+      "updated": "2025-07-07T13:47:36.964Z",
+      "description": "Tasks for master context"
+    }
+  }
 }

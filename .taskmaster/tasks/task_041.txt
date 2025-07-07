@@ -1,0 +1,50 @@
+# Task ID: 41
+# Title: Implement Push Notifications for Likes, Comments, and Follows
+# Status: pending
+# Dependencies: 4, 36, 35, 23, 3
+# Priority: medium
+# Description: Implement push notifications for likes, comments, and follows to enhance user engagement and provide real-time updates. This task involves setting up the necessary backend infrastructure and integrating with a push notification service.
+# Details:
+1.  **Backend Implementation:**
+    *   Set up Firebase Cloud Messaging (FCM) or another push notification service.
+    *   Create API endpoints to handle device token registration and unregistration.
+    *   Implement logic to trigger push notifications when a user receives a like, comment, or follow.
+    *   Store user device tokens in the database, associating them with user accounts.
+    *   Configure notification payloads with relevant data (e.g., sender, content, timestamp).
+    *   Implement a notification queue to handle large volumes of notifications.
+2.  **Frontend Implementation:**
+    *   Request permission to send push notifications from the user.
+    *   Obtain the device token from FCM or the chosen service.
+    *   Send the device token to the backend for registration.
+    *   Handle incoming push notifications and display them to the user.
+    *   Implement logic to navigate the user to the relevant content when a notification is clicked.
+3.  **Database Schema Extension:**
+    *   Add a `device_tokens` table to the Supabase schema. This table should include fields such as `user_id` (foreign key referencing the user ID), `device_token` (text field for the device token), `platform` (enum: 'ios', 'android', 'web'), and `created_at` (timestamp).
+4.  **Considerations:**
+    *   Handle different notification types (e.g., likes, comments, follows) with appropriate content and actions.
+    *   Implement rate limiting to prevent abuse.
+    *   Provide users with options to customize their notification preferences.
+    *   Ensure compliance with privacy regulations regarding user data and notification permissions.
+
+# Test Strategy:
+1.  **Like Notification Test:**
+    *   Log in as two different users (User A and User B).
+    *   User A likes a voice post or comment made by User B.
+    *   Verify that User B receives a push notification indicating that User A liked their content.
+    *   Click on the notification and ensure it navigates to the correct voice post or comment.
+2.  **Comment Notification Test:**
+    *   Log in as two different users (User A and User B).
+    *   User A comments on a voice post made by User B.
+    *   Verify that User B receives a push notification indicating that User A commented on their voice post.
+    *   Click on the notification and ensure it navigates to the correct voice post and comment.
+3.  **Follow Notification Test:**
+    *   Log in as two different users (User A and User B).
+    *   User A follows User B.
+    *   Verify that User B receives a push notification indicating that User A followed them.
+    *   Click on the notification and ensure it navigates to User A's profile.
+4.  **Device Token Registration Test:**
+    *   Log in as a user and verify that the device token is successfully registered in the `device_tokens` table.
+    *   Log out and log in again to ensure the device token is still registered.
+5.  **Notification Preference Test:**
+    *   Implement notification preference settings for each user.
+    *   Test that users only receive notifications for the types they have enabled.
