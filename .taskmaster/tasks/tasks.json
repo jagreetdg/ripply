@@ -9,7 +9,7 @@
         "testStrategy": "Verify the Next.js application starts without errors. Check basic routing and styling.",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -20,7 +20,7 @@
         "testStrategy": "Verify the Express.js server starts without errors. Test basic API endpoints using tools like Postman or curl.",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -34,7 +34,7 @@
           1,
           2
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -47,7 +47,7 @@
         "dependencies": [
           3
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -61,7 +61,59 @@
           4
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define RLS Policies for 'users' table",
+            "description": "Define RLS policies for the 'users' table, considering admin, regular user, and guest roles. Specify access permissions for each role (e.g., admin can view all user data, regular users can only view their own data, guests have no access).",
+            "dependencies": [],
+            "details": "Consider read and write access for each role.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Define RLS Policies for 'posts' table",
+            "description": "Define RLS policies for the 'posts' table, considering admin, regular user, and guest roles. Specify access permissions for each role (e.g., admin can view/edit all posts, regular users can view all posts but only edit their own, guests can only view public posts).",
+            "dependencies": [],
+            "details": "Consider visibility of draft vs published posts.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Define RLS Policies for 'comments' table",
+            "description": "Define RLS policies for the 'comments' table, considering admin, regular user, and guest roles. Specify access permissions for each role (e.g., admin can view/edit all comments, regular users can view all comments and edit their own, guests can only view comments).",
+            "dependencies": [],
+            "details": "Consider moderation capabilities for admins.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Test RLS Policies",
+            "description": "Test the defined RLS policies for each table and role to ensure they function as expected. Create test cases to verify that users can only access the data they are authorized to access.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Use different user accounts to simulate different roles.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Document RLS Implementation",
+            "description": "Document the implemented RLS policies, including the rationale behind each policy, the specific SQL code used to create the policies, and the results of the testing performed.",
+            "dependencies": [
+              4
+            ],
+            "details": "Include diagrams or flowcharts to illustrate the RLS implementation.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 6,
@@ -73,7 +125,7 @@
         "dependencies": [
           2
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -86,7 +138,7 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -100,7 +152,7 @@
           3,
           6
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -115,7 +167,76 @@
           8
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement MediaRecorder API Integration",
+            "description": "Integrate the MediaRecorder API to capture audio input from the user's microphone. Handle initialization, start/stop recording, and data availability events.",
+            "dependencies": [],
+            "details": "Use navigator.mediaDevices.getUserMedia to access the microphone. Create a MediaRecorder instance with appropriate audio encoding settings. Implement event listeners for 'dataavailable' and 'stop' events.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop Timer Functionality",
+            "description": "Create a timer that starts when recording begins and stops when recording ends. Display the elapsed time to the user.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use JavaScript's setInterval and clearInterval functions to implement the timer. Format the elapsed time in a user-friendly format (e.g., mm:ss).",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Audio Type and Duration Validation",
+            "description": "Validate the recorded audio type and duration. Ensure the audio type is acceptable (e.g., mp3, wav) and the duration is within acceptable limits.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Check the MIME type of the recorded audio data. Implement logic to enforce a maximum recording duration. Display error messages to the user if validation fails.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Supabase Storage Upload with Signed URLs",
+            "description": "Generate a signed URL using Supabase Storage and upload the recorded audio file to Supabase.",
+            "dependencies": [
+              3
+            ],
+            "details": "Use the Supabase client library to generate a signed URL for uploading the audio file. Use the fetch API or a similar library to upload the audio data to the signed URL.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement UI Elements and Error Handling",
+            "description": "Create UI elements for recording control (start/stop button, timer display) and error messages. Implement comprehensive error handling for all API calls and operations.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Design and implement UI elements using HTML, CSS, and JavaScript. Implement try-catch blocks and error handling logic for all asynchronous operations. Display user-friendly error messages.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Cross-Browser Testing and Compatibility",
+            "description": "Test the voice post recorder on different browsers (Chrome, Firefox, Safari, Edge) to ensure compatibility and identify any browser-specific issues.",
+            "dependencies": [
+              5
+            ],
+            "details": "Perform thorough testing on different browsers and operating systems. Address any compatibility issues by using polyfills or browser-specific code.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 10,
@@ -128,7 +249,7 @@
           4,
           9
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -140,7 +261,53 @@
         "priority": "medium",
         "dependencies": [],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Onboarding UI/UX",
+            "description": "Create wireframes and mockups for each onboarding screen/modal, focusing on user experience and visual appeal.",
+            "dependencies": [],
+            "details": "Consider mobile-first design principles and accessibility guidelines.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Microphone Permission Request",
+            "description": "Develop the functionality to request microphone permissions from the user and handle different permission states (granted, denied, blocked).",
+            "dependencies": [
+              1
+            ],
+            "details": "Ensure clear communication about why microphone access is needed.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create Voice Post Creation Instructions",
+            "description": "Develop interactive tutorials or guides to instruct users on how to create voice posts, including recording, editing, and publishing.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Incorporate visual aids and step-by-step instructions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Onboarding Completion Tracking with Analytics",
+            "description": "Integrate analytics to track user progress through the onboarding flow and measure completion rates. Define key metrics to monitor.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Use analytics data to identify areas for improvement in the onboarding process.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 20,
@@ -151,7 +318,52 @@
         "priority": "high",
         "dependencies": [],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create a Private Supabase Storage Bucket",
+            "description": "Create a new private bucket in Supabase storage to store voice posts. Configure appropriate access policies to ensure only authorized users can access the bucket.",
+            "dependencies": [],
+            "details": "Use the Supabase dashboard or the Supabase CLI to create a new bucket. Set the bucket to private and configure RLS (Row Level Security) policies to control access.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Voice Post Upload Functionality",
+            "description": "Implement the functionality to upload voice post files to the created Supabase storage bucket using the Supabase client library.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use the Supabase client library (e.g., JavaScript, Python) to upload files to the bucket. Handle file uploads, error handling, and progress tracking. Ensure files are named appropriately and stored in a structured manner.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Generate and Store Signed URLs for Voice Posts",
+            "description": "Generate signed URLs with expiration times for accessing the uploaded voice posts and store these URLs in the database.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use the Supabase client library to generate signed URLs for the uploaded voice post files. Set appropriate expiration times for the URLs. Store the generated URLs and their expiration times in the database, associated with the corresponding voice post record.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Security Considerations for Voice Post Storage",
+            "description": "Review and implement security best practices for storing and accessing voice posts, including access control, data encryption, and vulnerability assessments.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Review and implement security measures such as input validation, sanitization, and protection against unauthorized access. Consider implementing encryption at rest and in transit. Regularly assess the security of the storage and access mechanisms.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 21,
@@ -164,7 +376,62 @@
           20
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Database Query for Home Feed",
+            "description": "Create an efficient database query to fetch voice posts from users followed by the current user, ordered by creation date.",
+            "dependencies": [],
+            "details": "Consider indexing strategies for performance. The query should retrieve necessary post data (audio URL, creation date, author ID) and author information (username, profile picture).",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Pagination Logic",
+            "description": "Implement pagination for the home feed to load posts in batches, improving performance and user experience.",
+            "dependencies": [
+              1
+            ],
+            "details": "Define page size and implement logic to fetch the next/previous page of posts. Handle edge cases like reaching the end of the feed.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Develop Post Display Component",
+            "description": "Create a UI component to display individual voice posts, including author information and an audio player.",
+            "dependencies": [
+              1
+            ],
+            "details": "The component should display the author's username and profile picture, the post's creation date, and an audio player for playing the voice post. Ensure the component is responsive and accessible.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Integrate Database Query and Post Display",
+            "description": "Connect the database query with the post display component to render the home feed.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Fetch posts using the paginated query and render them using the post display component. Handle loading states and errors gracefully.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Handle Empty Feed and Edge Cases",
+            "description": "Implement logic to handle cases where the user is not following anyone or there are no new posts.",
+            "dependencies": [
+              4
+            ],
+            "details": "Display a message indicating that the feed is empty and suggest actions like following other users. Handle potential errors during data fetching and display appropriate error messages.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 22,
@@ -177,7 +444,73 @@
           20
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Trending Algorithm",
+            "description": "Develop the trending algorithm based on likes, comments, and shares. Define weights for each factor and implement the scoring mechanism.",
+            "dependencies": [],
+            "details": "Consider exponential decay for older posts. Implement a scoring system that combines likes, comments, and shares with appropriate weights. Store the trending score for each post.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Query Database for Mixed Posts",
+            "description": "Query the database to retrieve a mix of random and trending posts based on the implemented algorithm.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement a query that retrieves a specified number of trending posts and a specified number of random posts. Ensure the query is efficient and scalable.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Pagination",
+            "description": "Implement pagination for the explore feed to load posts in batches.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use offset-based or cursor-based pagination to efficiently load posts as the user scrolls. Ensure the pagination logic is correct and handles edge cases.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Display Posts with Author and Audio Player",
+            "description": "Implement the UI to display posts with author information and an audio player.",
+            "dependencies": [
+              3
+            ],
+            "details": "Design the UI to display post content, author name, profile picture, and an audio player for audio posts. Ensure the UI is responsive and visually appealing.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Optimize Database Query Performance",
+            "description": "Optimize the database query for performance to ensure fast loading times.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use indexing, caching, and query optimization techniques to improve the performance of the database query. Monitor query performance and identify bottlenecks.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "A/B Test Trending Algorithm",
+            "description": "Implement A/B testing to compare different versions of the trending algorithm.",
+            "dependencies": [
+              1,
+              4
+            ],
+            "details": "Create two or more versions of the trending algorithm and randomly assign users to each version. Track key metrics such as engagement and retention to determine the best-performing algorithm.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 23,
@@ -189,7 +522,7 @@
         "dependencies": [
           20
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -198,7 +531,7 @@
         "description": "Configure the .env file to securely store all secrets, including Supabase keys, JWT secrets, and OAuth credentials, ensuring they are not exposed in the codebase.",
         "details": "1. Create a `.env` file in the root directory of both the frontend and backend projects.\n2. Add all sensitive information as key-value pairs in the `.env` file. Examples include: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `JWT_SECRET`, `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`.\n3. Use a library like `dotenv` (Node.js) or similar mechanisms in Next.js to load environment variables into the application.\n4. Update the codebase to use `process.env.VARIABLE_NAME` to access the secrets instead of hardcoding them.\n5. Ensure the `.env` file is added to `.gitignore` to prevent it from being committed to the repository.\n6. For production environments, configure environment variables directly on the server or using a secrets management service.",
         "testStrategy": "1. Verify that the application can successfully read the environment variables from the `.env` file in both development and production environments.\n2. Ensure that sensitive information is not hardcoded in the codebase.\n3. Confirm that the `.env` file is not committed to the Git repository.\n4. Test the application's functionality to ensure that all secrets are being used correctly (e.g., Supabase connection, authentication).\n5. Simulate different environments (development, staging, production) to ensure the correct environment variables are loaded in each environment.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           3
         ],
@@ -216,7 +549,85 @@
           20
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Review Supabase Storage Architecture and Security",
+            "description": "Analyze the current Supabase storage setup, including bucket structure, access policies, and existing security measures. Identify potential vulnerabilities and areas for improvement.",
+            "dependencies": [],
+            "details": "Examine Supabase documentation on storage best practices, review existing bucket policies, and assess the current security posture.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Evaluate Existing Libraries for Signed URL Generation",
+            "description": "Research and evaluate existing libraries or SDKs that simplify the process of generating signed URLs for Supabase storage. Consider factors like ease of use, security, and performance.",
+            "dependencies": [
+              1
+            ],
+            "details": "Explore libraries like `@supabase/supabase-js` or other relevant packages. Compare their features and suitability for the project's needs.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create Helper Functions for Profile Pictures Bucket",
+            "description": "Implement helper functions specifically for generating signed URLs for the profile pictures bucket. Include functions for uploading, retrieving, and deleting profile pictures.",
+            "dependencies": [
+              2
+            ],
+            "details": "Develop functions that handle the specific logic for profile picture storage, including setting appropriate content types and file naming conventions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Create Helper Functions for Cover Photos Bucket",
+            "description": "Implement helper functions specifically for generating signed URLs for the cover photos bucket. Include functions for uploading, retrieving, and deleting cover photos.",
+            "dependencies": [
+              2
+            ],
+            "details": "Develop functions that handle the specific logic for cover photo storage, including setting appropriate content types and file naming conventions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Create Helper Functions for Voice Notes Bucket",
+            "description": "Implement helper functions specifically for generating signed URLs for the voice notes bucket. Include functions for uploading, retrieving, and deleting voice notes.",
+            "dependencies": [
+              2
+            ],
+            "details": "Develop functions that handle the specific logic for voice note storage, including setting appropriate content types and file naming conventions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Signed URL Generation with Expiration Times and Secure Bucket Access",
+            "description": "Implement the logic for generating signed URLs with appropriate expiration times for each bucket type. Ensure that bucket access is restricted and only accessible via signed URLs.",
+            "dependencies": [
+              3,
+              4,
+              5
+            ],
+            "details": "Configure the Supabase storage policies to enforce access control and use the helper functions to generate signed URLs with limited validity periods.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Integrate with Backend API Endpoints and Implement Error Handling",
+            "description": "Integrate the storage helper functions with the backend API endpoints. Implement robust error handling to gracefully manage potential issues during file uploads, downloads, and deletions.",
+            "dependencies": [
+              6
+            ],
+            "details": "Modify the backend API endpoints to use the helper functions for generating signed URLs and handling storage operations. Implement error logging and user-friendly error messages.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 26,
@@ -229,7 +640,75 @@
           3
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Choose CAPTCHA Provider and Obtain API Keys",
+            "description": "Research and select a suitable CAPTCHA provider (e.g., reCAPTCHA, hCaptcha). Obtain the necessary API keys for both frontend and backend integration.",
+            "dependencies": [],
+            "details": "Consider factors like cost, ease of use, security, and privacy when choosing a provider. Document the chosen provider and the steps to obtain API keys.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Frontend Integration: Script Inclusion and Widget Display",
+            "description": "Include the CAPTCHA provider's JavaScript library in the signup/login pages. Implement the CAPTCHA widget display within the forms.",
+            "dependencies": [
+              1
+            ],
+            "details": "Ensure the script is loaded asynchronously to avoid blocking page rendering. Style the widget appropriately to match the website's design.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Frontend Integration: Response Handling",
+            "description": "Implement JavaScript code to capture the CAPTCHA response from the widget and include it in the signup/login form submission.",
+            "dependencies": [
+              2
+            ],
+            "details": "Handle cases where the CAPTCHA fails or expires on the frontend. Consider adding a visual indicator to show the CAPTCHA status.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Backend Integration: API Endpoint and Server-Side Validation",
+            "description": "Create an API endpoint on the server to validate the CAPTCHA response. Implement server-side validation logic using the CAPTCHA provider's API.",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Securely store and use the API keys on the server. Implement proper error handling and logging for validation failures.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Error Handling and User Feedback",
+            "description": "Implement error handling for CAPTCHA validation failures on both the frontend and backend. Provide clear and helpful feedback to the user.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Display appropriate error messages to the user, such as 'Incorrect CAPTCHA' or 'CAPTCHA expired'. Log validation failures for monitoring purposes.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Configuration and Accessibility Considerations",
+            "description": "Implement a configuration option to enable/disable CAPTCHA. Ensure the CAPTCHA implementation is accessible to users with disabilities.",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "Provide alternative text for the CAPTCHA widget. Consider using audio CAPTCHAs or other accessibility features provided by the CAPTCHA provider. Store API keys securely in configuration.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 27,
@@ -243,7 +722,72 @@
           24
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Choose a Logging Library",
+            "description": "Evaluate and select a suitable logging library (e.g., Winston, Bunyan, Pino) based on performance, features, and compatibility with the project.",
+            "dependencies": [],
+            "details": "Consider factors like ease of use, performance impact, and community support when selecting the library.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Logging Middleware",
+            "description": "Create middleware to automatically log incoming requests, outgoing responses, and other relevant application events.",
+            "dependencies": [
+              1
+            ],
+            "details": "The middleware should capture request method, URL, status code, and response time.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Set Up Centralized Log Management",
+            "description": "Configure a centralized logging system (e.g., ELK stack, Graylog, Datadog) to aggregate and analyze logs from all application instances.",
+            "dependencies": [
+              2
+            ],
+            "details": "This involves setting up a log shipper (e.g., Filebeat, Logstash) to forward logs to the central system.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Integrate Vercel Analytics",
+            "description": "Integrate Vercel Analytics to track website traffic, user behavior, and performance metrics.",
+            "dependencies": [],
+            "details": "Configure Vercel Analytics according to the project's requirements and ensure data is being collected correctly.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Error Tracking",
+            "description": "Set up error tracking using a service like Sentry or Bugsnag to capture and report application errors.",
+            "dependencies": [
+              1
+            ],
+            "details": "Configure error reporting to include relevant context, such as user information and request details.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Configure Log Levels and Secure Sensitive Information",
+            "description": "Configure appropriate log levels (e.g., DEBUG, INFO, WARN, ERROR) and implement measures to prevent logging of sensitive information (e.g., passwords, API keys).",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Use environment variables and configuration files to manage log levels and sensitive data.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 28,
@@ -258,7 +802,71 @@
           27
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Analyze Vercel Analytics Data",
+            "description": "Review Vercel Analytics data to identify areas for improvement on the landing page, focusing on user behavior, bounce rates, and conversion rates.",
+            "dependencies": [],
+            "details": "Examine heatmaps, session recordings, and funnel analysis to pinpoint user drop-off points and areas of friction.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Conduct Competitor Analysis",
+            "description": "Research competitor landing pages to identify best practices and potential areas for differentiation.",
+            "dependencies": [],
+            "details": "Analyze competitor messaging, design, and call-to-action strategies.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Design A/B Test Variations for Call to Action",
+            "description": "Create multiple variations of the call-to-action (CTA) button, including changes to text, color, and placement.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Develop at least two distinct CTA variations based on analytics data and competitor analysis.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement A/B Testing with Next.js",
+            "description": "Integrate an A/B testing framework (e.g., Vercel Experiments, Google Optimize) into the Next.js landing page to serve different CTA variations to users.",
+            "dependencies": [
+              3
+            ],
+            "details": "Configure the A/B testing framework to track conversion rates for each CTA variation.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Monitor A/B Test Performance and Collect User Feedback",
+            "description": "Track the performance of each CTA variation using Vercel Analytics and collect user feedback through surveys or feedback forms.",
+            "dependencies": [
+              4
+            ],
+            "details": "Analyze A/B test results to determine the winning CTA variation and gather qualitative feedback to understand user preferences.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Winning Design and Iterate",
+            "description": "Implement the winning CTA design on the live landing page and plan for future iterations based on ongoing performance monitoring and user feedback.",
+            "dependencies": [
+              5
+            ],
+            "details": "Continuously monitor landing page performance and make further adjustments as needed to optimize conversion rates.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 29,
@@ -273,7 +881,63 @@
           18
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design UI Prompts for Mic Permission and First Post",
+            "description": "Create visually appealing and user-friendly UI prompts for requesting microphone permission and encouraging users to create their first voice post. Consider different screen sizes and accessibility.",
+            "dependencies": [],
+            "details": "Design mockups and prototypes for the UI prompts, including variations for different user scenarios (e.g., first-time app launch, skipped permission request).",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Microphone Permission Request",
+            "description": "Integrate the microphone permission request flow into the onboarding process. Handle different user responses (allow, deny, block) and provide appropriate feedback.",
+            "dependencies": [
+              1
+            ],
+            "details": "Write code to request microphone permission using the appropriate platform APIs (iOS, Android). Implement error handling and fallback mechanisms.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Modify Onboarding Screens to Encourage First Voice Post",
+            "description": "Update the onboarding screens to highlight the benefits of creating a voice post and guide users through the process.",
+            "dependencies": [
+              1
+            ],
+            "details": "Revise the existing onboarding content and layout to emphasize voice posting. Add clear calls to action and visual cues.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Incentive for First Voice Post",
+            "description": "Integrate a reward system to incentivize users to create their first voice post (e.g., virtual currency, badges, early access to features).",
+            "dependencies": [
+              3
+            ],
+            "details": "Design and implement the reward mechanism. Ensure the reward is appealing and easily redeemable.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Track User Progress with Analytics",
+            "description": "Implement analytics tracking to monitor user behavior during onboarding, including microphone permission requests, first voice post creation, and incentive redemption.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "Integrate analytics SDKs (e.g., Firebase, Amplitude) and define relevant events and metrics. Create dashboards to visualize user progress.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 30,
@@ -281,7 +945,7 @@
         "description": "Implement profile picture and cover photo upload functionality, allowing users to customize their profiles with images. This includes both frontend UI elements and backend storage and retrieval mechanisms.",
         "details": "1.  **Frontend Implementation:**\n    *   Add UI elements for uploading profile pictures and cover photos on the user profile page.\n    *   Implement image preview functionality before uploading.\n    *   Use a library like `react-dropzone` or similar for drag-and-drop upload functionality.\n    *   Implement client-side image resizing and cropping to optimize image sizes before upload.\n    *   Display appropriate error messages for invalid file types or sizes.\n2.  **Backend Implementation:**\n    *   Create API endpoints for uploading profile pictures and cover photos.\n    *   Use Supabase storage to store the uploaded images in dedicated buckets (profile_pictures, cover_photos).\n    *   Generate signed URLs for accessing the images.\n    *   Store the image URLs in the `users` table in the database.\n    *   Implement logic to handle different image sizes and formats.\n    *   Consider using a background job queue (e.g., BullMQ) for image processing tasks.\n3.  **Database Updates:**\n    *   Modify the `users` table to include columns for `profile_picture_url` and `cover_photo_url`.\n4.  **Security Considerations:**\n    *   Implement proper authentication and authorization to ensure only the user can update their own profile pictures and cover photos.\n    *   Validate file types and sizes on the backend to prevent malicious uploads.\n    *   Sanitize image URLs before storing them in the database to prevent XSS attacks.",
         "testStrategy": "1.  **Profile Picture Upload:**\n    *   Verify that users can upload profile pictures successfully.\n    *   Ensure the uploaded image is displayed correctly on the user's profile.\n    *   Test different image formats (e.g., JPEG, PNG, GIF) and sizes.\n    *   Verify that the image is stored in the correct Supabase bucket.\n    *   Ensure the image URL is stored correctly in the `users` table.\n2.  **Cover Photo Upload:**\n    *   Verify that users can upload cover photos successfully.\n    *   Ensure the uploaded image is displayed correctly on the user's profile.\n    *   Test different image formats (e.g., JPEG, PNG, GIF) and sizes.\n    *   Verify that the image is stored in the correct Supabase bucket.\n    *   Ensure the image URL is stored correctly in the `users` table.\n3.  **Image Resizing and Cropping:**\n    *   Verify that client-side image resizing and cropping are working correctly.\n    *   Ensure that the uploaded images are optimized for different screen sizes.\n4.  **Security Tests:**\n    *   Attempt to upload invalid file types (e.g., executable files) and verify that the backend rejects them.\n    *   Attempt to upload large files and verify that the backend handles them gracefully.\n    *   Test the authentication and authorization mechanisms to ensure only the user can update their own profile pictures and cover photos.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           25
         ],
@@ -300,7 +964,75 @@
           9
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Choose Audio Validation Libraries",
+            "description": "Select appropriate libraries for audio type and duration validation on both the frontend and backend.",
+            "dependencies": [],
+            "details": "Research and choose suitable libraries for audio type and duration validation. Consider factors like ease of use, performance, and community support. Document the chosen libraries and their versions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Frontend Audio Type Validation",
+            "description": "Implement client-side validation to check the audio file type before uploading for both posts and comments.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use JavaScript and the chosen library to validate the audio file type (e.g., mp3, wav) on the client-side before uploading. Provide immediate feedback to the user if the file type is invalid. Handle different audio types for posts and comments if necessary.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Frontend Audio Duration Validation",
+            "description": "Implement client-side validation to check the audio duration before uploading for both posts and comments.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use JavaScript and the chosen library to validate the audio duration on the client-side before uploading. Provide immediate feedback to the user if the duration exceeds the allowed limit. Handle different duration limits for posts and comments if necessary.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Server-Side Audio Type Validation",
+            "description": "Implement server-side validation to check the audio file type after receiving the uploaded file for both posts and comments.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use the chosen backend library to validate the audio file type (e.g., mp3, wav) on the server-side after receiving the uploaded file. Reject invalid file types and return an appropriate error response. Handle different audio types for posts and comments if necessary.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Server-Side Audio Duration Validation",
+            "description": "Implement server-side validation to check the audio duration after receiving the uploaded file for both posts and comments.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use the chosen backend library to validate the audio duration on the server-side after receiving the uploaded file. Reject audio files exceeding the allowed duration and return an appropriate error response. Handle different duration limits for posts and comments if necessary.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Error Handling and UI Feedback",
+            "description": "Implement comprehensive error handling and provide clear UI feedback for audio validation failures.",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "Implement error handling on both the frontend and backend to gracefully handle audio validation failures. Provide clear and informative error messages to the user through the UI. Log errors for debugging purposes.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 32,
@@ -308,7 +1040,7 @@
         "description": "Display a waveform visualization of the audio during voice post playback. This will provide users with a visual representation of the audio content.",
         "details": "1.  **Frontend Integration:**\n    *   Integrate a waveform library (e.g., wavesurfer.js, waveform-playlist) into the frontend.\n    *   Fetch the audio data for the voice post from Supabase storage.\n    *   Use the waveform library to generate a waveform visualization from the audio data.\n    *   Display the waveform below the voice post during playback.\n    *   Synchronize the waveform display with the audio playback progress.\n2.  **Backend Considerations:**\n    *   Ensure the backend provides the necessary audio metadata (e.g., duration) to the frontend.\n    *   Optimize audio data delivery for efficient waveform generation.\n3.  **UI/UX Considerations:**\n    *   Design an intuitive and visually appealing waveform display.\n    *   Ensure the waveform is responsive and adapts to different screen sizes.\n    *   Provide clear visual cues for playback progress on the waveform.",
         "testStrategy": "1.  **Verify Waveform Display:**\n    *   Play a voice post and verify that the waveform is displayed correctly.\n    *   Test different voice posts with varying audio characteristics (e.g., volume, frequency) to ensure the waveform accurately represents the audio.\n2.  **Test Playback Synchronization:**\n    *   Play a voice post and verify that the waveform display is synchronized with the audio playback progress.\n    *   Pause, resume, and seek within the audio to ensure the waveform updates accordingly.\n3.  **Test Responsiveness:**\n    *   Resize the browser window and verify that the waveform adapts to different screen sizes.\n4.  **Test Error Handling:**\n    *   Test cases where the audio data is unavailable or corrupted and verify that the app handles the errors gracefully.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           9,
           31
@@ -328,7 +1060,88 @@
           32
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Choose Audio Player Library",
+            "description": "Research and select a suitable audio player library (e.g., Howler.js, Tone.js, HTML5 Audio API) based on project requirements and performance considerations.",
+            "dependencies": [],
+            "details": "Evaluate libraries based on features, browser compatibility, ease of use, and performance. Document the chosen library and its rationale.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create Playback Manager Service",
+            "description": "Develop a centralized service to manage audio playback state, including current audio source, play/pause status, volume, and playback position.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement methods for playing, pausing, stopping, and seeking audio. Use a state management solution (e.g., React Context, Redux) to maintain global playback state.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Pause on Scroll with Intersection Observer",
+            "description": "Integrate Intersection Observer API to automatically pause audio playback when the corresponding voice post component is scrolled out of view.",
+            "dependencies": [
+              2
+            ],
+            "details": "Set up Intersection Observer to monitor the visibility of voice post components. When a component is no longer visible, trigger the pause function in the Playback Manager Service.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Ensure Single Audio Source Playback",
+            "description": "Implement logic to ensure that only one audio source can play at a time. When a new audio source starts playing, automatically pause any other currently playing sources.",
+            "dependencies": [
+              2
+            ],
+            "details": "Modify the Playback Manager Service to track the currently playing audio source. Before starting a new audio source, pause the previous one.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate with Voice Post Components",
+            "description": "Modify voice post components to interact with the Playback Manager Service for starting, pausing, and stopping audio playback.",
+            "dependencies": [
+              2
+            ],
+            "details": "Add event handlers to voice post components to trigger playback actions in the Playback Manager Service. Pass necessary data (e.g., audio source URL) to the service.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Handle Edge Cases (Tab Switching, Minimization)",
+            "description": "Implement logic to handle edge cases such as tab switching and window minimization, pausing audio playback when the tab is inactive or the window is minimized.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use the Page Visibility API to detect tab switching and window minimization events. Trigger the pause function in the Playback Manager Service when these events occur.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Optimize Performance",
+            "description": "Optimize the performance of the Global Playback Manager, including minimizing resource usage and ensuring smooth playback across different devices and browsers.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "details": "Profile the Playback Manager to identify performance bottlenecks. Implement optimizations such as lazy loading of audio files, caching, and efficient event handling.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 34,
@@ -343,7 +1156,62 @@
           9
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Frontend Implementation: Delete Post Button and Confirmation Dialog",
+            "description": "Implement a delete button on the post view. When clicked, display a confirmation dialog to ensure the user wants to delete the post.",
+            "dependencies": [],
+            "details": "Add a delete button to the post display. Implement a confirmation dialog using a modal or similar component. Ensure the dialog clearly warns the user about the permanent nature of deletion.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Frontend Implementation: API Call to Delete Post Endpoint",
+            "description": "Implement the API call to the backend delete post endpoint upon confirmation from the user.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create a function that sends a DELETE request to the backend endpoint with the post ID. Handle success and error responses from the API.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Backend Implementation: API Endpoint, Authentication, Authorization, and Database Deletion",
+            "description": "Create a DELETE API endpoint for deleting posts. Implement authentication and authorization to ensure only authorized users can delete posts. Implement the database deletion logic.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create a DELETE route in the API. Implement middleware to authenticate the user. Implement authorization logic to verify the user has permission to delete the post (e.g., they are the author or an admin). Implement the database query to delete the post from the database.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Backend Implementation: Storage Deletion and Error Handling",
+            "description": "Implement the deletion of associated storage resources (e.g., images) when a post is deleted. Implement robust error handling for all operations.",
+            "dependencies": [
+              3
+            ],
+            "details": "Identify any associated storage resources (e.g., images, videos) linked to the post. Implement logic to delete these resources from storage. Implement error handling for database and storage operations, returning appropriate error codes to the frontend.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Logging Deletion Events and Security Considerations",
+            "description": "Implement logging of post deletion events, including the user who deleted the post and the timestamp. Review security considerations to prevent unauthorized deletions.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Implement logging to record post deletion events, including the user ID, post ID, and timestamp. Review and implement security measures to prevent unauthorized access and deletion of posts, such as input validation and rate limiting.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 35,
@@ -357,7 +1225,71 @@
           31
         ],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Frontend: Implement Voice Recording UI",
+            "description": "Develop the frontend UI components for voice recording, including a record button, recording interface, duration limit indicator, playback functionality, and upload mechanism.",
+            "dependencies": [],
+            "details": "Implement the record button, timer, waveform display, playback controls, and upload button. Set a duration limit (e.g., 60 seconds).",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Backend: Create Voice Comment API Endpoint",
+            "description": "Design and implement the API endpoint for handling voice comment uploads, including authentication, authorization, and validation.",
+            "dependencies": [],
+            "details": "Create a REST API endpoint that accepts audio files, authenticates the user, authorizes the action, and validates the audio file format and size.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Database: Update Schema for Voice Comments",
+            "description": "Modify the database schema to store voice comment metadata and the audio file location.",
+            "dependencies": [],
+            "details": "Add a new table or modify an existing table to store information such as user ID, timestamp, audio file path, and associated comment ID.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Backend: Implement Voice Comment Storage",
+            "description": "Implement the backend logic for storing voice comment audio files in a suitable storage solution (e.g., cloud storage, file system).",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Implement the logic to save the uploaded audio file to the designated storage location and update the database with the file path.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Frontend: Integrate Playback Button in UI",
+            "description": "Integrate a playback button into the UI to allow users to listen to voice comments.",
+            "dependencies": [
+              1,
+              4
+            ],
+            "details": "Add a playback button next to each voice comment and implement the functionality to play the audio file when the button is clicked.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Accessibility: Ensure Voice Comment Feature is Accessible",
+            "description": "Ensure the voice comment feature is accessible to users with disabilities, including keyboard navigation, screen reader compatibility, and alternative text for audio elements.",
+            "dependencies": [
+              1,
+              5
+            ],
+            "details": "Implement ARIA attributes, keyboard navigation, and screen reader support for the voice recording and playback components. Provide transcripts or alternative text for audio content where appropriate.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 36,
@@ -365,7 +1297,7 @@
         "description": "Enable users to add text-based comments to voice posts, allowing for detailed feedback and discussions. This feature will complement the voice comment feature and provide an alternative communication method.",
         "details": "1.  **Frontend Implementation:**\n    *   Add a text input field below each voice post, along with a \"Post Comment\" button.\n    *   Implement client-side validation to ensure the comment is not empty and within a reasonable length limit (e.g., 500 characters).\n    *   Upon submission, send the comment text and the associated voice post ID to the backend API.\n    *   Display the new comment in the comment section below the voice post.\n2.  **Backend Implementation:**\n    *   Create a `comments` table in the database with columns for comment text, user ID, voice post ID, and timestamp.\n    *   Implement an API endpoint to create new comments (e.g., `/api/comments`).\n    *   Implement authentication and authorization to ensure only logged-in users can post comments.\n    *   Store the comment text, user ID, voice post ID, and timestamp in the `comments` table.\n    *   Implement API endpoints to retrieve comments for a specific voice post.\n3.  **Database Considerations:**\n    *   Ensure proper indexing on the `comments` table for efficient retrieval of comments for a given voice post.\n    *   Consider implementing pagination for comments if a voice post is expected to have a large number of comments.\n4.  **Security Considerations:**\n    *   Sanitize user input to prevent XSS attacks.\n    *   Implement rate limiting to prevent comment spamming.",
         "testStrategy": "1.  **Successful Comment Submission:**\n    *   Log in as a user and navigate to a voice post.\n    *   Enter a text comment in the input field and click the \"Post Comment\" button.\n    *   Verify that the comment is displayed below the voice post.\n    *   Verify that the comment is stored in the `comments` table in the database.\n2.  **Empty Comment Submission:**\n    *   Attempt to submit an empty comment and verify that an error message is displayed.\n3.  **Comment Length Limit:**\n    *   Attempt to submit a comment exceeding the length limit and verify that an error message is displayed.\n4.  **Unauthorized Comment Submission:**\n    *   Attempt to submit a comment without being logged in and verify that an error message is displayed.\n5.  **Comment Retrieval:**\n    *   Verify that all comments for a given voice post are retrieved and displayed correctly.\n6.  **XSS Prevention:**\n    *   Attempt to submit a comment containing malicious HTML or JavaScript code and verify that it is properly sanitized and does not execute in the browser.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           4,
           23
@@ -379,7 +1311,7 @@
         "description": "Implement search functionality to allow users to search for other users and voice posts. This includes both frontend and backend implementation to handle search queries and display results.",
         "details": "1.  **Backend Implementation:**\n    *   Create API endpoints for searching users and voice posts (e.g., `/api/search/users?query=`, `/api/search/posts?query=`).\n    *   Implement search queries in the database to find users and voice posts matching the search query. Consider using full-text search capabilities of Supabase.\n    *   Implement pagination for search results.\n    *   Ensure proper indexing for efficient searching.\n2.  **Frontend Implementation:**\n    *   Add a search bar in the UI.\n    *   Implement search functionality to call the backend API endpoints when the user enters a search query.\n    *   Display search results in a list or grid format with user profiles and voice post previews.\n    *   Implement loading indicators and error handling for search requests.\n    *   Implement infinite scroll or pagination for displaying large search result sets.\n3.  **User Search:**\n    *   Search users by username, display name, or email.\n    *   Display user profiles with avatars and usernames.\n4.  **Voice Post Search:**\n    *   Search voice posts by title, description, or tags.\n    *   Display voice post previews with audio players and author information.\n5.  **Performance Considerations:**\n    *   Optimize database queries for fast search results.\n    *   Implement caching for frequently searched terms.\n    *   Use debounce or throttling to limit the number of search requests sent to the backend.",
         "testStrategy": "1.  **User Search Test:**\n    *   Search for existing users by username, display name, and email.\n    *   Verify that the search results display the correct user profiles.\n    *   Test search with different casing and partial matches.\n2.  **Voice Post Search Test:**\n    *   Search for voice posts by title, description, and tags.\n    *   Verify that the search results display the correct voice post previews.\n    *   Test search with different casing and partial matches.\n3.  **Pagination Test:**\n    *   Search for a term with a large number of results.\n    *   Verify that the search results are paginated correctly.\n    *   Test loading more results with infinite scroll or pagination buttons.\n4.  **Error Handling Test:**\n    *   Test search with invalid search queries.\n    *   Verify that appropriate error messages are displayed.\n5.  **Performance Test:**\n    *   Measure the time it takes to perform search queries with different data volumes.\n    *   Identify and address any performance bottlenecks.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           21,
           22
@@ -393,7 +1325,7 @@
         "description": "Implement user profile view and edit functionality, allowing users to view their profile information and make changes. This includes both frontend UI elements and backend API endpoints to handle profile updates.",
         "details": "1. **Frontend Implementation:**\n    *   Create a user profile page displaying user information such as username, email, profile picture, cover photo, and other relevant details.\n    *   Implement an edit mode for the profile page, allowing users to modify their information.\n    *   Add input fields for editable profile attributes (e.g., display name, bio, location).\n    *   Integrate with the profile picture and cover photo upload functionality (Task 30).\n    *   Implement client-side validation for input fields to ensure data integrity.\n    *   Use React forms and state management to handle user input and updates.\n    *   Implement a \"Save Changes\" button to submit the updated profile information to the backend.\n    *   Display success or error messages upon saving or encountering issues.\n2.  **Backend Implementation:**\n    *   Create API endpoints for retrieving user profile information (e.g., `/api/users/:userId`).\n    *   Create API endpoints for updating user profile information (e.g., `/api/users/:userId`).\n    *   Implement authentication and authorization to ensure users can only access and modify their own profiles.\n    *   Validate the incoming data from the frontend to prevent malicious input.\n    *   Update the user's profile information in the database.\n    *   Handle errors gracefully and return appropriate HTTP status codes and error messages.\n    *   Consider using Supabase's built-in user management features to simplify profile updates.\n3.  **Database Considerations:**\n    *   Ensure the `users` table in Supabase includes all necessary profile attributes (e.g., display name, bio, location, profile picture URL, cover photo URL).\n    *   Consider adding indexes to frequently queried profile attributes to improve performance.\n    *   Implement database migrations to update the schema if necessary.",
         "testStrategy": "1.  **Profile View Test:**\n    *   Log in as a user and navigate to the profile page.\n    *   Verify that all profile information is displayed correctly.\n    *   Test with different user accounts to ensure the correct profile is displayed for each user.\n2.  **Profile Edit Test:**\n    *   Log in as a user and navigate to the profile edit mode.\n    *   Modify profile attributes and click the \"Save Changes\" button.\n    *   Verify that the changes are saved successfully and reflected on the profile page.\n    *   Test with different input values, including valid and invalid data.\n    *   Verify that client-side and server-side validation are working correctly.\n    *   Test error handling for invalid input or database errors.\n3.  **Authorization Test:**\n    *   Attempt to access or modify another user's profile.\n    *   Verify that the user is not authorized to access or modify the profile.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           3,
           8,
@@ -408,7 +1340,7 @@
         "description": "Implement the share feature for voice posts, allowing users to generate and share external links to specific voice posts. This includes generating a shareable link and providing options to share via various social media platforms.",
         "details": "1.  **Generate Shareable Link:**\n    *   Create an API endpoint that generates a unique, short URL for a given voice post ID.\n    *   Use a URL shortening service (e.g., Bitly, TinyURL, or a custom solution) to create short, manageable links.\n    *   Store the mapping between the voice post ID and the shortened URL in the database.\n2.  **Implement Share UI:**\n    *   Add a \"Share\" button/icon to the voice post UI.\n    *   When the button is clicked, display a modal or popover with the following options:\n        *   Copy the shareable link to the clipboard.\n        *   Share directly to social media platforms (e.g., Twitter, Facebook, etc.) using their respective APIs or web sharing flows.\n3.  **Social Media Integration:**\n    *   Use social media sharing APIs or web sharing flows to pre-populate the share message with the voice post title and link.\n    *   Ensure the shared link directs users to the specific voice post within the application.\n4.  **Link Preview Generation:**\n    *   Implement metadata tags (Open Graph, Twitter Cards) on the voice post page to generate rich previews when the link is shared on social media.\n    *   Include the voice post title, author, and a relevant image in the metadata.",
         "testStrategy": "1.  **Link Generation and Redirection:**\n    *   Create a voice post and generate a shareable link.\n    *   Verify that the generated link is a valid URL.\n    *   Open the generated link in a new browser tab or window.\n    *   Ensure that the link redirects to the correct voice post within the application.\n2.  **Social Media Sharing:**\n    *   Share a voice post to different social media platforms (e.g., Twitter, Facebook).\n    *   Verify that the shared post includes the correct title, link, and image preview.\n    *   Click on the shared link and ensure it redirects to the correct voice post.\n3.  **Clipboard Copy:**\n    *   Click the \"Copy to Clipboard\" button.\n    *   Paste the contents of the clipboard into a text editor or other application.\n    *   Verify that the correct shareable link is copied to the clipboard.\n4.  **Performance:**\n    *   Test the link generation API endpoint with a large number of requests.\n    *   Ensure that the API responds quickly and efficiently.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           9,
           23
@@ -430,7 +1362,72 @@
           37
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Content Moderation Policies",
+            "description": "Establish clear guidelines and rules for content moderation, including acceptable and unacceptable content types, consequences for violations, and escalation procedures.",
+            "dependencies": [],
+            "details": "Document the moderation policies in a central location accessible to moderators and users.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Extend Database Schema: Reports Table",
+            "description": "Design and implement a 'reports' table in the database to store information about reported content. Include fields for content ID, reporter ID, report reason, report timestamp, and report status (e.g., pending, resolved, rejected).",
+            "dependencies": [
+              1
+            ],
+            "details": "Consider indexing relevant fields for efficient querying.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Reporting API Endpoints",
+            "description": "Develop API endpoints for users to submit reports on content. This includes endpoints for creating new reports and potentially retrieving report status. Implement necessary authentication and authorization checks.",
+            "dependencies": [
+              2
+            ],
+            "details": "Ensure proper error handling and validation of report data.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Develop Admin Interface for Moderation",
+            "description": "Create an admin interface for moderators to review and manage reported content. This interface should allow moderators to view report details, access the reported content, take actions (e.g., remove content, ban user, dismiss report), and update the report status.",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement search and filtering capabilities for efficient report management.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Frontend Integration: Report Button and Modal",
+            "description": "Integrate a 'Report' button into the frontend for users to easily report content. Implement a modal or form to collect report details (e.g., report reason).",
+            "dependencies": [
+              3
+            ],
+            "details": "Ensure the report button is visually consistent with the platform's design.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Optional Notification System",
+            "description": "Implement a notification system to alert moderators when new reports are submitted. Consider sending email or in-app notifications.",
+            "dependencies": [
+              4
+            ],
+            "details": "Configure notification preferences for moderators.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 41,
@@ -447,7 +1444,86 @@
           3
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Choose Push Notification Service",
+            "description": "Evaluate and select a push notification service provider (e.g., Firebase Cloud Messaging (FCM), APNs).",
+            "dependencies": [],
+            "details": "Consider factors like pricing, platform support, ease of integration, and reliability.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Backend: FCM Setup and Configuration",
+            "description": "Set up and configure the chosen push notification service (e.g., FCM) on the backend.",
+            "dependencies": [
+              1
+            ],
+            "details": "Includes creating a project, obtaining API keys, and configuring server credentials.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Database: Implement Device Token Storage",
+            "description": "Create a 'device_tokens' table in the database to store user device tokens.",
+            "dependencies": [],
+            "details": "The table should include fields for user ID, device token, platform (iOS/Android), and timestamp.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Backend: Implement API Endpoints for Device Token Management",
+            "description": "Create API endpoints for registering and unregistering device tokens.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "These endpoints will be used by the frontend to manage device token registration.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Backend: Implement Notification Triggering Logic",
+            "description": "Implement logic to trigger push notifications for likes, comments, and follows.",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "This involves identifying the recipient user(s), constructing the notification payload, and sending the notification via the push notification service.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Frontend: Implement Push Notification Handling",
+            "description": "Implement the frontend logic for requesting push notification permissions, obtaining the device token, and handling incoming notifications.",
+            "dependencies": [
+              4
+            ],
+            "details": "This includes using the appropriate platform-specific APIs (e.g., iOS/Android) and displaying notifications to the user.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Define Notification Payloads and Types",
+            "description": "Design the structure of notification payloads for different event types (likes, comments, follows) and define notification types.",
+            "dependencies": [
+              2,
+              5,
+              6
+            ],
+            "details": "Consider including relevant data in the payload (e.g., user ID, post ID) and defining notification types for filtering and handling on the frontend.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 42,
@@ -462,7 +1538,83 @@
           33
         ],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Factor Weighting",
+            "description": "Determine the weighting of recency, engagement, content quality, and other factors in the trending algorithm.",
+            "dependencies": [],
+            "details": "Analyze historical data and user behavior to determine optimal weighting for each factor. Document the rationale behind the chosen weights.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Refine Trending Algorithm",
+            "description": "Refine the trending algorithm based on defined factor weighting, including recency, engagement metrics, content quality assessment, and decay function.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement the refined algorithm, incorporating the defined weighting for each factor. Define the decay function to reduce the influence of older posts.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Scoring System",
+            "description": "Implement a scoring system based on the refined trending algorithm to rank posts.",
+            "dependencies": [
+              2
+            ],
+            "details": "Develop a scoring system that calculates a score for each post based on the refined algorithm. Ensure the scoring system is efficient and scalable.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Caching Mechanism",
+            "description": "Implement a caching mechanism to store and retrieve trending posts efficiently.",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement a caching layer to store the trending posts and their scores. Configure the cache to update periodically or based on specific events.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate with Explore Feed",
+            "description": "Integrate the refined trending algorithm with the Explore Feed to display popular posts.",
+            "dependencies": [
+              4
+            ],
+            "details": "Integrate the caching mechanism and scoring system with the Explore Feed to display the trending posts to users.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Optimize Performance",
+            "description": "Optimize the performance of the trending algorithm and caching mechanism.",
+            "dependencies": [
+              5
+            ],
+            "details": "Profile the performance of the algorithm and caching mechanism. Identify bottlenecks and optimize the code for speed and efficiency.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Monitor Algorithm Effectiveness",
+            "description": "Monitor the effectiveness of the refined trending algorithm and make adjustments as needed.",
+            "dependencies": [
+              6
+            ],
+            "details": "Track key metrics such as user engagement, click-through rates, and time spent on trending posts. Analyze the data and make adjustments to the algorithm as needed to improve its effectiveness.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 43,
@@ -476,7 +1628,62 @@
           3
         ],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install PWA Dependencies",
+            "description": "Install the necessary dependencies for PWA support, including `next-pwa`.",
+            "dependencies": [],
+            "details": "Use npm or yarn to install `next-pwa` and any other required packages.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Configure `next-pwa`",
+            "description": "Configure the `next-pwa` plugin in `next.config.js` with appropriate options.",
+            "dependencies": [
+              1
+            ],
+            "details": "Set options like `dest`, `register`, `skipWaiting`, and `clientsClaim` in the `next-pwa` configuration.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Design Service Worker Caching Strategy",
+            "description": "Define the caching strategy for the service worker, including which assets to cache and how to handle updates.",
+            "dependencies": [
+              2
+            ],
+            "details": "Determine the cache names, precaching assets, runtime caching rules, and network-first or cache-first strategies.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Install Prompt",
+            "description": "Implement the install prompt functionality to allow users to install the PWA on their devices.",
+            "dependencies": [
+              2
+            ],
+            "details": "Add the necessary JavaScript code to detect when the app is installable and display the install prompt to the user.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement and Test Offline Caching",
+            "description": "Implement offline caching based on the designed strategy and test the application's functionality in offline mode.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Implement the caching logic in the service worker and thoroughly test the application's behavior when offline to ensure proper caching and error handling.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 44,
@@ -484,7 +1691,7 @@
         "description": "Deploy the Next.js frontend to Vercel and the Express.js backend to Railway. This task ensures the application is live and accessible to users.",
         "details": "1. **Vercel Frontend Deployment:**\n   - Configure Vercel project settings to connect to the Next.js repository.\n   - Set up environment variables in Vercel to match the frontend's requirements (e.g., API endpoints).\n   - Trigger a deployment through Vercel's Git integration or CLI.\n   - Verify successful deployment by accessing the Vercel-provided URL.\n2. **Railway Backend Deployment:**\n   - Create a new project in Railway and connect it to the Express.js backend repository.\n   - Configure environment variables in Railway to match the backend's requirements (e.g., database connection string, API keys).\n   - Deploy the backend application through Railway's Git integration or CLI.\n   - Verify successful deployment by checking the Railway logs and accessing the backend API endpoints.\n3. **Domain Configuration:**\n   - Configure a custom domain for both the frontend and backend (if applicable).\n   - Update DNS records to point to the Vercel and Railway deployments.\n4. **Monitoring and Logging:**\n   - Set up monitoring and logging for both the frontend and backend to track performance and errors.\n   - Integrate with tools like Sentry or Datadog for error tracking and performance monitoring.",
         "testStrategy": "1. **Frontend Verification:**\n   - Access the Vercel-deployed frontend URL.\n   - Verify that the landing page loads correctly and all components are functional.\n   - Test user authentication flow (signup, login, logout).\n   - Check that data is being fetched and displayed correctly from the backend.\n   - Ensure the application is responsive on different screen sizes.\n2. **Backend Verification:**\n   - Access the Railway-deployed backend API endpoints using tools like Postman or curl.\n   - Verify that the API endpoints return the expected responses.\n   - Test database connectivity and data retrieval.\n   - Check rate limiting functionality by sending multiple requests.\n3. **End-to-End Testing:**\n   - Perform end-to-end testing by interacting with the frontend and verifying that data is being passed correctly to the backend and vice versa.\n   - Monitor logs and error tracking tools to identify any issues.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": []
@@ -500,7 +1707,63 @@
           25
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Frontend: Implement Voice Recording Interface",
+            "description": "Develop the frontend components for recording audio, including a record button, timer (max 30s), recording visualization, playback functionality, and upload initiation.",
+            "dependencies": [],
+            "details": "Use HTML5 Media Recorder API or a suitable library for audio recording. Implement a visual timer and playback controls. Design the UI for a clear and intuitive user experience.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Backend: Implement Audio Storage Helpers and Signed URL Generation",
+            "description": "Create backend functions to handle audio file storage (e.g., AWS S3, Google Cloud Storage). Implement signed URL generation for secure audio uploads from the frontend.",
+            "dependencies": [],
+            "details": "Choose a suitable cloud storage provider. Implement functions to generate pre-signed URLs with appropriate permissions and expiration times. Ensure proper error handling for storage failures.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Frontend: Integrate Upload Functionality and Progress Indicator",
+            "description": "Integrate the frontend with the backend to upload the recorded audio using the signed URL. Implement a progress indicator to provide visual feedback during the upload process.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Use JavaScript's Fetch API or a similar library to upload the audio file to the signed URL. Implement a progress bar or other visual indicator to show the upload progress. Handle upload success and failure scenarios.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Backend: Implement Database Storage and Metadata Handling",
+            "description": "Store the audio file metadata (e.g., file name, URL, user ID) in the database. Implement necessary database schema changes and API endpoints.",
+            "dependencies": [
+              2
+            ],
+            "details": "Design the database schema to store the required metadata. Implement API endpoints to create, read, update, and delete voice bio records. Ensure data integrity and consistency.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Security Considerations and Error Handling",
+            "description": "Address security concerns related to audio uploads, storage, and access. Implement robust error handling throughout the frontend and backend.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Implement input validation and sanitization to prevent malicious uploads. Secure the signed URL generation process. Implement error logging and monitoring. Handle potential errors gracefully and provide informative error messages to the user.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 46,
@@ -514,7 +1777,74 @@
           45
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Choose Audio Processing Library",
+            "description": "Evaluate and select an appropriate audio processing library (e.g., Librosa, PyDub, FFmpeg) for silence detection and trimming.",
+            "dependencies": [],
+            "details": "Consider factors like ease of use, performance, licensing, and available features for silence detection and manipulation.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Analyze Audio Clips for Silence",
+            "description": "Implement functionality to analyze audio clips and identify segments of silence based on a defined threshold.",
+            "dependencies": [
+              1
+            ],
+            "details": "This involves reading audio data, calculating the amplitude or energy levels, and detecting periods below the silence threshold.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Silence Trimming Algorithm",
+            "description": "Develop an algorithm to trim the identified silence segments from the beginning and end of the audio clips.",
+            "dependencies": [
+              2
+            ],
+            "details": "This includes removing leading and trailing silence while preserving the relevant audio content.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Integrate with Voice Post and Bio Upload",
+            "description": "Integrate the silence trimming functionality into the voice post and bio upload workflows.",
+            "dependencies": [
+              3
+            ],
+            "details": "Ensure that audio clips are automatically trimmed before being processed for voice posts or bio uploads.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Configuration for Silence Threshold",
+            "description": "Provide a configurable setting to adjust the silence threshold used for detection and trimming.",
+            "dependencies": [
+              2
+            ],
+            "details": "This allows users or administrators to fine-tune the sensitivity of the silence detection based on the audio characteristics.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Error Handling and Logging",
+            "description": "Implement robust error handling and logging to capture any issues during audio analysis and trimming.",
+            "dependencies": [
+              3,
+              4,
+              5
+            ],
+            "details": "This includes handling exceptions, logging errors, and providing informative messages to the user or administrator.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 47,
@@ -528,7 +1858,83 @@
           33
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Voice Story Recorder UI",
+            "description": "Create the UI design for the voice story recorder component, including record/play/discard buttons, a countdown timer display, and a visual recording indicator.",
+            "dependencies": [],
+            "details": "Consider user experience and accessibility when designing the UI.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement React Voice Story Recorder Component",
+            "description": "Create a new React component for the voice story recorder, incorporating the designed UI.",
+            "dependencies": [
+              1
+            ],
+            "details": "Set up the basic component structure and integrate the UI elements.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Audio Recording with MediaRecorder API and 15s Limit",
+            "description": "Use the MediaRecorder API to record audio, limiting the recording duration to 15 seconds.",
+            "dependencies": [
+              2
+            ],
+            "details": "Handle audio stream initialization, recording start/stop, and data storage.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Countdown Timer and Visual Recording Indicator",
+            "description": "Implement a countdown timer that displays the remaining recording time and a visual indicator to show when recording is active.",
+            "dependencies": [
+              3
+            ],
+            "details": "Update the timer display and visual indicator in real-time during recording.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate with Global Playback Manager",
+            "description": "Integrate the recorded audio with the Global Playback Manager to allow playback of the recorded story.",
+            "dependencies": [
+              3
+            ],
+            "details": "Ensure seamless integration and proper audio playback control.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Audio Upload and Story Metadata Storage",
+            "description": "Implement functionality to upload the recorded audio to the backend and store story metadata (e.g., user ID, timestamp) in the database. Create a new API endpoint for handling the upload.",
+            "dependencies": [
+              3
+            ],
+            "details": "Ensure secure audio upload and proper data storage.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Implement Automatic Story Deletion Logic",
+            "description": "Implement logic to automatically delete voice stories after a certain period (e.g., 24 hours).",
+            "dependencies": [
+              6
+            ],
+            "details": "Schedule a background task to periodically check and delete old stories.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 48,
@@ -542,7 +1948,72 @@
           20
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Story Viewer UI and Responsiveness",
+            "description": "Create the user interface design for the story viewer component, ensuring it is responsive across different devices and screen sizes.",
+            "dependencies": [],
+            "details": "Design the layout, including elements like story display area, navigation controls (next/previous), progress indicator, and user profile information. Ensure the design is visually appealing and user-friendly on both mobile and desktop.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Story Viewer Component",
+            "description": "Develop the core story viewer component based on the UI design, including rendering stories and handling navigation.",
+            "dependencies": [
+              1
+            ],
+            "details": "Build the component using appropriate front-end technologies (e.g., React, Vue, Angular). Implement the logic for displaying stories, handling user interactions (e.g., tapping to advance, swiping), and managing the story queue.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Autoplay Functionality",
+            "description": "Add autoplay functionality to the story viewer, automatically advancing to the next story after a set duration.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement a timer that automatically transitions to the next story after a specified interval. Allow users to pause/resume autoplay. Consider adding settings to adjust the autoplay speed.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Integrate with Voice Story Recorder",
+            "description": "Connect the story viewer with the voice story recorder to display recorded voice stories.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement the necessary API calls or data fetching mechanisms to retrieve voice stories from the recorder. Ensure the stories are displayed correctly within the story viewer component.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Error Handling and Loading States",
+            "description": "Implement error handling to gracefully handle issues such as network errors or missing stories. Add loading states to improve user experience.",
+            "dependencies": [
+              4
+            ],
+            "details": "Add error handling for API calls, data parsing, and other potential issues. Display appropriate error messages to the user. Implement loading indicators to show when stories are being fetched or processed.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Ensure Accessibility",
+            "description": "Make the story viewer accessible to users with disabilities by implementing accessibility best practices.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement ARIA attributes, keyboard navigation, and proper semantic HTML to ensure the story viewer is usable by users with screen readers and other assistive technologies. Ensure sufficient color contrast and provide alternative text for images.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 49,
@@ -556,7 +2027,65 @@
           48
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Background Task Scheduler",
+            "description": "Set up a background task scheduler (e.g., Celery, APScheduler) to periodically check for expired stories.",
+            "dependencies": [],
+            "details": "Choose a suitable scheduler, configure its settings, and define the scheduling interval for the expiration check.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Query Database for Expired Stories",
+            "description": "Write a database query to identify stories that have exceeded their expiration date.",
+            "dependencies": [
+              1
+            ],
+            "details": "The query should filter stories based on their creation date and expiration duration. Consider indexing the relevant columns for performance.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Delete Expired Stories from Storage",
+            "description": "Implement the logic to delete the media files (images, videos) associated with the expired stories from storage (e.g., AWS S3, local storage).",
+            "dependencies": [
+              2
+            ],
+            "details": "Ensure proper error handling and logging during the deletion process. Implement retry mechanisms for failed deletions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Delete Expired Stories from Database",
+            "description": "Implement the logic to delete the expired story records from the database.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Use a database transaction to ensure atomicity. Implement cascading deletes if necessary to remove related data.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Error Handling, Retries, Logging, and Monitoring",
+            "description": "Implement robust error handling, retry mechanisms for failed operations, logging of expiration events, and monitoring of the expiration process.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Use a logging framework to record important events. Implement metrics to monitor the number of expired stories and the success/failure rate of the expiration process. Implement retry logic with exponential backoff for failed operations.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 50,
@@ -564,7 +2093,7 @@
         "description": "Implement the ability for users to follow and unfollow other users. This includes updating the database to reflect these relationships and providing UI elements for users to manage their followed users.",
         "details": "1.  **Database Schema Update:**\n    *   Create a `followers` table in the database to store follower-followee relationships. This table should include columns for `follower_id` (user initiating the follow), `followee_id` (user being followed), and `created_at` (timestamp of when the follow action occurred).\n    *   Ensure proper indexing on `follower_id` and `followee_id` for efficient querying.\n2.  **API Endpoints:**\n    *   Implement a `/api/follow` endpoint that accepts a `followee_id` and creates a new entry in the `followers` table.\n    *   Implement an `/api/unfollow` endpoint that accepts a `followee_id` and deletes the corresponding entry from the `followers` table.\n    *   Implement an `/api/followers` endpoint that returns a list of users following a specific user (accepts a `user_id` as a parameter).\n    *   Implement an `/api/following` endpoint that returns a list of users that a specific user is following (accepts a `user_id` as a parameter).\n3.  **Frontend Implementation:**\n    *   Add a \"Follow\"/\"Unfollow\" button to user profiles.\n    *   When the button is clicked, call the appropriate API endpoint (`/api/follow` or `/api/unfollow`).\n    *   Update the button state (Follow/Unfollow) based on the API response.\n    *   Implement a \"Following\" list on the user's profile page to display the users they are following.\n4.  **Error Handling:**\n    *   Handle cases where a user tries to follow themselves.\n    *   Handle cases where a user tries to follow the same user multiple times.\n    *   Implement proper error messages for API failures.",
         "testStrategy": "1.  **Follow/Unfollow Functionality:**\n    *   Verify that users can successfully follow and unfollow other users.\n    *   Ensure that the `followers` table is updated correctly when a user follows or unfollows another user.\n    *   Check that the \"Follow\"/\"Unfollow\" button state is updated correctly in the UI.\n2.  **API Endpoint Tests:**\n    *   Test the `/api/follow` endpoint with valid and invalid `followee_id` values.\n    *   Test the `/api/unfollow` endpoint with valid and invalid `followee_id` values.\n    *   Test the `/api/followers` and `/api/following` endpoints to ensure they return the correct lists of users.\n3.  **Edge Cases:**\n    *   Verify that a user cannot follow themselves.\n    *   Ensure that a user cannot follow the same user multiple times.\n4.  **Performance:**\n    *   Test the performance of the API endpoints with a large number of followers and followees.\n    *   Ensure that the database queries are optimized for performance.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           8,
           23
@@ -584,7 +2113,73 @@
           50
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Notification Panel UI",
+            "description": "Create the visual design and layout for the notification panel, including mockups and style guides.",
+            "dependencies": [],
+            "details": "Design the layout, color scheme, and overall look and feel of the notification panel. Consider responsiveness and accessibility.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Notification Panel Component",
+            "description": "Develop the front-end component for the notification panel using the chosen framework (e.g., React, Angular, Vue.js).",
+            "dependencies": [
+              1
+            ],
+            "details": "Code the UI component based on the design, including handling user interactions like opening and closing the panel.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Fetch Notifications from Backend",
+            "description": "Implement the API call to retrieve notifications from the backend server.",
+            "dependencies": [
+              2
+            ],
+            "details": "Write the code to make a GET request to the backend endpoint that provides the notification data. Handle different response scenarios (success, error).",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Integrate with Push Notifications",
+            "description": "Set up the system to receive and display push notifications in the notification panel.",
+            "dependencies": [
+              3
+            ],
+            "details": "Configure the push notification service (e.g., Firebase Cloud Messaging) and integrate it with the notification panel to display real-time updates.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement 'Mark as Read' Functionality",
+            "description": "Add the functionality to mark notifications as read, updating both the UI and the backend.",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement the logic to handle the 'mark as read' action, sending an update to the backend and visually updating the notification status in the panel.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Optimize Performance and Link to Content",
+            "description": "Optimize the notification panel's performance and implement links to relevant content within the app.",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "Improve the loading speed and responsiveness of the notification panel. Add links to the relevant sections of the app based on the notification content.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 52,
@@ -597,7 +2192,73 @@
           1
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install i18n Library",
+            "description": "Install a suitable i18n library (e.g., i18next, react-intl) for the project.",
+            "dependencies": [],
+            "details": "Research and select an appropriate i18n library based on project requirements and framework. Install the library using npm or yarn.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Configure i18n",
+            "description": "Configure the i18n library with English (en) as the default language and Japanese (ja) as the secondary language.",
+            "dependencies": [
+              1
+            ],
+            "details": "Set up the i18n configuration file, specifying the supported languages, default language, and translation file locations.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Language Toggle",
+            "description": "Create a UI component (e.g., a dropdown or buttons) to allow users to switch between English and Japanese.",
+            "dependencies": [
+              2
+            ],
+            "details": "Design and implement a language toggle component that updates the application's locale when a user selects a different language.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Translate Text Content",
+            "description": "Translate all text content in the application into both English and Japanese.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create translation files (e.g., JSON files) for each language, containing key-value pairs for all text strings in the application.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Handle Plurals and Gender",
+            "description": "Implement pluralization and gender handling in the i18n system.",
+            "dependencies": [
+              4
+            ],
+            "details": "Use the i18n library's features to handle plural forms and gender-specific text variations in both languages.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Translation Quality Assurance",
+            "description": "Review and verify the accuracy and fluency of the Japanese translations.",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "Engage a native Japanese speaker or professional translator to review the translated content and ensure its quality and cultural appropriateness.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 61,
@@ -605,7 +2266,7 @@
         "description": "Implement landing page call-to-action buttons for user signup and voice post preview, ensuring a seamless user flow from the landing page to the respective functionalities.",
         "details": "1.  **Integrate Signup CTA:**\n    *   Link the 'Sign Up' button on the landing page (Task 7) to the email/social login functionality (Task 60).\n    *   Ensure a smooth transition to the signup form or social login providers (Google, Apple).\n    *   Track user clicks on the 'Sign Up' button using analytics to monitor conversion rates (Task 28).\n2.  **Integrate Voice Post Preview CTA:**\n    *   Link the 'Preview Feed' button on the landing page to the voice post preview functionality (Task 53).\n    *   Guide new users through a brief tutorial or onboarding flow explaining how to record and share voice posts.\n    *   Implement a clear call to action within the preview feed to encourage users to create their own voice posts.\n3.  **User Flow Optimization:**\n    *   Design a user-friendly flow from the landing page to the signup/preview features.\n    *   Minimize the number of steps required to complete the signup or preview process.\n    *   Provide clear instructions and feedback to guide users through the process.\n    *   Implement error handling to gracefully handle invalid inputs or unexpected issues.\n4.  **UI/UX Considerations:**\n    *   Ensure the CTAs are visually appealing and consistent with the overall landing page design.\n    *   Optimize the CTAs for mobile devices to ensure a seamless experience on smaller screens.\n    *   Use clear and concise language to communicate the value proposition of signing up or previewing the feed.",
         "testStrategy": "1.  **Signup Flow Testing:**\n    *   Verify that the 'Sign Up' button on the landing page correctly redirects users to the signup form or social login providers.\n    *   Test the signup process with valid and invalid email addresses and passwords.\n    *   Ensure that new users are successfully created and logged in.\n    *   Verify that user data is stored correctly in Supabase.\n2.  **Voice Post Preview Flow Testing:**\n    *   Verify that the 'Preview Feed' button on the landing page correctly redirects users to the voice post preview functionality.\n    *   Test the voice post preview functionality with different voice posts.\n    *   Ensure that users can successfully listen to voice posts and interact with the preview feed.\n    *   Verify that the call to action within the preview feed encourages users to create their own voice posts.\n3.  **Analytics Verification:**\n    *   Verify that user clicks on the CTAs are correctly tracked using analytics.\n    *   Monitor conversion rates to assess the effectiveness of the landing page and CTAs.\n4.  **Responsiveness Testing:**\n    *   Test the landing page and CTAs on different screen sizes and devices to ensure a consistent user experience.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           7
         ],
@@ -624,7 +2285,63 @@
           32
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Voice Post Preview UI Component",
+            "description": "Develop the basic UI structure for the voice post preview screen, including placeholders for the waveform, playback controls, and action buttons (Confirm, Re-record).",
+            "dependencies": [],
+            "details": "Use React Native components to structure the layout. Include placeholders for audio waveform, playback controls, and action buttons.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Audio Playback Functionality",
+            "description": "Integrate audio playback functionality using a suitable audio library. Implement play/pause controls and audio progress tracking.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use Expo AV or React Native Sound to handle audio playback. Implement play/pause button functionality and display the current playback time.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Integrate Waveform Visualization",
+            "description": "Implement the waveform visualization component to display the audio waveform. Fetch audio data and render the waveform accordingly.",
+            "dependencies": [
+              2
+            ],
+            "details": "Use a library like react-native-audio-waveform or create a custom component to visualize the audio waveform. Fetch audio data and render the waveform.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement 'Confirm' Action",
+            "description": "Implement the 'Confirm' button action, which should navigate to the next screen or trigger the voice post submission process.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Implement the navigation logic for the 'Confirm' button. This might involve navigating to a confirmation screen or triggering the voice post submission process.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement 'Re-record' Action and Styling/Responsiveness",
+            "description": "Implement the 'Re-record' button action, which should navigate back to the recording screen. Also, apply styling and ensure responsiveness across different screen sizes.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement the navigation logic for the 'Re-record' button. Apply styling using a consistent design system and ensure the UI is responsive across different screen sizes and orientations.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 63,
@@ -639,12 +2356,90 @@
           52
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Select and Integrate Language Detection API",
+            "description": "Research and choose a suitable language detection API (e.g., Google Cloud Translation API, Amazon Translate) and integrate it into the backend.",
+            "dependencies": [],
+            "details": "Evaluate API pricing, accuracy, and language support. Implement API authentication and error handling.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Audio Transcription (If Necessary)",
+            "description": "If voice posts are audio-only, implement audio transcription using a service like Google Cloud Speech-to-Text or AssemblyAI.",
+            "dependencies": [
+              1
+            ],
+            "details": "Configure audio encoding, sample rate, and language hints for optimal transcription accuracy. Handle transcription errors and timeouts.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Define Tag Generation Algorithm",
+            "description": "Design the algorithm for generating relevant tags based on the detected language and transcribed text (if applicable).",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Consider using keyword extraction techniques, NLP models, or a combination of both. Define a scoring system for tag relevance.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Tag Generation Logic",
+            "description": "Implement the tag generation algorithm in the backend, processing the detected language and transcribed text to generate a list of tags.",
+            "dependencies": [
+              3
+            ],
+            "details": "Optimize the algorithm for performance and accuracy. Implement filtering and deduplication of tags.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Backend Storage for Tags",
+            "description": "Store the generated tags in the backend database, associating them with the corresponding voice post.",
+            "dependencies": [
+              4
+            ],
+            "details": "Design the database schema to efficiently store and retrieve tags. Implement indexing for faster tag searching.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Integrate with Frontend",
+            "description": "Update the frontend to display the automatically generated tags for voice posts. Allow users to add or remove tags.",
+            "dependencies": [
+              5
+            ],
+            "details": "Implement API endpoints for retrieving and updating tags. Design the user interface for tag management.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Address Internationalization (i18n) Considerations",
+            "description": "Ensure the tag generation and display are properly localized for different languages. Handle character encoding and text direction issues.",
+            "dependencies": [
+              4,
+              6
+            ],
+            "details": "Implement language-specific tag filtering and ranking. Use i18n libraries for text localization.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-07-06T09:32:37.993Z",
-      "updated": "2025-07-07T13:47:36.964Z",
+      "updated": "2025-07-09T07:42:39.261Z",
       "description": "Tasks for master context"
     }
   }

@@ -1,0 +1,389 @@
+{
+	"meta": {
+		"generatedAt": "2025-07-09T07:46:33.214Z",
+		"tasksAnalyzed": 28,
+		"totalTasks": 47,
+		"analysisCount": 47,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Initialize Next.js Frontend",
+			"complexityScore": 4,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the initialization of the Next.js frontend into smaller, more manageable tasks. Consider tasks for project setup, styling configuration, routing setup, and code quality tools.",
+			"reasoning": "Basic setup, but involves multiple configuration steps and tools."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Initialize Express.js Backend",
+			"complexityScore": 4,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Decompose the Express.js backend initialization into subtasks for project creation, middleware configuration, route definition, and testing setup.",
+			"reasoning": "Similar to the frontend, involves basic setup and configuration."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Connect to Supabase",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Divide the Supabase connection task into subtasks for installing the client library, configuring credentials, initializing the client in the frontend, and initializing the client in the backend.",
+			"reasoning": "Requires configuration in both frontend and backend."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Setup Supabase Schema",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the Supabase schema setup into creating tables for users, voice notes, comments, notifications, and defining relationships between them.",
+			"reasoning": "Involves designing and creating multiple tables with relationships."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Setup Rate Limiter",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Divide the rate limiter setup into installing the middleware, configuring rate limits for different endpoints, and testing the rate limiter.",
+			"reasoning": "Involves configuring middleware and defining rate limits."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Design Landing Page",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the landing page design into subtasks for UI design, responsiveness implementation, call-to-action implementation, and content creation.",
+			"reasoning": "Requires UI design and responsiveness implementation."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Implement User Authentication",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Decompose user authentication into email signup, email login, social login integration (Google, Facebook), CAPTCHA integration, and testing each authentication method.",
+			"reasoning": "Involves multiple authentication methods and security considerations."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Implement Home and Explore Feeds",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down the feed implementation into querying the database, implementing pagination, designing the UI, displaying waveform, and implementing the trending algorithm for the Explore Feed.",
+			"reasoning": "Involves complex queries, UI design, and algorithm implementation."
+		},
+		{
+			"taskId": 23,
+			"taskTitle": "Implement Like Feature",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the Like feature into creating a 'likes' table, implementing the API endpoint, updating the like count, and displaying the like count in the UI.",
+			"reasoning": "Requires database interaction and API implementation."
+		},
+		{
+			"taskId": 24,
+			"taskTitle": "Configure .env for Secrets",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Divide the .env configuration into creating the .env file, adding secrets, loading environment variables, updating the codebase, adding .env to .gitignore, and configuring production environment variables.",
+			"reasoning": "Requires careful handling of sensitive information."
+		},
+		{
+			"taskId": 30,
+			"taskTitle": "Implement Profile Picture and Cover Photo Upload",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Divide the profile picture and cover photo upload into frontend implementation, backend implementation, database updates, security considerations, image resizing, and cropping.",
+			"reasoning": "Requires UI design, backend logic, and secure storage."
+		},
+		{
+			"taskId": 32,
+			"taskTitle": "Display Waveform UI on Voice Post Playback",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the waveform UI implementation into frontend integration, backend considerations, UI/UX design, and synchronization with audio playback.",
+			"reasoning": "Requires integration with a waveform library and UI design."
+		},
+		{
+			"taskId": 36,
+			"taskTitle": "Implement Text Comment Feature",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Divide the text comment feature into frontend implementation, backend implementation, database considerations, security considerations, and input sanitization.",
+			"reasoning": "Requires UI changes, backend logic, and security considerations."
+		},
+		{
+			"taskId": 37,
+			"taskTitle": "Implement User and Voice Post Search Functionality",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Decompose the search functionality into backend implementation, frontend implementation, user search, voice post search, performance considerations, and error handling.",
+			"reasoning": "Requires database querying, UI design, and performance optimization."
+		},
+		{
+			"taskId": 38,
+			"taskTitle": "Implement User Profile View and Edit Functionality",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down the profile view and edit functionality into frontend implementation, backend implementation, database considerations, authentication, authorization, and validation.",
+			"reasoning": "Requires UI design, backend logic, and secure data handling."
+		},
+		{
+			"taskId": 39,
+			"taskTitle": "Implement Voice Post Share Feature",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Divide the share feature into generating a shareable link, implementing the share UI, integrating with social media, and generating link previews.",
+			"reasoning": "Requires integration with social media platforms and URL shortening."
+		},
+		{
+			"taskId": 44,
+			"taskTitle": "Deploy Frontend and Backend to Production",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down the deployment into Vercel frontend deployment, Railway backend deployment, domain configuration, monitoring and logging setup, and testing.",
+			"reasoning": "Requires deployment to multiple platforms and careful configuration."
+		},
+		{
+			"taskId": 50,
+			"taskTitle": "Implement User Follow/Unfollow System",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down the follow/unfollow system into database schema update, API endpoints, frontend implementation, error handling, and performance considerations.",
+			"reasoning": "Requires database changes, API implementation, and UI design."
+		},
+		{
+			"taskId": 61,
+			"taskTitle": "Implement Landing Page CTAs for Signup and Preview Feed",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the landing page CTA implementation into integrating the signup CTA, integrating the voice post preview CTA, optimizing the user flow, UI/UX considerations, and analytics tracking.",
+			"reasoning": "Requires UI design, analytics integration, and user flow optimization."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Create RLS Policies",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand the task 'Create RLS Policies' into subtasks, focusing on defining policies for different user roles (e.g., admin, regular user, guest) and tables (e.g., users, posts, comments). Include subtasks for testing each policy and documenting the RLS implementation.",
+			"reasoning": "RLS policies require careful planning and testing to avoid unintended data access issues. Different tables and roles will need specific policies."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Implement Voice Post Recorder",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Implement Voice Post Recorder' into subtasks, detailing the implementation of the MediaRecorder API, timer functionality, audio type validation, duration validation, Supabase storage upload using signed URLs, and error handling. Include subtasks for UI elements and testing on different browsers.",
+			"reasoning": "This task involves multiple API integrations, UI components, and validation steps, making it relatively complex."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "Build Onboarding Flow",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Expand the task 'Build Onboarding Flow' into subtasks, focusing on creating individual onboarding screens/modals, implementing microphone permission requests, providing instructions for voice post creation, and tracking user completion rates with analytics. Include a subtask for designing the user interface.",
+			"reasoning": "The onboarding flow involves multiple UI elements and user interactions, requiring a structured approach."
+		},
+		{
+			"taskId": 20,
+			"taskTitle": "Upload Voice Posts to Supabase Storage",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Expand the task 'Upload Voice Posts to Supabase Storage' into subtasks, detailing the creation of a private Supabase bucket, implementation of the upload process using the Supabase client library, generation of signed URLs with expiration times, and storage of signed URLs in the database. Include a subtask for security considerations.",
+			"reasoning": "This task involves Supabase storage configuration, secure URL generation, and database interaction."
+		},
+		{
+			"taskId": 21,
+			"taskTitle": "Implement Home Feed",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand the task 'Implement Home Feed' into subtasks, focusing on querying the database for voice posts from followed users, ordering posts by creation date, implementing pagination, displaying posts with author information and audio player, and handling edge cases like empty feeds.",
+			"reasoning": "The home feed requires database queries, data ordering, and UI implementation with pagination."
+		},
+		{
+			"taskId": 22,
+			"taskTitle": "Implement Explore Feed",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Implement Explore Feed' into subtasks, detailing the implementation of the trending algorithm (likes, comments, shares), querying the database for a mix of random and trending posts, implementing pagination, displaying posts with author information and audio player, and optimizing the query for performance. Include a subtask for A/B testing the algorithm.",
+			"reasoning": "The explore feed involves a trending algorithm, database queries, and UI implementation with pagination and A/B testing."
+		},
+		{
+			"taskId": 25,
+			"taskTitle": "Setup Storage Helpers for Supabase Buckets with Signed URLs",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand the task 'Setup Storage Helpers for Supabase Buckets with Signed URLs' into subtasks, focusing on reviewing the storage architecture, creating helper functions for each bucket type (profile pictures, cover photos, voice notes), implementing signed URL generation with appropriate expiration times, securing bucket access, implementing error handling, configuring environment variables, and integrating with backend API endpoints. Include a subtask to evaluate existing libraries.",
+			"reasoning": "This task requires a deep understanding of Supabase storage, security considerations, and backend integration."
+		},
+		{
+			"taskId": 26,
+			"taskTitle": "Implement CAPTCHA for Signup/Login",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Implement CAPTCHA for Signup/Login' into subtasks, focusing on choosing a CAPTCHA provider, frontend integration (script inclusion, widget display, response handling), backend integration (API endpoint, server-side validation), error handling and user feedback, configuration (API keys, enable/disable), and accessibility considerations.",
+			"reasoning": "CAPTCHA implementation involves frontend and backend integration, security considerations, and user experience."
+		},
+		{
+			"taskId": 27,
+			"taskTitle": "Implement Logging and Analytics",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Implement Logging and Analytics' into subtasks, focusing on choosing a logging library, implementing logging middleware, setting up centralized log management, integrating Vercel Analytics, implementing error tracking, configuring log levels, securing sensitive information, and implementing log rotation.",
+			"reasoning": "Logging and analytics require careful configuration and integration with different services."
+		},
+		{
+			"taskId": 28,
+			"taskTitle": "Optimize Landing Page with A/B Testing and Analytics",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Optimize Landing Page with A/B Testing and Analytics' into subtasks, focusing on analyzing Vercel Analytics data, implementing A/B testing for the call to action, creating design iterations, implementing changes using Next.js, monitoring performance, and collecting user feedback. Include a subtask for competitor analysis.",
+			"reasoning": "Landing page optimization involves data analysis, A/B testing, and iterative design improvements."
+		},
+		{
+			"taskId": 29,
+			"taskTitle": "Enhance Onboarding: Mic Permission and First Post",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand the task 'Enhance Onboarding: Mic Permission and First Post' into subtasks, focusing on modifying onboarding screens, implementing microphone permission requests, encouraging the first voice post, incentivizing the first post, and tracking user progress with analytics. Include a subtask for designing the UI prompts.",
+			"reasoning": "This task builds upon the existing onboarding flow and requires careful attention to user experience."
+		},
+		{
+			"taskId": 31,
+			"taskTitle": "Validate Audio Type and Duration",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Validate Audio Type and Duration' into subtasks, detailing audio type validation (server-side and frontend), duration validation (server-side and frontend) for both posts and comments, error handling, and UI feedback. Include a subtask for choosing appropriate libraries.",
+			"reasoning": "Audio validation requires both frontend and backend implementation and careful error handling."
+		},
+		{
+			"taskId": 33,
+			"taskTitle": "Implement Global Playback Manager",
+			"complexityScore": 9,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand the task 'Implement Global Playback Manager' into subtasks, focusing on creating a playback manager service, implementing pause on scroll using Intersection Observer, ensuring only one audio source plays at a time, integrating with voice post components, handling edge cases (tab switching, minimization), and optimizing performance. Include a subtask for choosing the audio player library.",
+			"reasoning": "This task involves complex state management, event handling, and integration with multiple components."
+		},
+		{
+			"taskId": 34,
+			"taskTitle": "Implement Delete Post Flow",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand the task 'Implement Delete Post Flow' into subtasks, detailing frontend implementation (delete button, confirmation dialog, API call), backend implementation (API endpoint, authentication, authorization, database deletion, storage deletion), error handling, and security considerations. Include a subtask for logging deletion events.",
+			"reasoning": "Deleting posts requires both frontend and backend implementation with security considerations."
+		},
+		{
+			"taskId": 35,
+			"taskTitle": "Implement Voice Comment Feature",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Implement Voice Comment Feature' into subtasks, detailing frontend implementation (record button, recording interface, duration limit, playback, upload), backend implementation (API endpoint, authentication, authorization, database storage, validation), database schema update, and UI integration (playback button). Include a subtask for accessibility.",
+			"reasoning": "Voice comments require both frontend and backend implementation with audio recording and validation."
+		},
+		{
+			"taskId": 40,
+			"taskTitle": "Implement Report/Flag Content Moderation System",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Implement Report/Flag Content Moderation System' into subtasks, detailing database schema extension (reports table), reporting API endpoints, admin interface, frontend integration (report button, modal), and optional notification system. Include a subtask for defining moderation policies.",
+			"reasoning": "Content moderation involves database design, API implementation, and an admin interface."
+		},
+		{
+			"taskId": 41,
+			"taskTitle": "Implement Push Notifications for Likes, Comments, and Follows",
+			"complexityScore": 9,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand the task 'Implement Push Notifications for Likes, Comments, and Follows' into subtasks, detailing backend implementation (FCM setup, API endpoints, notification triggering, device token storage, notification payloads, notification queue), frontend implementation (permission request, device token, notification handling), database schema extension (device_tokens table), and considerations (notification types, rate limiting, preferences, privacy). Include a subtask for choosing the push notification service.",
+			"reasoning": "Push notifications require complex backend and frontend integration with a third-party service."
+		},
+		{
+			"taskId": 42,
+			"taskTitle": "Implement Refined Trending/Popular Posts Algorithm",
+			"complexityScore": 9,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand the task 'Implement Refined Trending/Popular Posts Algorithm' into subtasks, detailing refining the trending algorithm (recency, engagement, content quality, decay function), implementing a scoring system, implementing a caching mechanism, integrating with the Explore Feed, optimizing performance, and monitoring the algorithm's effectiveness. Include a subtask for defining the weighting of different factors.",
+			"reasoning": "A refined trending algorithm requires careful design, implementation, and optimization."
+		},
+		{
+			"taskId": 43,
+			"taskTitle": "Add PWA Support (Install Prompt, Offline Caching)",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand the task 'Add PWA Support (Install Prompt, Offline Caching)' into subtasks, detailing installing PWA dependencies, configuring `next-pwa`, implementing the install prompt, implementing offline caching, and testing offline functionality. Include a subtask for designing the service worker caching strategy.",
+			"reasoning": "PWA support involves service worker configuration and testing."
+		},
+		{
+			"taskId": 45,
+			"taskTitle": "Add Voice Bio Upload Functionality (Max 30s)",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand the task 'Add Voice Bio Upload Functionality (Max 30s)' into subtasks, detailing frontend implementation (record button, recording interface, timer, playback, upload), backend implementation (storage helpers, signed URL generation, database storage), UI considerations (visual feedback, progress indicator), and error handling. Include a subtask for security considerations.",
+			"reasoning": "Voice bio upload requires both frontend and backend implementation with audio recording and storage."
+		},
+		{
+			"taskId": 46,
+			"taskTitle": "Implement Silence Trimming for Voice Clips",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Implement Silence Trimming for Voice Clips' into subtasks, detailing analyzing audio clips, implementing silence trimming, integrating with voice post and bio upload, configuration (silence threshold), and error handling. Include a subtask for choosing the audio processing library.",
+			"reasoning": "Silence trimming requires audio analysis and processing."
+		},
+		{
+			"taskId": 47,
+			"taskTitle": "Implement Voice Story Recorder with 15s Limit",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand the task 'Implement Voice Story Recorder with 15s Limit' into subtasks, detailing creating a new React component, using the MediaRecorder API, implementing a timer, displaying a countdown timer, adding a visual indicator, adding record/play/discard buttons, integrating with the Global Playback Manager, uploading the recorded audio, creating a new API endpoint, storing story metadata, and implementing logic to automatically delete stories. Include a subtask for UI design.",
+			"reasoning": "Voice story recording requires both frontend and backend implementation with audio recording and storage, plus integration with existing components."
+		},
+		{
+			"taskId": 48,
+			"taskTitle": "Build Story viewer with autoplay functionality",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Build Story viewer with autoplay functionality' into subtasks, detailing creating a story viewer component, implementing autoplay functionality, integrating with the voice story recorder, error handling, and accessibility. Include a subtask for UI design and responsiveness.",
+			"reasoning": "Story viewing requires UI implementation, autoplay logic, and integration with the story recorder."
+		},
+		{
+			"taskId": 49,
+			"taskTitle": "Implement Story Expiration Logic",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand the task 'Implement Story Expiration Logic' into subtasks, detailing implementing a background task scheduler, querying the database for expired stories, deleting expired stories from storage, deleting expired stories from the database, and logging and monitoring. Include a subtask for error handling and retries.",
+			"reasoning": "Story expiration requires a scheduled task and database interaction."
+		},
+		{
+			"taskId": 51,
+			"taskTitle": "Implement In-App Notification Panel",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Implement In-App Notification Panel' into subtasks, detailing creating a notification panel component, fetching notifications from the backend, integrating with push notifications, implementing mark as read functionality, linking to relevant content, and adding visual indicators. Include a subtask for UI design and performance optimization.",
+			"reasoning": "The notification panel requires UI implementation, backend integration, and real-time updates."
+		},
+		{
+			"taskId": 52,
+			"taskTitle": "Implement i18n with English/Japanese Language Toggle",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Expand the task 'Implement i18n with English/Japanese Language Toggle' into subtasks, detailing installing the i18n library, configuring i18n, implementing the language toggle, translating text, handling plurals and gender, and optimizing for SEO. Include a subtask for translation quality assurance.",
+			"reasoning": "i18n requires library configuration, translation, and UI implementation."
+		},
+		{
+			"taskId": 62,
+			"taskTitle": "Build Voice Post Preview Screen",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Expand the task 'Build Voice Post Preview Screen' into subtasks, detailing creating the UI component, implementing audio playback, implementing the 'Confirm' action, implementing the 'Re-record' action, and styling and responsiveness. Include a subtask for integrating the waveform visualization.",
+			"reasoning": "The preview screen requires UI implementation, audio playback, and navigation logic."
+		},
+		{
+			"taskId": 63,
+			"taskTitle": "Implement Language Detection and Auto-Tagging for Voice Posts",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand the task 'Implement Language Detection and Auto-Tagging for Voice Posts' into subtasks, detailing integrating a language detection API, implementing audio transcription (if necessary), tag generation, frontend integration, backend storage, and i18n considerations. Include a subtask for defining the tag generation algorithm.",
+			"reasoning": "Language detection and auto-tagging require API integration, potentially audio transcription, and tag generation logic."
+		}
+	]
+}
