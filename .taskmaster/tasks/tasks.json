@@ -60,7 +60,7 @@
         "dependencies": [
           4
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -68,7 +68,7 @@
             "description": "Define RLS policies for the 'users' table, considering admin, regular user, and guest roles. Specify access permissions for each role (e.g., admin can view all user data, regular users can only view their own data, guests have no access).",
             "dependencies": [],
             "details": "Consider read and write access for each role.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -77,7 +77,7 @@
             "description": "Define RLS policies for the 'posts' table, considering admin, regular user, and guest roles. Specify access permissions for each role (e.g., admin can view/edit all posts, regular users can view all posts but only edit their own, guests can only view public posts).",
             "dependencies": [],
             "details": "Consider visibility of draft vs published posts.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -86,7 +86,7 @@
             "description": "Define RLS policies for the 'comments' table, considering admin, regular user, and guest roles. Specify access permissions for each role (e.g., admin can view/edit all comments, regular users can view all comments and edit their own, guests can only view comments).",
             "dependencies": [],
             "details": "Consider moderation capabilities for admins.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -99,7 +99,7 @@
               3
             ],
             "details": "Use different user accounts to simulate different roles.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -110,7 +110,7 @@
               4
             ],
             "details": "Include diagrams or flowcharts to illustrate the RLS implementation.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -316,7 +316,10 @@
         "details": "Create a private bucket in Supabase storage to store voice posts. Upload the recorded audio file to the bucket using the Supabase client library. Generate a signed URL for the uploaded file with a limited expiration time. Store the signed URL in the database for playback.",
         "testStrategy": "Verify voice posts are uploaded to the private bucket in Supabase storage. Ensure signed URLs are generated correctly and can be used to access the audio files. Test the expiration of signed URLs and ensure they become invalid after the specified time.",
         "priority": "high",
-        "dependencies": [],
+        "dependencies": [
+          5,
+          9
+        ],
         "status": "pending",
         "subtasks": [
           {
@@ -325,7 +328,7 @@
             "description": "Create a new private bucket in Supabase storage to store voice posts. Configure appropriate access policies to ensure only authorized users can access the bucket.",
             "dependencies": [],
             "details": "Use the Supabase dashboard or the Supabase CLI to create a new bucket. Set the bucket to private and configure RLS (Row Level Security) policies to control access.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -373,7 +376,8 @@
         "testStrategy": "Verify the Home Feed displays voice posts from followed users correctly. Ensure the posts are ordered by creation date. Test the pagination and loading of more posts.",
         "priority": "medium",
         "dependencies": [
-          20
+          20,
+          50
         ],
         "status": "pending",
         "subtasks": [
@@ -520,7 +524,7 @@
         "testStrategy": "Verify users can like and unlike voice posts. Ensure the like count is updated correctly in the database and UI. Test the like feature with different users and voice posts.",
         "priority": "medium",
         "dependencies": [
-          20
+          9
         ],
         "status": "done",
         "subtasks": []
@@ -544,9 +548,9 @@
         "description": "Set up storage helpers for Supabase buckets (profile pictures, cover photos, voice notes) with signed URLs as per STORAGE_ARCHITECTURE.md. This task involves creating utility functions to manage file uploads and generate secure signed URLs for different storage buckets.",
         "details": "1.  **Review STORAGE_ARCHITECTURE.md:** Understand the defined storage architecture for profile pictures, cover photos, and voice notes.\n2.  **Create Storage Helper Functions:** Implement helper functions for each bucket type (profile pictures, cover photos, voice notes) to handle file uploads and signed URL generation.\n3.  **Implement Signed URL Generation:** Use Supabase's storage API to generate signed URLs with appropriate expiration times for each file type. Consider different expiration times based on the use case.\n4.  **Secure Bucket Access:** Ensure that the buckets are private and only accessible via signed URLs.\n5.  **Error Handling:** Implement robust error handling for file uploads and signed URL generation.\n6.  **Configuration:** Store bucket names and other configuration parameters in environment variables.\n7.  **Integration with Backend:** Integrate the storage helper functions into the backend API endpoints for user profile updates, voice note uploads, etc.\n8.  **Consider using a dedicated service or library:** Explore using existing libraries or services that simplify signed URL generation and management with Supabase storage.",
         "testStrategy": "1.  **Upload Files to Each Bucket:** Upload test files (images, audio) to each bucket (profile pictures, cover photos, voice notes) using the helper functions.\n2.  **Verify Signed URL Generation:** Ensure that signed URLs are generated correctly for each uploaded file.\n3.  **Access Files via Signed URLs:** Verify that the files can be accessed using the generated signed URLs.\n4.  **Test URL Expiration:** Confirm that the signed URLs expire after the specified time and become invalid.\n5.  **Test Unauthorized Access:** Ensure that direct access to the files in the buckets is denied without a valid signed URL.\n6.  **Test Error Handling:** Verify that appropriate error messages are returned for invalid file uploads or failed signed URL generation.\n7.  **Integration Tests:** Test the integration of the storage helper functions with the backend API endpoints.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
-          20
+          4
         ],
         "priority": "high",
         "subtasks": [
@@ -556,7 +560,7 @@
             "description": "Analyze the current Supabase storage setup, including bucket structure, access policies, and existing security measures. Identify potential vulnerabilities and areas for improvement.",
             "dependencies": [],
             "details": "Examine Supabase documentation on storage best practices, review existing bucket policies, and assess the current security posture.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -567,7 +571,7 @@
               1
             ],
             "details": "Explore libraries like `@supabase/supabase-js` or other relevant packages. Compare their features and suitability for the project's needs.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -637,7 +641,7 @@
         "testStrategy": "1. **Signup Flow:**\n    *   Verify that the CAPTCHA widget is displayed on the signup form.\n    *   Test successful signup with a valid CAPTCHA response.\n    *   Test failed signup with an invalid or missing CAPTCHA response.\n    *   Ensure appropriate error messages are displayed to the user.\n2. **Login Flow:**\n    *   Verify that the CAPTCHA widget is displayed on the login form.\n    *   Test successful login with a valid CAPTCHA response.\n    *   Test failed login with an invalid or missing CAPTCHA response.\n    *   Ensure appropriate error messages are displayed to the user.\n3. **Automated Testing:**\n    *   Implement automated tests to simulate bot behavior and verify that CAPTCHA effectively blocks automated signup/login attempts.\n4. **Load Testing:**\n    *   Perform load testing to ensure that CAPTCHA integration does not negatively impact the performance of the signup/login flows.\n5. **Accessibility Testing:**\n    *   Ensure that the CAPTCHA implementation is accessible to users with disabilities (e.g., provide alternative CAPTCHA options).",
         "status": "pending",
         "dependencies": [
-          3
+          8
         ],
         "priority": "medium",
         "subtasks": [
@@ -798,7 +802,6 @@
         "status": "pending",
         "dependencies": [
           7,
-          26,
           27
         ],
         "priority": "medium",
@@ -876,8 +879,7 @@
         "testStrategy": "1. **Verify Microphone Permission Request:** Ensure that the microphone permission request is displayed at the appropriate time during the onboarding flow.\n2. **Test Permission Grant/Denial:** Test both granting and denying microphone permission. Verify that the app handles both cases gracefully and provides appropriate feedback to the user.\n3. **Verify First Post Encouragement:** Ensure that the first voice post encouragement screen is displayed after microphone permission is granted.\n4. **Test Incentive Implementation:** If an incentive is offered, verify that it is correctly awarded to the user after creating their first voice post.\n5. **Verify Analytics Tracking:** Ensure that analytics events are correctly tracked for each step of the onboarding flow, including microphone permission requests and first voice post creation.",
         "status": "pending",
         "dependencies": [
-          3,
-          8,
+          9,
           18
         ],
         "priority": "medium",
@@ -960,7 +962,6 @@
         "testStrategy": "1.  **Invalid Audio Type:**\n    *   Attempt to upload files with invalid audio types (e.g., .txt, .jpg) and verify that the server rejects the upload with an appropriate error message.\n2.  **Valid Audio Type, Exceeds Duration (Post):**\n    *   Record an audio file longer than 60 seconds and attempt to upload it as a post. Verify that the server rejects the upload with an appropriate error message.\n3.  **Valid Audio Type, Exceeds Duration (Comment):**\n    *   Record an audio file longer than 20 seconds and attempt to upload it as a comment. Verify that the server rejects the upload with an appropriate error message.\n4.  **Valid Audio Type, Within Duration (Post):**\n    *   Record an audio file shorter than 60 seconds and upload it as a post. Verify that the upload is successful.\n5.  **Valid Audio Type, Within Duration (Comment):**\n    *   Record an audio file shorter than 20 seconds and upload it as a comment. Verify that the upload is successful.\n6.  **Boundary Cases:**\n    *   Test with audio files that are exactly 60 seconds and 20 seconds long to ensure that the validation works correctly at the boundaries.",
         "status": "pending",
         "dependencies": [
-          3,
           9
         ],
         "priority": "high",
@@ -1151,8 +1152,6 @@
         "testStrategy": "1.  **Successful Deletion:**\n    *   Log in as a user and create a voice post.\n    *   Verify that the \"Delete\" button is visible on the post.\n    *   Click the \"Delete\" button and confirm the deletion.\n    *   Verify that the post is removed from the UI and no longer accessible.\n2.  **Unauthorized Deletion:**\n    *   Log in as a different user.\n    *   Attempt to delete the voice post created by the first user (e.g., by manually calling the API endpoint with the post ID).\n    *   Verify that the backend returns an error indicating that the user is not authorized to delete the post.\n3.  **Non-Existent Post:**\n    *   Attempt to delete a post with an invalid `postId`.\n    *   Verify that the backend returns an error indicating that the post does not exist.\n4.  **Database and Storage Verification:**\n    *   After deleting a post, verify that the corresponding record is removed from the database and the audio file is removed from Supabase storage.",
         "status": "pending",
         "dependencies": [
-          3,
-          8,
           9
         ],
         "priority": "medium",
@@ -1299,7 +1298,7 @@
         "testStrategy": "1.  **Successful Comment Submission:**\n    *   Log in as a user and navigate to a voice post.\n    *   Enter a text comment in the input field and click the \"Post Comment\" button.\n    *   Verify that the comment is displayed below the voice post.\n    *   Verify that the comment is stored in the `comments` table in the database.\n2.  **Empty Comment Submission:**\n    *   Attempt to submit an empty comment and verify that an error message is displayed.\n3.  **Comment Length Limit:**\n    *   Attempt to submit a comment exceeding the length limit and verify that an error message is displayed.\n4.  **Unauthorized Comment Submission:**\n    *   Attempt to submit a comment without being logged in and verify that an error message is displayed.\n5.  **Comment Retrieval:**\n    *   Verify that all comments for a given voice post are retrieved and displayed correctly.\n6.  **XSS Prevention:**\n    *   Attempt to submit a comment containing malicious HTML or JavaScript code and verify that it is properly sanitized and does not execute in the browser.",
         "status": "done",
         "dependencies": [
-          4,
+          8,
           23
         ],
         "priority": "medium",
@@ -2439,7 +2438,7 @@
     ],
     "metadata": {
       "created": "2025-07-06T09:32:37.993Z",
-      "updated": "2025-07-09T07:42:39.261Z",
+      "updated": "2025-07-09T17:42:08.458Z",
       "description": "Tasks for master context"
     }
   }

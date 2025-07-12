@@ -1,7 +1,29 @@
 /**
- * Script to update the shares column in the voice_notes table
- * based on the actual count of shares in the voice_note_shares table
+ * OBSOLETE SCRIPT - NO LONGER NEEDED
+ *
+ * This script was used to update the denormalized 'shares' column in the voice_notes table.
+ * As of the database optimization (database-optimization-safe.sql), we removed the redundant
+ * shares column and now use COUNT() queries from voice_note_shares table directly.
+ *
+ * This provides better data consistency and performance.
+ *
+ * DO NOT RUN THIS SCRIPT - IT WILL CAUSE ERRORS
  */
+
+console.log("❌ OBSOLETE SCRIPT");
+console.log("This script is no longer needed after database optimization.");
+console.log("The shares column has been removed from voice_notes table.");
+console.log(
+	"Share counts are now calculated using COUNT() from voice_note_shares table."
+);
+console.log("");
+console.log("✅ Current approach: Real-time COUNT() queries (more accurate)");
+console.log("❌ Old approach: Denormalized shares column (removed)");
+
+process.exit(0);
+
+// ===== OLD CODE (COMMENTED OUT) =====
+/*
 const supabase = require("../config/supabase");
 
 async function updateShareCounts() {
@@ -94,3 +116,4 @@ updateShareCounts()
 		console.error("Script failed:", error);
 		process.exit(1);
 	});
+*/

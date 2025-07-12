@@ -210,3 +210,48 @@ CREATE POLICY "Users can update their own voice note shares" ON voice_note_share
 
 DROP POLICY IF EXISTS "Users can delete their own voice note shares" ON voice_note_shares;
 CREATE POLICY "Users can delete their own voice note shares" ON voice_note_shares FOR DELETE USING (auth.uid() = user_id);
+
+-- Users table RLS policies
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can view user profiles" ON users;
+CREATE POLICY "Public can view user profiles" ON users FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Authenticated users can create their own user record" ON users;
+CREATE POLICY "Authenticated users can create their own user record" ON users FOR INSERT WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can update their own profile" ON users;
+CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can delete their own account" ON users;
+CREATE POLICY "Users can delete their own account" ON users FOR DELETE USING (auth.uid() = id);
+
+-- Voice notes RLS policies
+ALTER TABLE voice_notes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view voice notes" ON voice_notes;
+CREATE POLICY "Anyone can view voice notes" ON voice_notes FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can create their own voice notes" ON voice_notes;
+CREATE POLICY "Users can create their own voice notes" ON voice_notes FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update their own voice notes" ON voice_notes;
+CREATE POLICY "Users can update their own voice notes" ON voice_notes FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete their own voice notes" ON voice_notes;
+CREATE POLICY "Users can delete their own voice notes" ON voice_notes FOR DELETE USING (auth.uid() = user_id);
+
+-- Voice note comments RLS policies
+ALTER TABLE voice_note_comments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view voice note comments" ON voice_note_comments;
+CREATE POLICY "Anyone can view voice note comments" ON voice_note_comments FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can create their own voice note comments" ON voice_note_comments;
+CREATE POLICY "Users can create their own voice note comments" ON voice_note_comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update their own voice note comments" ON voice_note_comments;
+CREATE POLICY "Users can update their own voice note comments" ON voice_note_comments FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete their own voice note comments" ON voice_note_comments;
+CREATE POLICY "Users can delete their own voice note comments" ON voice_note_comments FOR DELETE USING (auth.uid() = user_id);
