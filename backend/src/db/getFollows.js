@@ -1,46 +1,31 @@
 // Database utility to get follows from Supabase
-const supabase = require("../config/supabase");
+const { supabase, supabaseAdmin } = require("../config/supabase");
 require("dotenv").config();
 
 /**
- * Get follows with user information
- * @param {string} userId - User ID
- * @param {string} relationshipType - 'followers' or 'following'
- * @returns {Promise<Array>} - Array of follow relationships with user data
+ * Get follows with optional filtering
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Maximum number of records to return
+ * @param {string} options.userId - Filter by user ID
+ * @returns {Promise<Array>} - Array of follows
  */
-async function getFollows(userId, relationshipType) {
+async function getFollows(options = {}) {
 	try {
-		// Validate inputs
-		if (!userId) {
-			throw new Error("User ID is required");
-		}
+		const { limit = 10, userId } = options;
 
-		if (
-			!relationshipType ||
-			!["followers", "following"].includes(relationshipType)
-		) {
-			throw new Error(
-				'Invalid relationship type. Must be "followers" or "following"'
-			);
-		}
+		let query = supabaseAdmin.from("follows").select(`
+      *,
+      follower:follower_id (id, username, display_name, avatar_url),
+      following:following_id (id, username, display_name, avatar_url)
+    `);
 
-		// Build query based on relationship type
-		let query = supabase.from("follows").select(`
-        *,
-        follower:users!follower_id(id, username, display_name, avatar_url, is_verified),
-        following:users!following_id(id, username, display_name, avatar_url, is_verified)
-      `);
-
-		// Apply appropriate filter
-		if (relationshipType === "followers") {
-			query = query.eq("following_id", userId);
-		} else {
+		if (userId) {
 			query = query.eq("follower_id", userId);
 		}
 
 		const { data, error } = await query
 			.order("created_at", { ascending: false })
-			.limit(100); // Default limit
+			.limit(limit);
 
 		if (error) {
 			throw error;
@@ -48,7 +33,74 @@ async function getFollows(userId, relationshipType) {
 
 		return data || [];
 	} catch (error) {
-		console.error("Unexpected error:", error);
+		console.error("Error fetching follows:", error);
+		throw error;
+	}
+}
+
+/**
+ * Get followers for a user
+ * @param {string} userId - User ID to get followers for
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Maximum number of records to return
+ * @returns {Promise<Array>} - Array of followers
+ */
+async function getFollowers(userId, options = {}) {
+	try {
+		const { limit = 10 } = options;
+
+		const { data: users, error: usersError } = await supabaseAdmin
+			.from("users")
+			.select("id, username, display_name, avatar_url, is_verified")
+			.eq("id", userId)
+			.single();
+
+		if (usersError) {
+			throw usersError;
+		}
+
+		if (!users) {
+			return [];
+		}
+
+		const { data: follows, error: followsError } = await supabaseAdmin
+			.from("follows")
+			.select(
+				`
+        *,
+        follower:follower_id (id, username, display_name, avatar_url, is_verified)
+      `
+			)
+			.eq("following_id", userId)
+			.order("created_at", { ascending: false })
+			.limit(limit);
+
+		if (followsError) {
+			throw followsError;
+		}
+
+		return follows || [];
+	} catch (error) {
+		console.error("Error fetching followers:", error);
+		throw error;
+	}
+}
+
+/**
+ * Get all follows
+ * @returns {Promise<Array>} - Array of all follows
+ */
+async function getAllFollows() {
+	try {
+		const { data, error } = await supabaseAdmin.from("follows").select("*");
+
+		if (error) {
+			throw error;
+		}
+
+		return data || [];
+	} catch (error) {
+		console.error("Error fetching all follows:", error);
 		throw error;
 	}
 }

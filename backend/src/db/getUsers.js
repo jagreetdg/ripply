@@ -1,5 +1,5 @@
 // Database utility to get users from Supabase
-const supabase = require("../config/supabase");
+const { supabase, supabaseAdmin } = require("../config/supabase");
 require("dotenv").config();
 
 console.log("Connecting to Supabase at:", process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -8,14 +8,18 @@ console.log("Connecting to Supabase at:", process.env.NEXT_PUBLIC_SUPABASE_URL);
  * Get users with optional filtering
  * @param {Object} options - Query options
  * @param {number} options.limit - Maximum number of records to return
- * @param {string} options.search - Search term for username or display_name
+ * @param {string} options.search - Search term for username or display name
  * @returns {Promise<Array>} - Array of users
  */
 async function getUsers(options = {}) {
 	try {
 		const { limit = 10, search } = options;
 
-		let query = supabase.from("users").select("*");
+		let query = supabaseAdmin
+			.from("users")
+			.select(
+				"id, username, display_name, avatar_url, is_verified, created_at"
+			);
 
 		if (search) {
 			query = query.or(
@@ -23,7 +27,7 @@ async function getUsers(options = {}) {
 			);
 		}
 
-		const { data, error } = await query
+		const { data: users, error } = await query
 			.order("created_at", { ascending: false })
 			.limit(limit);
 
@@ -31,9 +35,9 @@ async function getUsers(options = {}) {
 			throw error;
 		}
 
-		return data || [];
+		return users || [];
 	} catch (error) {
-		console.error("Unexpected error:", error);
+		console.error("Error fetching users:", error);
 		throw error;
 	}
 }

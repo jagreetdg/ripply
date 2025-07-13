@@ -1,5 +1,5 @@
 // Database utility to get voice notes from Supabase
-const supabase = require("../config/supabase");
+const { supabase, supabaseAdmin } = require("../config/supabase");
 require("dotenv").config();
 
 console.log("Connecting to Supabase at:", process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -15,7 +15,7 @@ async function getVoiceNotes(options = {}) {
 	try {
 		const { limit = 10, userId } = options;
 
-		let query = supabase.from("voice_notes").select(`
+		let query = supabaseAdmin.from("voice_notes").select(`
         *,
         users:user_id (id, username, display_name, avatar_url, is_verified),
         likes:voice_note_likes (count),
@@ -42,7 +42,7 @@ async function getVoiceNotes(options = {}) {
 		// Get actual share counts for all voice notes in parallel
 		const shareCountPromises = data.map(async (note) => {
 			try {
-				const { count } = await supabase
+				const { count } = await supabaseAdmin
 					.from("voice_note_shares")
 					.select("*", { count: "exact", head: true })
 					.eq("voice_note_id", note.id);
@@ -71,6 +71,93 @@ async function getVoiceNotes(options = {}) {
 		return processedData || [];
 	} catch (error) {
 		console.error("Unexpected error:", error);
+		throw error;
+	}
+}
+
+/**
+ * Get voice notes by user ID
+ * @param {string} userId - User ID
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Maximum number of records to return
+ * @returns {Promise<Array>} - Array of voice notes for the user
+ */
+async function getVoiceNotesByUser(userId, options = {}) {
+	try {
+		const { limit = 10 } = options;
+
+		const { data: users, error: usersError } = await supabaseAdmin
+			.from("users")
+			.select("id, username, display_name, avatar_url, is_verified")
+			.eq("id", userId)
+			.single();
+
+		if (usersError) {
+			throw usersError;
+		}
+
+		if (!users) {
+			return [];
+		}
+
+		const voiceNotes = await getVoiceNotes({ userId, limit });
+
+		return voiceNotes;
+	} catch (error) {
+		console.error("Error fetching voice notes by user:", error);
+		throw error;
+	}
+}
+
+/**
+ * Get voice note by ID
+ * @param {string} voiceNoteId - Voice note ID
+ * @returns {Promise<Object|null>} - Voice note object or null if not found
+ */
+async function getVoiceNoteById(voiceNoteId) {
+	try {
+		const { data: voiceNotes, error } = await supabaseAdmin
+			.from("voice_notes")
+			.select(
+				`
+        *,
+        users:user_id (id, username, display_name, avatar_url, is_verified),
+        likes:voice_note_likes (count),
+        comments:voice_note_comments (count),
+        plays:voice_note_plays (count)
+      `
+			)
+			.eq("id", voiceNoteId)
+			.single();
+
+		if (error) {
+			if (error.code === "PGRST116") {
+				// No rows returned
+				return null;
+			}
+			throw error;
+		}
+
+		// Get actual share count
+		try {
+			const { count: shareCount } = await supabaseAdmin
+				.from("voice_note_shares")
+				.select("*", { count: "exact", head: true })
+				.eq("voice_note_id", voiceNoteId);
+
+			return {
+				...voiceNotes,
+				shares: shareCount || 0,
+			};
+		} catch (shareError) {
+			console.warn(`Failed to get share count for ${voiceNoteId}:`, shareError);
+			return {
+				...voiceNotes,
+				shares: 0,
+			};
+		}
+	} catch (error) {
+		console.error("Error fetching voice note by ID:", error);
 		throw error;
 	}
 }
@@ -130,6 +217,8 @@ async function createSampleVoiceNotes() {
 // Export the function for use in tests and other modules
 module.exports = {
 	getVoiceNotes,
+	getVoiceNotesByUser,
+	getVoiceNoteById,
 	createSampleVoiceNotes,
 };
 
