@@ -221,10 +221,15 @@ const createSocialUser = async (profile, provider) => {
 		display_name:
 			profile.displayName || profile.name || profile.email.split("@")[0],
 		avatar_url: profile.picture || profile.photos?.[0]?.value,
-		provider: provider,
-		provider_id: profile.id,
 		created_at: new Date().toISOString(),
 	};
+
+	// Add provider-specific ID field based on provider
+	if (provider === "google") {
+		userData.google_id = profile.id;
+	} else if (provider === "apple") {
+		userData.apple_id = profile.id;
+	}
 
 	const { data, error } = await supabase
 		.from("users")
@@ -242,10 +247,16 @@ const createSocialUser = async (profile, provider) => {
  * @param {string} userId - User ID
  */
 const updateLastLogin = async (userId) => {
-	await supabase
-		.from("users")
-		.update({ last_login: new Date().toISOString() })
-		.eq("id", userId);
+	try {
+		// Use updated_at instead of last_login since last_login column doesn't exist
+		await supabase
+			.from("users")
+			.update({ updated_at: new Date().toISOString() })
+			.eq("id", userId);
+	} catch (error) {
+		// Don't throw error if last login update fails - it's not critical
+		console.warn("[Auth] Failed to update last login:", error.message);
+	}
 };
 
 module.exports = {

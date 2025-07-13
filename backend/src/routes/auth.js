@@ -86,6 +86,23 @@ router.get("/test", (req, res) => {
 	res.json({ route: "auth" });
 });
 
+// Diagnostic endpoint to check environment variables
+router.get("/debug/env", (req, res) => {
+	const envCheck = {
+		NODE_ENV: process.env.NODE_ENV,
+		JWT_SECRET: process.env.JWT_SECRET ? "SET" : "NOT SET",
+		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? "SET" : "NOT SET",
+		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? "SET" : "NOT SET",
+		SUPABASE_URL: process.env.SUPABASE_URL ? "SET" : "NOT SET",
+		SUPABASE_KEY: process.env.SUPABASE_KEY ? "SET" : "NOT SET",
+		FRONTEND_URL: process.env.FRONTEND_URL ? "SET" : "NOT SET",
+		BACKEND_URL: process.env.BACKEND_URL ? "SET" : "NOT SET",
+	};
+
+	console.log("[DEBUG] Environment check:", envCheck);
+	res.json(envCheck);
+});
+
 router.post("/test", (req, res) => {
 	console.log("[AUTH TEST] Test POST route hit!");
 	res.json({ route: "auth" });

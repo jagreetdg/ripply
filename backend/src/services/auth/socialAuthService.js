@@ -7,19 +7,12 @@ const { generateSocialAuthToken } = require("../../utils/auth/tokenUtils");
 
 /**
  * Handle Google OAuth callback
- * @param {Object} profile - Google profile data
+ * @param {Object} user - User data from passport
  * @returns {Object} User data and token
  */
-const handleGoogleAuth = async (profile) => {
+const handleGoogleAuth = async (user) => {
 	try {
-		// Check if user already exists by email
-		let user = await authService.findUserByEmail(profile.email);
-
-		if (!user) {
-			// Create new user from Google profile
-			user = await authService.createSocialUser(profile, "google");
-		}
-
+		// User is already created/found by passport, just process it
 		// Update last login
 		await authService.updateLastLogin(user.id);
 
@@ -29,7 +22,7 @@ const handleGoogleAuth = async (profile) => {
 		return {
 			user,
 			token,
-			isNewUser: !user.provider_id, // If no provider_id, it's a newly created social user
+			isNewUser: !user.google_id, // If no google_id, it's a newly created social user
 		};
 	} catch (error) {
 		console.error("[Social Auth] Error in Google authentication:", error);
@@ -39,19 +32,12 @@ const handleGoogleAuth = async (profile) => {
 
 /**
  * Handle Apple OAuth callback
- * @param {Object} profile - Apple profile data
+ * @param {Object} user - User data from passport
  * @returns {Object} User data and token
  */
-const handleAppleAuth = async (profile) => {
+const handleAppleAuth = async (user) => {
 	try {
-		// Check if user already exists by email
-		let user = await authService.findUserByEmail(profile.email);
-
-		if (!user) {
-			// Create new user from Apple profile
-			user = await authService.createSocialUser(profile, "apple");
-		}
-
+		// User is already created/found by passport, just process it
 		// Update last login
 		await authService.updateLastLogin(user.id);
 
@@ -61,7 +47,7 @@ const handleAppleAuth = async (profile) => {
 		return {
 			user,
 			token,
-			isNewUser: !user.provider_id, // If no provider_id, it's a newly created social user
+			isNewUser: !user.apple_id, // If no apple_id, it's a newly created social user
 		};
 	} catch (error) {
 		console.error("[Social Auth] Error in Apple authentication:", error);
@@ -77,7 +63,7 @@ const handleAppleAuth = async (profile) => {
  * @returns {string} Redirect URL
  */
 const buildOAuthRedirectUrl = (provider, token = null, error = null) => {
-	const baseUrl = process.env.FRONTEND_URL;
+	const baseUrl = process.env.FRONTEND_URL || "https://ripply-app.netlify.app";
 
 	if (error) {
 		return `${baseUrl}/auth/login?error=${error}`;

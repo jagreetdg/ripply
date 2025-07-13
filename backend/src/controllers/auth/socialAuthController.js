@@ -22,11 +22,20 @@ const googleAuth = passport.authenticate("google", {
 const googleCallback = [
 	passport.authenticate("google", {
 		session: false,
-		failureRedirect: `${process.env.FRONTEND_URL}/auth/login?error=auth_failed`,
+		failureRedirect: `${
+			process.env.FRONTEND_URL || "https://ripply-app.netlify.app"
+		}/auth/login?error=auth_failed`,
 	}),
 	async (req, res) => {
 		try {
+			console.log("[Google OAuth] Callback received");
+			console.log(
+				"[Google OAuth] User from passport:",
+				req.user ? "Present" : "Missing"
+			);
+
 			if (!req.user) {
+				console.error("[Google OAuth] No user from passport authentication");
 				const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
 					"google",
 					null,
@@ -35,8 +44,20 @@ const googleCallback = [
 				return res.redirect(redirectUrl);
 			}
 
+			console.log("[Google OAuth] Processing user:", {
+				id: req.user.id,
+				email: req.user.email,
+				google_id: req.user.google_id,
+			});
+
 			// Handle Google authentication
 			const authResult = await socialAuthService.handleGoogleAuth(req.user);
+
+			console.log("[Google OAuth] Auth result:", {
+				hasUser: !!authResult.user,
+				hasToken: !!authResult.token,
+				isNewUser: authResult.isNewUser,
+			});
 
 			// Set secure cookie in production
 			setSocialAuthCookie(res, authResult.token);
@@ -46,9 +67,13 @@ const googleCallback = [
 				"google",
 				authResult.token
 			);
+
+			console.log("[Google OAuth] Redirecting to:", redirectUrl);
 			res.redirect(redirectUrl);
 		} catch (error) {
-			console.error("[Auth Flow] Error in Google callback:", error);
+			console.error("[Google OAuth] Error in callback:", error);
+			console.error("[Google OAuth] Error stack:", error.stack);
+
 			const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
 				"google",
 				null,
