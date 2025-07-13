@@ -221,6 +221,8 @@ const createSocialUser = async (profile, provider) => {
 		display_name:
 			profile.displayName || profile.name || profile.email.split("@")[0],
 		avatar_url: profile.picture || profile.photos?.[0]?.value,
+		is_sso_user: true, // This is a social sign-on user
+		is_anonymous: false, // This is not an anonymous user
 		created_at: new Date().toISOString(),
 	};
 

@@ -112,6 +112,8 @@ const initializePassport = () => {
 									profile.photos && profile.photos[0]
 										? profile.photos[0].value
 										: null,
+								is_sso_user: true, // This is a social sign-on user
+								is_anonymous: false, // This is not an anonymous user
 								created_at: new Date().toISOString(),
 								updated_at: new Date().toISOString(),
 							})
@@ -254,6 +256,8 @@ const initializePassport = () => {
 								email,
 								display_name: displayName,
 								apple_id: profile.sub,
+								is_sso_user: true, // This is a social sign-on user
+								is_anonymous: false, // This is not an anonymous user
 								created_at: new Date().toISOString(),
 								updated_at: new Date().toISOString(),
 							})
