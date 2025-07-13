@@ -2,7 +2,7 @@
  * Authentication middleware for protecting routes
  */
 const jwt = require("jsonwebtoken");
-const supabase = require("../config/supabase");
+const { supabase, supabaseAdmin } = require("../config/supabase");
 
 // JWT Secret - must be provided in production
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -31,8 +31,8 @@ const authenticateToken = async (req, res, next) => {
 		// Verify token
 		const decoded = jwt.verify(token, JWT_SECRET);
 
-		// Get user from database
-		const { data: user, error } = await supabase
+		// Get user from database using supabaseAdmin to bypass RLS
+		const { data: user, error } = await supabaseAdmin
 			.from("users")
 			.select(
 				"id, username, email, display_name, avatar_url, bio, is_verified, created_at, updated_at"

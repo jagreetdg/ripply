@@ -105,10 +105,10 @@ const registerUser = async (userData) => {
 };
 
 /**
- * Authenticate user login
+ * Authenticate user credentials
  * @param {string} email - User email
- * @param {string} password - User password
- * @returns {Object} User data if authentication successful
+ * @param {string} password - User password (SHA-256 hashed)
+ * @returns {Object} User data if authenticated
  */
 const authenticateUser = async (email, password) => {
 	// Check if account is locked
@@ -119,8 +119,8 @@ const authenticateUser = async (email, password) => {
 		);
 	}
 
-	// Get user by email
-	const { data: users, error } = await supabase
+	// Get user by email using supabaseAdmin to bypass RLS
+	const { data: users, error } = await supabaseAdmin
 		.from("users")
 		.select("*")
 		.eq("email", email);
@@ -158,7 +158,7 @@ const authenticateUser = async (email, password) => {
  * @returns {Object|null} User data without password
  */
 const getUserById = async (userId) => {
-	const { data: user, error } = await supabase
+	const { data: user, error } = await supabaseAdmin
 		.from("users")
 		.select("*")
 		.eq("id", userId)
@@ -184,12 +184,12 @@ const validateUserForToken = async (userId) => {
 };
 
 /**
- * Check if user exists for social auth
+ * Find user by email
  * @param {string} email - User email
- * @returns {Object|null} User data if exists
+ * @returns {Object|null} User data if found
  */
 const findUserByEmail = async (email) => {
-	const { data: user, error } = await supabase
+	const { data: user, error } = await supabaseAdmin
 		.from("users")
 		.select("*")
 		.eq("email", email)
@@ -257,7 +257,7 @@ const createSocialUser = async (profile, provider) => {
 const updateLastLogin = async (userId) => {
 	try {
 		// Use updated_at instead of last_login since last_login column doesn't exist
-		await supabase
+		await supabaseAdmin
 			.from("users")
 			.update({ updated_at: new Date().toISOString() })
 			.eq("id", userId);
