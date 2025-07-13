@@ -34,7 +34,16 @@ export default function SearchScreen() {
 	// Get initial search tag from params if available
 	const initialTag = params?.tag as string;
 	const initialSearchType = params?.searchType as string;
+	const initialTabParam = params?.tab as string;
 	const timestamp = params?.timestamp as string;
+
+	// Determine initial tab based on parameters
+	const determineInitialTab = (): SearchTab => {
+		if (initialTabParam === "users") return "users";
+		if (initialTabParam === "posts") return "posts";
+		if (initialSearchType === "tag") return "posts";
+		return "posts"; // Default to posts
+	};
 
 	// State to control show all/less for results
 	const [showAllUsers, setShowAllUsers] = useState(false);
@@ -42,6 +51,7 @@ export default function SearchScreen() {
 	const [lastParams, setLastParams] = useState({
 		tag: initialTag,
 		searchType: initialSearchType,
+		tab: initialTabParam,
 		timestamp,
 	});
 
@@ -71,7 +81,7 @@ export default function SearchScreen() {
 		loadDiscoveryContent,
 	} = useSearch({
 		initialSearchQuery: initialTag ? `#${initialTag}` : "",
-		initialTab: "posts", // Always default to posts tab
+		initialTab: determineInitialTab(), // Use the determined initial tab
 		userId: currentUser?.id || "",
 	});
 
@@ -228,11 +238,13 @@ export default function SearchScreen() {
 			// Get current params
 			const currentTag = params?.tag as string;
 			const currentSearchType = params?.searchType as string;
+			const currentTabParam = params?.tab as string;
 			const currentTimestamp = params?.timestamp as string;
 
 			console.log("Screen focused with params:", {
 				currentTag,
 				currentSearchType,
+				currentTabParam,
 				currentTimestamp,
 				lastParams,
 			});
@@ -241,7 +253,25 @@ export default function SearchScreen() {
 			const paramsChanged =
 				currentTag !== lastParams.tag ||
 				currentSearchType !== lastParams.searchType ||
+				currentTabParam !== lastParams.tab ||
 				currentTimestamp !== lastParams.timestamp;
+
+			// Handle tab change from URL params
+			if (currentTabParam && currentTabParam !== activeTab) {
+				console.log(
+					"Tab parameter changed, updating active tab:",
+					currentTabParam
+				);
+				setActiveTab(currentTabParam as SearchTab);
+				// Move tab indicator
+				const targetPosition = currentTabParam === "posts" ? 0 : 1;
+				Animated.spring(tabIndicatorPosition, {
+					toValue: targetPosition,
+					useNativeDriver: true,
+					speed: 12,
+					bounciness: 4,
+				}).start();
+			}
 
 			if (currentTag && paramsChanged) {
 				console.log("Params changed, updating search");
@@ -263,11 +293,22 @@ export default function SearchScreen() {
 				setLastParams({
 					tag: currentTag,
 					searchType: currentSearchType,
+					tab: currentTabParam,
 					timestamp: currentTimestamp,
 				});
 			} else if (!currentTag && searchQuery.trim() === "") {
 				// Load discovery content if no search params and no query - only if not loaded
 				loadDiscoveryContent(activeTab, false);
+			}
+
+			// Update last params even if no search is performed
+			if (paramsChanged) {
+				setLastParams({
+					tag: currentTag,
+					searchType: currentSearchType,
+					tab: currentTabParam,
+					timestamp: currentTimestamp,
+				});
 			}
 
 			// Cleanup function

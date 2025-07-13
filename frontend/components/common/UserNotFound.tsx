@@ -19,7 +19,7 @@ export const UserNotFound: React.FC<UserNotFoundProps> = ({ username }) => {
 	};
 
 	const handleSearch = () => {
-		router.push("/search");
+		router.push("/search?tab=users");
 	};
 
 	return (
