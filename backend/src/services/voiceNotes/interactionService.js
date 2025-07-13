@@ -1,4 +1,4 @@
-const supabase = require("../../config/supabase");
+const { supabase, supabaseAdmin } = require("../../config/supabase");
 const { randomUUID } = require("crypto");
 
 /**
@@ -14,7 +14,7 @@ const { randomUUID } = require("crypto");
  * @returns {boolean} Whether user has liked the voice note
  */
 const checkUserLiked = async (voiceNoteId, userId) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_note_likes")
 		.select("id")
 		.eq("voice_note_id", voiceNoteId)
@@ -36,7 +36,7 @@ const likeVoiceNote = async (voiceNoteId, userId) => {
 	const alreadyLiked = await checkUserLiked(voiceNoteId, userId);
 	if (alreadyLiked) {
 		// Return existing like instead of throwing error
-		const { data, error } = await supabase
+		const { data, error } = await supabaseAdmin
 			.from("voice_note_likes")
 			.select("*")
 			.eq("voice_note_id", voiceNoteId)
@@ -47,7 +47,7 @@ const likeVoiceNote = async (voiceNoteId, userId) => {
 		return data;
 	}
 
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_note_likes")
 		.insert([{ voice_note_id: voiceNoteId, user_id: userId }])
 		.select()
@@ -64,7 +64,7 @@ const likeVoiceNote = async (voiceNoteId, userId) => {
  * @returns {boolean} Success status
  */
 const unlikeVoiceNote = async (voiceNoteId, userId) => {
-	const { error } = await supabase
+	const { error } = await supabaseAdmin
 		.from("voice_note_likes")
 		.delete()
 		.eq("voice_note_id", voiceNoteId)
@@ -80,7 +80,7 @@ const unlikeVoiceNote = async (voiceNoteId, userId) => {
  * @returns {Array} List of likes with user info
  */
 const getVoiceNoteLikes = async (voiceNoteId) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_note_likes")
 		.select("*, users:user_id (id, username, display_name, avatar_url)")
 		.eq("voice_note_id", voiceNoteId)
@@ -102,7 +102,7 @@ const getVoiceNoteComments = async (voiceNoteId, options = {}) => {
 	const { page = 1, limit = 10 } = options;
 	const offset = (page - 1) * limit;
 
-	const { data, error, count } = await supabase
+	const { data, error, count } = await supabaseAdmin
 		.from("voice_note_comments")
 		.select("*, users:user_id (id, username, display_name, avatar_url)", {
 			count: "exact",
@@ -138,7 +138,7 @@ const getVoiceNoteComments = async (voiceNoteId, options = {}) => {
  * @returns {Object} Created comment with user info
  */
 const addComment = async (voiceNoteId, userId, content) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_note_comments")
 		.insert([{ voice_note_id: voiceNoteId, user_id: userId, content }])
 		.select("*, users:user_id (id, username, display_name, avatar_url)")
@@ -162,7 +162,7 @@ const addComment = async (voiceNoteId, userId, content) => {
  * @returns {Object} Created play record
  */
 const recordPlay = async (voiceNoteId, userId = null) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_note_plays")
 		.insert([
 			{
@@ -191,7 +191,7 @@ const checkUserShared = async (voiceNoteId, userId) => {
 		userId,
 	});
 
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_note_shares")
 		.select("id, user_id, voice_note_id, shared_at")
 		.eq("voice_note_id", voiceNoteId)
@@ -230,7 +230,7 @@ const shareVoiceNote = async (voiceNoteId, userId) => {
 
 	// Try using a stored function first (if it exists)
 	try {
-		const { data, error } = await supabase.rpc("create_voice_note_share", {
+		const { data, error } = await supabaseAdmin.rpc("create_voice_note_share", {
 			p_voice_note_id: voiceNoteId,
 			p_user_id: userId,
 		});
@@ -245,7 +245,7 @@ const shareVoiceNote = async (voiceNoteId, userId) => {
 	// Fallback to direct insert with explicit UUID
 	const shareId = randomUUID();
 
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_note_shares")
 		.insert([
 			{
@@ -271,7 +271,7 @@ const shareVoiceNote = async (voiceNoteId, userId) => {
  * @returns {boolean} Success status
  */
 const unshareVoiceNote = async (voiceNoteId, userId) => {
-	const { error } = await supabase
+	const { error } = await supabaseAdmin
 		.from("voice_note_shares")
 		.delete()
 		.eq("voice_note_id", voiceNoteId)
@@ -291,7 +291,7 @@ const getVoiceNoteShares = async (voiceNoteId, options = {}) => {
 	const { page = 1, limit = 10 } = options;
 	const offset = (page - 1) * limit;
 
-	const { data, error, count } = await supabase
+	const { data, error, count } = await supabaseAdmin
 		.from("voice_note_shares")
 		.select("*, users:user_id (id, username, display_name, avatar_url)", {
 			count: "exact",
@@ -325,7 +325,7 @@ const getVoiceNoteShareCount = async (voiceNoteId) => {
 	);
 
 	try {
-		const { count, error } = await supabase
+		const { count, error } = await supabaseAdmin
 			.from("voice_note_shares")
 			.select("*", { count: "exact", head: true })
 			.eq("voice_note_id", voiceNoteId);
@@ -347,7 +347,7 @@ const getVoiceNoteShareCount = async (voiceNoteId) => {
 
 		// Also fetch actual records for debugging inconsistencies
 		if (finalCount === 0) {
-			const { data: records, error: recordsError } = await supabase
+			const { data: records, error: recordsError } = await supabaseAdmin
 				.from("voice_note_shares")
 				.select("id, user_id, voice_note_id, shared_at")
 				.eq("voice_note_id", voiceNoteId);
@@ -388,7 +388,7 @@ const toggleLikeNew = async (voiceNoteId, userId) => {
 
 	try {
 		// Check current like status
-		const { data: existingLike, error: checkError } = await supabase
+		const { data: existingLike, error: checkError } = await supabaseAdmin
 			.from("voice_note_likes")
 			.select("id")
 			.eq("voice_note_id", voiceNoteId)
@@ -404,7 +404,7 @@ const toggleLikeNew = async (voiceNoteId, userId) => {
 
 		if (isCurrentlyLiked) {
 			// Remove like
-			const { error: deleteError } = await supabase
+			const { error: deleteError } = await supabaseAdmin
 				.from("voice_note_likes")
 				.delete()
 				.eq("voice_note_id", voiceNoteId)
@@ -413,7 +413,7 @@ const toggleLikeNew = async (voiceNoteId, userId) => {
 			if (deleteError) throw deleteError;
 		} else {
 			// Add like
-			const { error: insertError } = await supabase
+			const { error: insertError } = await supabaseAdmin
 				.from("voice_note_likes")
 				.insert([{ voice_note_id: voiceNoteId, user_id: userId }]);
 
@@ -421,7 +421,7 @@ const toggleLikeNew = async (voiceNoteId, userId) => {
 		}
 
 		// Get new count
-		const { count, error: countError } = await supabase
+		const { count, error: countError } = await supabaseAdmin
 			.from("voice_note_likes")
 			.select("*", { count: "exact", head: true })
 			.eq("voice_note_id", voiceNoteId);
@@ -456,7 +456,7 @@ const toggleShareNew = async (voiceNoteId, userId) => {
 
 	try {
 		// Check current share status
-		const { data: existingShare, error: checkError } = await supabase
+		const { data: existingShare, error: checkError } = await supabaseAdmin
 			.from("voice_note_shares")
 			.select("id")
 			.eq("voice_note_id", voiceNoteId)
@@ -472,7 +472,7 @@ const toggleShareNew = async (voiceNoteId, userId) => {
 
 		if (isCurrentlyShared) {
 			// Remove share
-			const { error: deleteError } = await supabase
+			const { error: deleteError } = await supabaseAdmin
 				.from("voice_note_shares")
 				.delete()
 				.eq("voice_note_id", voiceNoteId)
@@ -482,7 +482,7 @@ const toggleShareNew = async (voiceNoteId, userId) => {
 		} else {
 			// Add share
 			const shareId = randomUUID();
-			const { error: insertError } = await supabase
+			const { error: insertError } = await supabaseAdmin
 				.from("voice_note_shares")
 				.insert([
 					{
@@ -497,7 +497,7 @@ const toggleShareNew = async (voiceNoteId, userId) => {
 		}
 
 		// Get new count
-		const { count, error: countError } = await supabase
+		const { count, error: countError } = await supabaseAdmin
 			.from("voice_note_shares")
 			.select("*", { count: "exact", head: true })
 			.eq("voice_note_id", voiceNoteId);
@@ -538,11 +538,11 @@ const getInteractionStatusNew = async (voiceNoteId, userId = null) => {
 			{ count: likesCount, error: likesError },
 			{ count: sharesCount, error: sharesError },
 		] = await Promise.all([
-			supabase
+			supabaseAdmin
 				.from("voice_note_likes")
 				.select("*", { count: "exact", head: true })
 				.eq("voice_note_id", voiceNoteId),
-			supabase
+			supabaseAdmin
 				.from("voice_note_shares")
 				.select("*", { count: "exact", head: true })
 				.eq("voice_note_id", voiceNoteId),
@@ -560,13 +560,13 @@ const getInteractionStatusNew = async (voiceNoteId, userId = null) => {
 				{ data: likeData, error: likeCheckError },
 				{ data: shareData, error: shareCheckError },
 			] = await Promise.all([
-				supabase
+				supabaseAdmin
 					.from("voice_note_likes")
 					.select("id")
 					.eq("voice_note_id", voiceNoteId)
 					.eq("user_id", userId)
 					.single(),
-				supabase
+				supabaseAdmin
 					.from("voice_note_shares")
 					.select("id")
 					.eq("voice_note_id", voiceNoteId)

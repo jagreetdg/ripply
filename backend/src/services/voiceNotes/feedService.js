@@ -1,4 +1,4 @@
-const supabase = require("../../config/supabase");
+const { supabase, supabaseAdmin } = require("../../config/supabase");
 const {
 	processVoiceNoteCounts,
 	calculateDiscoveryScore,
@@ -16,13 +16,14 @@ const { VOICE_NOTE_SELECT_QUERY } = require("./voiceNoteService"); // Import the
  * @returns {Array} Array of following user IDs
  */
 const getUserFollowing = async (userId) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("follows")
 		.select("following_id")
 		.eq("follower_id", userId);
 
 	if (error) throw error;
-	return data.map((follow) => follow.following_id);
+
+	return data ? data.map((follow) => follow.following_id) : [];
 };
 
 /**
@@ -36,7 +37,7 @@ const getOriginalPosts = async (followingIds, options = {}) => {
 
 	if (followingIds.length === 0) return [];
 
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_notes")
 		.select(
 			`
@@ -57,7 +58,7 @@ const getOriginalPosts = async (followingIds, options = {}) => {
 	// Get actual share counts for all voice notes in parallel
 	const shareCountPromises = data.map(async (note) => {
 		try {
-			const { count } = await supabase
+			const { count } = await supabaseAdmin
 				.from("voice_note_shares")
 				.select("*", { count: "exact", head: true })
 				.eq("voice_note_id", note.id);
@@ -106,7 +107,7 @@ const getSharedPosts = async (followingIds, options = {}) => {
 	if (followingIds.length === 0) return [];
 
 	// Get share records from followed users
-	const { data: sharedData, error: sharedError } = await supabase
+	const { data: sharedData, error: sharedError } = await supabaseAdmin
 		.from("voice_note_shares")
 		.select("id, voice_note_id, user_id, shared_at")
 		.in("user_id", followingIds)
@@ -122,7 +123,7 @@ const getSharedPosts = async (followingIds, options = {}) => {
 	// Get the actual voice notes
 	const sharedVoiceNoteIds = sharedData.map((share) => share.voice_note_id);
 	const { data: sharedVoiceNotes, error: sharedVoiceNotesError } =
-		await supabase
+		await supabaseAdmin
 			.from("voice_notes")
 			.select(
 				`
@@ -141,7 +142,7 @@ const getSharedPosts = async (followingIds, options = {}) => {
 	// Get actual share counts for all voice notes in parallel
 	const shareCountPromises = sharedVoiceNotes.map(async (note) => {
 		try {
-			const { count } = await supabase
+			const { count } = await supabaseAdmin
 				.from("voice_note_shares")
 				.select("*", { count: "exact", head: true })
 				.eq("voice_note_id", note.id);
@@ -164,7 +165,7 @@ const getSharedPosts = async (followingIds, options = {}) => {
 	// Get sharer info
 	const sharersData = await Promise.all(
 		sharedData.map(async (share) => {
-			const { data: sharerInfo } = await supabase
+			const { data: sharerInfo } = await supabaseAdmin
 				.from("users")
 				.select("id, username, display_name, avatar_url")
 				.eq("id", share.user_id)
@@ -265,7 +266,7 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 	const followingIds = await getUserFollowing(userId);
 
 	// Get user's preferred tags from their liked posts
-	const { data: likedPosts } = await supabase
+	const { data: likedPosts } = await supabaseAdmin
 		.from("voice_note_likes")
 		.select(
 			`
@@ -288,7 +289,7 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 	];
 
 	// Get creators user has liked before
-	const { data: likedCreatorsData } = await supabase
+	const { data: likedCreatorsData } = await supabaseAdmin
 		.from("voice_note_likes")
 		.select(
 			`
@@ -306,7 +307,7 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 	];
 
 	// Get discovery posts (exclude own posts and posts from followed users)
-	let query = supabase
+	let query = supabaseAdmin
 		.from("voice_notes")
 		.select(
 			`
@@ -338,7 +339,7 @@ const getDiscoveryPosts = async (userId, options = {}) => {
 	// Get actual share counts for all voice notes in parallel
 	const shareCountPromises = discoveryPosts.map(async (note) => {
 		try {
-			const { count } = await supabase
+			const { count } = await supabaseAdmin
 				.from("voice_note_shares")
 				.select("*", { count: "exact", head: true })
 				.eq("voice_note_id", note.id);
@@ -393,7 +394,7 @@ const getDiscoveryUsers = async (userId, options = {}) => {
 	const followingIds = await getUserFollowing(userId);
 
 	// Get users with their voice notes stats for engagement scoring
-	let query = supabase
+	let query = supabaseAdmin
 		.from("users")
 		.select(
 			`
@@ -443,7 +444,7 @@ const getVoiceNotesByTag = async (tagName, options = {}) => {
 	const offset = (page - 1) * limit;
 
 	// First, find the voice_note_ids associated with the tag
-	const { data: tagData, error: tagError } = await supabase
+	const { data: tagData, error: tagError } = await supabaseAdmin
 		.from("voice_note_tags")
 		.select("voice_note_id")
 		.eq("tag_name", tagName.toLowerCase());
@@ -456,7 +457,7 @@ const getVoiceNotesByTag = async (tagName, options = {}) => {
 	const voiceNoteIds = tagData.map((t) => t.voice_note_id);
 
 	// Now, fetch the voice notes with those IDs
-	const { data, error, count } = await supabase
+	const { data, error, count } = await supabaseAdmin
 		.from("voice_notes")
 		.select(VOICE_NOTE_SELECT_QUERY, { count: "exact" })
 		.in("id", voiceNoteIds)
@@ -501,9 +502,11 @@ const getPublicFeed = async (options = {}) => {
 	const { page = 1, limit = 10, discover = "newest", currentUserId } = options;
 	const offset = (page - 1) * limit;
 
-	let query = supabase.from("voice_notes").select(VOICE_NOTE_SELECT_QUERY, {
-		count: "exact",
-	});
+	let query = supabaseAdmin
+		.from("voice_notes")
+		.select(VOICE_NOTE_SELECT_QUERY, {
+			count: "exact",
+		});
 
 	if (discover === "newest") {
 		query = query.order("created_at", { ascending: false });
@@ -521,7 +524,7 @@ const getPublicFeed = async (options = {}) => {
 	// Get actual share counts for all voice notes in parallel
 	const shareCountPromises = data.map(async (note) => {
 		try {
-			const { count } = await supabase
+			const { count } = await supabaseAdmin
 				.from("voice_note_shares")
 				.select("*", { count: "exact", head: true })
 				.eq("voice_note_id", note.id);

@@ -1,4 +1,4 @@
-const supabase = require("../../config/supabase");
+const { supabase, supabaseAdmin } = require("../../config/supabase");
 const { processVoiceNoteCounts } = require("../../utils/voiceNotes/processors");
 
 /**
@@ -20,7 +20,7 @@ const VOICE_NOTE_SELECT_QUERY = `
  * @returns {Object|null} Voice note data with engagement stats or null if not found
  */
 const getVoiceNoteById = async (id) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_notes")
 		.select(
 			`
@@ -48,7 +48,7 @@ const getVoiceNoteById = async (id) => {
 
 	// Get actual share count
 	try {
-		const { count: shareCount } = await supabase
+		const { count: shareCount } = await supabaseAdmin
 			.from("voice_note_shares")
 			.select("*", { count: "exact", head: true })
 			.eq("voice_note_id", id);
@@ -89,9 +89,11 @@ const getVoiceNotes = async (options = {}) => {
 	} = options;
 	const offset = (page - 1) * limit;
 
-	let query = supabase.from("voice_notes").select(VOICE_NOTE_SELECT_QUERY, {
-		count: "exact",
-	});
+	let query = supabaseAdmin
+		.from("voice_notes")
+		.select(VOICE_NOTE_SELECT_QUERY, {
+			count: "exact",
+		});
 
 	if (userId) {
 		query = query.eq("user_id", userId);
@@ -105,7 +107,7 @@ const getVoiceNotes = async (options = {}) => {
 	// Get actual share counts for all voice notes in parallel
 	const shareCountPromises = data.map(async (note) => {
 		try {
-			const { count } = await supabase
+			const { count } = await supabaseAdmin
 				.from("voice_note_shares")
 				.select("*", { count: "exact", head: true })
 				.eq("voice_note_id", note.id);
@@ -149,7 +151,7 @@ const getVoiceNotes = async (options = {}) => {
  * @returns {Object} Created voice note
  */
 const createVoiceNote = async (voiceNoteData) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_notes")
 		.insert([voiceNoteData])
 		.select(
@@ -171,7 +173,7 @@ const createVoiceNote = async (voiceNoteData) => {
  * @returns {Object} Updated voice note
  */
 const updateVoiceNote = async (id, updates) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("voice_notes")
 		.update(updates)
 		.eq("id", id)
@@ -193,7 +195,10 @@ const updateVoiceNote = async (id, updates) => {
  * @returns {boolean} Success status
  */
 const deleteVoiceNote = async (id) => {
-	const { error } = await supabase.from("voice_notes").delete().eq("id", id);
+	const { error } = await supabaseAdmin
+		.from("voice_notes")
+		.delete()
+		.eq("id", id);
 
 	if (error) throw error;
 	return true;
@@ -214,7 +219,7 @@ const searchVoiceNotes = async (searchTerm, options = {}) => {
 
 	if (searchType === "tag") {
 		// This path is for specific tag searches (e.g., from clicking a tag)
-		const { data: tagData, error: tagError } = await supabase
+		const { data: tagData, error: tagError } = await supabaseAdmin
 			.from("voice_note_tags")
 			.select("voice_note_id")
 			.ilike("tag_name", `%${searchTerm}%`);
@@ -227,13 +232,13 @@ const searchVoiceNotes = async (searchTerm, options = {}) => {
 		}
 
 		// Since this path is simpler, we can use the standard query for consistency
-		query = supabase
+		query = supabaseAdmin
 			.from("voice_notes")
 			.select(VOICE_NOTE_SELECT_QUERY, { count: "exact" })
 			.in("id", voiceNoteIds);
 	} else {
 		// This path uses the new RPC for unified title and tag text search
-		query = supabase.rpc(
+		query = supabaseAdmin.rpc(
 			"search_voice_notes",
 			{
 				search_term: searchTerm,
@@ -287,7 +292,7 @@ const searchVoiceNotes = async (searchTerm, options = {}) => {
 	if (searchType === "tag") {
 		const shareCountPromises = processedData.map(async (note) => {
 			try {
-				const { count: shareCount } = await supabase
+				const { count: shareCount } = await supabaseAdmin
 					.from("voice_note_shares")
 					.select("*", { count: "exact", head: true })
 					.eq("voice_note_id", note.id);
