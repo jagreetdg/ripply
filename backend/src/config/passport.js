@@ -101,6 +101,15 @@ const initializePassport = () => {
 
 						// Create a new user
 						const userId = uuidv4();
+						console.log("[Google OAuth] Creating new user with supabaseAdmin");
+						console.log("[Google OAuth] User data:", {
+							id: userId,
+							username,
+							email,
+							display_name: profile.displayName || baseUsername,
+							google_id: profile.id,
+						});
+
 						const { data: newUser, error: createError } = await supabaseAdmin
 							.from("users")
 							.insert({
@@ -118,6 +127,12 @@ const initializePassport = () => {
 							})
 							.select()
 							.single();
+
+						console.log("[Google OAuth] User creation result:", {
+							success: !createError,
+							error: createError?.message,
+							userId: newUser?.id,
+						});
 
 						if (createError) throw createError;
 
