@@ -41,9 +41,10 @@ const initializePassport = () => {
 						}
 
 						const email = profile.emails[0].value;
+						console.log("[Google OAuth] Looking up user with email:", email);
 
-						// Check if user already exists in the database
-						const { data: existingUser, error: findError } = await supabase
+						// Check if user already exists in the database using supabaseAdmin
+						const { data: existingUser, error: findError } = await supabaseAdmin
 							.from("users")
 							.select("*")
 							.eq("email", email)
@@ -51,14 +52,21 @@ const initializePassport = () => {
 
 						if (findError && findError.code !== "PGRST116") {
 							// PGRST116 is the error code for no rows returned
+							console.log("[Google OAuth] Error looking up user:", findError);
 							throw findError;
 						}
 
 						// If user exists, return the user
 						if (existingUser) {
+							console.log(
+								"[Google OAuth] Found existing user:",
+								existingUser.id
+							);
+
 							// Update the user's google_id if it doesn't exist
 							if (!existingUser.google_id) {
-								const { error: updateError } = await supabase
+								console.log("[Google OAuth] Adding Google ID to existing user");
+								const { error: updateError } = await supabaseAdmin
 									.from("users")
 									.update({
 										google_id: profile.id,
@@ -66,11 +74,21 @@ const initializePassport = () => {
 									})
 									.eq("id", existingUser.id);
 
-								if (updateError) throw updateError;
+								if (updateError) {
+									console.log(
+										"[Google OAuth] Error updating user with Google ID:",
+										updateError
+									);
+									throw updateError;
+								}
 							}
 
 							return done(null, existingUser);
 						}
+
+						console.log(
+							"[Google OAuth] No existing user found, creating new user"
+						);
 
 						// Generate a unique username based on the Google profile
 						const baseUsername = profile.displayName
@@ -84,7 +102,7 @@ const initializePassport = () => {
 						let usernameExists = true;
 						while (usernameExists && attempts < 10) {
 							const { data: usernameCheck, error: usernameError } =
-								await supabase
+								await supabaseAdmin
 									.from("users")
 									.select("id")
 									.eq("username", username);
@@ -122,6 +140,8 @@ const initializePassport = () => {
 									profile.photos && profile.photos[0]
 										? profile.photos[0].value
 										: null,
+								is_sso_user: true,
+								is_anonymous: false,
 								created_at: new Date().toISOString(),
 								updated_at: new Date().toISOString(),
 							})
@@ -206,8 +226,10 @@ const initializePassport = () => {
 							return done(new Error("No email provided by Apple"), null);
 						}
 
-						// Check if user already exists in the database
-						const { data: existingUser, error: findError } = await supabase
+						console.log("[Apple OAuth] Looking up user with email:", email);
+
+						// Check if user already exists in the database using supabaseAdmin
+						const { data: existingUser, error: findError } = await supabaseAdmin
 							.from("users")
 							.select("*")
 							.eq("email", email)
@@ -215,14 +237,21 @@ const initializePassport = () => {
 
 						if (findError && findError.code !== "PGRST116") {
 							// PGRST116 is the error code for no rows returned
+							console.log("[Apple OAuth] Error looking up user:", findError);
 							throw findError;
 						}
 
 						// If user exists, return the user
 						if (existingUser) {
+							console.log(
+								"[Apple OAuth] Found existing user:",
+								existingUser.id
+							);
+
 							// Update the user's apple_id if it doesn't exist
 							if (!existingUser.apple_id) {
-								const { error: updateError } = await supabase
+								console.log("[Apple OAuth] Adding Apple ID to existing user");
+								const { error: updateError } = await supabaseAdmin
 									.from("users")
 									.update({
 										apple_id: profile.sub,
@@ -230,13 +259,23 @@ const initializePassport = () => {
 									})
 									.eq("id", existingUser.id);
 
-								if (updateError) throw updateError;
+								if (updateError) {
+									console.log(
+										"[Apple OAuth] Error updating user with Apple ID:",
+										updateError
+									);
+									throw updateError;
+								}
 							}
 
 							return done(null, existingUser);
 						}
 
-						// Generate a username based on the email
+						console.log(
+							"[Apple OAuth] No existing user found, creating new user"
+						);
+
+						// Generate a unique username based on the Apple profile
 						const emailUsername = email
 							.split("@")[0]
 							.replace(/[^a-zA-Z0-9_]/g, "");
@@ -247,7 +286,7 @@ const initializePassport = () => {
 						let usernameExists = true;
 						while (usernameExists && attempts < 10) {
 							const { data: usernameCheck, error: usernameError } =
-								await supabase
+								await supabaseAdmin
 									.from("users")
 									.select("id")
 									.eq("username", username);
@@ -268,6 +307,15 @@ const initializePassport = () => {
 							? `${profile.name.firstName} ${profile.name.lastName}`
 							: emailUsername;
 
+						console.log("[Apple OAuth] Creating new user with supabaseAdmin");
+						console.log("[Apple OAuth] User data:", {
+							id: userId,
+							username,
+							email,
+							display_name: displayName,
+							apple_id: profile.sub,
+						});
+
 						const { data: newUser, error: createError } = await supabaseAdmin
 							.from("users")
 							.insert({
@@ -276,16 +324,30 @@ const initializePassport = () => {
 								email,
 								display_name: displayName,
 								apple_id: profile.sub,
+								is_sso_user: true,
+								is_anonymous: false,
 								created_at: new Date().toISOString(),
 								updated_at: new Date().toISOString(),
 							})
 							.select()
 							.single();
 
+						console.log("[Apple OAuth] User creation result:", {
+							success: !createError,
+							error: createError?.message,
+							userId: newUser?.id,
+						});
+
 						if (createError) throw createError;
 
 						return done(null, newUser);
 					} catch (error) {
+						console.error("[Apple OAuth] Error in passport strategy:", {
+							message: error.message,
+							code: error.code,
+							details: error.details,
+							stack: error.stack,
+						});
 						return done(error, null);
 					}
 				}
@@ -306,7 +368,7 @@ const initializePassport = () => {
 	// Deserialize user from the session
 	passport.deserializeUser(async (id, done) => {
 		try {
-			const { data: user, error } = await supabase
+			const { data: user, error } = await supabaseAdmin
 				.from("users")
 				.select("*")
 				.eq("id", id)
