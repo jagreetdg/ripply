@@ -1,8 +1,9 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const AppleStrategy = require("passport-apple");
-const supabase = require("./supabase");
+const AppleStrategy = require("passport-apple").Strategy;
+const { supabase, supabaseAdmin } = require("./supabase");
 const { v4: uuidv4 } = require("uuid");
+const fs = require("fs");
 
 // Helper function to get callback URL
 const getCallbackURL = (provider) => {
@@ -100,7 +101,7 @@ const initializePassport = () => {
 
 						// Create a new user
 						const userId = uuidv4();
-						const { data: newUser, error: createError } = await supabase
+						const { data: newUser, error: createError } = await supabaseAdmin
 							.from("users")
 							.insert({
 								id: userId,
@@ -252,7 +253,7 @@ const initializePassport = () => {
 							? `${profile.name.firstName} ${profile.name.lastName}`
 							: emailUsername;
 
-						const { data: newUser, error: createError } = await supabase
+						const { data: newUser, error: createError } = await supabaseAdmin
 							.from("users")
 							.insert({
 								id: userId,

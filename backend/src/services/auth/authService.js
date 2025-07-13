@@ -1,6 +1,7 @@
-const supabase = require("../../config/supabase");
 const bcrypt = require("bcrypt");
 const { v4: uuidv4 } = require("uuid");
+const { supabase, supabaseAdmin } = require("../../config/supabase");
+const { generateToken } = require("../../utils/auth/tokenUtils");
 const {
 	isAccountLocked,
 	recordFailedAttempt,
@@ -231,15 +232,22 @@ const createSocialUser = async (profile, provider) => {
 		userData.apple_id = profile.id;
 	}
 
-	const { data, error } = await supabase
-		.from("users")
-		.insert([userData])
-		.select()
-		.single();
+	try {
+		const { data, error } = await supabaseAdmin
+			.from("users")
+			.insert(userData)
+			.select()
+			.single();
 
-	if (error) throw error;
+		if (error) {
+			throw error;
+		}
 
-	return data;
+		return data;
+	} catch (error) {
+		console.error("[Auth] Error creating social user:", error);
+		throw error;
+	}
 };
 
 /**

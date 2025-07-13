@@ -25,7 +25,7 @@ const googleCallback = [
 			session: false,
 			failureRedirect: `${
 				process.env.FRONTEND_URL || "https://ripply-app.netlify.app"
-			}/auth/login?error=auth_failed`,
+			}/?error=auth_failed`,
 		})(req, res, (err) => {
 			if (err) {
 				console.error("[Google OAuth] Passport authentication error:", {

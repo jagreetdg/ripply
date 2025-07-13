@@ -4,15 +4,23 @@ const fetch = require("node-fetch");
 
 // Validate required environment variables
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
+const supabaseAnonKey =
+	process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl) {
 	throw new Error("SUPABASE_URL environment variable is required");
 }
 
-if (!supabaseKey) {
+if (!supabaseAnonKey) {
 	throw new Error(
 		"SUPABASE_ANON_KEY (or SUPABASE_KEY) environment variable is required"
+	);
+}
+
+if (!supabaseServiceKey) {
+	console.warn(
+		"SUPABASE_SERVICE_KEY not found, using anon key for all operations"
 	);
 }
 
@@ -27,8 +35,8 @@ if (process.env.NODE_ENV === "development") {
 	console.log("Connecting to Supabase at:", supabaseUrl);
 }
 
-// Create Supabase client with custom fetch implementation
-const supabase = createClient(supabaseUrl, supabaseKey, {
+// Create regular Supabase client (with RLS)
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 	auth: {
 		persistSession: false,
 	},
@@ -44,4 +52,24 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 	},
 });
 
-module.exports = supabase;
+// Create admin client that bypasses RLS (for user creation, etc.)
+const supabaseAdmin = createClient(
+	supabaseUrl,
+	supabaseServiceKey || supabaseAnonKey,
+	{
+		auth: {
+			persistSession: false,
+		},
+		global: {
+			fetch: fetch,
+			headers: {
+				"Content-Type": "application/json",
+			},
+			fetchOptions: {
+				timeout: 30000, // 30 seconds
+			},
+		},
+	}
+);
+
+module.exports = { supabase, supabaseAdmin };

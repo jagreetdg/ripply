@@ -63,17 +63,21 @@ const handleAppleAuth = async (user) => {
  * @returns {string} Redirect URL
  */
 const buildOAuthRedirectUrl = (provider, token = null, error = null) => {
-	const baseUrl = process.env.FRONTEND_URL || "https://ripply-app.netlify.app";
+	const baseUrl =
+		process.env.FRONTEND_URL ||
+		(process.env.NODE_ENV === "production"
+			? "https://ripply-app.netlify.app"
+			: "http://localhost:8081");
 
 	if (error) {
-		return `${baseUrl}/auth/login?error=${error}`;
+		return `${baseUrl}/?error=${error}`;
 	}
 
 	if (token) {
 		return `${baseUrl}/auth/${provider}-callback?token=${token}`;
 	}
 
-	return `${baseUrl}/auth/login?error=auth_failed`;
+	return `${baseUrl}/?error=auth_failed`;
 };
 
 /**

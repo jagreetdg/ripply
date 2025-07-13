@@ -15,11 +15,13 @@ services:
         sync: false
       - key: SUPABASE_KEY
         sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://ripply.vercel.app
+        value: https://ripply-app.netlify.app
       - key: BACKEND_URL
         value: https://ripply-backend.onrender.com
     autoDeploy: true
-    branch: f/backend
+    branch: codebase-refactor
