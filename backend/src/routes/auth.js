@@ -95,11 +95,13 @@ router.get("/debug/env", (req, res) => {
 		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? "SET" : "NOT SET",
 		SUPABASE_URL: process.env.SUPABASE_URL ? "SET" : "NOT SET",
 		SUPABASE_KEY: process.env.SUPABASE_KEY ? "SET" : "NOT SET",
+		SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? "SET" : "NOT SET",
+		SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY
+			? "SET"
+			: "NOT SET",
 		FRONTEND_URL: process.env.FRONTEND_URL ? "SET" : "NOT SET",
 		BACKEND_URL: process.env.BACKEND_URL ? "SET" : "NOT SET",
 	};
-
-	console.log("[DEBUG] Environment check:", envCheck);
 	res.json(envCheck);
 });
 
