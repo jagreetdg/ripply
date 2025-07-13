@@ -1,4 +1,4 @@
-const supabase = require("../../config/supabase");
+const { supabase, supabaseAdmin } = require("../../config/supabase");
 const { processVoiceNoteCounts } = require("../../utils/voiceNotes/processors");
 const { VOICE_NOTE_SELECT_QUERY } = require("../voiceNotes/voiceNoteService");
 
@@ -16,7 +16,7 @@ const getUserVoiceNotes = async (userId, options = {}) => {
 	const { page = 1, limit = 10 } = options;
 	const offset = (page - 1) * limit;
 
-	const { data, error, count } = await supabase
+	const { data, error, count } = await supabaseAdmin
 		.from("voice_notes")
 		.select(VOICE_NOTE_SELECT_QUERY, {
 			count: "exact",
@@ -30,7 +30,7 @@ const getUserVoiceNotes = async (userId, options = {}) => {
 	// Get actual share counts for all voice notes in parallel
 	const shareCountPromises = data.map(async (note) => {
 		try {
-			const { count } = await supabase
+			const { count } = await supabaseAdmin
 				.from("voice_note_shares")
 				.select("*", { count: "exact", head: true })
 				.eq("voice_note_id", note.id);
@@ -92,7 +92,7 @@ const getUserSharedVoiceNotes = async (userId, options = {}) => {
 		data: sharedEntries,
 		error: sharedError,
 		count: totalSharesCount,
-	} = await supabase
+	} = await supabaseAdmin
 		.from("voice_note_shares")
 		.select(
 			"voice_note_id, created_at, user_id, sharer_details:users (id, username, display_name, avatar_url)",
@@ -135,7 +135,7 @@ const getUserSharedVoiceNotes = async (userId, options = {}) => {
 	const voiceNoteIds = sharedEntries.map((entry) => entry.voice_note_id);
 
 	// Get the actual voice note data for these IDs, including original creator's details
-	const { data: voiceNotesData, error: voiceNotesError } = await supabase
+	const { data: voiceNotesData, error: voiceNotesError } = await supabaseAdmin
 		.from("voice_notes")
 		.select(
 			`
@@ -160,7 +160,7 @@ const getUserSharedVoiceNotes = async (userId, options = {}) => {
 	// Get actual share counts for all voice notes in parallel
 	const shareCountPromises = voiceNotesData.map(async (note) => {
 		try {
-			const { count } = await supabase
+			const { count } = await supabaseAdmin
 				.from("voice_note_shares")
 				.select("*", { count: "exact", head: true })
 				.eq("voice_note_id", note.id);

@@ -1,4 +1,4 @@
-const supabase = require("../../config/supabase");
+const { supabase, supabaseAdmin } = require("../../config/supabase");
 
 /**
  * Service layer for user follow system
@@ -11,7 +11,7 @@ const supabase = require("../../config/supabase");
  * @returns {boolean} Whether the follow relationship exists
  */
 const checkFollowStatus = async (followerId, followingId) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("follows")
 		.select("*")
 		.eq("follower_id", followerId)
@@ -40,7 +40,7 @@ const followUser = async (followerId, followingId) => {
 	}
 
 	// Create follow relationship
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("follows")
 		.insert([{ follower_id: followerId, following_id: followingId }])
 		.select()
@@ -58,7 +58,7 @@ const followUser = async (followerId, followingId) => {
  * @returns {boolean} Success status
  */
 const unfollowUser = async (followerId, followingId) => {
-	const { error } = await supabase
+	const { error } = await supabaseAdmin
 		.from("follows")
 		.delete()
 		.eq("follower_id", followerId)
@@ -79,7 +79,7 @@ const getFollowers = async (userId, options = {}) => {
 	const { page = 1, limit = 20 } = options;
 	const offset = (page - 1) * limit;
 
-	const { data, error, count } = await supabase
+	const { data, error, count } = await supabaseAdmin
 		.from("follows")
 		.select("follower_id, users!follower_id(*)", { count: "exact" })
 		.eq("following_id", userId)
@@ -108,7 +108,7 @@ const getFollowing = async (userId, options = {}) => {
 	const { page = 1, limit = 20 } = options;
 	const offset = (page - 1) * limit;
 
-	const { data, error, count } = await supabase
+	const { data, error, count } = await supabaseAdmin
 		.from("follows")
 		.select("following_id, users!following_id(*)", { count: "exact" })
 		.eq("follower_id", userId)
@@ -133,7 +133,7 @@ const getFollowing = async (userId, options = {}) => {
  * @returns {number} Number of followers
  */
 const getFollowerCount = async (userId) => {
-	const { count, error } = await supabase
+	const { count, error } = await supabaseAdmin
 		.from("follows")
 		.select("*", { count: "exact", head: true })
 		.eq("following_id", userId);
@@ -149,7 +149,7 @@ const getFollowerCount = async (userId) => {
  * @returns {number} Number of users being followed
  */
 const getFollowingCount = async (userId) => {
-	const { count, error } = await supabase
+	const { count, error } = await supabaseAdmin
 		.from("follows")
 		.select("*", { count: "exact", head: true })
 		.eq("follower_id", userId);

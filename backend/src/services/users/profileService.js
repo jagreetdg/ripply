@@ -1,4 +1,4 @@
-const supabase = require("../../config/supabase");
+const { supabase, supabaseAdmin } = require("../../config/supabase");
 
 /**
  * Service layer for user profile management
@@ -10,7 +10,7 @@ const supabase = require("../../config/supabase");
  * @returns {Object|null} User profile data
  */
 const getUserById = async (userId) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("users")
 		.select("*")
 		.eq("id", userId);
@@ -30,7 +30,7 @@ const getUserById = async (userId) => {
  * @returns {Object|null} User profile data
  */
 const getUserByUsername = async (username) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("users")
 		.select("*")
 		.eq("username", username);
@@ -57,7 +57,7 @@ const updateUserProfile = async (userId, updates) => {
 	delete sanitizedUpdates.email;
 	delete sanitizedUpdates.created_at;
 
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("users")
 		.update(sanitizedUpdates)
 		.eq("id", userId)
@@ -91,7 +91,7 @@ const searchUsers = async (searchTerm, options = {}) => {
 	const searchPattern = `%${searchTerm.toLowerCase()}%`;
 
 	// Build the query
-	let query = supabase
+	let query = supabaseAdmin
 		.from("users")
 		.select("*", { count: "exact" })
 		.or(`username.ilike.${searchPattern},display_name.ilike.${searchPattern}`)
@@ -129,7 +129,7 @@ const searchUsers = async (searchTerm, options = {}) => {
  */
 const updateVerificationStatus = async (userId, isVerified) => {
 	// Check if user exists first
-	const { data: userData, error: userError } = await supabase
+	const { data: userData, error: userError } = await supabaseAdmin
 		.from("users")
 		.select("id")
 		.eq("id", userId)
@@ -140,7 +140,7 @@ const updateVerificationStatus = async (userId, isVerified) => {
 	}
 
 	// Update verification status
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("users")
 		.update({
 			is_verified: isVerified,
@@ -174,7 +174,7 @@ const updateProfilePhotos = async (userId, photos) => {
 	}
 
 	// Check if user exists first
-	const { data: userData, error: userError } = await supabase
+	const { data: userData, error: userError } = await supabaseAdmin
 		.from("users")
 		.select("id")
 		.eq("id", userId)
@@ -185,7 +185,7 @@ const updateProfilePhotos = async (userId, photos) => {
 	}
 
 	// Update profile photos
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("users")
 		.update({
 			profile_photos: photos,
