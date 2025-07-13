@@ -122,6 +122,12 @@ const initializePassport = () => {
 
 						return done(null, newUser);
 					} catch (error) {
+						console.error("[Google OAuth] Error in passport strategy:", {
+							message: error.message,
+							code: error.code,
+							details: error.details,
+							stack: error.stack,
+						});
 						return done(error, null);
 					}
 				}

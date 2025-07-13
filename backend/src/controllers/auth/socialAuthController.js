@@ -20,15 +20,34 @@ const googleAuth = passport.authenticate("google", {
  * @route GET /auth/google/callback
  */
 const googleCallback = [
-	passport.authenticate("google", {
-		session: false,
-		failureRedirect: `${
-			process.env.FRONTEND_URL || "https://ripply-app.netlify.app"
-		}/auth/login?error=auth_failed`,
-	}),
+	(req, res, next) => {
+		passport.authenticate("google", {
+			session: false,
+			failureRedirect: `${
+				process.env.FRONTEND_URL || "https://ripply-app.netlify.app"
+			}/auth/login?error=auth_failed`,
+		})(req, res, (err) => {
+			if (err) {
+				console.error("[Google OAuth] Passport authentication error:", {
+					message: err.message,
+					code: err.code,
+					details: err.details,
+					stack: err.stack,
+				});
+				const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
+					"google",
+					null,
+					"auth_error"
+				);
+				return res.redirect(redirectUrl);
+			}
+			next();
+		});
+	},
 	async (req, res) => {
 		try {
 			console.log("[Google OAuth] Callback received");
+			console.log("[Google OAuth] Query params:", req.query);
 			console.log(
 				"[Google OAuth] User from passport:",
 				req.user ? "Present" : "Missing"
