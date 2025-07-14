@@ -212,6 +212,7 @@ export const apiRequest = async <T = any>(
   const requestOptions: RequestInit = {
     method,
     headers: requestHeaders,
+    credentials: 'include', // Include credentials for CORS requests
   };
 
   // Add body for non-GET requests
