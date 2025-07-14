@@ -34,14 +34,31 @@ const getUserSharedVoiceNotes = async (req, res) => {
 		const { userId } = req.params;
 		const { page = 1, limit = 10 } = req.query;
 
+		console.log(
+			`[DEBUG] getUserSharedVoiceNotes called - userId: ${userId}, page: ${page}, limit: ${limit}`
+		);
+
 		const result = await contentService.getUserSharedVoiceNotes(userId, {
 			page: parseInt(page),
 			limit: parseInt(limit),
 		});
 
+		console.log(`[DEBUG] getUserSharedVoiceNotes result:`, {
+			dataLength: result.data?.length,
+			pagination: result.pagination,
+			hasMessage: !!result.message,
+		});
+
 		res.status(200).json(result);
 	} catch (error) {
 		console.error("Error fetching user shared voice notes:", error);
+		console.error("Error details:", {
+			message: error.message,
+			code: error.code,
+			details: error.details,
+			hint: error.hint,
+			stack: error.stack,
+		});
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 };
