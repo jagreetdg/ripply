@@ -101,11 +101,11 @@ const getUserSharedVoiceNotes = async (userId, options = {}) => {
 		} = await supabaseAdmin
 			.from("voice_note_shares")
 			.select(
-				"voice_note_id, created_at, user_id, sharer_details:users (id, username, display_name, avatar_url)",
+				"voice_note_id, shared_at, user_id, sharer_details:users (id, username, display_name, avatar_url)",
 				{ count: "exact" }
 			)
 			.eq("user_id", userId) // Filter shares made by the profile user
-			.order("created_at", { ascending: false }) // Order by when the share happened
+			.order("shared_at", { ascending: false }) // Order by when the share happened
 			.range(offset, offset + parseInt(limit) - 1);
 
 		console.log(`[DEBUG] voice_note_shares query result:`, {
@@ -236,7 +236,7 @@ const getUserSharedVoiceNotes = async (userId, options = {}) => {
 				...processVoiceNoteCounts(note),
 				tags,
 				is_shared: true,
-				shared_at: shareInfo ? shareInfo.created_at : null,
+				shared_at: shareInfo ? shareInfo.shared_at : null,
 				shared_by: shareInfo?.sharer_details
 					? {
 							id: shareInfo.sharer_details.id,
