@@ -18,7 +18,7 @@ const {
  * @returns {Object} Availability status
  */
 const checkUsernameAvailability = async (username) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("users")
 		.select("id")
 		.eq("username", username);
@@ -38,7 +38,7 @@ const checkUsernameAvailability = async (username) => {
  * @returns {Object} Availability status
  */
 const checkEmailAvailability = async (email) => {
-	const { data, error } = await supabase
+	const { data, error } = await supabaseAdmin
 		.from("users")
 		.select("id")
 		.eq("email", email);

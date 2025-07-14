@@ -74,18 +74,57 @@ const getUserByUsername = async (req, res) => {
  */
 const updateUserProfile = async (req, res) => {
 	try {
+		console.log("[PROFILE UPDATE DEBUG] Request received:", {
+			userId: req.params.userId,
+			updates: req.body,
+			userFromToken: req.user
+				? { id: req.user.id, username: req.user.username }
+				: null,
+		});
+
 		const { userId } = req.params;
 		const updates = req.body;
 
 		const updatedUser = await profileService.updateUserProfile(userId, updates);
+
+		console.log("[PROFILE UPDATE DEBUG] Update successful:", updatedUser);
 		res.status(200).json(updatedUser);
 	} catch (error) {
+		console.error("[PROFILE UPDATE DEBUG] Error details:", {
+			message: error.message,
+			code: error.code,
+			details: error.details,
+			hint: error.hint,
+			stack: error.stack,
+		});
+
 		if (error.message === "User not found") {
 			return res.status(404).json({ message: error.message });
 		}
 
+		// Check for specific database errors
+		if (error.code === "23505") {
+			// Unique constraint violation
+			if (error.message.includes("username")) {
+				return res.status(400).json({
+					message: "Username is already taken",
+					field: "username",
+				});
+			}
+			if (error.message.includes("email")) {
+				return res.status(400).json({
+					message: "Email is already taken",
+					field: "email",
+				});
+			}
+		}
+
 		console.error("Error updating user:", error);
-		res.status(500).json({ message: "Server error", error: error.message });
+		res.status(500).json({
+			message: "Server error",
+			error: error.message,
+			details: error.details || null,
+		});
 	}
 };
 
