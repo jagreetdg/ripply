@@ -12,6 +12,7 @@ const voiceNoteRoutes = require("./routes/voiceNotes");
 const voiceBioRoutes = require("./routes/voiceBios");
 const passwordResetRoutes = require("./routes/passwordReset");
 const verificationRoutes = require("./routes/verification");
+const waitlistRoutes = require("./routes/waitlist");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -165,6 +166,7 @@ app.use("/api/voice-notes", voiceNoteRoutes);
 app.use("/api/voice-bios", voiceBioRoutes);
 app.use("/api/password-reset", passwordResetRoutes);
 app.use("/api/verification", verificationRoutes);
+app.use("/api/waitlist", waitlistRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {

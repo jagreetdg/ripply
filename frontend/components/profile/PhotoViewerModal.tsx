@@ -25,7 +25,6 @@ import { useUser, User } from "../../context/UserContext";
 import { updateUserProfile, UpdateUserProfileParams } from "../../services/api";
 import { BlurView } from "expo-blur";
 import { ENDPOINTS, apiRequest } from "../../services/api/config";
-import { useGlobalToast } from "../common/Toast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
 	useConfirmation,
