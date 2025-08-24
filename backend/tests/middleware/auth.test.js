@@ -19,8 +19,16 @@ if (!JWT_SECRET) {
 }
 
 // Mock the dependencies
-jest.mock("../../src/config/supabase");
-const mockSupabase = require("../../src/config/supabase");
+jest.mock("../../src/config/supabase", () => ({
+	supabase: {
+		from: jest.fn(() => ({
+			select: jest.fn().mockReturnThis(),
+			eq: jest.fn().mockReturnThis(),
+			single: jest.fn().mockResolvedValue({ data: null, error: null }),
+		})),
+	},
+}));
+const { supabase: mockSupabase } = require("../../src/config/supabase");
 
 describe("Authentication Middleware", () => {
 	let mockReq, mockRes, mockNext;

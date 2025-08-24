@@ -1,4 +1,8 @@
 const { supabase, supabaseAdmin } = require("../../config/supabase");
+const {
+	uploadProfilePicture,
+	uploadCoverPhoto,
+} = require("../../utils/storage");
 
 /**
  * Service layer for user profile management
@@ -215,3 +219,69 @@ module.exports = {
 	updateVerificationStatus,
 	updateProfilePhotos,
 };
+
+/**
+ * Upload profile picture to storage and set users.avatar_url
+ * @param {string} userId
+ * @param {{name:string,mimetype:string,buffer:Buffer}} file
+ * @returns {Promise<object>} Updated user
+ */
+async function uploadAndSetAvatar(userId, file) {
+	if (!userId) throw new Error("userId is required");
+	if (!file) throw new Error("file is required");
+
+	// Ensure user exists
+	const { data: userData, error: userError } = await supabaseAdmin
+		.from("users")
+		.select("id")
+		.eq("id", userId)
+		.single();
+	if (userError || !userData) throw new Error("User not found");
+
+	const publicUrl = await uploadProfilePicture(userId, file);
+
+	const { data, error } = await supabaseAdmin
+		.from("users")
+		.update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+		.eq("id", userId)
+		.select()
+		.single();
+	if (error) throw error;
+	return data;
+}
+
+/**
+ * Upload cover photo to storage and set users.cover_photo_url
+ * @param {string} userId
+ * @param {{name:string,mimetype:string,buffer:Buffer}} file
+ * @returns {Promise<object>} Updated user
+ */
+async function uploadAndSetCoverPhoto(userId, file) {
+	if (!userId) throw new Error("userId is required");
+	if (!file) throw new Error("file is required");
+
+	const { data: userData, error: userError } = await supabaseAdmin
+		.from("users")
+		.select("id")
+		.eq("id", userId)
+		.single();
+	if (userError || !userData) throw new Error("User not found");
+
+	const publicUrl = await uploadCoverPhoto(userId, file);
+
+	const { data, error } = await supabaseAdmin
+		.from("users")
+		.update({
+			cover_photo_url: publicUrl,
+			updated_at: new Date().toISOString(),
+		})
+		.eq("id", userId)
+		.select()
+		.single();
+	if (error) throw error;
+	return data;
+}
+
+// Export new helpers at end to keep existing named exports intact above
+module.exports.uploadAndSetAvatar = uploadAndSetAvatar;
+module.exports.uploadAndSetCoverPhoto = uploadAndSetCoverPhoto;

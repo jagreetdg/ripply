@@ -5,6 +5,18 @@
 
 const rateLimiter = require("../../src/middleware/rateLimiter");
 
+jest.mock("../../src/config/supabase", () => ({
+	supabase: {
+		from: jest.fn(() => ({
+			select: jest.fn().mockReturnThis(),
+			upsert: jest.fn().mockReturnThis(),
+			eq: jest.fn().mockReturnThis(),
+			single: jest.fn().mockResolvedValue({ data: null, error: null }),
+			count: jest.fn().mockResolvedValue({ data: [], count: 0, error: null }),
+		})),
+	},
+}));
+
 describe("Rate Limiter Middleware", () => {
 	let mockReq, mockRes, mockNext;
 

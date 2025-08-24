@@ -23,13 +23,11 @@ jest.mock("passport-apple", () => jest.fn());
 
 // Mock supabase
 jest.mock("../../src/config/supabase", () => ({
-	from: jest.fn(() => ({
-		select: jest.fn(() => ({
-			eq: jest.fn(() => ({
-				single: jest.fn(() =>
-					Promise.resolve({ data: null, error: { code: "PGRST116" } })
-				),
-			})),
+	supabase: {
+		from: jest.fn(() => ({
+			select: jest.fn().mockReturnThis(),
+			eq: jest.fn().mockReturnThis(),
+			single: jest.fn().mockResolvedValue({ data: null, error: null }),
 		})),
 		insert: jest.fn(() => ({
 			select: jest.fn(() => ({
@@ -41,7 +39,7 @@ jest.mock("../../src/config/supabase", () => ({
 		update: jest.fn(() => ({
 			eq: jest.fn(() => Promise.resolve({ error: null })),
 		})),
-	})),
+	}),
 }));
 
 describe("Passport Configuration", () => {
@@ -71,7 +69,7 @@ describe("Passport Configuration", () => {
 		// Get references to mocked modules
 		passport = require("passport");
 		GoogleStrategy = require("passport-google-oauth20").Strategy;
-		mockSupabase = require("../../src/config/supabase");
+		const { supabase: mockSupabase } = require("../../src/config/supabase");
 	});
 
 	afterEach(() => {

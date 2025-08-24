@@ -6,9 +6,29 @@
 const { TestDatabase } = require("../helpers/testDatabase");
 
 // Mock the dependencies
-jest.mock("../../src/config/supabase");
+jest.mock("../../src/config/supabase", () => {
+	const createMockQuery = () => {
+		const mockQuery = {
+			select: jest.fn().mockReturnThis(),
+			order: jest.fn().mockReturnThis(),
+			range: jest.fn().mockReturnThis(),
+			limit: jest.fn().mockReturnThis(),
+			or: jest.fn().mockReturnThis(),
+			ilike: jest.fn().mockReturnThis(),
+		};
+		mockQuery.range.mockResolvedValue({ data: [], error: null });
+		mockQuery.limit.mockResolvedValue({ data: [], error: null });
+		return mockQuery;
+	};
 
-const mockSupabase = require("../../src/config/supabase");
+	return {
+		supabase: {
+			from: jest.fn(() => createMockQuery()),
+		},
+	};
+});
+
+const { supabase: mockSupabase } = require("../../src/config/supabase");
 const { getUsers } = require("../../src/db/getUsers");
 
 describe("Database getUsers Utility", () => {

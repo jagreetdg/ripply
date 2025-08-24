@@ -548,7 +548,7 @@
         "description": "Set up storage helpers for Supabase buckets (profile pictures, cover photos, voice notes) with signed URLs as per STORAGE_ARCHITECTURE.md. This task involves creating utility functions to manage file uploads and generate secure signed URLs for different storage buckets.",
         "details": "1.  **Review STORAGE_ARCHITECTURE.md:** Understand the defined storage architecture for profile pictures, cover photos, and voice notes.\n2.  **Create Storage Helper Functions:** Implement helper functions for each bucket type (profile pictures, cover photos, voice notes) to handle file uploads and signed URL generation.\n3.  **Implement Signed URL Generation:** Use Supabase's storage API to generate signed URLs with appropriate expiration times for each file type. Consider different expiration times based on the use case.\n4.  **Secure Bucket Access:** Ensure that the buckets are private and only accessible via signed URLs.\n5.  **Error Handling:** Implement robust error handling for file uploads and signed URL generation.\n6.  **Configuration:** Store bucket names and other configuration parameters in environment variables.\n7.  **Integration with Backend:** Integrate the storage helper functions into the backend API endpoints for user profile updates, voice note uploads, etc.\n8.  **Consider using a dedicated service or library:** Explore using existing libraries or services that simplify signed URL generation and management with Supabase storage.",
         "testStrategy": "1.  **Upload Files to Each Bucket:** Upload test files (images, audio) to each bucket (profile pictures, cover photos, voice notes) using the helper functions.\n2.  **Verify Signed URL Generation:** Ensure that signed URLs are generated correctly for each uploaded file.\n3.  **Access Files via Signed URLs:** Verify that the files can be accessed using the generated signed URLs.\n4.  **Test URL Expiration:** Confirm that the signed URLs expire after the specified time and become invalid.\n5.  **Test Unauthorized Access:** Ensure that direct access to the files in the buckets is denied without a valid signed URL.\n6.  **Test Error Handling:** Verify that appropriate error messages are returned for invalid file uploads or failed signed URL generation.\n7.  **Integration Tests:** Test the integration of the storage helper functions with the backend API endpoints.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           4
         ],
@@ -582,7 +582,7 @@
               2
             ],
             "details": "Develop functions that handle the specific logic for profile picture storage, including setting appropriate content types and file naming conventions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -593,7 +593,7 @@
               2
             ],
             "details": "Develop functions that handle the specific logic for cover photo storage, including setting appropriate content types and file naming conventions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -604,7 +604,7 @@
               2
             ],
             "details": "Develop functions that handle the specific logic for voice note storage, including setting appropriate content types and file naming conventions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -617,7 +617,7 @@
               5
             ],
             "details": "Configure the Supabase storage policies to enforce access control and use the helper functions to generate signed URLs with limited validity periods.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -628,7 +628,7 @@
               6
             ],
             "details": "Modify the backend API endpoints to use the helper functions for generating signed URLs and handling storage operations. Implement error logging and user-friendly error messages.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -2438,7 +2438,7 @@
     ],
     "metadata": {
       "created": "2025-07-06T09:32:37.993Z",
-      "updated": "2025-07-09T17:42:08.458Z",
+      "updated": "2025-08-16T13:48:36.039Z",
       "description": "Tasks for master context"
     }
   }

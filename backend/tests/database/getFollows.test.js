@@ -6,9 +6,29 @@
 const { TestDatabase } = require("../helpers/testDatabase");
 
 // Mock the dependencies
-jest.mock("../../src/config/supabase");
+jest.mock("../../src/config/supabase", () => {
+	const createMockQuery = () => {
+		const mockQuery = {
+			select: jest.fn().mockReturnThis(),
+			eq: jest.fn().mockReturnThis(),
+			order: jest.fn().mockReturnThis(),
+			range: jest.fn().mockReturnThis(),
+			limit: jest.fn().mockReturnThis(),
+			single: jest.fn().mockResolvedValue({ data: null, error: null }),
+		};
+		mockQuery.range.mockResolvedValue({ data: [], error: null });
+		mockQuery.limit.mockResolvedValue({ data: [], error: null });
+		return mockQuery;
+	};
 
-const mockSupabase = require("../../src/config/supabase");
+	return {
+		supabaseAdmin: {
+			from: jest.fn(() => createMockQuery()),
+		},
+	};
+});
+
+const { supabaseAdmin: mockSupabase } = require("../../src/config/supabase");
 const { getFollows } = require("../../src/db/getFollows");
 
 describe("Database getFollows Utility", () => {

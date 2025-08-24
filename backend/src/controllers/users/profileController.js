@@ -234,4 +234,33 @@ module.exports = {
 	searchUsers,
 	updateVerificationStatus,
 	updateProfilePhotos,
+	// New endpoints for media uploads
+	uploadAvatar: async (req, res) => {
+		try {
+			const { userId } = req.params;
+			const file = req.file || req.body?.file;
+			if (!file) return res.status(400).json({ message: "file is required" });
+			const updated = await profileService.uploadAndSetAvatar(userId, file);
+			return res.status(200).json(updated);
+		} catch (error) {
+			if (error.message === "User not found") {
+				return res.status(404).json({ message: error.message });
+			}
+			return res.status(400).json({ message: error.message });
+		}
+	},
+	uploadCover: async (req, res) => {
+		try {
+			const { userId } = req.params;
+			const file = req.file || req.body?.file;
+			if (!file) return res.status(400).json({ message: "file is required" });
+			const updated = await profileService.uploadAndSetCoverPhoto(userId, file);
+			return res.status(200).json(updated);
+		} catch (error) {
+			if (error.message === "User not found") {
+				return res.status(404).json({ message: error.message });
+			}
+			return res.status(400).json({ message: error.message });
+		}
+	},
 };

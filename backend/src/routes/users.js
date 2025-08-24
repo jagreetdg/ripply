@@ -45,6 +45,16 @@ router.patch(
 	profileController.updateProfilePhotos
 );
 
+// Upload avatar image and set users.avatar_url
+router.post(
+	"/:userId/avatar",
+	authenticateToken,
+	profileController.uploadAvatar
+);
+
+// Upload cover photo and set users.cover_photo_url
+router.post("/:userId/cover", authenticateToken, profileController.uploadCover);
+
 // ===== FOLLOW SYSTEM =====
 
 // Follow a user (authenticated)

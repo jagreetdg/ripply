@@ -6,9 +6,36 @@
 const { TestDatabase } = require("../helpers/testDatabase");
 
 // Mock dependencies
-jest.mock("../../src/config/supabase");
+jest.mock("../../src/config/supabase", () => {
+	const createMockQuery = () => {
+		const mockQuery = {
+			select: jest.fn().mockReturnThis(),
+			insert: jest.fn().mockReturnThis(),
+			update: jest.fn().mockReturnThis(),
+			delete: jest.fn().mockReturnThis(),
+			eq: jest.fn().mockReturnThis(),
+			in: jest.fn().mockReturnThis(),
+			order: jest.fn().mockReturnThis(),
+			limit: jest.fn().mockReturnThis(),
+			single: jest.fn().mockResolvedValue({ data: null, error: null }),
+		};
+		mockQuery.limit.mockResolvedValue({ data: [], error: null });
+		return mockQuery;
+	};
 
-const mockSupabase = require("../../src/config/supabase");
+	return {
+		supabase: {
+			from: jest.fn(() => createMockQuery()),
+			rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
+		},
+		supabaseAdmin: {
+			from: jest.fn(() => createMockQuery()),
+			rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
+		},
+	};
+});
+
+const { supabase: mockSupabase } = require("../../src/config/supabase");
 
 describe("Update Share Counts Database Utility", () => {
 	let testDb;

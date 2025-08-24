@@ -8,14 +8,14 @@ require("../helpers/testEnv");
 describe("Supabase Configuration", () => {
 	describe("Client Initialization", () => {
 		it("should create Supabase client instance", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			expect(supabase).toBeDefined();
 			expect(typeof supabase).toBe("object");
 		});
 
 		it("should have required Supabase methods", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			expect(supabase).toHaveProperty("from");
 			expect(supabase).toHaveProperty("auth");
@@ -24,7 +24,7 @@ describe("Supabase Configuration", () => {
 		});
 
 		it("should configure auth settings correctly", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			// These properties depend on your specific Supabase configuration
 			expect(supabase.auth).toBeDefined();
@@ -36,7 +36,7 @@ describe("Supabase Configuration", () => {
 
 	describe("Database Operations", () => {
 		it("should create table references", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			const usersTable = supabase.from("users");
 			expect(usersTable).toBeDefined();
@@ -47,7 +47,7 @@ describe("Supabase Configuration", () => {
 		});
 
 		it("should support chaining operations", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			const query = supabase.from("users").select("*");
 
@@ -60,7 +60,7 @@ describe("Supabase Configuration", () => {
 
 	describe("Authentication Integration", () => {
 		it("should provide auth methods", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			expect(supabase.auth).toBeDefined();
 			expect(typeof supabase.auth.getSession).toBe("function");
@@ -68,7 +68,7 @@ describe("Supabase Configuration", () => {
 		});
 
 		it("should handle session management", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			// Test that session methods exist
 			expect(typeof supabase.auth.onAuthStateChange).toBe("function");
@@ -77,14 +77,14 @@ describe("Supabase Configuration", () => {
 
 	describe("Storage Integration", () => {
 		it("should provide storage methods", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			expect(supabase.storage).toBeDefined();
 			expect(typeof supabase.storage.from).toBe("function");
 		});
 
 		it("should create bucket references", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			const bucket = supabase.storage.from("test-bucket");
 			expect(bucket).toBeDefined();
@@ -95,7 +95,7 @@ describe("Supabase Configuration", () => {
 
 	describe("Configuration Options", () => {
 		it("should handle realtime configuration", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			// Test realtime functionality if configured
 			expect(supabase.realtime).toBeDefined();
@@ -104,7 +104,7 @@ describe("Supabase Configuration", () => {
 
 	describe("Module Export", () => {
 		it("should export Supabase client as default", () => {
-			const supabase = require("../../src/config/supabase");
+			const { supabase } = require("../../src/config/supabase");
 
 			expect(supabase).toBeDefined();
 			expect(typeof supabase).toBe("object");
