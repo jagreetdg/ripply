@@ -6,6 +6,7 @@ const { authenticateToken } = require("../middleware/auth");
 const voiceNoteController = require("../controllers/voiceNotes/voiceNoteController");
 const interactionController = require("../controllers/voiceNotes/interactionController");
 const feedController = require("../controllers/voiceNotes/feedController");
+const uploadController = require("../controllers/voiceNotes/uploadController");
 
 /**
  * Refactored Voice Notes Routes

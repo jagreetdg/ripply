@@ -68,14 +68,17 @@ const createVoiceNote = async (req, res) => {
 			audio_url,
 			duration,
 			is_public = true,
-			user_id,
 			tags = [],
 		} = req.body;
+
+		// Get user_id from authenticated user
+		const user_id = req.user?.id;
 
 		// Validate required fields
 		if (!title || !audio_url || !user_id) {
 			return res.status(400).json({
-				message: "title, audio_url, and user_id are required",
+				message:
+					"title, audio_url are required, and user must be authenticated",
 			});
 		}
 

@@ -61,9 +61,8 @@ export default function HomeScreen() {
 	);
 
 	const handleNewVoiceNote = () => {
-		// TODO: Implement voice note recording
-		console.log("New voice note");
-		// Navigate to recording screen when implemented
+		console.log("Navigating to voice note creation");
+		router.push("/create");
 	};
 
 	// Handle user profile navigation
