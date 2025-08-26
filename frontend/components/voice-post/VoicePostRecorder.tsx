@@ -286,113 +286,85 @@ export function VoicePostRecorder() {
 					</TouchableOpacity>
 				</View>
 
-				{/* Header with editable title */}
-				<View style={styles.headerSection}>
-					{isEditingCaption ? (
-						<TextInput
-							style={[
-								styles.titleInput,
-								{
-									color: colors.text,
-									borderBottomColor: PURPLE_COLORS.secondary,
-								},
-							]}
-							value={caption}
-							onChangeText={setCaption}
-							onBlur={() => setIsEditingCaption(false)}
-							placeholder="Voice Notes"
-							placeholderTextColor={colors.textSecondary}
-							autoFocus
-							onSubmitEditing={() => setIsEditingCaption(false)}
-						/>
-					) : (
-						<TouchableOpacity
-							onPress={() => setIsEditingCaption(true)}
-							style={styles.titleContainer}
-						>
-							<Text style={[styles.title, { color: colors.text }]}>
-								{caption || "Voice Notes"}
-							</Text>
-							<Feather
-								name="edit-2"
-								size={20}
-								color={colors.textSecondary}
-								style={{ marginLeft: 8 }}
-							/>
-						</TouchableOpacity>
-					)}
-				</View>
+
 
 				{/* Recording Section */}
-				<View
-					style={[
-						styles.sectionCard,
-						{
-							backgroundColor: colors.card,
-							borderColor: colors.border,
-						},
-					]}
-				>
-					{/* Status Text */}
-					<Text style={[styles.statusText, { color: colors.textSecondary }]}>
-						{isRecording
-							? "🔴 Recording in progress..."
-							: recordingUri
-							? "✅ Recording ready to play"
-							: "🎤 Tap to start recording"}
+				<View style={styles.recordingSection}>
+					{/* Main Record Button */}
+					<Animated.View
+						style={[
+							styles.recordButton,
+							{
+								backgroundColor: isRecording
+									? PURPLE_COLORS.primary
+									: PURPLE_COLORS.secondary,
+								transform: [{ scale: pulseAnim }],
+							},
+						]}
+					>
+						<TouchableOpacity
+							style={styles.recordButtonInner}
+							onPress={handleStartRecording}
+							disabled={isUploading}
+							activeOpacity={0.8}
+						>
+							<Feather
+								name={isRecording ? "square" : "mic"}
+								size={32}
+								color="#FFFFFF"
+							/>
+						</TouchableOpacity>
+					</Animated.View>
+
+					{/* Timer */}
+					<Text style={[styles.timerText, { color: colors.text }]}>
+						{formatTime(recordingDuration)}
 					</Text>
 
-					{/* Central Recording Section */}
-					<View style={styles.recordingSection}>
-						{/* Main Record Button */}
-						<Animated.View
+					{/* Input Device Selector */}
+					<View style={styles.deviceSelectorContainer}>
+						<Text style={[styles.deviceLabel, { color: colors.textSecondary }]}>
+							Microphone
+						</Text>
+						<TouchableOpacity
 							style={[
-								styles.recordButton,
+								styles.deviceSelector,
 								{
-									backgroundColor: isRecording
-										? PURPLE_COLORS.primary
-										: PURPLE_COLORS.secondary,
-									transform: [{ scale: pulseAnim }],
+									backgroundColor: colors.card,
+									borderColor: colors.border,
 								},
 							]}
+							onPress={() => {
+								// TODO: Implement device selection
+								Alert.alert("Device Selection", "Microphone selection will be available soon");
+							}}
 						>
-							<TouchableOpacity
-								style={styles.recordButtonInner}
-								onPress={handleStartRecording}
-								disabled={isUploading}
-								activeOpacity={0.8}
-							>
-								<Feather
-									name={isRecording ? "square" : "mic"}
-									size={32}
-									color="#FFFFFF"
-								/>
-							</TouchableOpacity>
-						</Animated.View>
+							<Text style={[styles.deviceText, { color: colors.text }]}>
+								Default Microphone
+							</Text>
+							<Feather name="chevron-down" size={16} color={colors.textSecondary} />
+						</TouchableOpacity>
+					</View>
 
-						{/* Timer */}
-						<Text style={[styles.timerText, { color: colors.text }]}>
-							{formatTime(recordingDuration)}
-						</Text>
-
-						{/* Waveform with Play Button */}
+					{/* Waveform with Play Button */}
+					{recordingUri && (
 						<View style={styles.waveformSection}>
-							{recordingUri && !isRecording && (
-								<TouchableOpacity
-									style={[
-										styles.playButton,
-										{ backgroundColor: PURPLE_COLORS.secondary },
-									]}
-									onPress={handlePlayPause}
-									disabled={isUploading}
-								>
+							<TouchableOpacity
+								style={[
+									styles.playButton,
+									{ backgroundColor: PURPLE_COLORS.secondary },
+								]}
+								onPress={handlePlayPause}
+								disabled={isUploading}
+							>
+								<View style={styles.playButtonIcon}>
 									<Feather
 										name={isPlaying ? "pause" : "play"}
 										size={20}
 										color="#FFFFFF"
 									/>
-								</TouchableOpacity>
-							)}
+								</View>
+							</TouchableOpacity>
 
 							<View style={[styles.waveformContainer, { marginLeft: 16 }]}>
 								<VoicePostWaveform
@@ -404,7 +376,7 @@ export function VoicePostRecorder() {
 								/>
 							</View>
 						</View>
-					</View>
+					)}
 				</View>
 
 				{/* Caption Section */}
@@ -419,7 +391,11 @@ export function VoicePostRecorder() {
 						]}
 					>
 						<View style={styles.sectionHeader}>
-							<Feather name="edit-3" size={18} color={PURPLE_COLORS.secondary} />
+							<Feather
+								name="edit-3"
+								size={18}
+								color={PURPLE_COLORS.secondary}
+							/>
 							<Text style={[styles.sectionTitle, { color: colors.text }]}>
 								Add a caption
 							</Text>
@@ -479,7 +455,9 @@ export function VoicePostRecorder() {
 										{ backgroundColor: PURPLE_COLORS.secondary },
 									]}
 								>
-									<Text style={[styles.tagText, { marginRight: 6 }]}>{tag}</Text>
+									<Text style={[styles.tagText, { marginRight: 6 }]}>
+										{tag}
+									</Text>
 									<TouchableOpacity
 										onPress={() => removeTag(tag)}
 										style={styles.tagRemove}
@@ -501,7 +479,11 @@ export function VoicePostRecorder() {
 									]}
 									onPress={() => setShowTagInput(true)}
 								>
-									<Feather name="plus" size={16} color={PURPLE_COLORS.secondary} />
+									<Feather
+										name="plus"
+										size={16}
+										color={PURPLE_COLORS.secondary}
+									/>
 									<Text
 										style={[
 											styles.addTagText,
@@ -555,7 +537,9 @@ export function VoicePostRecorder() {
 										setCurrentTag("");
 									}}
 								>
-									<Text style={[styles.cancelButtonText, { color: colors.text }]}>
+									<Text
+										style={[styles.cancelButtonText, { color: colors.text }]}
+									>
 										Cancel
 									</Text>
 								</TouchableOpacity>
@@ -619,36 +603,7 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.2,
 		shadowRadius: 2,
 	},
-	// Header Section
-	headerSection: {
-		alignItems: "center",
-		marginBottom: 8,
-	},
-	titleContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-	},
-	title: {
-		fontSize: 36,
-		fontWeight: "bold",
-		textAlign: "center",
-	},
-	titleInput: {
-		fontSize: 36,
-		fontWeight: "bold",
-		textAlign: "center",
-		borderBottomWidth: 2,
-		paddingBottom: 8,
-		minWidth: 200,
-		borderRadius: 8,
-		paddingHorizontal: 16,
-	},
-	// Status and Recording Section
-	statusText: {
-		fontSize: 16,
-		textAlign: "center",
-		marginBottom: 32,
-	},
+
 	// Section Card Styles
 	sectionCard: {
 		width: "100%",
@@ -675,7 +630,8 @@ const styles = StyleSheet.create({
 	},
 	recordingSection: {
 		alignItems: "center",
-		marginTop: 8,
+		marginVertical: 40,
+		width: "100%",
 	},
 	recordButton: {
 		width: 96,
@@ -698,7 +654,31 @@ const styles = StyleSheet.create({
 		fontSize: 24,
 		fontWeight: "600",
 		fontFamily: "monospace",
-		marginBottom: 24,
+		marginBottom: 32,
+	},
+	// Device Selector
+	deviceSelectorContainer: {
+		alignItems: "center",
+		marginBottom: 32,
+	},
+	deviceLabel: {
+		fontSize: 14,
+		marginBottom: 8,
+		opacity: 0.8,
+	},
+	deviceSelector: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		paddingHorizontal: 16,
+		paddingVertical: 12,
+		borderRadius: 8,
+		borderWidth: 1,
+		minWidth: 200,
+	},
+	deviceText: {
+		fontSize: 14,
+		marginRight: 8,
 	},
 	// Waveform Section
 	waveformSection: {
@@ -717,6 +697,9 @@ const styles = StyleSheet.create({
 		shadowOffset: { width: 0, height: 1 },
 		shadowOpacity: 0.2,
 		shadowRadius: 4,
+	},
+	playButtonIcon: {
+		marginLeft: 2, // Slight offset to center the play triangle
 	},
 	waveformContainer: {
 		flex: 1,

@@ -100,30 +100,46 @@ export function VoicePostWaveform({
 	const generateStaticWaveform = () => {
 		if (!audioBlob) return [];
 
-		// If we have stored audio levels from recording, use those
+		// If we have stored audio levels from recording, use those (PRIORITIZE REAL DATA)
 		if (audioLevels.length > 0) {
 			return audioLevels;
 		}
 
-		// Generate a more realistic waveform pattern based on duration
-		const bars = Math.min(Math.max(duration * 3, 20), 60);
+		// Generate a voice-like waveform pattern that mimics actual speech
+		const bars = Math.min(Math.max(duration * 4, 25), 80); // More bars for better resolution
 		const waveform = [];
 
 		for (let i = 0; i < bars; i++) {
 			const position = i / bars;
 			
-			// Create multiple wave patterns for more realistic audio visualization
-			const primaryWave = Math.sin(position * Math.PI * 2) * 0.6;
-			const secondaryWave = Math.sin(position * Math.PI * 6) * 0.3;
-			const tertiaryWave = Math.sin(position * Math.PI * 12) * 0.2;
+			// Simulate voice patterns: pauses, syllables, emphasis
+			const speechPattern = Math.sin(position * Math.PI * 8) * 0.4; // Syllable rhythm
+			const breathPattern = Math.sin(position * Math.PI * 1.5) * 0.3; // Breathing pauses
+			const emphasisPattern = Math.sin(position * Math.PI * 15) * 0.2; // Micro variations
 			
-			// Combine waves with some randomness
-			const combinedWave = primaryWave + secondaryWave + tertiaryWave;
-			const noise = (Math.random() - 0.5) * 0.3;
+			// Add realistic pauses (voice recordings have silent moments)
+			const pauseProbability = Math.random();
+			const isPause = pauseProbability < 0.1; // 10% chance of silence
 			
-			// Ensure levels are realistic (voice recordings typically vary between 0.2-0.9)
-			const level = Math.max(0.15, Math.min(0.95, Math.abs(combinedWave) + noise + 0.3));
-			waveform.push(level);
+			if (isPause) {
+				waveform.push(0.05 + Math.random() * 0.1); // Near silence
+			} else {
+				// Combine patterns with natural variation
+				const combinedWave = speechPattern + breathPattern + emphasisPattern;
+				const naturalVariation = (Math.random() - 0.5) * 0.4;
+				
+				// Voice typically ranges from quiet syllables to loud emphasis
+				let level = Math.abs(combinedWave) + naturalVariation + 0.4;
+				
+				// Add occasional peaks (loud words/emphasis)
+				if (Math.random() < 0.15) { // 15% chance of emphasis
+					level *= 1.5;
+				}
+				
+				// Ensure realistic voice range (0.2-0.95)
+				level = Math.max(0.2, Math.min(0.95, level));
+				waveform.push(level);
+			}
 		}
 
 		return waveform;
