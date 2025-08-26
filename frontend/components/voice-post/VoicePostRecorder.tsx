@@ -389,7 +389,10 @@ export function VoicePostRecorder() {
 				{/* Post Button */}
 				{recordingUri && !isRecording && (
 					<TouchableOpacity
-						style={[styles.postButton, { backgroundColor: PURPLE_COLORS.primary }]}
+						style={[
+							styles.postButton,
+							{ backgroundColor: PURPLE_COLORS.primary },
+						]}
 						onPress={handlePost}
 						disabled={isUploading}
 					>
@@ -413,7 +416,10 @@ export function VoicePostRecorder() {
 						{tags.map((tag, index) => (
 							<View
 								key={index}
-								style={[styles.tagChip, { backgroundColor: PURPLE_COLORS.secondary }]}
+								style={[
+									styles.tagChip,
+									{ backgroundColor: PURPLE_COLORS.secondary },
+								]}
 							>
 								<Text style={[styles.tagText, { marginRight: 6 }]}>{tag}</Text>
 								<TouchableOpacity
