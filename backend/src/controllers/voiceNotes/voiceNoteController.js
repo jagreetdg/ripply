@@ -62,7 +62,7 @@ const getVoiceNoteById = async (req, res) => {
  */
 const createVoiceNote = async (req, res) => {
 	try {
-		const { title, audio_url, duration } = req.body;
+		const { title, audio_url, duration, tags } = req.body;
 
 		// Get user_id from authenticated user
 		const user_id = req.user?.id;
