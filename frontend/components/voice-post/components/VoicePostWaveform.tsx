@@ -100,16 +100,29 @@ export function VoicePostWaveform({
 	const generateStaticWaveform = () => {
 		if (!audioBlob) return [];
 
-		// Generate pseudo-random waveform based on duration
-		const bars = Math.min(Math.max(duration * 2, 10), 50);
+		// If we have stored audio levels from recording, use those
+		if (audioLevels.length > 0) {
+			return audioLevels;
+		}
+
+		// Generate a more realistic waveform pattern based on duration
+		const bars = Math.min(Math.max(duration * 3, 20), 60);
 		const waveform = [];
 
 		for (let i = 0; i < bars; i++) {
-			// Create a more natural looking waveform
 			const position = i / bars;
-			const base = Math.sin(position * Math.PI) * 0.8; // Bell curve shape
-			const noise = (Math.random() - 0.5) * 0.4; // Add some randomness
-			const level = Math.max(0.1, Math.min(1, base + noise));
+			
+			// Create multiple wave patterns for more realistic audio visualization
+			const primaryWave = Math.sin(position * Math.PI * 2) * 0.6;
+			const secondaryWave = Math.sin(position * Math.PI * 6) * 0.3;
+			const tertiaryWave = Math.sin(position * Math.PI * 12) * 0.2;
+			
+			// Combine waves with some randomness
+			const combinedWave = primaryWave + secondaryWave + tertiaryWave;
+			const noise = (Math.random() - 0.5) * 0.3;
+			
+			// Ensure levels are realistic (voice recordings typically vary between 0.2-0.9)
+			const level = Math.max(0.15, Math.min(0.95, Math.abs(combinedWave) + noise + 0.3));
 			waveform.push(level);
 		}
 
@@ -137,15 +150,16 @@ export function VoicePostWaveform({
 								{
 									height: Math.max(4, level * 60), // Min height 4px, max 60px
 									backgroundColor: isRecording
-										? colors.tint
+										? "#8B5CF6" // Purple during recording
 										: isPlaybackActive
-										? colors.tint // Highlight played portion during playback
-										: colors.textSecondary,
+										? "#A855F7" // Lighter purple for played portion
+										: "#C084FC", // Even lighter purple for unplayed
 									opacity: isRecording
-										? 0.6 + level * 0.4 // Dynamic opacity while recording
+										? 0.7 + level * 0.3 // Dynamic opacity while recording
 										: isPlaybackActive
 										? 0.9 // Bright for played portion
-										: 0.4, // Dim for unplayed portion
+										: 0.5, // Medium for unplayed portion
+									marginRight: index < displayLevels.length - 1 ? 2 : 0, // Gap replacement
 								},
 							]}
 						/>
@@ -167,7 +181,6 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		height: 60,
-		gap: 2,
 	},
 	bar: {
 		width: 3,
