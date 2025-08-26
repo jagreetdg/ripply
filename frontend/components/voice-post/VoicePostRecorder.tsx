@@ -4,11 +4,12 @@ import {
 	Text,
 	TouchableOpacity,
 	StyleSheet,
-	Alert,
 	TextInput,
 	ScrollView,
+	Animated,
+	Pressable,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Mic, Play, Pause, X, Plus, Hash } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
@@ -27,7 +28,15 @@ export function VoicePostRecorder() {
 	const [caption, setCaption] = useState("");
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [playbackPosition, setPlaybackPosition] = useState(0);
+	const [tags, setTags] = useState<string[]>([]);
+	const [currentTag, setCurrentTag] = useState("");
+	const [showTagInput, setShowTagInput] = useState(false);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
+	
+	// Animation values
+	const pulseAnim = useRef(new Animated.Value(1)).current;
+	const recordButtonScale = useRef(new Animated.Value(1)).current;
+	const glowAnim = useRef(new Animated.Value(0)).current;
 
 	const {
 		isRecording,
@@ -43,10 +52,88 @@ export function VoicePostRecorder() {
 		maxDuration: MAX_RECORDING_DURATION,
 	});
 
+	// Animation effects
+	useEffect(() => {
+		if (isRecording) {
+			// Pulse animation for recording button
+			Animated.loop(
+				Animated.sequence([
+					Animated.timing(pulseAnim, {
+						toValue: 1.1,
+						duration: 800,
+						useNativeDriver: true,
+					}),
+					Animated.timing(pulseAnim, {
+						toValue: 1,
+						duration: 800,
+						useNativeDriver: true,
+					}),
+				])
+			).start();
+			
+			// Glow effect
+			Animated.loop(
+				Animated.sequence([
+					Animated.timing(glowAnim, {
+						toValue: 1,
+						duration: 1000,
+						useNativeDriver: false,
+					}),
+					Animated.timing(glowAnim, {
+						toValue: 0,
+						duration: 1000,
+						useNativeDriver: false,
+					}),
+				])
+			).start();
+		} else {
+			pulseAnim.setValue(1);
+			glowAnim.setValue(0);
+		}
+	}, [isRecording]);
+
+	// Tag management functions
+	const addTag = useCallback(() => {
+		const trimmedTag = currentTag.trim().toLowerCase();
+		if (!trimmedTag) return;
+		
+		if (tags.includes(trimmedTag)) {
+			showToast("Tag already added", "warning");
+			return;
+		}
+		
+		if (tags.length >= 5) {
+			showToast("Maximum 5 tags allowed", "warning");
+			return;
+		}
+		
+		setTags(prev => [...prev, trimmedTag]);
+		setCurrentTag("");
+		setShowTagInput(false);
+	}, [currentTag, tags, showToast]);
+
+	const removeTag = useCallback((tagToRemove: string) => {
+		setTags(prev => prev.filter(tag => tag !== tagToRemove));
+	}, []);
+
 	const handleStartRecording = useCallback(async () => {
 		if (isRecording) {
 			await stopRecording();
 		} else {
+			// Record button press animation
+			Animated.sequence([
+				Animated.timing(recordButtonScale, {
+					toValue: 0.9,
+					duration: 100,
+					useNativeDriver: true,
+				}),
+				Animated.timing(recordButtonScale, {
+					toValue: 1,
+					duration: 100,
+					useNativeDriver: true,
+				}),
+			]).start();
+			
 			await startRecording();
 		}
 	}, [isRecording, startRecording, stopRecording]);
@@ -139,7 +226,12 @@ export function VoicePostRecorder() {
 		}
 
 		try {
-			await uploadRecording(caption);
+			// For now, we'll use the caption field to send tags until backend supports tags
+			const captionWithTags = tags.length > 0 
+				? `${caption} #${tags.join(' #')}`
+				: caption;
+			
+			await uploadRecording(captionWithTags);
 			showToast("Voice note posted successfully!", "success");
 			// Navigate back after a short delay to let user see success message
 			setTimeout(() => router.back(), 1500);
@@ -149,7 +241,7 @@ export function VoicePostRecorder() {
 				error?.message || "Failed to post voice note. Please try again.";
 			showToast(errorMessage, "error", 5000); // Show error for 5 seconds
 		}
-	}, [recordingUri, audioBlob, caption, uploadRecording, router, showToast]);
+	}, [recordingUri, audioBlob, caption, tags, uploadRecording, router, showToast]);
 
 	const formatTime = (seconds: number) => {
 		const mins = Math.floor(seconds / 60);
@@ -160,129 +252,245 @@ export function VoicePostRecorder() {
 	const timeRemaining = MAX_RECORDING_DURATION - recordingDuration;
 
 	return (
-		<ScrollView
-			style={[styles.container, { backgroundColor: colors.background }]}
-			contentContainerStyle={[
-				styles.contentContainer,
-				{ paddingTop: insets.top, paddingBottom: insets.bottom + 20 },
-			]}
-		>
-			{/* Header */}
-			<View style={[styles.header, { borderBottomColor: colors.border }]}>
-				<TouchableOpacity
-					onPress={() => router.back()}
-					style={styles.headerButton}
-				>
-					<Feather name="x" size={24} color={colors.text} />
-				</TouchableOpacity>
-				<Text style={[styles.headerTitle, { color: colors.text }]}>
-					New Voice Note
-				</Text>
-				<View style={styles.headerButton} />
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
+			{/* Gradient Background */}
+			<View style={[styles.gradientBackground, { 
+				backgroundColor: isRecording ? '#6366F1' : colors.background 
+			}]}>
+				{/* Animated Glow Effect */}
+				<Animated.View 
+					style={[
+						styles.glowEffect,
+						{
+							opacity: glowAnim,
+							backgroundColor: isRecording ? '#8B5CF6' : '#6366F1',
+						}
+					]}
+				/>
 			</View>
 
-			{/* Recording Section */}
-			<View style={styles.recordingSection}>
-				{/* Timer */}
-				<VoicePostTimer
-					duration={recordingDuration}
-					maxDuration={MAX_RECORDING_DURATION}
-					isRecording={isRecording}
-				/>
-
-				{/* Waveform Visualization */}
-				<VoicePostWaveform
-					isRecording={isRecording}
-					audioBlob={audioBlob}
-					duration={recordingDuration}
-					isPlaying={isPlaying}
-					playbackPosition={playbackPosition}
-				/>
-
-				{/* Recording Button */}
-				<TouchableOpacity
-					style={[
-						styles.recordButton,
-						{
-							backgroundColor: isRecording ? colors.error : colors.tint,
-						},
-					]}
-					onPress={handleStartRecording}
-					disabled={isUploading}
-				>
-					<Feather
-						name={isRecording ? "square" : "mic"}
-						size={32}
-						color={colors.white}
-					/>
-				</TouchableOpacity>
-
-				{/* Time Remaining */}
-				{isRecording && (
-					<Text style={[styles.timeRemaining, { color: colors.textSecondary }]}>
-						{timeRemaining}s remaining
+			<ScrollView
+				style={styles.scrollContainer}
+				contentContainerStyle={[
+					styles.contentContainer,
+					{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 },
+				]}
+				showsVerticalScrollIndicator={false}
+			>
+				{/* Header */}
+				<View style={styles.header}>
+					<TouchableOpacity
+						onPress={() => router.back()}
+						style={[styles.headerButton, { backgroundColor: colors.background + '20' }]}
+					>
+						<X size={24} color={isRecording ? '#FFFFFF' : colors.text} />
+					</TouchableOpacity>
+					<Text style={[styles.headerTitle, { 
+						color: isRecording ? '#FFFFFF' : colors.text,
+						textShadowColor: isRecording ? 'rgba(0,0,0,0.3)' : 'transparent',
+						textShadowOffset: { width: 0, height: 1 },
+						textShadowRadius: 2,
+					}]}>
+						🎙️ Create Voice Note
 					</Text>
+					<View style={styles.headerButton} />
+				</View>
+
+						{/* Central Recording Section */}
+			<View style={styles.recordingSection}>
+				{/* Status Text */}
+				<Text style={[styles.statusText, { 
+					color: isRecording ? '#FFFFFF' : colors.text,
+					textShadowColor: isRecording ? 'rgba(0,0,0,0.3)' : 'transparent',
+					textShadowOffset: { width: 0, height: 1 },
+					textShadowRadius: 2,
+				}]}>
+					{isRecording ? "🔴 Recording..." : 
+					 recordingUri ? "✅ Ready to post" : 
+					 "🎤 Tap to record"}
+				</Text>
+
+				{/* Timer */}
+				<Text style={[styles.timerText, { 
+					color: isRecording ? '#FFFFFF' : colors.text,
+					textShadowColor: isRecording ? 'rgba(0,0,0,0.3)' : 'transparent',
+					textShadowOffset: { width: 0, height: 1 },
+					textShadowRadius: 2,
+				}]}>
+					{formatTime(recordingDuration)} / {formatTime(MAX_RECORDING_DURATION)}
+				</Text>
+
+				{/* Main Record Button with Pulse Animation */}
+				<View style={styles.recordButtonContainer}>
+					<Animated.View style={[
+						styles.recordButtonOuter,
+						{ 
+							transform: [{ scale: pulseAnim }],
+							backgroundColor: isRecording ? '#EF4444' : '#6366F1',
+							shadowColor: isRecording ? '#EF4444' : '#6366F1',
+						}
+					]}>
+						<Animated.View style={[
+							styles.recordButtonInner,
+							{ transform: [{ scale: recordButtonScale }] }
+						]}>
+							<TouchableOpacity
+								style={styles.recordButton}
+								onPress={handleStartRecording}
+								disabled={isUploading}
+								activeOpacity={0.8}
+							>
+								<Mic 
+									size={48} 
+									color="#FFFFFF" 
+									style={{ 
+										opacity: isRecording ? 0.9 : 1,
+									}}
+								/>
+							</TouchableOpacity>
+						</Animated.View>
+					</Animated.View>
+				</View>
+
+				{/* Waveform Visualizer */}
+				<View style={styles.waveformContainer}>
+					<VoicePostWaveform
+						isRecording={isRecording}
+						audioBlob={audioBlob}
+						duration={recordingDuration}
+						isPlaying={isPlaying}
+						playbackPosition={playbackPosition}
+					/>
+				</View>
+			</View>
+
+				{/* Playback Section */}
+				{recordingUri && (
+					<View style={[styles.playbackSection, { 
+						backgroundColor: colors.card + '40',
+						borderColor: colors.border + '20'
+					}]}>
+						<Text style={[styles.sectionTitle, { color: colors.text }]}>
+							🎧 Review your recording
+						</Text>
+						<View style={styles.playbackControls}>
+							<TouchableOpacity
+								style={[
+									styles.playButton,
+									{
+										backgroundColor: isPlaying ? '#EF4444' : '#10B981',
+										shadowColor: isPlaying ? '#EF4444' : '#10B981',
+									},
+								]}
+								onPress={handlePlayPause}
+								disabled={isUploading}
+							>
+								{isPlaying ? (
+									<Pause size={24} color="#FFFFFF" />
+								) : (
+									<Play size={24} color="#FFFFFF" />
+								)}
+							</TouchableOpacity>
+							{isPlaying && (
+								<Text style={[styles.playbackTime, { color: colors.textSecondary }]}>
+									{formatTime(Math.round(playbackPosition))} /{" "}
+									{formatTime(recordingDuration)}
+								</Text>
+							)}
+						</View>
+					</View>
 				)}
 
-				{/* Recording Status */}
-				<Text style={[styles.status, { color: colors.textSecondary }]}>
-					{isRecording
-						? "Recording..."
-						: recordingUri
-						? "Recording ready"
-						: "Tap to start recording"}
-				</Text>
-			</View>
-
-			{/* Playback Section */}
-			{recordingUri && (
-				<View style={styles.playbackSection}>
-					<Text style={[styles.sectionTitle, { color: colors.text }]}>
-						Review your recording
-					</Text>
-					<TouchableOpacity
-						style={[
-							styles.playButton,
-							{
-								backgroundColor: isPlaying ? colors.error : colors.tint,
-							},
-						]}
-						onPress={handlePlayPause}
-						disabled={isUploading}
-					>
-						<Feather
-							name={isPlaying ? "pause" : "play"}
-							size={24}
-							color={colors.white}
-						/>
-					</TouchableOpacity>
-					{isPlaying && (
-						<Text
-							style={[styles.playbackTime, { color: colors.textSecondary }]}
-						>
-							{formatTime(Math.round(playbackPosition))} /{" "}
-							{formatTime(recordingDuration)}
+				{/* Tags Section */}
+				{recordingUri && (
+					<View style={[styles.tagsSection, { 
+						backgroundColor: colors.card + '40',
+						borderColor: colors.border + '20'
+					}]}>
+						<Text style={[styles.sectionTitle, { color: colors.text }]}>
+							🏷️ Add tags (max 5)
 						</Text>
-					)}
-				</View>
-			)}
+						
+						{/* Tag Display */}
+						<View style={styles.tagsContainer}>
+							{tags.map((tag, index) => (
+								<View key={index} style={[styles.tagChip, { 
+									backgroundColor: '#6366F1',
+									shadowColor: '#6366F1'
+								}]}>
+									<Text style={styles.tagText}>#{tag}</Text>
+									<TouchableOpacity
+										onPress={() => removeTag(tag)}
+										style={styles.tagRemove}
+									>
+										<X size={14} color="#FFFFFF" />
+									</TouchableOpacity>
+								</View>
+							))}
+							
+							{/* Add Tag Button */}
+							{tags.length < 5 && (
+								<TouchableOpacity
+									style={[styles.addTagButton, { borderColor: colors.border }]}
+									onPress={() => setShowTagInput(!showTagInput)}
+								>
+									<Plus size={16} color={colors.textSecondary} />
+									<Text style={[styles.addTagText, { color: colors.textSecondary }]}>
+										Add tag
+									</Text>
+								</TouchableOpacity>
+							)}
+						</View>
+						
+						{/* Tag Input */}
+						{showTagInput && (
+							<View style={styles.tagInputContainer}>
+								<TextInput
+									style={[styles.tagInput, {
+										color: colors.text,
+										backgroundColor: colors.background,
+										borderColor: colors.border,
+									}]}
+									placeholder="Enter tag (e.g., music, story, funny)"
+									placeholderTextColor={colors.textSecondary}
+									value={currentTag}
+									onChangeText={setCurrentTag}
+									onSubmitEditing={addTag}
+									maxLength={20}
+									autoCapitalize="none"
+									autoCorrect={false}
+								/>
+								<TouchableOpacity
+									style={[styles.addTagSubmit, { backgroundColor: '#6366F1' }]}
+									onPress={addTag}
+								>
+									<Text style={styles.addTagSubmitText}>Add</Text>
+								</TouchableOpacity>
+							</View>
+						)}
+					</View>
+				)}
 
-			{/* Caption Section */}
+						{/* Caption Section */}
 			{recordingUri && (
-				<View style={styles.captionSection}>
+				<View style={[styles.captionSection, { 
+					backgroundColor: colors.card + '40',
+					borderColor: colors.border + '20'
+				}]}>
 					<Text style={[styles.sectionTitle, { color: colors.text }]}>
-						Add a caption (optional)
+						✨ Add a caption (optional)
 					</Text>
 					<TextInput
 						style={[
 							styles.captionInput,
 							{
 								color: colors.text,
-								backgroundColor: colors.card,
+								backgroundColor: colors.background,
 								borderColor: colors.border,
+								shadowColor: colors.tint,
 							},
 						]}
-						placeholder="What's on your mind?"
+						placeholder="What's your story? 🎤"
 						placeholderTextColor={colors.textSecondary}
 						multiline
 						maxLength={280}
@@ -295,35 +503,40 @@ export function VoicePostRecorder() {
 				</View>
 			)}
 
-			{/* Action Buttons */}
+						{/* Action Buttons */}
 			{recordingUri && (
 				<View style={styles.actionButtons}>
 					<TouchableOpacity
 						style={[
-							styles.actionButton,
 							styles.clearButton,
-							{ borderColor: colors.border },
+							{ 
+								borderColor: '#EF4444',
+								backgroundColor: '#EF444410'
+							},
 						]}
 						onPress={handleClearRecording}
 						disabled={isUploading}
 					>
-						<Text style={[styles.clearButtonText, { color: colors.text }]}>
+						<X size={18} color="#EF4444" />
+						<Text style={[styles.clearButtonText, { color: '#EF4444' }]}>
 							Clear
 						</Text>
 					</TouchableOpacity>
 
 					<TouchableOpacity
 						style={[
-							styles.actionButton,
 							styles.postButton,
-							{ backgroundColor: colors.tint },
+							{ 
+								backgroundColor: '#10B981',
+								shadowColor: '#10B981',
+							},
 							isUploading && { opacity: 0.6 },
 						]}
 						onPress={handlePost}
 						disabled={isUploading}
 					>
-						<Text style={[styles.postButtonText, { color: colors.white }]}>
-							{isUploading ? "Posting..." : "Post"}
+						<Text style={styles.postButtonText}>
+							{isUploading ? "🚀 Posting..." : "🎉 Post Voice Note"}
 						</Text>
 					</TouchableOpacity>
 				</View>
@@ -335,131 +548,281 @@ export function VoicePostRecorder() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+		position: 'relative',
+	},
+	gradientBackground: {
+		position: 'absolute',
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		transition: 'all 0.5s ease',
+	},
+	glowEffect: {
+		position: 'absolute',
+		top: -50,
+		left: -50,
+		right: -50,
+		bottom: -50,
+		borderRadius: 200,
+		filter: 'blur(50px)',
+	},
+	scrollContainer: {
+		flex: 1,
+		zIndex: 1,
 	},
 	contentContainer: {
 		flexGrow: 1,
+		minHeight: '100%',
 	},
 	header: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-		borderBottomWidth: 1,
+		paddingHorizontal: 20,
+		paddingVertical: 16,
+		marginBottom: 20,
 	},
 	headerButton: {
-		width: 40,
-		height: 40,
+		width: 44,
+		height: 44,
 		alignItems: "center",
 		justifyContent: "center",
+		borderRadius: 22,
+		backdropFilter: 'blur(10px)',
 	},
 	headerTitle: {
-		fontSize: 18,
-		fontWeight: "600",
+		fontSize: 24,
+		fontWeight: "700",
+		letterSpacing: 0.5,
 	},
 	recordingSection: {
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
 		paddingHorizontal: 32,
+		minHeight: 400,
+	},
+	statusText: {
+		fontSize: 20,
+		fontWeight: "600",
+		marginBottom: 16,
+		textAlign: 'center',
+	},
+	timerText: {
+		fontSize: 32,
+		fontWeight: "700",
+		marginBottom: 40,
+		fontFamily: 'monospace',
+	},
+	recordButtonContainer: {
+		alignItems: 'center',
+		justifyContent: 'center',
+		marginBottom: 40,
+	},
+	recordButtonOuter: {
+		width: 120,
+		height: 120,
+		borderRadius: 60,
+		alignItems: "center",
+		justifyContent: "center",
+		elevation: 8,
+		shadowOffset: { width: 0, height: 4 },
+		shadowOpacity: 0.3,
+		shadowRadius: 8,
+	},
+	recordButtonInner: {
+		width: 100,
+		height: 100,
+		borderRadius: 50,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	recordButton: {
-		width: 80,
-		height: 80,
-		borderRadius: 40,
+		width: '100%',
+		height: '100%',
+		borderRadius: 50,
 		alignItems: "center",
 		justifyContent: "center",
-		marginVertical: 24,
-		elevation: 3,
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.25,
-		shadowRadius: 4,
 	},
-	timeRemaining: {
-		fontSize: 16,
-		marginTop: 8,
-	},
-	status: {
-		fontSize: 14,
-		marginTop: 8,
-		textAlign: "center",
+	waveformContainer: {
+		width: '100%',
+		height: 80,
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 	playbackSection: {
+		margin: 16,
+		borderRadius: 16,
+		borderWidth: 1,
+		paddingHorizontal: 20,
+		paddingVertical: 24,
 		alignItems: "center",
-		paddingHorizontal: 16,
-		paddingVertical: 20,
-		borderBottomWidth: 1,
-		borderBottomColor: "rgba(0,0,0,0.1)",
+	},
+	playbackControls: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 16,
 	},
 	playButton: {
-		width: 56,
-		height: 56,
-		borderRadius: 28,
+		width: 60,
+		height: 60,
+		borderRadius: 30,
 		alignItems: "center",
 		justifyContent: "center",
-		marginVertical: 12,
+		elevation: 4,
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.3,
+		shadowRadius: 4,
+	},
+	playbackTime: {
+		fontSize: 16,
+		fontWeight: '600',
+		fontFamily: 'monospace',
+	},
+	tagsSection: {
+		margin: 16,
+		borderRadius: 16,
+		borderWidth: 1,
+		paddingHorizontal: 20,
+		paddingVertical: 24,
+	},
+	tagsContainer: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 8,
+		marginTop: 8,
+	},
+	tagChip: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+		borderRadius: 20,
 		elevation: 2,
-		shadowColor: "#000",
 		shadowOffset: { width: 0, height: 1 },
 		shadowOpacity: 0.2,
 		shadowRadius: 2,
 	},
-	playbackTime: {
+	tagText: {
+		color: '#FFFFFF',
 		fontSize: 14,
-		marginTop: 8,
+		fontWeight: '600',
+		marginRight: 6,
+	},
+	tagRemove: {
+		width: 20,
+		height: 20,
+		borderRadius: 10,
+		alignItems: 'center',
+		justifyContent: 'center',
+		backgroundColor: 'rgba(255,255,255,0.2)',
+	},
+	addTagButton: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+		borderRadius: 20,
+		borderWidth: 1.5,
+		borderStyle: 'dashed',
+	},
+	addTagText: {
+		fontSize: 14,
+		marginLeft: 6,
+	},
+	tagInputContainer: {
+		flexDirection: 'row',
+		marginTop: 12,
+		gap: 8,
+	},
+	tagInput: {
+		flex: 1,
+		borderWidth: 1,
+		borderRadius: 12,
+		paddingHorizontal: 16,
+		paddingVertical: 12,
+		fontSize: 16,
+	},
+	addTagSubmit: {
+		paddingHorizontal: 20,
+		paddingVertical: 12,
+		borderRadius: 12,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	addTagSubmitText: {
+		color: '#FFFFFF',
+		fontSize: 16,
+		fontWeight: '600',
 	},
 	captionSection: {
-		paddingHorizontal: 16,
-		paddingVertical: 20,
+		margin: 16,
+		borderRadius: 16,
+		borderWidth: 1,
+		paddingHorizontal: 20,
+		paddingVertical: 24,
 	},
 	sectionTitle: {
-		fontSize: 16,
-		fontWeight: "600",
-		marginBottom: 12,
+		fontSize: 18,
+		fontWeight: "700",
+		marginBottom: 16,
 	},
 	captionInput: {
 		borderWidth: 1,
 		borderRadius: 12,
 		padding: 16,
 		fontSize: 16,
-		minHeight: 80,
+		minHeight: 100,
 		textAlignVertical: "top",
+		elevation: 1,
+		shadowOffset: { width: 0, height: 1 },
+		shadowOpacity: 0.1,
+		shadowRadius: 2,
 	},
 	charCount: {
 		fontSize: 12,
 		marginTop: 8,
 		textAlign: "right",
+		opacity: 0.7,
 	},
 	actionButtons: {
 		flexDirection: "row",
 		paddingHorizontal: 16,
-		paddingBottom: 20,
-		gap: 12,
-	},
-	actionButton: {
-		flex: 1,
-		paddingVertical: 14,
-		borderRadius: 12,
-		alignItems: "center",
-		justifyContent: "center",
+		paddingBottom: 32,
+		gap: 16,
 	},
 	clearButton: {
-		borderWidth: 1,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		paddingVertical: 16,
+		paddingHorizontal: 24,
+		borderRadius: 16,
+		borderWidth: 2,
+		gap: 8,
+		flex: 1,
 	},
 	clearButtonText: {
 		fontSize: 16,
 		fontWeight: "600",
 	},
 	postButton: {
-		elevation: 2,
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 1 },
-		shadowOpacity: 0.2,
-		shadowRadius: 2,
+		flex: 2,
+		paddingVertical: 18,
+		paddingHorizontal: 32,
+		borderRadius: 16,
+		alignItems: "center",
+		justifyContent: "center",
+		elevation: 6,
+		shadowOffset: { width: 0, height: 3 },
+		shadowOpacity: 0.3,
+		shadowRadius: 6,
 	},
 	postButtonText: {
-		fontSize: 16,
-		fontWeight: "600",
+		color: '#FFFFFF',
+		fontSize: 18,
+		fontWeight: "700",
+		letterSpacing: 0.5,
 	},
 });

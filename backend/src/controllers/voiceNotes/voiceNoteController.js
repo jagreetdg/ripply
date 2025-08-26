@@ -62,14 +62,7 @@ const getVoiceNoteById = async (req, res) => {
  */
 const createVoiceNote = async (req, res) => {
 	try {
-		const {
-			title,
-			description,
-			audio_url,
-			duration,
-			is_public = true,
-			tags = [],
-		} = req.body;
+		const { title, audio_url, duration } = req.body;
 
 		// Get user_id from authenticated user
 		const user_id = req.user?.id;
@@ -85,10 +78,8 @@ const createVoiceNote = async (req, res) => {
 		const voiceNoteData = {
 			id: uuidv4(),
 			title,
-			description,
 			audio_url,
 			duration,
-			is_public,
 			user_id,
 			created_at: new Date().toISOString(),
 			updated_at: new Date().toISOString(),

@@ -5,7 +5,7 @@ import Constants from 'expo-constants';
 export const API_BASE_URL = 
   process.env.EXPO_PUBLIC_API_URL || 
   Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 
-  'http://localhost:3000';
+  'https://ripply-backend.onrender.com';
 
 // Storage keys
 export const TOKEN_KEY = '@ripply_auth_token';
