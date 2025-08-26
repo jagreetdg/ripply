@@ -286,8 +286,6 @@ export function VoicePostRecorder() {
 					</TouchableOpacity>
 				</View>
 
-
-
 				{/* Recording Section */}
 				<View style={styles.recordingSection}>
 					{/* Main Record Button */}
@@ -336,13 +334,20 @@ export function VoicePostRecorder() {
 							]}
 							onPress={() => {
 								// TODO: Implement device selection
-								Alert.alert("Device Selection", "Microphone selection will be available soon");
+								Alert.alert(
+									"Device Selection",
+									"Microphone selection will be available soon"
+								);
 							}}
 						>
 							<Text style={[styles.deviceText, { color: colors.text }]}>
 								Default Microphone
 							</Text>
-							<Feather name="chevron-down" size={16} color={colors.textSecondary} />
+							<Feather
+								name="chevron-down"
+								size={16}
+								color={colors.textSecondary}
+							/>
 						</TouchableOpacity>
 					</View>
 
