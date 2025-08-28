@@ -70,12 +70,12 @@ export function VoicePostRecorder() {
 					Animated.timing(pulseAnim, {
 						toValue: 1.1,
 						duration: 800,
-						useNativeDriver: true,
+						useNativeDriver: false,
 					}),
 					Animated.timing(pulseAnim, {
 						toValue: 1,
 						duration: 800,
-						useNativeDriver: true,
+						useNativeDriver: false,
 					}),
 				])
 			).start();
@@ -279,7 +279,13 @@ export function VoicePostRecorder() {
 				{/* Close Button */}
 				<View style={styles.closeButtonContainer}>
 					<TouchableOpacity
-						style={[styles.closeButton, { backgroundColor: colors.card }]}
+						style={[
+							styles.closeButton,
+							{
+								backgroundColor: colors.card,
+								borderColor: colors.border,
+							},
+						]}
 						onPress={() => router.back()}
 					>
 						<Feather name="x" size={24} color={colors.text} />
@@ -319,59 +325,35 @@ export function VoicePostRecorder() {
 						{formatTime(recordingDuration)}
 					</Text>
 
-					{/* Input Device Selector */}
-					<View style={styles.deviceSelectorContainer}>
-						<Text style={[styles.deviceLabel, { color: colors.textSecondary }]}>
-							Microphone
-						</Text>
-						<TouchableOpacity
-							style={[
-								styles.deviceSelector,
-								{
-									backgroundColor: colors.card,
-									borderColor: colors.border,
-								},
-							]}
-							onPress={() => {
-								// TODO: Implement device selection
-								Alert.alert(
-									"Device Selection",
-									"Microphone selection will be available soon"
-								);
-							}}
-						>
-							<Text style={[styles.deviceText, { color: colors.text }]}>
-								Default Microphone
-							</Text>
-							<Feather
-								name="chevron-down"
-								size={16}
-								color={colors.textSecondary}
-							/>
-						</TouchableOpacity>
-					</View>
-
-					{/* Waveform with Play Button */}
-					{recordingUri && (
+					{/* Waveform - Show during recording and after */}
+					{(isRecording || recordingUri) && (
 						<View style={styles.waveformSection}>
-							<TouchableOpacity
-								style={[
-									styles.playButton,
-									{ backgroundColor: PURPLE_COLORS.secondary },
-								]}
-								onPress={handlePlayPause}
-								disabled={isUploading}
-							>
-								<View style={styles.playButtonIcon}>
-									<Feather
-										name={isPlaying ? "pause" : "play"}
-										size={20}
-										color="#FFFFFF"
-									/>
-								</View>
-							</TouchableOpacity>
+							{/* Play Button - Only show after recording */}
+							{recordingUri && !isRecording && (
+								<TouchableOpacity
+									style={[
+										styles.playButton,
+										{ backgroundColor: PURPLE_COLORS.secondary },
+									]}
+									onPress={handlePlayPause}
+									disabled={isUploading}
+								>
+									<View style={styles.playButtonIcon}>
+										<Feather
+											name={isPlaying ? "pause" : "play"}
+											size={20}
+											color="#FFFFFF"
+										/>
+									</View>
+								</TouchableOpacity>
+							)}
 
-							<View style={[styles.waveformContainer, { marginLeft: 16 }]}>
+							<View
+								style={[
+									styles.waveformContainer,
+									recordingUri && !isRecording ? { marginLeft: 4 } : {},
+								]}
+							>
 								<VoicePostWaveform
 									isRecording={isRecording}
 									audioBlob={audioBlob}
@@ -601,6 +583,7 @@ const styles = StyleSheet.create({
 		width: 40,
 		height: 40,
 		borderRadius: 20,
+		borderWidth: 1,
 		alignItems: "center",
 		justifyContent: "center",
 		elevation: 2,
@@ -661,30 +644,7 @@ const styles = StyleSheet.create({
 		fontFamily: "monospace",
 		marginBottom: 32,
 	},
-	// Device Selector
-	deviceSelectorContainer: {
-		alignItems: "center",
-		marginBottom: 32,
-	},
-	deviceLabel: {
-		fontSize: 14,
-		marginBottom: 8,
-		opacity: 0.8,
-	},
-	deviceSelector: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-		borderRadius: 8,
-		borderWidth: 1,
-		minWidth: 200,
-	},
-	deviceText: {
-		fontSize: 14,
-		marginRight: 8,
-	},
+
 	// Waveform Section
 	waveformSection: {
 		flexDirection: "row",
@@ -798,7 +758,7 @@ const styles = StyleSheet.create({
 	// Tag Input
 	tagInputContainer: {
 		flexDirection: "row",
-		marginTop: 12,
+		marginTop: 4,
 	},
 	tagInput: {
 		flex: 1,
