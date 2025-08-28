@@ -35,11 +35,17 @@ export function VoicePostWaveform({
 
 		const initializeAudioAnalysis = async () => {
 			try {
+				console.log('Requesting microphone access...');
 				// Get microphone stream
 				const stream = await navigator.mediaDevices.getUserMedia({
-					audio: true,
+					audio: {
+						echoCancellation: false,
+						noiseSuppression: false,
+						autoGainControl: false,
+					},
 				});
 				streamRef.current = stream;
+				console.log('Microphone stream obtained');
 
 				// Create audio context and analyser
 				const audioContext = new (window.AudioContext ||
@@ -47,16 +53,19 @@ export function VoicePostWaveform({
 				const analyser = audioContext.createAnalyser();
 				const source = audioContext.createMediaStreamSource(stream);
 
-				analyser.fftSize = 256;
+				analyser.fftSize = 512; // Increased for better frequency resolution
+				analyser.smoothingTimeConstant = 0.3; // Reduced for more responsive levels
 				source.connect(analyser);
 
 				audioContextRef.current = audioContext;
 				analyserRef.current = analyser;
 
+				console.log('Audio context and analyser created, starting analysis...');
 				// Start analyzing audio levels
 				analyzeAudio();
 			} catch (error) {
 				console.error("Failed to initialize audio analysis:", error);
+				// Try to continue without real-time analysis
 			}
 		};
 
@@ -99,7 +108,10 @@ export function VoicePostWaveform({
 	}, [isRecording, audioLevels.length, storedAudioLevels.length]);
 
 	const analyzeAudio = () => {
-		if (!analyserRef.current) return;
+		if (!analyserRef.current) {
+			console.log('No analyser available');
+			return;
+		}
 
 		const bufferLength = analyserRef.current.frequencyBinCount;
 		const dataArray = new Uint8Array(bufferLength);
@@ -110,10 +122,19 @@ export function VoicePostWaveform({
 			dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
 		const normalizedLevel = Math.min(average / 128, 1); // Normalize to 0-1
 
-		// Update audio levels (keep last 50 samples for waveform)
+		// Log occasional samples to verify audio capture
+		if (Math.random() < 0.1) { // Log ~10% of samples
+			console.log('Audio level captured:', normalizedLevel.toFixed(3));
+		}
+
+		// Update audio levels (keep last 80 samples for better waveform resolution)
 		setAudioLevels((prev) => {
 			const newLevels = [...prev, normalizedLevel];
-			return newLevels.slice(-50); // Keep last 50 samples
+			const trimmedLevels = newLevels.slice(-80); // Keep last 80 samples
+			if (trimmedLevels.length % 10 === 0) { // Log every 10 samples
+				console.log('Audio levels array size:', trimmedLevels.length);
+			}
+			return trimmedLevels;
 		});
 
 		if (isRecording) {
