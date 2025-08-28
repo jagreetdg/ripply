@@ -25,6 +25,7 @@ import {
 import ProfileStats from "./components/ProfileStats";
 import ProfileActionButton from "./components/ProfileActionButton";
 import ProfileFloatingActionButton from "./components/ProfileFloatingActionButton";
+import { VoicePostRecorder } from "../../components/voice-post/VoicePostRecorder";
 
 interface UserProfile {
 	id: string;
@@ -64,6 +65,7 @@ export default function ProfileByUsernameScreen() {
 	const [showFollowersPopup, setShowFollowersPopup] = useState(false);
 	const [showFollowingPopup, setShowFollowingPopup] = useState(false);
 	const [loadingVoiceNotes, setLoadingVoiceNotes] = useState(false);
+	const [showRecordingModal, setShowRecordingModal] = useState(false);
 
 	// Animation state
 	const scrollY = useRef(new Animated.Value(0)).current;
@@ -85,6 +87,16 @@ export default function ProfileByUsernameScreen() {
 	// Computed values
 	const isOwnProfile = currentUser?.username === params.username;
 	const combinedVoiceNotes = voiceNotes;
+
+	// Modal handlers
+	const handleNewVoiceNote = () => {
+		console.log("Opening voice note recording modal from profile");
+		setShowRecordingModal(true);
+	};
+
+	const handleCloseRecordingModal = () => {
+		setShowRecordingModal(false);
+	};
 
 	// Load profile data
 	const loadProfileData = useCallback(
@@ -399,6 +411,7 @@ export default function ProfileByUsernameScreen() {
 			<ProfileFloatingActionButton
 				userId={profileData.userProfile?.id || ""}
 				isOwnProfile={profileData.isOwnProfile}
+				onPress={handleNewVoiceNote}
 			/>
 
 			{/* Modals */}
@@ -418,6 +431,14 @@ export default function ProfileByUsernameScreen() {
 					userId={profileData.userProfile.id}
 					onClose={handleCloseFollowingPopup}
 					initialTab="following"
+				/>
+			)}
+
+			{/* Voice Recording Modal */}
+			{showRecordingModal && (
+				<VoicePostRecorder
+					visible={showRecordingModal}
+					onClose={handleCloseRecordingModal}
 				/>
 			)}
 		</View>

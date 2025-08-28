@@ -1,13 +1,19 @@
 import React from "react";
 import { TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../../context/ThemeContext";
 
-const ProfileFloatingActionButton: React.FC = () => {
+interface ProfileFloatingActionButtonProps {
+	userId?: string;
+	isOwnProfile?: boolean;
+	onPress?: () => void;
+}
+
+const ProfileFloatingActionButton: React.FC<
+	ProfileFloatingActionButtonProps
+> = ({ onPress }) => {
 	const { colors } = useTheme();
-	const router = useRouter();
 	const insets = useSafeAreaInsets();
 
 	return (
@@ -20,7 +26,7 @@ const ProfileFloatingActionButton: React.FC = () => {
 					shadowColor: colors.shadow,
 				},
 			]}
-			onPress={() => router.push("/create")}
+			onPress={onPress}
 		>
 			<Feather name="mic" size={24} color={colors.white} />
 		</TouchableOpacity>

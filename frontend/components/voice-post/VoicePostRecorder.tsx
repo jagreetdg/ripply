@@ -8,9 +8,9 @@ import {
 	ScrollView,
 	Animated,
 	Alert,
-	Modal,
 	Dimensions,
 } from "react-native";
+import { BlurView } from "expo-blur";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -57,6 +57,8 @@ export function VoicePostRecorder({
 	const pulseAnim = useRef(new Animated.Value(1)).current;
 	const recordButtonScale = useRef(new Animated.Value(1)).current;
 	const glowAnim = useRef(new Animated.Value(0)).current;
+	const modalOpacity = useRef(new Animated.Value(0)).current;
+	const modalScale = useRef(new Animated.Value(0.8)).current;
 
 	const {
 		isRecording,
@@ -258,6 +260,40 @@ export function VoicePostRecorder({
 		setPlaybackPosition(0);
 	}, [recordingUri]);
 
+	// Modal animation effects
+	useEffect(() => {
+		if (visible) {
+			// Animate in
+			Animated.parallel([
+				Animated.timing(modalOpacity, {
+					toValue: 1,
+					duration: 300,
+					useNativeDriver: true,
+				}),
+				Animated.spring(modalScale, {
+					toValue: 1,
+					tension: 100,
+					friction: 8,
+					useNativeDriver: true,
+				}),
+			]).start();
+		} else {
+			// Animate out
+			Animated.parallel([
+				Animated.timing(modalOpacity, {
+					toValue: 0,
+					duration: 200,
+					useNativeDriver: true,
+				}),
+				Animated.timing(modalScale, {
+					toValue: 0.8,
+					duration: 200,
+					useNativeDriver: true,
+				}),
+			]).start();
+		}
+	}, [visible]);
+
 	const handlePost = useCallback(async () => {
 		if (!recordingUri || !audioBlob) {
 			showToast("Please record a voice note first", "error");
@@ -310,366 +346,359 @@ export function VoicePostRecorder({
 		}
 	}, [onClose, router]);
 
+	if (!visible) return null;
+
 	return (
-		<Modal
-			visible={visible}
-			animationType="slide"
-			transparent={true}
-			onRequestClose={handleClose}
-			statusBarTranslucent
+		<Animated.View
+			style={[
+				styles.modalOverlay,
+				{
+					opacity: modalOpacity,
+				},
+			]}
 		>
-			{/* Semi-transparent overlay background */}
-			<View style={styles.modalOverlay}>
+			<BlurView style={styles.modalBackdrop} intensity={20} tint="dark">
 				<TouchableOpacity
-					style={styles.modalBackdrop}
+					style={styles.modalBackdropTouch}
 					activeOpacity={1}
 					onPress={handleClose}
 				/>
+			</BlurView>
 
-				{/* Modal Content Container */}
-				<View style={styles.modalContainer}>
-					<View
-						style={[
-							styles.modalContent,
-							{ backgroundColor: colors.background },
+			{/* Modal Content Container */}
+			<Animated.View
+				style={[
+					styles.modalContainer,
+					{
+						transform: [{ scale: modalScale }],
+					},
+				]}
+			>
+				<View
+					style={[styles.modalContent, { backgroundColor: colors.background }]}
+				>
+					<ScrollView
+						style={styles.scrollContainer}
+						contentContainerStyle={[
+							styles.contentContainer,
+							{ paddingTop: 5, paddingBottom: 20 },
 						]}
+						showsVerticalScrollIndicator={false}
 					>
-						{/* Modal Handle/Indicator */}
-						<View style={styles.modalHandle}>
-							<View
-								style={[
-									styles.handleBar,
-									{ backgroundColor: colors.textSecondary },
-								]}
-							/>
+						{/* Close Button - No Circle Background */}
+						<View style={styles.closeButtonContainer}>
+							<TouchableOpacity
+								style={styles.closeButton}
+								onPress={handleClose}
+							>
+								<Feather name="x" size={24} color={colors.text} />
+							</TouchableOpacity>
 						</View>
 
-						<ScrollView
-							style={styles.scrollContainer}
-							contentContainerStyle={[
-								styles.contentContainer,
-								{ paddingTop: 10, paddingBottom: 20 },
-							]}
-							showsVerticalScrollIndicator={false}
-						>
-							{/* Close Button - No Circle Background */}
-							<View style={styles.closeButtonContainer}>
+						{/* Recording Section */}
+						<View style={styles.recordingSection}>
+							{/* Main Record Button */}
+							<Animated.View
+								style={[
+									styles.recordButton,
+									{
+										backgroundColor: isRecording
+											? PURPLE_COLORS.primary
+											: PURPLE_COLORS.secondary,
+										transform: [{ scale: pulseAnim }],
+									},
+								]}
+							>
 								<TouchableOpacity
-									style={styles.closeButton}
-									onPress={handleClose}
+									style={styles.recordButtonInner}
+									onPress={handleStartRecording}
+									disabled={isUploading}
+									activeOpacity={0.8}
 								>
-									<Feather name="x" size={24} color={colors.text} />
+									<Feather
+										name={isRecording ? "square" : "mic"}
+										size={32}
+										color="#FFFFFF"
+									/>
 								</TouchableOpacity>
-							</View>
+							</Animated.View>
 
-							{/* Recording Section */}
-							<View style={styles.recordingSection}>
-								{/* Main Record Button */}
-								<Animated.View
-									style={[
-										styles.recordButton,
-										{
-											backgroundColor: isRecording
-												? PURPLE_COLORS.primary
-												: PURPLE_COLORS.secondary,
-											transform: [{ scale: pulseAnim }],
-										},
-									]}
-								>
-									<TouchableOpacity
-										style={styles.recordButtonInner}
-										onPress={handleStartRecording}
-										disabled={isUploading}
-										activeOpacity={0.8}
-									>
-										<Feather
-											name={isRecording ? "square" : "mic"}
-											size={32}
-											color="#FFFFFF"
-										/>
-									</TouchableOpacity>
-								</Animated.View>
+							{/* Timer */}
+							<Text style={[styles.timerText, { color: colors.text }]}>
+								{formatTime(recordingDuration)}
+							</Text>
 
-								{/* Timer */}
-								<Text style={[styles.timerText, { color: colors.text }]}>
-									{formatTime(recordingDuration)}
-								</Text>
-
-								{/* Waveform - Show during recording and after */}
-								{(isRecording ||
-									recordingUri ||
-									audioBlob ||
-									isProcessingRecording) && (
-									<View style={styles.waveformSection}>
-										{/* Waveform Container - Responsive layout */}
-										<View
-											style={[
-												styles.waveformPlayContainer,
-												{
-													backgroundColor: colors.card,
-													borderColor: colors.border,
-												},
-											]}
-										>
-											{/* Play Button - Only show after recording */}
-											{recordingUri && !isRecording && (
-												<TouchableOpacity
-													style={[
-														styles.playButton,
-														{ backgroundColor: PURPLE_COLORS.secondary },
-													]}
-													onPress={handlePlayPause}
-													disabled={isUploading}
-												>
-													<View style={styles.playButtonIcon}>
-														<Feather
-															name={isPlaying ? "pause" : "play"}
-															size={20}
-															color="#FFFFFF"
-														/>
-													</View>
-												</TouchableOpacity>
-											)}
-
-											{/* Waveform - Expands to fill available space */}
-											<View
-												style={[
-													styles.waveformContainer,
-													isRecording ? { paddingHorizontal: 16 } : {},
-												]}
-											>
-												<VoicePostWaveform
-													isRecording={isRecording}
-													audioBlob={audioBlob}
-													duration={recordingDuration}
-													isPlaying={isPlaying}
-													playbackPosition={playbackPosition}
-													onAudioLevelsReady={(levels: number[]) => {
-														// Store the audio levels when they're ready
-														console.log(
-															"🎯 Parent received audio levels:",
-															levels.length
-														);
-													}}
-												/>
-											</View>
-										</View>
-									</View>
-								)}
-							</View>
-
-							{/* Caption Section */}
-							{recordingUri && (
-								<View
-									style={[
-										styles.sectionCard,
-										{
-											backgroundColor: colors.card,
-											borderColor: colors.border,
-										},
-									]}
-								>
-									<View style={styles.sectionHeader}>
-										<Feather
-											name="edit-3"
-											size={18}
-											color={PURPLE_COLORS.secondary}
-										/>
-										<Text style={[styles.sectionTitle, { color: colors.text }]}>
-											Add a caption
-										</Text>
-									</View>
-									<TextInput
+							{/* Waveform - Show during recording and after */}
+							{(isRecording ||
+								recordingUri ||
+								audioBlob ||
+								isProcessingRecording) && (
+								<View style={styles.waveformSection}>
+									{/* Waveform Container - Responsive layout */}
+									<View
 										style={[
-											styles.captionInput,
+											styles.waveformPlayContainer,
 											{
-												color: colors.text,
-												backgroundColor: colors.background,
+												backgroundColor: colors.card,
 												borderColor: colors.border,
 											},
 										]}
-										placeholder="What's your story? Share your thoughts..."
-										placeholderTextColor={colors.textSecondary}
-										multiline
-										numberOfLines={3}
-										maxLength={280}
-										value={caption}
-										onChangeText={setCaption}
-										textAlignVertical="top"
-									/>
-									<Text
-										style={[styles.charCount, { color: colors.textSecondary }]}
 									>
-										{caption.length}/280
-									</Text>
+										{/* Play Button - Only show after recording */}
+										{recordingUri && !isRecording && (
+											<TouchableOpacity
+												style={[
+													styles.playButton,
+													{ backgroundColor: PURPLE_COLORS.secondary },
+												]}
+												onPress={handlePlayPause}
+												disabled={isUploading}
+											>
+												<View style={styles.playButtonIcon}>
+													<Feather
+														name={isPlaying ? "pause" : "play"}
+														size={20}
+														color="#FFFFFF"
+													/>
+												</View>
+											</TouchableOpacity>
+										)}
+
+										{/* Waveform - Expands to fill available space */}
+										<View
+											style={[
+												styles.waveformContainer,
+												isRecording ? { paddingHorizontal: 16 } : {},
+											]}
+										>
+											<VoicePostWaveform
+												isRecording={isRecording}
+												audioBlob={audioBlob}
+												duration={recordingDuration}
+												isPlaying={isPlaying}
+												playbackPosition={playbackPosition}
+												onAudioLevelsReady={(levels: number[]) => {
+													// Store the audio levels when they're ready
+													console.log(
+														"🎯 Parent received audio levels:",
+														levels.length
+													);
+												}}
+											/>
+										</View>
+									</View>
 								</View>
 							)}
+						</View>
 
-							{/* Tags Section */}
-							{recordingUri && (
-								<View
+						{/* Caption Section */}
+						{recordingUri && (
+							<View
+								style={[
+									styles.sectionCard,
+									{
+										backgroundColor: colors.card,
+										borderColor: colors.border,
+									},
+								]}
+							>
+								<View style={styles.sectionHeader}>
+									<Feather
+										name="edit-3"
+										size={18}
+										color={PURPLE_COLORS.secondary}
+									/>
+									<Text style={[styles.sectionTitle, { color: colors.text }]}>
+										Add a caption
+									</Text>
+								</View>
+								<TextInput
 									style={[
-										styles.sectionCard,
+										styles.captionInput,
 										{
-											backgroundColor: colors.card,
+											color: colors.text,
+											backgroundColor: colors.background,
 											borderColor: colors.border,
 										},
 									]}
+									placeholder="What's your story? Share your thoughts..."
+									placeholderTextColor={colors.textSecondary}
+									multiline
+									numberOfLines={3}
+									maxLength={280}
+									value={caption}
+									onChangeText={setCaption}
+									textAlignVertical="top"
+								/>
+								<Text
+									style={[styles.charCount, { color: colors.textSecondary }]}
 								>
-									<View style={styles.sectionHeader}>
-										<Feather
-											name="hash"
-											size={18}
-											color={PURPLE_COLORS.secondary}
-										/>
-										<Text style={[styles.sectionTitle, { color: colors.text }]}>
-											Tags
-										</Text>
-										<Text
+									{caption.length}/280
+								</Text>
+							</View>
+						)}
+
+						{/* Tags Section */}
+						{recordingUri && (
+							<View
+								style={[
+									styles.sectionCard,
+									{
+										backgroundColor: colors.card,
+										borderColor: colors.border,
+									},
+								]}
+							>
+								<View style={styles.sectionHeader}>
+									<Feather
+										name="hash"
+										size={18}
+										color={PURPLE_COLORS.secondary}
+									/>
+									<Text style={[styles.sectionTitle, { color: colors.text }]}>
+										Tags
+									</Text>
+									<Text
+										style={[styles.tagsCount, { color: colors.textSecondary }]}
+									>
+										{tags.length}/5
+									</Text>
+								</View>
+
+								{/* Tag Display */}
+								<View style={styles.tagsContainer}>
+									{tags.map((tag, index) => (
+										<View
+											key={index}
 											style={[
-												styles.tagsCount,
-												{ color: colors.textSecondary },
+												styles.tagChip,
+												{ backgroundColor: PURPLE_COLORS.secondary },
 											]}
 										>
-											{tags.length}/5
-										</Text>
-									</View>
-
-									{/* Tag Display */}
-									<View style={styles.tagsContainer}>
-										{tags.map((tag, index) => (
-											<View
-												key={index}
-												style={[
-													styles.tagChip,
-													{ backgroundColor: PURPLE_COLORS.secondary },
-												]}
-											>
-												<Text style={[styles.tagText, { marginRight: 6 }]}>
-													{tag}
-												</Text>
-												<TouchableOpacity
-													onPress={() => removeTag(tag)}
-													style={styles.tagRemove}
-												>
-													<Feather name="x" size={12} color="#FFFFFF" />
-												</TouchableOpacity>
-											</View>
-										))}
-
-										{/* Add Tag Button */}
-										{tags.length < 5 && !showTagInput && (
+											<Text style={[styles.tagText, { marginRight: 6 }]}>
+												{tag}
+											</Text>
 											<TouchableOpacity
-												style={[
-													styles.addTagButton,
-													{
-														backgroundColor: colors.background,
-														borderColor: PURPLE_COLORS.light,
-													},
-												]}
-												onPress={() => setShowTagInput(true)}
+												onPress={() => removeTag(tag)}
+												style={styles.tagRemove}
 											>
-												<Feather
-													name="plus"
-													size={16}
-													color={PURPLE_COLORS.secondary}
-												/>
-												<Text
-													style={[
-														styles.addTagText,
-														{
-															color: colors.text,
-															marginLeft: 4,
-														},
-													]}
-												>
-													Add tag
-												</Text>
-											</TouchableOpacity>
-										)}
-									</View>
-
-									{/* Tag Input */}
-									{showTagInput && (
-										<View style={styles.tagInputContainer}>
-											<TextInput
-												style={[
-													styles.tagInput,
-													{
-														color: colors.text,
-														backgroundColor: colors.background,
-														borderColor: PURPLE_COLORS.secondary,
-													},
-												]}
-												placeholder="Enter tag..."
-												placeholderTextColor={colors.textSecondary}
-												value={currentTag}
-												onChangeText={setCurrentTag}
-												onSubmitEditing={addTag}
-												maxLength={20}
-												autoCapitalize="none"
-												autoCorrect={false}
-												autoFocus
-											/>
-											<TouchableOpacity
-												style={[
-													styles.addButton,
-													{
-														backgroundColor: PURPLE_COLORS.secondary,
-														marginLeft: 8,
-													},
-												]}
-												onPress={addTag}
-											>
-												<Text style={styles.addButtonText}>Add</Text>
-											</TouchableOpacity>
-											<TouchableOpacity
-												style={[styles.cancelButton, { marginLeft: 8 }]}
-												onPress={() => {
-													setShowTagInput(false);
-													setCurrentTag("");
-												}}
-											>
-												<Text
-													style={[
-														styles.cancelButtonText,
-														{ color: colors.text },
-													]}
-												>
-													Cancel
-												</Text>
+												<Feather name="x" size={12} color="#FFFFFF" />
 											</TouchableOpacity>
 										</View>
+									))}
+
+									{/* Add Tag Button */}
+									{tags.length < 5 && !showTagInput && (
+										<TouchableOpacity
+											style={[
+												styles.addTagButton,
+												{
+													backgroundColor: colors.background,
+													borderColor: PURPLE_COLORS.light,
+												},
+											]}
+											onPress={() => setShowTagInput(true)}
+										>
+											<Feather
+												name="plus"
+												size={16}
+												color={PURPLE_COLORS.secondary}
+											/>
+											<Text
+												style={[
+													styles.addTagText,
+													{
+														color: colors.text,
+														marginLeft: 4,
+													},
+												]}
+											>
+												Add tag
+											</Text>
+										</TouchableOpacity>
 									)}
 								</View>
-							)}
 
-							{/* Post Button */}
-							{recordingUri && !isRecording && (
-								<TouchableOpacity
-									style={[
-										styles.postButton,
-										{ backgroundColor: PURPLE_COLORS.primary },
-									]}
-									onPress={handlePost}
-									disabled={isUploading}
-								>
-									<Feather
-										name="send"
-										size={20}
-										color="#FFFFFF"
-										style={{ marginRight: 8 }}
-									/>
-									<Text style={styles.postButtonText}>
-										{isUploading ? "Posting..." : "Post Voice Note"}
-									</Text>
-								</TouchableOpacity>
-							)}
-						</ScrollView>
-					</View>
+								{/* Tag Input */}
+								{showTagInput && (
+									<View style={styles.tagInputContainer}>
+										<TextInput
+											style={[
+												styles.tagInput,
+												{
+													color: colors.text,
+													backgroundColor: colors.background,
+													borderColor: PURPLE_COLORS.secondary,
+												},
+											]}
+											placeholder="Enter tag..."
+											placeholderTextColor={colors.textSecondary}
+											value={currentTag}
+											onChangeText={setCurrentTag}
+											onSubmitEditing={addTag}
+											maxLength={20}
+											autoCapitalize="none"
+											autoCorrect={false}
+											autoFocus
+										/>
+										<TouchableOpacity
+											style={[
+												styles.addButton,
+												{
+													backgroundColor: PURPLE_COLORS.secondary,
+													marginLeft: 8,
+												},
+											]}
+											onPress={addTag}
+										>
+											<Text style={styles.addButtonText}>Add</Text>
+										</TouchableOpacity>
+										<TouchableOpacity
+											style={[styles.cancelButton, { marginLeft: 8 }]}
+											onPress={() => {
+												setShowTagInput(false);
+												setCurrentTag("");
+											}}
+										>
+											<Text
+												style={[
+													styles.cancelButtonText,
+													{ color: colors.text },
+												]}
+											>
+												Cancel
+											</Text>
+										</TouchableOpacity>
+									</View>
+								)}
+							</View>
+						)}
+
+						{/* Post Button */}
+						{recordingUri && !isRecording && (
+							<TouchableOpacity
+								style={[
+									styles.postButton,
+									{ backgroundColor: PURPLE_COLORS.primary },
+								]}
+								onPress={handlePost}
+								disabled={isUploading}
+							>
+								<Feather
+									name="send"
+									size={20}
+									color="#FFFFFF"
+									style={{ marginRight: 8 }}
+								/>
+								<Text style={styles.postButtonText}>
+									{isUploading ? "Posting..." : "Post Voice Note"}
+								</Text>
+							</TouchableOpacity>
+						)}
+					</ScrollView>
 				</View>
-			</View>
-		</Modal>
+			</Animated.View>
+		</Animated.View>
 	);
 }
 
@@ -678,11 +707,16 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	modalOverlay: {
-		flex: 1,
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
 		justifyContent: "center",
 		alignItems: "center",
 		paddingHorizontal: 20,
 		paddingVertical: 40,
+		zIndex: 1000,
 	},
 	modalBackdrop: {
 		position: "absolute",
@@ -690,7 +724,10 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		bottom: 0,
-		backgroundColor: "rgba(0, 0, 0, 0.5)",
+	},
+	modalBackdropTouch: {
+		flex: 1,
+		backgroundColor: "rgba(0, 0, 0, 0.3)",
 	},
 	modalContainer: {
 		width: "100%",
@@ -706,17 +743,6 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.3,
 		shadowRadius: 20,
 		flex: 1,
-	},
-	modalHandle: {
-		alignItems: "center",
-		paddingTop: 12,
-		paddingBottom: 8,
-	},
-	handleBar: {
-		width: 36,
-		height: 4,
-		borderRadius: 2,
-		opacity: 0.3,
 	},
 	scrollContainer: {
 		flex: 1,
@@ -765,7 +791,7 @@ const styles = StyleSheet.create({
 	},
 	recordingSection: {
 		alignItems: "center",
-		marginVertical: 40,
+		marginVertical: 20,
 		width: "100%",
 	},
 	recordButton: {

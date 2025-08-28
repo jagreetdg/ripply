@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "expo-router";
 import { HomeHeader } from "../../components/home/HomeHeader";
 import { FeedContent } from "../../components/home/FeedContent";
 import { FloatingActionButton } from "../../components/home/FloatingActionButton";
+import { VoicePostRecorder } from "../../components/voice-post/VoicePostRecorder";
 import { useTheme } from "../../context/ThemeContext";
 import { useFeedData } from "../../hooks/useFeedData";
 
@@ -18,6 +19,7 @@ export default function HomeScreen() {
 	const pathname = usePathname();
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
+	const [showRecordingModal, setShowRecordingModal] = useState(false);
 
 	// Only show FAB in home tab
 	const showFAB = pathname === "/home";
@@ -61,8 +63,12 @@ export default function HomeScreen() {
 	);
 
 	const handleNewVoiceNote = () => {
-		console.log("Navigating to voice note creation");
-		router.push("/create");
+		console.log("Opening voice note recording modal");
+		setShowRecordingModal(true);
+	};
+
+	const handleCloseRecordingModal = () => {
+		setShowRecordingModal(false);
 	};
 
 	// Handle user profile navigation
@@ -152,6 +158,14 @@ export default function HomeScreen() {
 				insets={insets}
 				visible={showFAB}
 			/>
+
+			{/* Voice Recording Modal */}
+			{showRecordingModal && (
+				<VoicePostRecorder
+					visible={showRecordingModal}
+					onClose={handleCloseRecordingModal}
+				/>
+			)}
 		</View>
 	);
 }
