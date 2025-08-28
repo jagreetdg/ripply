@@ -40,6 +40,7 @@ export function VoicePostRecorder() {
 	const [currentTag, setCurrentTag] = useState("");
 	const [showTagInput, setShowTagInput] = useState(false);
 	const [isEditingCaption, setIsEditingCaption] = useState(false);
+	const [isProcessingRecording, setIsProcessingRecording] = useState(false);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 
 	// Animation values
@@ -127,6 +128,8 @@ export function VoicePostRecorder() {
 
 	const handleStartRecording = useCallback(async () => {
 		if (isRecording) {
+			console.log("🔄 STOP: Setting processing state to prevent unmount");
+			setIsProcessingRecording(true); // Keep component mounted while processing
 			await stopRecording();
 		} else {
 			// Record button press animation
@@ -180,6 +183,12 @@ export function VoicePostRecorder() {
 					// Set up event listeners
 					audio.ontimeupdate = () => {
 						setPlaybackPosition(audio.currentTime);
+						// Debug: Log actual vs recorded duration mismatch
+						if (Math.abs(audio.duration - recordingDuration) > 1) {
+							console.log(
+								`⚠️ DURATION MISMATCH: recorded=${recordingDuration}s, actual=${audio.duration}s`
+							);
+						}
 					};
 
 					audio.onended = () => {
@@ -218,6 +227,16 @@ export function VoicePostRecorder() {
 			}
 		};
 	}, []);
+
+	// Clear processing state when recording is fully processed
+	useEffect(() => {
+		if (isProcessingRecording && (recordingUri || audioBlob)) {
+			console.log(
+				"🏁 Recording processing complete - clearing processing state"
+			);
+			setIsProcessingRecording(false);
+		}
+	}, [isProcessingRecording, recordingUri, audioBlob]);
 
 	useEffect(() => {
 		// Reset playback when recording changes
@@ -326,41 +345,63 @@ export function VoicePostRecorder() {
 					</Text>
 
 					{/* Waveform - Show during recording and after */}
-					{(isRecording || recordingUri) && (
+					{(isRecording ||
+						recordingUri ||
+						audioBlob ||
+						isProcessingRecording) && (
 						<View style={styles.waveformSection}>
-							{/* Play Button - Only show after recording */}
-							{recordingUri && !isRecording && (
-								<TouchableOpacity
-									style={[
-										styles.playButton,
-										{ backgroundColor: PURPLE_COLORS.secondary },
-									]}
-									onPress={handlePlayPause}
-									disabled={isUploading}
-								>
-									<View style={styles.playButtonIcon}>
-										<Feather
-											name={isPlaying ? "pause" : "play"}
-											size={20}
-											color="#FFFFFF"
-										/>
-									</View>
-								</TouchableOpacity>
-							)}
-
+							{/* Waveform Container - Responsive layout */}
 							<View
 								style={[
-									styles.waveformContainer,
-									recordingUri && !isRecording ? { marginLeft: 4 } : {},
+									styles.waveformPlayContainer,
+									{
+										backgroundColor: colors.card,
+										borderColor: colors.border,
+									},
 								]}
 							>
-								<VoicePostWaveform
-									isRecording={isRecording}
-									audioBlob={audioBlob}
-									duration={recordingDuration}
-									isPlaying={isPlaying}
-									playbackPosition={playbackPosition}
-								/>
+								{/* Play Button - Only show after recording */}
+								{recordingUri && !isRecording && (
+									<TouchableOpacity
+										style={[
+											styles.playButton,
+											{ backgroundColor: PURPLE_COLORS.secondary },
+										]}
+										onPress={handlePlayPause}
+										disabled={isUploading}
+									>
+										<View style={styles.playButtonIcon}>
+											<Feather
+												name={isPlaying ? "pause" : "play"}
+												size={20}
+												color="#FFFFFF"
+											/>
+										</View>
+									</TouchableOpacity>
+								)}
+
+								{/* Waveform - Expands to fill available space */}
+								<View
+									style={[
+										styles.waveformContainer,
+										isRecording ? { paddingHorizontal: 16 } : {},
+									]}
+								>
+									<VoicePostWaveform
+										isRecording={isRecording}
+										audioBlob={audioBlob}
+										duration={recordingDuration}
+										isPlaying={isPlaying}
+										playbackPosition={playbackPosition}
+										onAudioLevelsReady={(levels: number[]) => {
+											// Store the audio levels when they're ready
+											console.log(
+												"🎯 Parent received audio levels:",
+												levels.length
+											);
+										}}
+									/>
+								</View>
 							</View>
 						</View>
 					)}
@@ -647,10 +688,24 @@ const styles = StyleSheet.create({
 
 	// Waveform Section
 	waveformSection: {
+		alignItems: "center",
+		justifyContent: "center",
+		width: "100%",
+	},
+	waveformPlayContainer: {
 		flexDirection: "row",
 		alignItems: "center",
 		width: "100%",
 		maxWidth: 400,
+		borderRadius: 12,
+		borderWidth: 1,
+		paddingVertical: 12,
+		paddingHorizontal: 16,
+		elevation: 1,
+		shadowOffset: { width: 0, height: 1 },
+		shadowOpacity: 0.1,
+		shadowRadius: 2,
+		marginVertical: 8,
 	},
 	playButton: {
 		width: 48,
@@ -658,19 +713,22 @@ const styles = StyleSheet.create({
 		borderRadius: 24,
 		alignItems: "center",
 		justifyContent: "center",
+		marginRight: 16, // Right spacing between play button and waveform
 		elevation: 2,
 		shadowOffset: { width: 0, height: 1 },
 		shadowOpacity: 0.2,
 		shadowRadius: 4,
+		flexShrink: 0, // Prevent button from shrinking
 	},
 	playButtonIcon: {
 		marginLeft: 2, // Slight offset to center the play triangle
 	},
 	waveformContainer: {
-		flex: 1,
+		flex: 1, // Expands to fill all available horizontal space
 		height: 60,
 		alignItems: "center",
 		justifyContent: "center",
+		minWidth: 0, // Allow flex shrinking if needed
 	},
 	// Caption Input
 	captionInput: {
