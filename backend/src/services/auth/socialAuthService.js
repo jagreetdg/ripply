@@ -63,21 +63,18 @@ const handleAppleAuth = async (user) => {
  * @returns {string} Redirect URL
  */
 const buildOAuthRedirectUrl = (provider, token = null, error = null) => {
-	const baseUrl =
-		process.env.FRONTEND_URL ||
-		(process.env.NODE_ENV === "production"
-			? "https://ripply-app.netlify.app"
-			: "http://localhost:8081");
+	// Always use deep linking for mobile app (Ripply is primarily a mobile app)
+	// This ensures OAuth works on physical devices, simulators, and Expo Go
 
 	if (error) {
-		return `${baseUrl}/?error=${error}`;
+		return `ripply://auth?error=${error}`;
 	}
 
 	if (token) {
-		return `${baseUrl}/auth/${provider}-callback?token=${token}`;
+		return `ripply://auth/${provider}-callback?token=${token}`;
 	}
 
-	return `${baseUrl}/?error=auth_failed`;
+	return `ripply://auth?error=auth_failed`;
 };
 
 /**
