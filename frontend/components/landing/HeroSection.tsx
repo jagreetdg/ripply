@@ -48,39 +48,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 	const buttonAnim = useRef(new Animated.Value(0)).current;
 	const waveAnim = useRef(new Animated.Value(0)).current;
 
-	// Add web-specific font style
+	// Simplified font handling - no longer loading custom fonts here to avoid iOS issues
 	useEffect(() => {
-		const loadFonts = async () => {
-			if (Platform.OS === "web") {
-				try {
-					// Check if running in a browser environment
-					if (typeof document !== "undefined") {
-						const style = document.createElement("style");
-						style.textContent = `
-							@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
-						`;
-						document.head.append(style);
-					}
-					setFontsLoaded(true);
-				} catch (error) {
-					console.error("Error setting up web fonts:", error);
-					setFontsLoaded(true);
-				}
-			} else {
-				// Load fonts for native platforms
-				try {
-					await Font.loadAsync({
-						DancingScript: require("../../assets/fonts/DancingScript.ttf"),
-					});
-					setFontsLoaded(true);
-				} catch (error) {
-					console.error("Error loading native fonts:", error);
-					setFontsLoaded(true);
-				}
-			}
-		};
-
-		loadFonts();
+		// For now, set fonts as loaded immediately and use system fonts as fallback
+		setFontsLoaded(true);
 	}, []);
 
 	useEffect(() => {
@@ -176,7 +147,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 				</Animated.Text>
 
 				<Animated.Text style={[styles.heroSubtitle, { opacity: subtitleAnim }]}>
-					Some words can't type, Some voices glow <br />
+					Some words can't type, Some voices glow {"\n"}
 					No more filters, Let Ripply show !
 				</Animated.Text>
 
@@ -266,7 +237,7 @@ const styles = StyleSheet.create({
 	},
 	heroTitle: {
 		fontSize: width < 380 ? 32 : 48,
-		fontFamily: "Dancing Script, DancingScript, cursive",
+		fontFamily: Platform.OS === "ios" ? "Palatino" : "sans-serif",
 		fontWeight: "bold",
 		color: "#FFFFFF",
 		marginBottom: 16,

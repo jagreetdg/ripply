@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TouchableOpacity, Dimensions } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { VoiceNoteProfilePicture } from "./VoiceNoteProfilePicture"; // Path remains ./
 
@@ -29,6 +29,24 @@ export const VoiceNoteUserInfo: React.FC<VoiceNoteUserInfoProps> = ({
 	onProfilePress,
 	colors,
 }) => {
+	// Screen width state for responsive behavior
+	const [screenWidth, setScreenWidth] = useState(
+		Dimensions.get("window").width
+	);
+
+	// Threshold for hiding timestamp on narrow screens (380px)
+	const NARROW_SCREEN_THRESHOLD = 380;
+	const shouldShowTimestamp = screenWidth >= NARROW_SCREEN_THRESHOLD;
+
+	// Listen to screen dimension changes
+	useEffect(() => {
+		const subscription = Dimensions.addEventListener("change", ({ window }) => {
+			setScreenWidth(window.width);
+		});
+
+		return () => subscription?.remove();
+	}, []);
+
 	// Determine if we should use the "OnImage" variants of styles
 	const useOnImageStyles = hasBackgroundImage;
 
@@ -59,7 +77,7 @@ export const VoiceNoteUserInfo: React.FC<VoiceNoteUserInfoProps> = ({
 				</View>
 			</TouchableOpacity>
 			<View style={styles.headerActions}>
-				{timePosted && (
+				{timePosted && shouldShowTimestamp && (
 					<Text
 						style={
 							useOnImageStyles ? styles.timePostedOnImage : styles.timePosted
