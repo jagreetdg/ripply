@@ -59,7 +59,7 @@ export const PhotoViewerImage = React.memo(
 		if (loading) {
 			return (
 				<View style={styles.loadingOverlay}>
-					<ActivityIndicator size="large" color={colors.primary || "#9333ea"} />
+					<ActivityIndicator size="large" color={colors.tint || "#9333ea"} />
 					<Text style={styles.loadingText}>{loadingText}</Text>
 				</View>
 			);
@@ -79,7 +79,7 @@ export const PhotoViewerImage = React.memo(
 							{ backgroundColor: "rgba(0,0,0,0.3)" },
 						]}
 					>
-						<ActivityIndicator size="small" color={colors.primary} />
+						<ActivityIndicator size="small" color={colors.tint} />
 					</View>
 				)}
 				<Image

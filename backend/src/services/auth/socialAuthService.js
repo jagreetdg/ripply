@@ -62,14 +62,20 @@ const handleAppleAuth = async (user) => {
  * @param {string} error - Error message if any
  * @returns {string} Redirect URL
  */
-const buildOAuthRedirectUrl = (provider, token = null, error = null, req = null) => {
+const buildOAuthRedirectUrl = (
+	provider,
+	token = null,
+	error = null,
+	req = null
+) => {
 	// Detect if this is a web request by checking User-Agent
-	const userAgent = req?.headers['user-agent'] || '';
-	const isWebRequest = userAgent.includes('Mozilla') && !userAgent.includes('Expo');
-	
-	console.log('[OAuth] User-Agent:', userAgent);
-	console.log('[OAuth] Is web request:', isWebRequest);
-	
+	const userAgent = req?.headers["user-agent"] || "";
+	const isWebRequest =
+		userAgent.includes("Mozilla") && !userAgent.includes("Expo");
+
+	console.log("[OAuth] User-Agent:", userAgent);
+	console.log("[OAuth] Is web request:", isWebRequest);
+
 	if (isWebRequest) {
 		// Web requests go to frontend URL
 		const baseUrl = process.env.FRONTEND_URL || "http://localhost:8081";

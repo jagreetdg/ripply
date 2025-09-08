@@ -107,6 +107,6 @@ export const getFallbackImageUrl = (
 	} else {
 		// For cover photos, return null - we don't want any fallbacks for cover photos
 		// as they should be optional and gracefully handle missing images
-		return null;
+		return "";
 	}
 }; 
