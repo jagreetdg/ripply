@@ -65,16 +65,17 @@ const handleAppleAuth = async (user) => {
 const buildOAuthRedirectUrl = (provider, token = null, error = null) => {
 	// Always use deep linking for mobile app (Ripply is primarily a mobile app)
 	// This ensures OAuth works on physical devices, simulators, and Expo Go
+	// Using expo-router path format (leading slash)
 
 	if (error) {
-		return `ripply://auth?error=${error}`;
+		return `ripply:///auth/social-callback?error=${error}`;
 	}
 
 	if (token) {
-		return `ripply://auth/${provider}-callback?token=${token}`;
+		return `ripply:///auth/${provider}-callback?token=${token}`;
 	}
 
-	return `ripply://auth?error=auth_failed`;
+	return `ripply:///auth/social-callback?error=auth_failed`;
 };
 
 /**
