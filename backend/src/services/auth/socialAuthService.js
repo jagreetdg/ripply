@@ -66,7 +66,7 @@ const buildOAuthRedirectUrl = (provider, token = null, error = null) => {
 	// Always use deep linking for mobile app (Ripply is primarily a mobile app)
 	// This ensures OAuth works on physical devices, simulators, and Expo Go
 	// Using expo-router compatible format
-	
+
 	if (error) {
 		return `ripply://--/auth/social-callback?error=${error}`;
 	}
