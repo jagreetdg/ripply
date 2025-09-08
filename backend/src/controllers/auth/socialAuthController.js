@@ -37,7 +37,8 @@ const googleCallback = [
 				const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
 					"google",
 					null,
-					"auth_error"
+					"auth_error",
+					req
 				);
 				return res.redirect(redirectUrl);
 			}
@@ -58,7 +59,8 @@ const googleCallback = [
 				const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
 					"google",
 					null,
-					"auth_failed"
+					"auth_failed",
+					req
 				);
 				return res.redirect(redirectUrl);
 			}
@@ -82,10 +84,12 @@ const googleCallback = [
 			setSocialAuthCookie(res, authResult.token);
 
 			// Redirect to frontend with token
-			const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
-				"google",
-				authResult.token
-			);
+		const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
+			"google",
+			authResult.token,
+			null,
+			req
+		);
 
 			console.log("[Google OAuth] Redirecting to:", redirectUrl);
 			res.redirect(redirectUrl);
@@ -93,11 +97,12 @@ const googleCallback = [
 			console.error("[Google OAuth] Error in callback:", error);
 			console.error("[Google OAuth] Error stack:", error.stack);
 
-			const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
-				"google",
-				null,
-				"auth_failed"
-			);
+		const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
+			"google",
+			null,
+			"auth_failed",
+			req
+		);
 			res.redirect(redirectUrl);
 		}
 	},
