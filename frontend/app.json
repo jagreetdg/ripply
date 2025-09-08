@@ -6,6 +6,9 @@
 		"orientation": "portrait",
 		"icon": "./assets/images/icon.png",
 		"scheme": "ripply",
+		"linking": {
+			"prefixes": ["ripply://"]
+		},
 		"userInterfaceStyle": "automatic",
 		"newArchEnabled": true,
 		"splash": {
