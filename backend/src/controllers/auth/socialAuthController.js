@@ -10,10 +10,19 @@ const { setSocialAuthCookie } = require("../../utils/auth/tokenUtils");
  * Google authentication route
  * @route GET /auth/google
  */
-const googleAuth = passport.authenticate("google", {
-	scope: ["profile", "email"],
-	prompt: "select_account", // Force Google to show account selection screen instead of auto-login
-});
+const googleAuth = (req, res, next) => {
+	// Check if this is a mobile request and pass it in state
+	const clientParam = req.query.client;
+	const state = clientParam === 'mobile' ? 'mobile' : 'web';
+	
+	console.log("[Google OAuth] Initial request - client param:", clientParam, "state:", state);
+	
+	passport.authenticate("google", {
+		scope: ["profile", "email"],
+		prompt: "select_account", // Force Google to show account selection screen instead of auto-login
+		state: state, // Pass client type in state parameter
+	})(req, res, next);
+};
 
 /**
  * Google callback route
