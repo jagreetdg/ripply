@@ -34,9 +34,9 @@ export default function SocialAuthButtons({
 			// Call the onGoogleAuth callback to show loading state
 			onGoogleAuth();
 
-			// Open the Google auth URL in a popup window
-			const authUrl = `${API_URL}/api/auth/google`;
-			const result = await WebBrowser.openAuthSessionAsync(
+		// Open the Google auth URL in a popup window with client=mobile param
+		const authUrl = `${API_URL}/api/auth/google?client=mobile`;
+		const result = await WebBrowser.openAuthSessionAsync(
 				authUrl,
 				"ripply://",
 				{
