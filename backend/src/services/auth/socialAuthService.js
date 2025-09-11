@@ -70,11 +70,14 @@ const buildOAuthRedirectUrl = (
 ) => {
 	// Detect if this is a mobile request by checking client param first
 	const clientParam = req?.query?.client;
-	const isMobileRequest = clientParam === 'mobile';
-	
+	const isMobileRequest = clientParam === "mobile";
+
 	// Fallback to User-Agent if no param
 	const userAgent = req?.headers["user-agent"] || "";
-	const isWebRequest = !isMobileRequest && userAgent.includes("Mozilla") && !userAgent.includes("Expo");
+	const isWebRequest =
+		!isMobileRequest &&
+		userAgent.includes("Mozilla") &&
+		!userAgent.includes("Expo");
 
 	console.log("[OAuth] Client param:", clientParam);
 	console.log("[OAuth] User-Agent:", userAgent);
