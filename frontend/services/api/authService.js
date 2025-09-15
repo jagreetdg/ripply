@@ -205,7 +205,10 @@ const verifyToken = async () => {
     
     return response;
   } catch (error) {
-    console.error('Error verifying token:', error);
+    // Only log actual verification errors, not "no token" cases
+    if (error.message !== 'No token found') {
+      console.error('Error verifying token:', error);
+    }
     throw error;
   }
 };

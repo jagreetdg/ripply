@@ -176,7 +176,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 				</Animated.Text>
 
 				<Animated.Text style={[styles.heroSubtitle, { opacity: subtitleAnim }]}>
-					Some words can't type, Some voices glow <br />
+					Some words can't type, Some voices glow {'\n'}
 					No more filters, Let Ripply show !
 				</Animated.Text>
 

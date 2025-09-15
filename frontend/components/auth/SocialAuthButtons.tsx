@@ -49,7 +49,7 @@ export default function SocialAuthButtons({
 			// Close the auth window
 			await WebBrowser.dismissAuthSession();
 
-			if (result.type === "error") {
+			if (result.type !== "success") {
 				// Show error in the main app
 				alert("Authentication failed. Please try again.");
 			}
@@ -80,7 +80,7 @@ export default function SocialAuthButtons({
 			// Close the auth window
 			await WebBrowser.dismissAuthSession();
 
-			if (result.type === "error") {
+			if (result.type !== "success") {
 				// Show error in the main app
 				alert("Authentication failed. Please try again.");
 			}
@@ -137,7 +137,7 @@ export default function SocialAuthButtons({
 						style={[
 							styles.socialButton,
 							{
-								borderColor: colors.isDark ? colors.white : colors.black,
+								borderColor: colors.border,
 								backgroundColor: colors.card,
 							},
 						]}
@@ -146,7 +146,7 @@ export default function SocialAuthButtons({
 						<FontAwesome
 							name="apple"
 							size={20}
-							color={colors.isDark ? colors.white : Colors.brand.appleBlack}
+							color={colors.text}
 							style={styles.socialIcon}
 						/>
 						<Text style={[styles.socialButtonText, { color: colors.text }]}>
