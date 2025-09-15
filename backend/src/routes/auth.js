@@ -14,6 +14,7 @@ const {
 	LOCKOUT_DURATION,
 } = require("../middleware/accountLockout");
 const passport = require("../config/passport");
+const { handleNativeGoogleAuth } = require("../controllers/auth/nativeGoogleAuthController");
 
 // JWT Secret - in production, this would be an environment variable
 const JWT_SECRET =
@@ -337,6 +338,9 @@ router.post("/login", async (req, res) => {
 	}
 });
 
+// Native Google Sign-In endpoint
+router.post("/google/native", handleNativeGoogleAuth);
+
 // Logout endpoint
 router.post("/logout", (req, res) => {
 	// Clear the auth cookie
@@ -405,14 +409,9 @@ router.get(
 	async (req, res) => {
 		try {
 			if (!req.user) {
-				const userAgent = req.headers['user-agent'] || '';
-				const isMobileApp = userAgent.includes('Expo') || userAgent.includes('ReactNative');
-				
-				if (isMobileApp) {
-					return res.redirect(`ripply://auth/social-callback?error=auth_failed`);
-				} else {
-					return res.redirect(`${process.env.FRONTEND_URL}/auth/login?error=auth_failed`);
-				}
+				return res.redirect(
+					`${process.env.FRONTEND_URL}/auth/login?error=auth_failed`
+				);
 			}
 
 			// Generate JWT token
@@ -430,28 +429,13 @@ router.get(
 				});
 			}
 
-			// Check if this is a mobile request by User-Agent
-			const userAgent = req.headers['user-agent'] || '';
-			const isMobileApp = userAgent.includes('Expo') || userAgent.includes('ReactNative');
-			
-			// Redirect appropriately
-			if (isMobileApp) {
-				// Mobile app - use deep link
-				res.redirect(`ripply://auth/google-callback?token=${token}`);
-			} else {
-				// Web - use frontend URL
-				res.redirect(`${process.env.FRONTEND_URL}/auth/google-callback?token=${token}`);
-			}
+			// Redirect to frontend with token
+			res.redirect(
+				`${process.env.FRONTEND_URL}/auth/google-callback?token=${token}`
+			);
 		} catch (error) {
 			console.error("[Auth Flow] Error in Google callback:", error);
-			const userAgent = req.headers['user-agent'] || '';
-			const isMobileApp = userAgent.includes('Expo') || userAgent.includes('ReactNative');
-			
-			if (isMobileApp) {
-				res.redirect(`ripply://auth/social-callback?error=auth_failed`);
-			} else {
-				res.redirect(`${process.env.FRONTEND_URL}/auth/login?error=auth_failed`);
-			}
+			res.redirect(`${process.env.FRONTEND_URL}/auth/login?error=auth_failed`);
 		}
 	}
 );
