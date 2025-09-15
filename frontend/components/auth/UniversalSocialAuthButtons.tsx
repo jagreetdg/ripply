@@ -52,6 +52,8 @@ export default function UniversalSocialAuthButtons({
 		try {
 			console.log(`[Universal Auth] Starting ${provider} authentication`);
 
+			// For web platforms, the redirect happens immediately
+			// For mobile, this will complete the full OAuth flow
 			const result = await UniversalAuth.authenticateWithProvider(provider);
 
 			if (result.success && result.user && result.token) {
@@ -61,13 +63,18 @@ export default function UniversalSocialAuthButtons({
 					token: result.token,
 				});
 			} else {
-				console.error(
-					`[Universal Auth] ${provider} authentication failed:`,
-					result.error
-				);
-				onAuthError?.(
-					result.error || `Failed to authenticate with ${provider}`
-				);
+				// For web, this means the redirect is happening
+				// For mobile, this is an actual error
+				if (Platform.OS !== "web") {
+					console.error(
+						`[Universal Auth] ${provider} authentication failed:`,
+						result.error
+					);
+					onAuthError?.(
+						result.error || `Failed to authenticate with ${provider}`
+					);
+				}
+				// For web, don't show error - redirect is in progress
 			}
 		} catch (error) {
 			console.error(
@@ -78,7 +85,11 @@ export default function UniversalSocialAuthButtons({
 				`Authentication with ${provider} failed. Please try again.`
 			);
 		} finally {
-			setLoadingProvider(null);
+			// Only clear loading state for mobile platforms
+			// For web, the page will redirect so this won't matter
+			if (Platform.OS !== "web") {
+				setLoadingProvider(null);
+			}
 		}
 	};
 
@@ -123,7 +134,9 @@ export default function UniversalSocialAuthButtons({
 					icon
 				)}
 				<Text style={[styles.socialButtonText, { color: colors.text }]}>
-					{isLoading ? `Connecting...` : `Continue with ${displayName}`}
+					{isLoading
+						? `Connecting to ${displayName}...`
+						: `Continue with ${displayName}`}
 				</Text>
 			</Pressable>
 		);

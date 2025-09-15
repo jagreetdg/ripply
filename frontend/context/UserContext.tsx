@@ -12,6 +12,7 @@ import {
 } from "../services/api";
 import { setStoredUser, removeStoredUser } from "../services/api/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { UniversalAuth } from "../services/api/universalAuth";
 
 // Define the User interface
 export interface User {
@@ -113,8 +114,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 		}, 3000); // 3 seconds max loading time
 
 		try {
-			// First check if we have a token stored
-			const token = await AsyncStorage.getItem("@ripply_auth_token");
+			// First check if we have a token stored using UniversalAuth
+			const token = await UniversalAuth.getStoredToken();
+			console.log(
+				Date.now(),
+				"[PERF] UserContext - Token found:",
+				token ? "YES" : "NO"
+			);
 
 			if (!token) {
 				console.log(

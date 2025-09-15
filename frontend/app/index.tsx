@@ -24,7 +24,7 @@ export default function LandingPage() {
 	const [signupModalVisible, setSignupModalVisible] = useState(false);
 	const router = useRouter();
 
-	const { user, loading: userLoading } = useUser();
+	const { user, loading: userLoading, refreshUser } = useUser();
 	const [socialAuthLoading, setSocialAuthLoading] = useState(false);
 
 	// Combine loading states
@@ -62,11 +62,15 @@ export default function LandingPage() {
 							window.location.pathname
 						);
 
-						// Close any open modals - UserContext will handle the redirect
+						// Close any open modals
 						setLoginModalVisible(false);
 						setSignupModalVisible(false);
 
 						console.log("[Landing Page] OAuth authentication successful");
+
+						// Trigger UserContext to refresh and detect the new token
+						console.log("[Landing Page] Refreshing user context after OAuth");
+						await refreshUser();
 					} catch (error) {
 						console.error(
 							"[Landing Page] Error processing OAuth token:",

@@ -20,7 +20,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 // API configuration
 const API_URL = "https://ripply-backend.onrender.com";
-const TOKEN_KEY = "ripply_auth_token";
+const TOKEN_KEY = "@ripply_auth_token";
 
 interface AuthResult {
 	success: boolean;
@@ -49,17 +49,8 @@ export class UniversalAuth {
 		try {
 			console.log(`[Universal Auth] Starting ${provider} authentication`);
 			
-			// Check if provider is available
-			const isAvailable = await this.isProviderAvailable(provider);
-			if (!isAvailable) {
-				return {
-					success: false,
-					error: `${provider} authentication is not available`,
-				};
-			}
-			
 			// For web platforms, redirect directly to the OAuth endpoint
-			// For mobile platforms, use WebBrowser
+			// Skip provider check to avoid delay - let backend handle validation
 			if (Platform.OS === "web") {
 				console.log(`[Universal Auth] Redirecting to ${provider} OAuth`);
 				window.location.href = `${API_URL}/api/auth/oauth/${provider}`;
@@ -70,6 +61,14 @@ export class UniversalAuth {
 					error: "Redirecting to authentication provider...",
 				};
 			} else {
+				// For mobile, check if provider is available first
+				const isAvailable = await this.isProviderAvailable(provider);
+				if (!isAvailable) {
+					return {
+						success: false,
+						error: `${provider} authentication is not available`,
+					};
+				}
 				// For mobile, get the OAuth URL and open it in WebBrowser
 				const oauthUrl = `${API_URL}/api/auth/oauth/${provider}?return_url=true`;
 				
@@ -255,12 +254,12 @@ export class UniversalAuth {
 	}
 	
 	/**
-	 * Get stored authentication token
+	 * Get stored authentication token (public method for UserContext)
 	 */
-	private static async getStoredToken(): Promise<string | null> {
+	static async getStoredToken(): Promise<string | null> {
 		try {
 			if (Platform.OS === "web") {
-				// For web, check localStorage (both old and new keys)
+				// For web, check localStorage (both keys for compatibility)
 				return localStorage.getItem(TOKEN_KEY) || localStorage.getItem('ripply_auth_token');
 			} else {
 				// For mobile, check AsyncStorage
@@ -277,12 +276,16 @@ export class UniversalAuth {
 	 */
 	static async storeToken(token: string): Promise<void> {
 		try {
+			console.log("[Universal Auth] Storing token:", token.substring(0, 20) + "...");
+			
 			if (Platform.OS === "web") {
 				localStorage.setItem(TOKEN_KEY, token);
 				// Also clean up any temporary token from OAuth success page
 				localStorage.removeItem('ripply_auth_token');
+				console.log("[Universal Auth] Token stored in localStorage with key:", TOKEN_KEY);
 			} else {
 				await AsyncStorage.setItem(TOKEN_KEY, token);
+				console.log("[Universal Auth] Token stored in AsyncStorage with key:", TOKEN_KEY);
 			}
 		} catch (error) {
 			console.error("[Universal Auth] Error storing token:", error);
