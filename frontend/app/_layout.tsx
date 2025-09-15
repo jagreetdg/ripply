@@ -9,6 +9,7 @@ import RequireAuth from "../components/auth/RequireAuth";
 import { View } from "react-native";
 import TabLayout from "./(tabs)/_layout";
 import { GlobalToastProvider } from "../components/common/Toast";
+import * as Linking from "expo-linking";
 
 export {
 	// Catch any errors thrown by the Layout component.
@@ -94,18 +95,38 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
+	// Monitor deep links
+	useEffect(() => {
+		console.log("🔗 [DEEP LINK DEBUG] Setting up deep link monitoring");
+
+		// Handle initial URL (if app was opened via deep link)
+		Linking.getInitialURL().then((url) => {
+			console.log("🔗 [DEEP LINK DEBUG] Initial URL:", url);
+		});
+
+		// Handle incoming URLs while app is running
+		const subscription = Linking.addEventListener("url", (event) => {
+			console.log("🔗 [DEEP LINK DEBUG] Incoming URL event:", event.url);
+		});
+
+		return () => {
+			console.log("🔗 [DEEP LINK DEBUG] Cleaning up deep link listener");
+			subscription?.remove();
+		};
+	}, []);
+
 	return (
-		<ThemeProvider>
-			<ThemedRoot>
-				<GlobalToastProvider>
+		<GlobalToastProvider>
+			<ThemeProvider>
+				<ThemedRoot>
 					<UserProvider>
 						<RequireAuth>
 							<Slot />
 						</RequireAuth>
 					</UserProvider>
-				</GlobalToastProvider>
-			</ThemedRoot>
-		</ThemeProvider>
+				</ThemedRoot>
+			</ThemeProvider>
+		</GlobalToastProvider>
 	);
 }
 

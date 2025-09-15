@@ -127,21 +127,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 						);
 						setUser(null); // setUser also sets loading to false
 					}
-			} catch (verifyError) {
-				// Only log actual verification errors, not "no token" cases
-				if (verifyError.message !== 'No token found') {
+				} catch (verifyError) {
 					console.error(
 						Date.now(),
 						"[PERF] UserContext - Token verification failed inside refreshUser:",
 						verifyError
 					);
+					console.log(
+						Date.now(), // Added timestamp
+						"[PERF] UserContext - Token verification failed, setting user to null via setUser"
+					);
+					setUser(null); // setUser also sets loading to false
 				}
-				console.log(
-					Date.now(), // Added timestamp
-					"[PERF] UserContext - Token verification failed, setting user to null via setUser"
-				);
-				setUser(null); // setUser also sets loading to false
-			}
 			}
 		} catch (err) {
 			console.error(

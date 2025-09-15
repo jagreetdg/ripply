@@ -12,11 +12,17 @@ const USER_KEY = "@ripply_user";
 const API_URL = "https://ripply-backend.onrender.com";
 
 export default function GoogleCallback() {
+	console.log("[Auth Flow] GoogleCallback component mounted");
 	const router = useRouter();
+	const params = useLocalSearchParams();
 	const { token, error } = useLocalSearchParams();
 	const { setUser } = useUser();
 	const [isProcessing, setIsProcessing] = useState(false);
 	const [processingError, setProcessingError] = useState<string | null>(null);
+
+	console.log("[Auth Flow] GoogleCallback - params:", params);
+	console.log("[Auth Flow] GoogleCallback - token:", token);
+	console.log("[Auth Flow] GoogleCallback - error:", error);
 
 	useEffect(() => {
 		const handleCallback = async () => {
@@ -26,7 +32,9 @@ export default function GoogleCallback() {
 
 			try {
 				console.log("[Auth Flow] Google callback received");
+				console.log("[Auth Flow] All params:", params);
 				console.log("[Auth Flow] Token:", token ? "Present" : "Not present");
+				console.log("[Auth Flow] Token value:", token);
 				console.log("[Auth Flow] Error:", error ? "Present" : "Not present");
 
 				if (error) {
@@ -80,7 +88,7 @@ export default function GoogleCallback() {
 
 					// Update user context
 					console.log("[Auth Flow] Updating user context");
-					setUser({
+					await setUser({
 						id: userData.user.id,
 						username: userData.user.username,
 						email: userData.user.email,

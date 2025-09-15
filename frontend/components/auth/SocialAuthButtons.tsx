@@ -31,11 +31,16 @@ export default function SocialAuthButtons({
 	// Handle Google authentication
 	const handleGoogleAuth = async () => {
 		try {
+			console.log("🚀 [AUTH DEBUG] Starting Google OAuth flow");
+
 			// Call the onGoogleAuth callback to show loading state
 			onGoogleAuth();
 
-			// Open the Google auth URL in a popup window
-			const authUrl = `${API_URL}/api/auth/google`;
+			// Open the Google auth URL in a popup window with client=mobile param
+			const authUrl = `${API_URL}/api/auth/google?client=mobile`;
+			console.log("🌐 [AUTH DEBUG] Opening auth URL:", authUrl);
+			console.log("🔗 [AUTH DEBUG] Return URL scheme:", "ripply://");
+
 			const result = await WebBrowser.openAuthSessionAsync(
 				authUrl,
 				"ripply://",
@@ -46,15 +51,28 @@ export default function SocialAuthButtons({
 				}
 			);
 
+			console.log(
+				"📱 [AUTH DEBUG] WebBrowser result:",
+				JSON.stringify(result, null, 2)
+			);
+
 			// Close the auth window
 			await WebBrowser.dismissAuthSession();
 
+			if (result.type === "success") {
+				console.log("✅ [AUTH DEBUG] OAuth success! URL:", result.url);
+			} else if (result.type === "cancel") {
+				console.log("❌ [AUTH DEBUG] OAuth cancelled by user");
+			} else {
+				console.log("💥 [AUTH DEBUG] OAuth failed:", result.type);
+			}
+
 			if (result.type !== "success") {
 				// Show error in the main app
-				alert("Authentication failed. Please try again.");
+				alert(`Authentication ${result.type}. Please try again.`);
 			}
 		} catch (error) {
-			console.error("Google auth error:", error);
+			console.error("💀 [AUTH DEBUG] Exception in Google auth:", error);
 			alert("Authentication failed. Please try again.");
 		}
 	};

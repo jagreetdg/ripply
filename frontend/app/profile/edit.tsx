@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
 	View,
 	Text,
@@ -13,6 +13,7 @@ import {
 	Platform,
 	Animated,
 	ImageBackground,
+	ViewStyle,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -22,7 +23,7 @@ import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import * as ImagePicker from "expo-image-picker";
 import { updateUserProfile } from "../../services/api/userService";
-import { checkUsernameAvailability } from "../../services/api/authService";
+import { checkUsernameAvailability } from "../../services/api";
 import DefaultAvatar from "../../components/DefaultAvatar";
 import DefaultCoverPhoto from "../../components/DefaultCoverPhoto";
 import { LinearGradient } from "expo-linear-gradient";
@@ -44,14 +45,20 @@ const HoverableView = ({
 	onHoverOut,
 	style,
 	...props
-}: any) => {
+}: {
+	children: React.ReactNode;
+	onHoverIn: () => void;
+	onHoverOut: () => void;
+	style?: ViewStyle;
+	[key: string]: any;
+}) => {
 	// Only add hover styles on web platform
 	if (Platform.OS === "web") {
 		return (
 			<View
 				style={[style, { position: "relative" }]}
-				onMouseEnter={onHoverIn}
-				onMouseLeave={onHoverOut}
+				// onMouseEnter={onHoverIn}
+				// onMouseLeave={onHoverOut}
 				{...props}
 			>
 				{children}
@@ -73,10 +80,6 @@ export default function EditProfileScreen() {
 	const { user, refreshUser, setUser } = useUser();
 	const { colors, isDarkMode } = useTheme();
 	const { showToast } = useGlobalToast();
-	const [mounted, setMounted] = useState(false);
-	const [renderKey, setRenderKey] = useState(0);
-	// This is always the user's own profile in edit mode
-	const isOwnProfile = true;
 
 	// Dynamic styles that need theme context
 	const dynamicStyles = StyleSheet.create({
@@ -135,74 +138,74 @@ export default function EditProfileScreen() {
 	const [scaleAnim] = useState(new Animated.Value(0.95));
 	const [animationStarted, setAnimationStarted] = useState(false);
 
-	// Add a reference to track if we've just opened a modal
-	const recentlyOpenedModalRef = useRef(false);
-
-	// Set mounted state on component mount
-	useEffect(() => {
-		setMounted(true);
-		return () => {
-			setMounted(false);
-		};
-	}, []);
-
 	// Initialize form with user data
 	useEffect(() => {
-		if (!mounted || !user) return;
+		if (user) {
+			setDisplayName(user.display_name || "");
+			setBio(user.bio || "");
+			setUsername(user.username || "");
+			setOriginalUsername(user.username || "");
+			setAvatarUrl(user.avatar_url);
+			// Access cover_photo_url from the User interface
+			setCoverPhotoUrl(user.cover_photo_url || null);
 
-		setDisplayName(user.display_name || "");
-		setBio(user.bio || "");
-		setUsername(user.username || "");
-		setOriginalUsername(user.username || "");
-		setAvatarUrl(user.avatar_url);
-		// Access cover_photo_url from the User interface
-		setCoverPhotoUrl(user.cover_photo_url || null);
-
-		// Start entrance animation only on first load
-		if (!animationStarted) {
-			setAnimationStarted(true);
-			Animated.parallel([
-				Animated.timing(fadeAnim, {
-					toValue: 1,
-					duration: 400,
-					useNativeDriver: true,
-				}),
-				Animated.timing(scaleAnim, {
-					toValue: 1,
-					duration: 400,
-					useNativeDriver: true,
-				}),
-			]).start();
+			// Start entrance animation only on first load
+			if (!animationStarted) {
+				setAnimationStarted(true);
+				Animated.parallel([
+					Animated.timing(fadeAnim, {
+						toValue: 1,
+						duration: 400,
+						useNativeDriver: true,
+					}),
+					Animated.timing(scaleAnim, {
+						toValue: 1,
+						duration: 400,
+						useNativeDriver: true,
+					}),
+				]).start();
+			}
 		}
-	}, [user, mounted, animationStarted]);
+	}, [user]);
+
+	// Check if any changes have been made
+	const hasChanges = useMemo(() => {
+		if (!user) return false;
+
+		return (
+			displayName.trim() !== (user.display_name || "") ||
+			bio.trim() !== (user.bio || "") ||
+			username.trim() !== (user.username || "") ||
+			avatarUrl !== user.avatar_url ||
+			coverPhotoUrl !== user.cover_photo_url
+		);
+	}, [user, displayName, bio, username, avatarUrl, coverPhotoUrl]);
 
 	// Sync local photo state when user context changes (e.g., from PhotoViewerModal)
 	useEffect(() => {
-		if (!mounted || !user) return;
+		if (user) {
+			// Only update if the URLs are different to avoid unnecessary re-renders
+			if (user.avatar_url !== avatarUrl) {
+				console.log(
+					"[EDIT PROFILE] Syncing avatar URL from user context:",
+					user.avatar_url
+				);
+				setAvatarUrl(user.avatar_url);
+			}
 
-		// Only update if the URLs are different to avoid unnecessary re-renders
-		if (user.avatar_url !== avatarUrl) {
-			console.log(
-				"[EDIT PROFILE] Syncing avatar URL from user context:",
-				user.avatar_url
-			);
-			setAvatarUrl(user.avatar_url);
+			const userCoverPhoto = user.cover_photo_url;
+			if (userCoverPhoto !== coverPhotoUrl) {
+				console.log(
+					"[EDIT PROFILE] Syncing cover photo URL from user context:",
+					userCoverPhoto
+				);
+				setCoverPhotoUrl(userCoverPhoto || null);
+			}
 		}
-
-		const userCoverPhoto = user.cover_photo_url;
-		if (userCoverPhoto !== coverPhotoUrl) {
-			console.log(
-				"[EDIT PROFILE] Syncing cover photo URL from user context:",
-				userCoverPhoto
-			);
-			setCoverPhotoUrl(userCoverPhoto || null);
-		}
-	}, [user?.avatar_url, user?.cover_photo_url, mounted]);
+	}, [user?.avatar_url, user?.cover_photo_url]);
 
 	// Validate username with debounce
 	useEffect(() => {
-		if (!mounted) return;
-
 		// Skip validation if username hasn\'t changed
 		if (username === originalUsername) {
 			setUsernameError("");
@@ -241,41 +244,32 @@ export default function EditProfileScreen() {
 
 		// Debounce the API call
 		const timer = setTimeout(async () => {
-			if (!mounted || username.length < 3) return;
-
-			setIsCheckingUsername(true);
-			try {
-				const response = (await checkUsernameAvailability(
-					username
-				)) as UsernameAvailabilityResponse;
-
-				if (mounted) {
+			if (username.length >= 3) {
+				setIsCheckingUsername(true);
+				try {
+					const response = (await checkUsernameAvailability(
+						username
+					)) as UsernameAvailabilityResponse;
 					if (response && !response.available) {
 						setUsernameError("Username is already taken");
 					} else {
 						// Set as valid only if backend confirms availability
 						setIsUsernameValid(true);
 					}
-				}
-			} catch (error) {
-				if (mounted) {
+				} catch (error) {
 					console.error("Error checking username:", error);
 					setUsernameError("Error checking username availability");
-				}
-			} finally {
-				if (mounted) {
+				} finally {
 					setIsCheckingUsername(false);
 				}
 			}
 		}, 500); // 500ms debounce
 
 		return () => clearTimeout(timer);
-	}, [username, originalUsername, mounted]);
+	}, [username, originalUsername]);
 
 	// Handle profile image selection
 	const handleSelectImage = async () => {
-		if (!mounted) return;
-
 		try {
 			const permissionResult =
 				await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -295,58 +289,25 @@ export default function EditProfileScreen() {
 				quality: 0.8,
 			});
 
-			if (!mounted) return;
-
 			if (!result.canceled && result.assets && result.assets.length > 0) {
 				setAvatarUrl(result.assets[0].uri);
 			}
 		} catch (error) {
 			console.error("Error selecting image:", error);
-			if (mounted) {
-				Alert.alert("Error", "Failed to select image");
-			}
+			Alert.alert("Error", "Failed to select image");
 		}
 	};
 
-	// Handle modal opening and closing safely
+	// Handle opening photo viewer
 	const handleOpenPhotoViewer = (type: "profile" | "cover") => {
-		if (!mounted) return;
-
-		// Prevent repeated opening attempts
-		if (recentlyOpenedModalRef.current) {
-			console.log("[EDIT PROFILE] Ignoring rapid photo viewer open attempt");
-			return;
-		}
-
-		console.log(`[EDIT PROFILE] Opening photo viewer for ${type}`);
-		recentlyOpenedModalRef.current = true;
-
 		setPhotoViewerType(type);
-		// Small delay to ensure state updates before showing modal
-		setTimeout(() => {
-			if (mounted) {
-				setPhotoViewerVisible(true);
-
-				// Reset the recently opened flag after a delay
-				setTimeout(() => {
-					recentlyOpenedModalRef.current = false;
-				}, 1000);
-			}
-		}, 50);
+		setPhotoViewerVisible(true);
 	};
 
+	// Handle closing photo viewer
 	const handleClosePhotoViewer = () => {
-		if (!mounted) return;
-		console.log("[EDIT PROFILE] Closing photo viewer");
-
-		// First hide the modal
 		setPhotoViewerVisible(false);
-		// Then clear the type after a delay
-		setTimeout(() => {
-			if (mounted) {
-				setPhotoViewerType(null);
-			}
-		}, 100);
+		setPhotoViewerType(null);
 	};
 
 	// Handle photo updated from viewer
@@ -354,8 +315,6 @@ export default function EditProfileScreen() {
 		type: "profile" | "cover",
 		newUrl: string | null
 	) => {
-		if (!mounted) return;
-
 		if (type === "profile") {
 			setAvatarUrl(newUrl);
 		} else if (type === "cover") {
@@ -365,8 +324,6 @@ export default function EditProfileScreen() {
 
 	// Handle cover photo selection
 	const handleSelectCoverPhoto = async () => {
-		if (!mounted) return;
-
 		try {
 			const permissionResult =
 				await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -386,23 +343,17 @@ export default function EditProfileScreen() {
 				quality: 0.8,
 			});
 
-			if (!mounted) return;
-
 			if (!result.canceled && result.assets && result.assets.length > 0) {
 				setCoverPhotoUrl(result.assets[0].uri);
 			}
 		} catch (error) {
 			console.error("Error selecting cover photo:", error);
-			if (mounted) {
-				Alert.alert("Error", "Failed to select cover photo");
-			}
+			Alert.alert("Error", "Failed to select cover photo");
 		}
 	};
 
 	// Update user in AsyncStorage to maintain consistent state
 	const updateLocalUserData = async (updatedUser: any) => {
-		if (!mounted) return;
-
 		console.log("[EDIT PROFILE] updateLocalUserData called with:", updatedUser);
 		try {
 			const USER_KEY = "@ripply_user";
@@ -417,8 +368,6 @@ export default function EditProfileScreen() {
 			);
 
 			// Verify the save by reading it back
-			if (!mounted) return;
-
 			const savedData = await AsyncStorage.getItem(USER_KEY);
 			const parsedData = savedData ? JSON.parse(savedData) : null;
 			console.log(
@@ -435,8 +384,6 @@ export default function EditProfileScreen() {
 
 	// Handle form submission
 	const handleSave = async () => {
-		if (!mounted) return;
-
 		console.log("[EDIT PROFILE] === SAVE PROCESS STARTED ===");
 		console.log(
 			"[EDIT PROFILE] Current user:",
@@ -496,10 +443,24 @@ export default function EditProfileScreen() {
 			console.log("[EDIT PROFILE] Prepared userData for API:", userData);
 			console.log("[EDIT PROFILE] Making API call to updateUserProfile...");
 
+			// 🔥 CRITICAL DEBUG: Check auth token before API call
+			try {
+				const authToken = await AsyncStorage.getItem("@ripply_auth_token");
+				console.log("🔥 [AUTH DEBUG] Token exists:", !!authToken);
+				if (authToken) {
+					console.log(
+						"🔥 [AUTH DEBUG] Token preview:",
+						authToken.substring(0, 50) + "..."
+					);
+				} else {
+					console.log("🔥 [AUTH DEBUG] NO TOKEN FOUND IN STORAGE!");
+				}
+			} catch (tokenError) {
+				console.log("🔥 [AUTH DEBUG] Error getting token:", tokenError);
+			}
+
 			// Call API to update profile
 			const result = (await updateUserProfile(user.id, userData)) as any;
-
-			if (!mounted) return;
 
 			console.log("[EDIT PROFILE] API response received:", result);
 
@@ -532,9 +493,6 @@ export default function EditProfileScreen() {
 				// Update AsyncStorage first
 				console.log("[EDIT PROFILE] Updating AsyncStorage...");
 				await updateLocalUserData(updatedUserData);
-
-				if (!mounted) return;
-
 				console.log("[EDIT PROFILE] ✅ AsyncStorage updated");
 
 				// Update the user context immediately
@@ -550,8 +508,6 @@ export default function EditProfileScreen() {
 				// Navigate back to profile page with updated username after brief delay
 				// This gives the toast time to appear before navigation
 				setTimeout(() => {
-					if (!mounted) return;
-
 					console.log("[EDIT PROFILE] Setting up navigation...");
 					if (usernameChanged) {
 						console.log(
@@ -576,23 +532,29 @@ export default function EditProfileScreen() {
 					console.log("[EDIT PROFILE] ✅ Navigation initiated");
 				}, 100); // Brief delay to let toast appear before navigation
 			} else {
-				if (!mounted) return;
-
 				console.log(
-					"[EDIT PROFILE] ⚠️ API call returned unexpected response:",
+					"[EDIT PROFILE] ❌ API call failed - invalid response:",
 					result
 				);
-				showToast("Failed to update profile. Please try again.", "error");
+				// Show error message and stay on edit screen
+				const errorMessage = "Failed to update profile - invalid response";
+				console.log("[EDIT PROFILE] Showing error toast:", errorMessage);
+				showToast(errorMessage, "error");
 			}
-		} catch (error) {
-			if (!mounted) return;
+		} catch (error: any) {
+			console.log("[EDIT PROFILE] ❌ Exception during save:", error);
+			console.error("[EDIT PROFILE] Full error object:", error);
+			console.log("[EDIT PROFILE] Error message:", error.message);
+			console.log("[EDIT PROFILE] Error stack:", error.stack);
 
-			console.error("[EDIT PROFILE] ❌ Error updating profile:", error);
-			showToast("Failed to update profile. Please try again.", "error");
+			const errorMessage =
+				error.message || "An error occurred while updating your profile";
+			console.log("[EDIT PROFILE] Showing error toast:", errorMessage);
+			showToast(errorMessage, "error");
 		} finally {
-			if (mounted) {
-				setIsLoading(false);
-			}
+			console.log("[EDIT PROFILE] Setting loading to false");
+			setIsLoading(false);
+			console.log("[EDIT PROFILE] === SAVE PROCESS COMPLETED ===");
 		}
 	};
 
@@ -601,16 +563,14 @@ export default function EditProfileScreen() {
 		isLoading ||
 		!!usernameError ||
 		isCheckingUsername ||
-		(isUsernameEdited && !isUsernameValid);
+		(isUsernameEdited && !isUsernameValid) ||
+		!hasChanges; // Disable if no changes have been made
 
 	// If no user is logged in, redirect to login
 	if (!user) {
 		router.replace("/auth/login");
 		return null;
 	}
-
-	// If not mounted, don't render anything
-	if (!mounted) return null;
 
 	return (
 		<KeyboardAvoidingView
@@ -867,19 +827,16 @@ export default function EditProfileScreen() {
 				</Animated.View>
 			</ScrollView>
 
-			{/* Render PhotoViewerModal only when needed */}
-			{mounted && photoViewerVisible && photoViewerType && (
-				<PhotoViewerModal
-					key={`photo-viewer-${photoViewerType}-${renderKey}`}
-					visible={photoViewerVisible}
-					onClose={handleClosePhotoViewer}
-					photoType={photoViewerType}
-					imageUrl={photoViewerType === "profile" ? avatarUrl : coverPhotoUrl}
-					userId={user?.id || ""}
-					isOwnProfile={true}
-					onPhotoUpdated={handlePhotoUpdated}
-				/>
-			)}
+			{/* Photo Viewer Modal */}
+			<PhotoViewerModal
+				visible={photoViewerVisible}
+				onClose={handleClosePhotoViewer}
+				photoType={photoViewerType || "profile"}
+				imageUrl={photoViewerType === "profile" ? avatarUrl : coverPhotoUrl}
+				userId={user.id}
+				isOwnProfile={true}
+				onPhotoUpdated={handlePhotoUpdated}
+			/>
 		</KeyboardAvoidingView>
 	);
 }

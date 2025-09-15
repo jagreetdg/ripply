@@ -14,7 +14,9 @@ const {
 	LOCKOUT_DURATION,
 } = require("../middleware/accountLockout");
 const passport = require("../config/passport");
-const { handleNativeGoogleAuth } = require("../controllers/auth/nativeGoogleAuthController");
+const {
+	handleNativeGoogleAuth,
+} = require("../controllers/auth/nativeGoogleAuthController");
 
 // JWT Secret - in production, this would be an environment variable
 const JWT_SECRET =
