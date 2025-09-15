@@ -24,9 +24,7 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 		"/",
 		"/auth/login",
 		"/auth/signup",
-		"/auth/social-callback",
-		"/auth/google-callback",
-		"/auth/apple-callback",
+		"/auth/universal-callback",
 	];
 	const isPublicRoute = publicRoutes.includes(pathname);
 

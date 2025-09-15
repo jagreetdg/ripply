@@ -5,9 +5,9 @@
  */
 
 const authService = require("./authService");
-const socialAuthService = require("./socialAuthService");
+const universalAuthService = require("./universalAuthService");
 
 module.exports = {
 	authService,
-	socialAuthService,
+	universalAuthService,
 };

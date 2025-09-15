@@ -6,7 +6,6 @@ const { authenticateToken } = require("../middleware/auth");
 
 // Import controllers
 const authController = require("../controllers/auth/authController");
-const socialAuthController = require("../controllers/auth/socialAuthController");
 const universalOAuthController = require("../controllers/auth/universalOAuthController");
 
 /**
@@ -86,18 +85,7 @@ router.post("/oauth/callback", universalOAuthController.handleOAuthCallback); //
 // Test OAuth configuration
 router.get("/oauth/test", universalOAuthController.testOAuthConfig);
 
-// ===== LEGACY SOCIAL AUTH (DEPRECATED - use /oauth/ routes instead) =====
-
-// Legacy routes for backward compatibility (will be removed in future versions)
-router.get("/providers", socialAuthController.getProviders);
-router.get(
-	"/providers/:provider/status",
-	socialAuthController.getProviderStatus
-);
-router.get("/google", socialAuthController.googleAuth);
-router.get("/google/callback", socialAuthController.googleCallback);
-router.get("/apple", socialAuthController.appleAuth);
-router.get("/apple/callback", socialAuthController.appleCallback);
+// All social authentication now uses the universal OAuth 2.0 PKCE system above
 
 // ===== TEST ROUTES (for testing purposes) =====
 router.get("/test", (req, res) => {

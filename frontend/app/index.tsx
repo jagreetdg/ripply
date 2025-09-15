@@ -14,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import AuthModal from "../components/auth/AuthModal";
 import { useUser } from "../context/UserContext";
-import { useSocialAuth } from "../hooks/useSocialAuth";
+import { UniversalAuth } from "../services/api/universalAuth";
 import HeroSection from "../components/landing/HeroSection";
 import BackgroundRippleEffect from "../components/landing/BackgroundRippleEffect";
 import Colors from "../constants/Colors";
@@ -25,14 +25,37 @@ export default function LandingPage() {
 	const router = useRouter();
 
 	const { user, loading: userLoading } = useUser();
-	const {
-		isLoading: socialAuthLoading,
-		authError,
-		initiateSocialAuth,
-	} = useSocialAuth();
+	const [socialAuthLoading, setSocialAuthLoading] = useState(false);
 
 	// Combine loading states
 	const isAuthLoading = userLoading || socialAuthLoading;
+
+	// Handle universal social authentication
+	const handleSocialAuth = async (provider: string) => {
+		if (socialAuthLoading) return;
+		
+		setSocialAuthLoading(true);
+		
+		try {
+			console.log(`[Landing Page] Starting ${provider} authentication`);
+			
+			const result = await UniversalAuth.authenticateWithProvider(provider);
+			
+			if (result.success && result.user && result.token) {
+				console.log(`[Landing Page] ${provider} authentication successful`);
+				// Close any open modals and let UserContext handle the redirect
+				setLoginModalVisible(false);
+				setSignupModalVisible(false);
+			} else {
+				console.error(`[Landing Page] ${provider} authentication failed:`, result.error);
+				// You could show an error message here if desired
+			}
+		} catch (error) {
+			console.error(`[Landing Page] ${provider} authentication error:`, error);
+		} finally {
+			setSocialAuthLoading(false);
+		}
+	};
 
 	// Remove the redirect logic - RequireAuth handles this now
 
@@ -86,8 +109,8 @@ export default function LandingPage() {
 						<HeroSection
 							onShowLoginModal={handleLoginModalOpen}
 							onShowSignupModal={handleSignupModalOpen}
-							onGoogleSignIn={() => initiateSocialAuth("google")}
-							onAppleSignIn={() => initiateSocialAuth("apple")}
+							onGoogleSignIn={() => handleSocialAuth("google")}
+							onAppleSignIn={() => handleSocialAuth("apple")}
 							isAuthLoading={socialAuthLoading}
 						/>
 					</ScrollView>

@@ -5,9 +5,9 @@
  */
 
 const authController = require("./authController");
-const socialAuthController = require("./socialAuthController");
+const universalOAuthController = require("./universalOAuthController");
 
 module.exports = {
 	authController,
-	socialAuthController,
+	universalOAuthController,
 };
