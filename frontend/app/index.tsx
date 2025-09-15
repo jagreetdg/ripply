@@ -30,24 +30,77 @@ export default function LandingPage() {
 	// Combine loading states
 	const isAuthLoading = userLoading || socialAuthLoading;
 
+	// Handle OAuth token from URL parameters (web OAuth flow)
+	useEffect(() => {
+		const handleOAuthCallback = async () => {
+			if (typeof window !== "undefined") {
+				const urlParams = new URLSearchParams(window.location.search);
+				const authToken = urlParams.get("auth_token");
+				const authError = urlParams.get("auth_error");
+
+				if (authError) {
+					console.error("[Landing Page] OAuth error:", authError);
+					// Clear URL parameters
+					window.history.replaceState(
+						{},
+						document.title,
+						window.location.pathname
+					);
+					return;
+				}
+
+				if (authToken) {
+					console.log("[Landing Page] OAuth token received from URL");
+					try {
+						// Store the token
+						await UniversalAuth.storeToken(authToken);
+
+						// Clear URL parameters
+						window.history.replaceState(
+							{},
+							document.title,
+							window.location.pathname
+						);
+
+						// Close any open modals - UserContext will handle the redirect
+						setLoginModalVisible(false);
+						setSignupModalVisible(false);
+
+						console.log("[Landing Page] OAuth authentication successful");
+					} catch (error) {
+						console.error(
+							"[Landing Page] Error processing OAuth token:",
+							error
+						);
+					}
+				}
+			}
+		};
+
+		handleOAuthCallback();
+	}, []);
+
 	// Handle universal social authentication
 	const handleSocialAuth = async (provider: string) => {
 		if (socialAuthLoading) return;
-		
+
 		setSocialAuthLoading(true);
-		
+
 		try {
 			console.log(`[Landing Page] Starting ${provider} authentication`);
-			
+
 			const result = await UniversalAuth.authenticateWithProvider(provider);
-			
+
 			if (result.success && result.user && result.token) {
 				console.log(`[Landing Page] ${provider} authentication successful`);
 				// Close any open modals and let UserContext handle the redirect
 				setLoginModalVisible(false);
 				setSignupModalVisible(false);
 			} else {
-				console.error(`[Landing Page] ${provider} authentication failed:`, result.error);
+				console.error(
+					`[Landing Page] ${provider} authentication failed:`,
+					result.error
+				);
 				// You could show an error message here if desired
 			}
 		} catch (error) {

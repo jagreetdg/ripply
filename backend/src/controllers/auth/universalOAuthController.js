@@ -1,5 +1,6 @@
 const universalAuthService = require("../../services/auth/universalAuthService");
 const { setSocialAuthCookie } = require("../../utils/auth/tokenUtils");
+const path = require("path");
 
 /**
  * Universal OAuth Controller
@@ -14,6 +15,19 @@ const { setSocialAuthCookie } = require("../../utils/auth/tokenUtils");
 const initiateOAuth = async (req, res) => {
 	try {
 		const { provider } = req.params;
+
+		// Handle special routes that might be confused with provider names
+		if (
+			provider === "success" ||
+			provider === "test" ||
+			provider === "callback" ||
+			provider === "providers"
+		) {
+			return res.status(404).json({
+				error: "not_found",
+				message: "OAuth endpoint not found",
+			});
+		}
 
 		// Validate provider
 		if (!["google", "apple"].includes(provider)) {
@@ -46,12 +60,8 @@ const initiateOAuth = async (req, res) => {
 
 		console.log(`[Universal OAuth] Generated ${provider} OAuth URL`);
 
-		// For web platforms, redirect directly
-		// For mobile platforms, return URL for the app to open
-		const userAgent = req.headers["user-agent"] || "";
-		const isMobile = /Mobile|Android|iPhone|iPad/.test(userAgent);
-
-		if (isMobile || req.query.return_url === "true") {
+		// Check if this is a request for mobile (return URL) or web (redirect)
+		if (req.query.return_url === "true") {
 			// Return URL for mobile apps to handle
 			return res.json({
 				authUrl: oauthData.authUrl,
@@ -59,7 +69,8 @@ const initiateOAuth = async (req, res) => {
 				expiresAt: oauthData.expiresAt,
 			});
 		} else {
-			// Redirect web browsers directly
+			// Redirect web browsers directly - this is the standard OAuth flow
+			console.log(`[Universal OAuth] Redirecting to ${provider} OAuth URL`);
 			return res.redirect(oauthData.authUrl);
 		}
 	} catch (error) {
@@ -133,21 +144,33 @@ const handleOAuthCallback = async (req, res) => {
 		// Set secure cookie for web browsers
 		setSocialAuthCookie(res, authResult.token);
 
-		// Redirect to universal callback URL with token
-		const redirectUrl = universalAuthService.generateUniversalRedirectURL(
+		// For web browsers, redirect to the frontend with token as a URL parameter
+		// This is the standard OAuth flow - frontend will handle the token
+		const frontendUrl =
+			process.env.FRONTEND_URL || "https://ripply-app.netlify.app";
+		const redirectUrl = `${frontendUrl}/?auth_token=${encodeURIComponent(
 			authResult.token
-		);
+		)}`;
 
-		console.log("[Universal OAuth] Redirecting to:", redirectUrl);
+		console.log(
+			"[Universal OAuth] Redirecting to frontend with token:",
+			redirectUrl
+		);
 		return res.redirect(redirectUrl);
 	} catch (error) {
 		console.error("[Universal OAuth] Callback error:", error);
 
-		const redirectUrl = universalAuthService.generateUniversalRedirectURL(
-			null,
+		// For web browsers, redirect to the frontend with error
+		const frontendUrl =
+			process.env.FRONTEND_URL || "https://ripply-app.netlify.app";
+		const redirectUrl = `${frontendUrl}/?auth_error=${encodeURIComponent(
 			"callback_failed"
-		);
+		)}`;
 
+		console.log(
+			"[Universal OAuth] Redirecting to frontend with error:",
+			redirectUrl
+		);
 		return res.redirect(redirectUrl);
 	}
 };
@@ -260,4 +283,21 @@ module.exports = {
 	getAvailableProviders,
 	getProviderStatus,
 	testOAuthConfig,
+
+	/**
+	 * Show OAuth success page for web browsers
+	 * @route GET /auth/oauth-success
+	 */
+	showOAuthSuccess: (req, res) => {
+		try {
+			const filePath = path.join(__dirname, "../../views/oauth-success.html");
+			return res.sendFile(filePath);
+		} catch (error) {
+			console.error("[Universal OAuth] Error showing success page:", error);
+			return res.status(500).json({
+				error: "server_error",
+				message: "Failed to show success page",
+			});
+		}
+	},
 };

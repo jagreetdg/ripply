@@ -75,15 +75,17 @@ router.get(
 	universalOAuthController.getProviderStatus
 );
 
-// Initiate OAuth flow for any provider (Google, Apple, Facebook, etc.)
-router.get("/oauth/:provider", universalOAuthController.initiateOAuth);
-
 // Universal OAuth callback handler (handles all providers)
 router.get("/oauth/callback", universalOAuthController.handleOAuthCallback);
 router.post("/oauth/callback", universalOAuthController.handleOAuthCallback); // For Apple
 
 // Test OAuth configuration
 router.get("/oauth/test", universalOAuthController.testOAuthConfig);
+
+// Initiate OAuth flow for any provider (Google, Apple, Facebook, etc.)
+router.get("/oauth/:provider", universalOAuthController.initiateOAuth);
+
+// OAuth success page no longer needed - redirects to frontend
 
 // All social authentication now uses the universal OAuth 2.0 PKCE system above
 

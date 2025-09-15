@@ -58,36 +58,49 @@ export class UniversalAuth {
 				};
 			}
 			
-			// Get OAuth URL from backend
-			const oauthUrl = `${API_URL}/api/auth/oauth/${provider}?return_url=true`;
-			
-			console.log(`[Universal Auth] Fetching OAuth URL from: ${oauthUrl}`);
-			
-			const response = await fetch(oauthUrl, {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
-			
-			if (!response.ok) {
-				const errorData = await response.json().catch(() => ({}));
-				throw new Error(errorData.message || `Failed to get ${provider} OAuth URL`);
-			}
-			
-			const { authUrl } = await response.json();
-			
-			console.log(`[Universal Auth] Got OAuth URL: ${authUrl}`);
-			
-			// Open OAuth URL using the universal method
-			const result = await this.openOAuthURL(authUrl);
-			
-			if (!result.success) {
+			// For web platforms, redirect directly to the OAuth endpoint
+			// For mobile platforms, use WebBrowser
+			if (Platform.OS === "web") {
+				console.log(`[Universal Auth] Redirecting to ${provider} OAuth`);
+				window.location.href = `${API_URL}/api/auth/oauth/${provider}`;
+				
+				// Return a pending state - the page will redirect
+				return {
+					success: false,
+					error: "Redirecting to authentication provider...",
+				};
+			} else {
+				// For mobile, get the OAuth URL and open it in WebBrowser
+				const oauthUrl = `${API_URL}/api/auth/oauth/${provider}?return_url=true`;
+				
+				console.log(`[Universal Auth] Fetching OAuth URL from: ${oauthUrl}`);
+				
+				const response = await fetch(oauthUrl, {
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+					},
+				});
+				
+				if (!response.ok) {
+					const errorData = await response.json().catch(() => ({}));
+					throw new Error(errorData.message || `Failed to get ${provider} OAuth URL`);
+				}
+				
+				const { authUrl } = await response.json();
+				
+				console.log(`[Universal Auth] Got OAuth URL: ${authUrl}`);
+				
+				// Open OAuth URL using mobile WebBrowser
+				const result = await this.handleMobileOAuth(authUrl);
+				
+				if (!result.success) {
+					return result;
+				}
+				
+				console.log(`[Universal Auth] OAuth completed successfully`);
 				return result;
 			}
-			
-			console.log(`[Universal Auth] OAuth completed successfully`);
-			return result;
 			
 		} catch (error) {
 			console.error(`[Universal Auth] ${provider} authentication error:`, error);
@@ -99,82 +112,32 @@ export class UniversalAuth {
 	}
 	
 	/**
-	 * Open OAuth URL using the appropriate method for each platform
-	 * This is the universal method that works everywhere
+	 * This method is no longer used - authentication now uses direct redirects for web
+	 * and direct WebBrowser calls for mobile
 	 */
-	private static async openOAuthURL(authUrl: string): Promise<AuthResult> {
-		try {
-			if (Platform.OS === "web") {
-				// For web, redirect to OAuth URL and handle callback
-				return await this.handleWebOAuth(authUrl);
-			} else {
-				// For mobile (iOS/Android), use WebBrowser
-				return await this.handleMobileOAuth(authUrl);
-			}
-		} catch (error) {
-			console.error("[Universal Auth] Error opening OAuth URL:", error);
-			return {
-				success: false,
-				error: "Failed to open authentication window",
-			};
-		}
-	}
 	
 	/**
 	 * Handle OAuth for web platforms
 	 */
 	private static async handleWebOAuth(authUrl: string): Promise<AuthResult> {
-		return new Promise((resolve) => {
-			// Open OAuth in a popup window
-			const popup = window.open(
-				authUrl,
-				"oauth",
-				"width=500,height=600,scrollbars=yes,resizable=yes"
-			);
+		try {
+			// For web platforms, redirect directly to the OAuth URL
+			// This is the standard web OAuth flow - no popup needed
+			console.log("[Universal Auth] Redirecting to OAuth URL:", authUrl);
+			window.location.href = authUrl;
 			
-			if (!popup) {
-				resolve({
-					success: false,
-					error: "Failed to open authentication popup. Please check popup blocker settings.",
-				});
-				return;
-			}
-			
-			// Listen for popup completion
-			const checkClosed = setInterval(() => {
-				if (popup.closed) {
-					clearInterval(checkClosed);
-					// Check if authentication was successful
-					this.checkAuthenticationResult().then(resolve);
-				}
-			}, 1000);
-			
-			// Handle popup messages (for success/error callbacks)
-			const messageHandler = (event: MessageEvent) => {
-				if (event.origin !== new URL(API_URL).origin) {
-					return;
-				}
-				
-				clearInterval(checkClosed);
-				popup.close();
-				window.removeEventListener("message", messageHandler);
-				
-				if (event.data.type === "oauth_success") {
-					resolve({
-						success: true,
-						token: event.data.token,
-						user: event.data.user,
-					});
-				} else {
-					resolve({
-						success: false,
-						error: event.data.error || "Authentication failed",
-					});
-				}
+			// Return a pending state - the page will redirect
+			return {
+				success: false,
+				error: "Redirecting to authentication provider...",
 			};
-			
-			window.addEventListener("message", messageHandler);
-		});
+		} catch (error) {
+			console.error("[Universal Auth] Error during web OAuth redirect:", error);
+			return {
+				success: false,
+				error: "Failed to redirect to authentication provider",
+			};
+		}
 	}
 	
 	/**
@@ -297,8 +260,8 @@ export class UniversalAuth {
 	private static async getStoredToken(): Promise<string | null> {
 		try {
 			if (Platform.OS === "web") {
-				// For web, check localStorage or cookies
-				return localStorage.getItem(TOKEN_KEY);
+				// For web, check localStorage (both old and new keys)
+				return localStorage.getItem(TOKEN_KEY) || localStorage.getItem('ripply_auth_token');
 			} else {
 				// For mobile, check AsyncStorage
 				return await AsyncStorage.getItem(TOKEN_KEY);
@@ -316,6 +279,8 @@ export class UniversalAuth {
 		try {
 			if (Platform.OS === "web") {
 				localStorage.setItem(TOKEN_KEY, token);
+				// Also clean up any temporary token from OAuth success page
+				localStorage.removeItem('ripply_auth_token');
 			} else {
 				await AsyncStorage.setItem(TOKEN_KEY, token);
 			}
@@ -332,6 +297,7 @@ export class UniversalAuth {
 		try {
 			if (Platform.OS === "web") {
 				localStorage.removeItem(TOKEN_KEY);
+				localStorage.removeItem('ripply_auth_token'); // Clean up temporary token too
 			} else {
 				await AsyncStorage.removeItem(TOKEN_KEY);
 			}
