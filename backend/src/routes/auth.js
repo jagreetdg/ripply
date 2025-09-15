@@ -7,6 +7,7 @@ const { authenticateToken } = require("../middleware/auth");
 // Import controllers
 const authController = require("../controllers/auth/authController");
 const socialAuthController = require("../controllers/auth/socialAuthController");
+const universalOAuthController = require("../controllers/auth/universalOAuthController");
 
 /**
  * Refactored Auth Routes
@@ -63,20 +64,38 @@ router.get("/me", authenticateToken, authController.getCurrentUser);
 
 // ===== SOCIAL AUTHENTICATION =====
 
+// Universal OAuth 2.0 PKCE flow (industry standard)
+// Works identically across all platforms (web, iOS, Android, dev, prod)
+
 // Get available OAuth providers
-router.get("/providers", socialAuthController.getProviders);
+router.get("/oauth/providers", universalOAuthController.getAvailableProviders);
 
 // Check specific provider status
+router.get(
+	"/oauth/providers/:provider/status",
+	universalOAuthController.getProviderStatus
+);
+
+// Initiate OAuth flow for any provider (Google, Apple, Facebook, etc.)
+router.get("/oauth/:provider", universalOAuthController.initiateOAuth);
+
+// Universal OAuth callback handler (handles all providers)
+router.get("/oauth/callback", universalOAuthController.handleOAuthCallback);
+router.post("/oauth/callback", universalOAuthController.handleOAuthCallback); // For Apple
+
+// Test OAuth configuration
+router.get("/oauth/test", universalOAuthController.testOAuthConfig);
+
+// ===== LEGACY SOCIAL AUTH (DEPRECATED - use /oauth/ routes instead) =====
+
+// Legacy routes for backward compatibility (will be removed in future versions)
+router.get("/providers", socialAuthController.getProviders);
 router.get(
 	"/providers/:provider/status",
 	socialAuthController.getProviderStatus
 );
-
-// Google authentication routes
 router.get("/google", socialAuthController.googleAuth);
 router.get("/google/callback", socialAuthController.googleCallback);
-
-// Apple authentication routes
 router.get("/apple", socialAuthController.appleAuth);
 router.get("/apple/callback", socialAuthController.appleCallback);
 

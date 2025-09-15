@@ -10,6 +10,7 @@ import {
 import { useTheme } from "../../context/ThemeContext";
 import { AuthModalProps } from "./types";
 import { AuthHeader, AuthFooter, AuthForm } from "./components";
+import UniversalSocialAuthButtons from "./UniversalSocialAuthButtons";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -37,17 +38,20 @@ export default function AuthModal({
 		onClose();
 	};
 
-	// Handle Google/Apple/Facebook auth (placeholder functions)
-	const handleGoogleAuth = () => {
-		console.log("Google auth not implemented yet");
+	// Handle social authentication success
+	const handleSocialAuthSuccess = (result: { user: any; token: string }) => {
+		console.log(
+			"[Auth Modal] Social authentication successful:",
+			result.user.email
+		);
+		// Close modal and let the app handle the authenticated state
+		onClose();
 	};
 
-	const handleAppleAuth = () => {
-		console.log("Apple auth not implemented yet");
-	};
-
-	const handleFacebookAuth = () => {
-		console.log("Facebook auth not implemented yet");
+	// Handle social authentication error
+	const handleSocialAuthError = (error: string) => {
+		console.error("[Auth Modal] Social authentication error:", error);
+		// The UniversalSocialAuthButtons component will handle showing the error
 	};
 
 	return (
@@ -64,6 +68,12 @@ export default function AuthModal({
 				{/* Form */}
 				<View style={styles.formContainer}>
 					<AuthForm type={type} onAuth={handleAuth} />
+
+					{/* Universal Social Auth Buttons */}
+					<UniversalSocialAuthButtons
+						onAuthSuccess={handleSocialAuthSuccess}
+						onAuthError={handleSocialAuthError}
+					/>
 				</View>
 
 				{/* Footer */}

@@ -4,12 +4,12 @@ import { View, ActivityIndicator } from "react-native";
 
 /**
  * Main auth handler for deep links
- * Routes to appropriate callback handler based on URL structure
+ * Routes to the universal callback handler for all OAuth providers
  *
  * Deep link formats:
- * ripply://auth?error=...
- * ripply://auth/google-callback?token=...
- * ripply://auth/apple-callback?token=...
+ * ripply://auth/callback?token=... (Universal - handles all providers)
+ * ripply://auth/callback?error=... (Universal error handling)
+ * ripply://auth?error=... (Legacy error handling)
  */
 export default function AuthIndex() {
 	const router = useRouter();
@@ -18,29 +18,22 @@ export default function AuthIndex() {
 	useEffect(() => {
 		console.log("[Auth Index] Deep link received with params:", params);
 
-		// Handle error cases
-		if (params.error) {
-			console.log("[Auth Index] Error parameter found, redirecting to login");
-			router.replace(`/auth/login?error=${params.error}`);
-			return;
-		}
+		// Handle universal OAuth callback (token or error)
+		if (params.token || params.error) {
+			console.log(
+				"[Auth Index] OAuth callback detected, routing to universal callback"
+			);
+			const queryParams = new URLSearchParams();
 
-		// Handle token callbacks - check if this is a provider callback
-		if (params.token) {
-			// Check the current path to determine provider
-			const currentUrl = router.toString();
-			console.log("[Auth Index] Current URL:", currentUrl);
-
-			if (currentUrl.includes("google-callback")) {
-				console.log("[Auth Index] Routing to Google callback");
-				router.replace(`/auth/google-callback?token=${params.token}`);
-			} else if (currentUrl.includes("apple-callback")) {
-				console.log("[Auth Index] Routing to Apple callback");
-				router.replace(`/auth/apple-callback?token=${params.token}`);
-			} else {
-				console.log("[Auth Index] Generic social callback");
-				router.replace(`/auth/social-callback?token=${params.token}`);
+			if (params.token) {
+				queryParams.set("token", params.token as string);
 			}
+
+			if (params.error) {
+				queryParams.set("error", params.error as string);
+			}
+
+			router.replace(`/auth/universal-callback?${queryParams.toString()}`);
 			return;
 		}
 
