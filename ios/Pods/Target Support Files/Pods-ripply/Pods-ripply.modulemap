@@ -1,0 +1,6 @@
+module Pods_ripply {
+  umbrella header "Pods-ripply-umbrella.h"
+
+  export *
+  module * { export * }
+}
