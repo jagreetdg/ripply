@@ -129,10 +129,23 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 	);
 };
 
+// Create a fallback animation value
+const fallbackAnimation = new Animated.Value(0);
+
 export const useTheme = () => {
 	const context = useContext(ThemeContext);
 	if (context === undefined) {
-		throw new Error("useTheme must be used within a ThemeProvider");
+		// Provide fallback instead of throwing error to prevent crashes
+		console.warn(
+			"useTheme called outside ThemeProvider, using fallback colors"
+		);
+		return {
+			theme: "light" as ThemeMode,
+			isDarkMode: false,
+			colors: Colors.light,
+			setTheme: () => {},
+			animation: fallbackAnimation,
+		};
 	}
 	return context;
 };

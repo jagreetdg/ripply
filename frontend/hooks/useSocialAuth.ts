@@ -17,51 +17,30 @@ export const useSocialAuth = () => {
         setAuthError(null);
         
         try {
-            console.log("🚀 [SOCIAL AUTH DEBUG] Starting social auth for:", provider);
-            
-            // Add client=mobile parameter for mobile platforms
-            const authUrl = Platform.OS === "web" 
-                ? `${API_URL}/api/auth/${provider}`
-                : `${API_URL}/api/auth/${provider}?client=mobile`;
-            
-            console.log("🌐 [SOCIAL AUTH DEBUG] Auth URL:", authUrl);
+            const authUrl = `${API_URL}/api/auth/${provider}`;
             
             if (Platform.OS === "web") {
                 // For web, redirect to the auth URL
                 window.location.href = authUrl;
             } else {
-                console.log("📱 [SOCIAL AUTH DEBUG] Opening WebBrowser with mobile client param");
-                
-                // Add timeout wrapper to prevent infinite hanging
-                const authPromise = WebBrowser.openAuthSessionAsync(
+                // For native, use WebBrowser
+                const result = await WebBrowser.openAuthSessionAsync(
                     authUrl,
                     "ripply://",
                     {
                         showInRecents: false,
-                        preferEphemeralSession: false, // Try persistent session
+                        preferEphemeralSession: true,
                         dismissButtonStyle: "cancel",
                     }
                 );
-                
-                // Add 60 second timeout
-                const timeoutPromise = new Promise((resolve) => {
-                    setTimeout(() => {
-                        console.log("⏰ [SOCIAL AUTH DEBUG] WebBrowser timeout reached (60s)");
-                        resolve({ type: "timeout" });
-                    }, 60000);
-                });
-                
-                const result = await Promise.race([authPromise, timeoutPromise]);
-
-                console.log("📱 [SOCIAL AUTH DEBUG] WebBrowser result:", JSON.stringify(result, null, 2));
 
                 if (result.type === "success") {
-                    console.log(`✅ [SOCIAL AUTH DEBUG] ${provider} auth success:`, result.url);
+                    console.log(`[Auth Flow] ${provider} auth success:`, result.url);
                 } else if (result.type === "cancel" || result.type === "dismiss") {
-                    console.log(`❌ [SOCIAL AUTH DEBUG] ${provider} auth cancelled by user`);
+                    console.log(`[Auth Flow] ${provider} auth cancelled by user`);
                     setIsLoading(false);
                 } else {
-                    console.warn(`💥 [SOCIAL AUTH DEBUG] ${provider} auth unexpected result:`, result.type);
+                    console.warn(`[Auth Flow] ${provider} auth unexpected result:`, result.type);
                     setAuthError(`Authentication failed. Please try again.`);
                     setIsLoading(false);
                 }

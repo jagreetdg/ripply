@@ -62,48 +62,22 @@ const handleAppleAuth = async (user) => {
  * @param {string} error - Error message if any
  * @returns {string} Redirect URL
  */
-const buildOAuthRedirectUrl = (
-	provider,
-	token = null,
-	error = null,
-	req = null
-) => {
-	// Detect if this is a mobile request by checking state param (preserved through OAuth)
-	const stateParam = req?.query?.state;
-	const isMobileRequest = stateParam === "mobile";
+const buildOAuthRedirectUrl = (provider, token = null, error = null) => {
+	const baseUrl =
+		process.env.FRONTEND_URL ||
+		(process.env.NODE_ENV === "production"
+			? "https://ripply-app.netlify.app"
+			: "http://localhost:8081");
 
-	// Fallback to User-Agent if no param
-	const userAgent = req?.headers["user-agent"] || "";
-	const isWebRequest =
-		!isMobileRequest &&
-		userAgent.includes("Mozilla") &&
-		!userAgent.includes("Expo");
-
-	console.log("[OAuth] State param:", stateParam);
-	console.log("[OAuth] User-Agent:", userAgent);
-	console.log("[OAuth] Is mobile request:", isMobileRequest);
-	console.log("[OAuth] Is web request:", isWebRequest);
-
-	if (isWebRequest) {
-		// Web requests go to frontend URL
-		const baseUrl = process.env.FRONTEND_URL || "http://localhost:8081";
-		if (error) {
-			return `${baseUrl}/?error=${error}`;
-		}
-		if (token) {
-			return `${baseUrl}/auth/${provider}-callback?token=${token}`;
-		}
-		return `${baseUrl}/?error=auth_failed`;
-	} else {
-		// Mobile/app requests use deep linking
-		if (error) {
-			return `ripply://auth/social-callback?error=${error}`;
-		}
-		if (token) {
-			return `ripply://auth/${provider}-callback?token=${token}`;
-		}
-		return `ripply://auth/social-callback?error=auth_failed`;
+	if (error) {
+		return `${baseUrl}/?error=${error}`;
 	}
+
+	if (token) {
+		return `${baseUrl}/auth/${provider}-callback?token=${token}`;
+	}
+
+	return `${baseUrl}/?error=auth_failed`;
 };
 
 /**

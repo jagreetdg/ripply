@@ -12,10 +12,6 @@ import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import AuthModal from "../components/auth/AuthModal";
 import { useAuthHandler } from "../hooks/useAuthHandler";
-import { useNativeGoogleAuth } from "../hooks/useNativeGoogleAuth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useUser } from "../context/UserContext";
-import { useRouter } from "expo-router";
 import HeroSection from "../components/landing/HeroSection";
 import BackgroundRippleEffect from "../components/landing/BackgroundRippleEffect";
 
@@ -23,45 +19,12 @@ export default function LandingPage() {
 	const [loginModalVisible, setLoginModalVisible] = useState(false);
 	const [signupModalVisible, setSignupModalVisible] = useState(false);
 
-	const router = useRouter();
-	const { setUser } = useUser();
-
 	const {
 		user,
 		isLoading: isAuthLoading,
 		authError,
 		initiateSocialAuth,
 	} = useAuthHandler();
-
-	// Native Google Sign-In
-	const {
-		signInWithGoogle,
-		isLoading: isGoogleLoading,
-		authError: googleAuthError,
-	} = useNativeGoogleAuth();
-
-	// Handle native Google Sign-In
-	const handleNativeGoogleSignIn = async () => {
-		console.log("🚀 [LANDING] Starting native Google Sign-In");
-
-		const result = await signInWithGoogle();
-
-		if (result.success) {
-			console.log("✅ [LANDING] Native Google Sign-In successful");
-
-			// Store token
-			await AsyncStorage.setItem("@ripply_auth_token", result.token);
-			await AsyncStorage.setItem("@ripply_user", JSON.stringify(result.user));
-
-			// Update user context
-			setUser(result.user);
-
-			// Navigate to home
-			router.replace("/(tabs)/home");
-		} else {
-			console.error("❌ [LANDING] Native Google Sign-In failed:", result.error);
-		}
-	};
 
 	const handleLoginModalOpen = () => {
 		setLoginModalVisible(true);
@@ -109,9 +72,9 @@ export default function LandingPage() {
 						<HeroSection
 							onShowLoginModal={handleLoginModalOpen}
 							onShowSignupModal={handleSignupModalOpen}
-							onGoogleSignIn={handleNativeGoogleSignIn}
+							onGoogleSignIn={() => initiateSocialAuth("google")}
 							onAppleSignIn={() => initiateSocialAuth("apple")}
-							isAuthLoading={isGoogleLoading || isAuthLoading}
+							isAuthLoading={isAuthLoading}
 						/>
 					</ScrollView>
 				</SafeAreaView>

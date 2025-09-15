@@ -759,7 +759,7 @@ export function ProfileHeader({
 								<MaterialIcons
 									name="verified"
 									size={18}
-									color={colors.tint}
+									color={colors.primary}
 									style={styles.verifiedBadge}
 								/>
 							)}
@@ -900,7 +900,7 @@ export function ProfileHeader({
 			<PhotoViewerModal
 				visible={modalVisible}
 				onClose={() => setModalVisible(false)}
-				photoType={activePhoto || "profile"}
+				photoType={activePhoto}
 				imageUrl={
 					activePhoto === "profile" ? localAvatarUrl : localCoverPhotoUrl
 				}

@@ -6,10 +6,18 @@ import {
 	Pressable,
 	Dimensions,
 	Platform,
+	Text,
 } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
-import type { AuthModalProps } from "./types";
-import { AuthHeader, AuthFooter, AuthForm } from "./components/index";
+import SocialAuthButtons from "./SocialAuthButtons";
+
+type AuthModalProps = {
+	isVisible: boolean;
+	onClose: () => void;
+	type: "login" | "signup";
+	onSwitchToLogin: () => void;
+	onSwitchToSignup: () => void;
+};
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -37,7 +45,21 @@ export default function AuthModal({
 		onClose();
 	};
 
-	// Social auth removed from modal - use the buttons in HeroSection instead
+	// Handle Google/Apple/Facebook auth using the working implementation
+	const handleGoogleAuth = () => {
+		console.log("Starting Google authentication...");
+		// SocialAuthButtons component handles the actual implementation
+	};
+
+	const handleAppleAuth = () => {
+		console.log("Starting Apple authentication...");
+		// SocialAuthButtons component handles the actual implementation
+	};
+
+	const handleFacebookAuth = () => {
+		console.log("Starting Facebook authentication...");
+		// SocialAuthButtons component handles the actual implementation
+	};
 
 	return (
 		<Modal
@@ -47,27 +69,24 @@ export default function AuthModal({
 			onRequestClose={handleClose}
 		>
 			<View style={[styles.container, { backgroundColor: colors.background }]}>
-				{/* Header */}
-				<AuthHeader type={type} onClose={handleClose} />
-
-				{/* Form */}
-				<View style={styles.formContainer}>
-					<AuthForm type={type} onAuth={handleAuth} />
+				{/* Header with close button */}
+				<View style={styles.header}>
+					<Text style={[styles.title, { color: colors.text }]}>
+						{type === "login" ? "Sign In" : "Sign Up"}
+					</Text>
+					<Pressable onPress={handleClose} style={styles.closeButton}>
+						<Text style={[styles.closeText, { color: colors.text }]}>✕</Text>
+					</Pressable>
 				</View>
 
-				{/* Footer */}
-				<AuthFooter
-					type={type}
-					onSwitchToLogin={onSwitchToLogin}
-					onSwitchToSignup={onSwitchToSignup}
-				/>
-
-				{/* Background overlay for modal */}
-				<Pressable
-					style={styles.overlay}
-					onPress={handleClose}
-					pointerEvents="none"
-				/>
+				{/* Social Auth - Simple and Effective */}
+				<View style={styles.content}>
+					<SocialAuthButtons
+						onGoogleAuth={handleGoogleAuth}
+						onAppleAuth={handleAppleAuth}
+						onFacebookAuth={handleFacebookAuth}
+					/>
+				</View>
 			</View>
 		</Modal>
 	);
@@ -84,11 +103,27 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 		marginTop: Platform.OS === "web" ? screenHeight * 0.05 : 0,
 	},
-	formContainer: {
-		flex: 1,
+	header: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		padding: 20,
+		paddingTop: 40,
 	},
-	overlay: {
-		...StyleSheet.absoluteFillObject,
-		backgroundColor: "transparent",
+	title: {
+		fontSize: 24,
+		fontWeight: "bold",
+	},
+	closeButton: {
+		padding: 10,
+	},
+	closeText: {
+		fontSize: 18,
+		fontWeight: "bold",
+	},
+	content: {
+		flex: 1,
+		paddingHorizontal: 20,
+		justifyContent: "center",
 	},
 });

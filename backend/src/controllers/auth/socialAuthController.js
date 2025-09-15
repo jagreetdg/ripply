@@ -10,24 +10,10 @@ const { setSocialAuthCookie } = require("../../utils/auth/tokenUtils");
  * Google authentication route
  * @route GET /auth/google
  */
-const googleAuth = (req, res, next) => {
-	// Check if this is a mobile request and pass it in state
-	const clientParam = req.query.client;
-	const state = clientParam === "mobile" ? "mobile" : "web";
-
-	console.log(
-		"[Google OAuth] Initial request - client param:",
-		clientParam,
-		"state:",
-		state
-	);
-
-	passport.authenticate("google", {
-		scope: ["profile", "email"],
-		prompt: "select_account", // Force Google to show account selection screen instead of auto-login
-		state: state, // Pass client type in state parameter
-	})(req, res, next);
-};
+const googleAuth = passport.authenticate("google", {
+	scope: ["profile", "email"],
+	prompt: "select_account", // Force Google to show account selection screen instead of auto-login
+});
 
 /**
  * Google callback route
@@ -51,8 +37,7 @@ const googleCallback = [
 				const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
 					"google",
 					null,
-					"auth_error",
-					req
+					"auth_error"
 				);
 				return res.redirect(redirectUrl);
 			}
@@ -73,8 +58,7 @@ const googleCallback = [
 				const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
 					"google",
 					null,
-					"auth_failed",
-					req
+					"auth_failed"
 				);
 				return res.redirect(redirectUrl);
 			}
@@ -100,9 +84,7 @@ const googleCallback = [
 			// Redirect to frontend with token
 			const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
 				"google",
-				authResult.token,
-				null,
-				req
+				authResult.token
 			);
 
 			console.log("[Google OAuth] Redirecting to:", redirectUrl);
@@ -114,8 +96,7 @@ const googleCallback = [
 			const redirectUrl = socialAuthService.buildOAuthRedirectUrl(
 				"google",
 				null,
-				"auth_failed",
-				req
+				"auth_failed"
 			);
 			res.redirect(redirectUrl);
 		}

@@ -25,7 +25,7 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
 	const router = useRouter();
-	const { colors } = useTheme(); // Get current theme colors
+	const { colors } = useTheme();
 	const insets = useSafeAreaInsets();
 	const pathname = usePathname();
 

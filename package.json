@@ -6,6 +6,15 @@
     "@supabase/supabase-js": "^2.49.4",
     "dotenv": "^16.5.0",
     "expo-font": "^13.3.1",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "expo": "~53.0.22",
+    "react": "19.0.0",
+    "react-native": "0.79.6"
+  },
+  "name": "ripply",
+  "version": "1.0.0",
+  "scripts": {
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   }
 }

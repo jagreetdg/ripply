@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
 	progressBar: {
 		height: "100%",
 		borderRadius: 2,
-		// transition: "width 0.3s ease", // Web-only property
+		transition: "width 0.3s ease",
 	},
 	recordingIndicator: {
 		flexDirection: "row",

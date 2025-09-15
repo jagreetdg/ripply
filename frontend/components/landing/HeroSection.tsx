@@ -242,9 +242,15 @@ const styles = StyleSheet.create({
 		color: "#FFFFFF",
 		marginBottom: 16,
 		textAlign: "center",
-		textShadowColor: "rgba(138, 79, 209, 0.6)",
-		textShadowOffset: { width: 0, height: 2 },
-		textShadowRadius: 10,
+		...(Platform.OS === "web"
+			? {
+					textShadow: "0px 2px 10px rgba(138, 79, 209, 0.6)",
+			  }
+			: {
+					textShadowColor: "rgba(138, 79, 209, 0.6)",
+					textShadowOffset: { width: 0, height: 2 },
+					textShadowRadius: 10,
+			  }),
 		letterSpacing: 1,
 		// opacity: titleAnim, // This was part of Animated.Text style prop directly
 	},

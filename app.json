@@ -1,0 +1,8 @@
+{
+  "android": {
+    "package": "com.anonymous.ripply"
+  },
+  "ios": {
+    "bundleIdentifier": "com.anonymous.ripply"
+  }
+}

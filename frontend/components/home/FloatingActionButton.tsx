@@ -1,5 +1,10 @@
 import React from "react";
-import { TouchableOpacity, StyleSheet, ViewStyle } from "react-native";
+import {
+	TouchableOpacity,
+	StyleSheet,
+	ViewStyle,
+	Platform,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { EdgeInsets } from "react-native-safe-area-context";
 
@@ -54,9 +59,15 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		alignItems: "center",
 		elevation: 5,
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.3,
-		shadowRadius: 3,
+		...(Platform.OS === "web"
+			? {
+					boxShadow: "0px 2px 3px rgba(0, 0, 0, 0.3)",
+			  }
+			: {
+					shadowColor: "#000",
+					shadowOffset: { width: 0, height: 2 },
+					shadowOpacity: 0.3,
+					shadowRadius: 3,
+			  }),
 	},
 });

@@ -71,7 +71,7 @@ export function PhotoViewerModal({
 				<View style={styles.container}>
 					<PhotoViewerHeader onClose={onClose} />
 					<PhotoViewerImage
-						imageUrl={imageUrl || ""}
+						imageUrl={imageUrl}
 						fallbackImageUrl={getFallbackImageUrl(
 							userId,
 							"",

@@ -50,11 +50,11 @@ export const followUser = async (userId, followerId) => {
 };
 
 /**
- * Get voice notes for a user
+ * Get voice notes for a user (from user service perspective)
  * @param {string} userId - User ID
  * @returns {Promise<Array>} - List of voice notes
  */
-export const getUserVoiceNotes = async (userId) => {
+export const getUserVoiceNotesFromProfile = async (userId) => {
 	const response = await apiRequest(`${ENDPOINTS.USERS}/${userId}/voice-notes`);
 
 	// Extract just the voice notes array from the response

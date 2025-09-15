@@ -24,7 +24,7 @@ import {
 	checkShareStatus,
 } from "../../../services/api/voiceNoteService";
 import {
-	getUserVoiceNotes as getVoiceNotesForUser,
+	getUserVoiceNotesFromProfile as getVoiceNotesForUser,
 	getUserSharedVoiceNotes as getSharedVoiceNotesForUser,
 } from "../../../services/api/userService";
 import { useTheme } from "../../../context/ThemeContext";

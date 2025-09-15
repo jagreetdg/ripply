@@ -14,9 +14,6 @@ const {
 	LOCKOUT_DURATION,
 } = require("../middleware/accountLockout");
 const passport = require("../config/passport");
-const {
-	handleNativeGoogleAuth,
-} = require("../controllers/auth/nativeGoogleAuthController");
 
 // JWT Secret - in production, this would be an environment variable
 const JWT_SECRET =
@@ -339,9 +336,6 @@ router.post("/login", async (req, res) => {
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 });
-
-// Native Google Sign-In endpoint
-router.post("/google/native", handleNativeGoogleAuth);
 
 // Logout endpoint
 router.post("/logout", (req, res) => {

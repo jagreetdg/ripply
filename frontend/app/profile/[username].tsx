@@ -15,7 +15,7 @@ import { ProfileHeader } from "../../components/profile/ProfileHeader";
 import { VoiceNotesList } from "../../components/profile/voice-notes-list/VoiceNotesList";
 import {
 	getUserProfileByUsername,
-	getUserVoiceNotes,
+	getUserVoiceNotesFromProfile as getUserVoiceNotes,
 	getUserSharedVoiceNotes,
 	getFollowerCount,
 	getFollowingCount,

@@ -93,7 +93,7 @@ export const useSignupValidation = (): ValidationState & ValidationActions => {
             setUsernameError('Username is already taken');
             setIsUsernameValid(false);
           }
-        } catch (error: any) {
+        } catch (error: Error) {
           console.error('Error checking username:', error);
         } finally {
           setIsCheckingUsername(false);
@@ -129,7 +129,7 @@ export const useSignupValidation = (): ValidationState & ValidationActions => {
             setEmailError('Email is already registered');
             setIsEmailValid(false);
           }
-        } catch (error: any) {
+        } catch (error: Error) {
           console.error('Error checking email:', error);
         } finally {
           setIsCheckingEmail(false);

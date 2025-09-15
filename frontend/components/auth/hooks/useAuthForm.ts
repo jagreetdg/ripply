@@ -190,7 +190,7 @@ export const useAuthForm = (type: AuthType) => {
         setError('Authentication failed. Please try again.');
         return false;
       }
-	} catch (err: any) {
+    } catch (err: ApiError) {
       console.error('Authentication error:', err);
       
       if (err.response?.data?.message) {
