@@ -85,6 +85,12 @@ router.get("/oauth/test", universalOAuthController.testOAuthConfig);
 // Initiate OAuth flow for any provider (Google, Apple, Facebook, etc.)
 router.get("/oauth/:provider", universalOAuthController.initiateOAuth);
 
+// Native Google Sign-In (mobile apps) - exchange idToken for app JWT
+router.post(
+	"/oauth/google/native",
+	universalOAuthController.handleGoogleNativeLogin
+);
+
 // OAuth success page no longer needed - redirects to frontend
 
 // All social authentication now uses the universal OAuth 2.0 PKCE system above

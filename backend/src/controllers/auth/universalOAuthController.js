@@ -1,5 +1,9 @@
 const universalAuthService = require("../../services/auth/universalAuthService");
-const { setSocialAuthCookie } = require("../../utils/auth/tokenUtils");
+const {
+	setSocialAuthCookie,
+	generateToken,
+} = require("../../utils/auth/tokenUtils");
+const authService = require("../../services/auth/authService");
 const path = require("path");
 
 /**
@@ -283,6 +287,93 @@ module.exports = {
 	getAvailableProviders,
 	getProviderStatus,
 	testOAuthConfig,
+
+	/**
+	 * Native Google Sign-In: exchange Google idToken for app JWT
+	 * @route POST /auth/oauth/google/native
+	 * body: { idToken: string }
+	 */
+	handleGoogleNativeLogin: async (req, res) => {
+		try {
+			const { idToken } = req.body || {};
+			if (!idToken) {
+				return res
+					.status(400)
+					.json({ error: "missing_id_token", message: "idToken is required" });
+			}
+
+			// Verify the Google ID token using Google's tokeninfo endpoint
+			// For production-grade verification, validate via Google certs and audience.
+			const verifyResp = await fetch(
+				`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(
+					idToken
+				)}`
+			);
+			if (!verifyResp.ok) {
+				return res
+					.status(401)
+					.json({
+						error: "invalid_id_token",
+						message: "Google token verification failed",
+					});
+			}
+			const payload = await verifyResp.json();
+
+			// Basic audience check when env present
+			if (
+				process.env.GOOGLE_CLIENT_ID &&
+				payload.aud &&
+				payload.aud !== process.env.GOOGLE_CLIENT_ID
+			) {
+				return res
+					.status(401)
+					.json({
+						error: "invalid_audience",
+						message: "Token audience does not match",
+					});
+			}
+
+			// Map payload to a profile-like object used by authService
+			const profile = {
+				id: payload.sub,
+				email: payload.email,
+				displayName: payload.name,
+				name: payload.name,
+				picture: payload.picture,
+			};
+
+			// Try to find existing user by email
+			let user = await authService.findUserByEmail(profile.email);
+			if (!user) {
+				user = await authService.createSocialUser(profile, "google");
+			} else if (!user.google_id) {
+				// Attach google_id if missing
+				const { supabaseAdmin } = require("../../config/supabase");
+				await supabaseAdmin
+					.from("users")
+					.update({
+						google_id: profile.id,
+						updated_at: new Date().toISOString(),
+					})
+					.eq("id", user.id);
+				user.google_id = profile.id;
+			}
+
+			// Issue app JWT
+			const token = generateToken(user);
+			await authService.updateLastLogin(user.id);
+
+			return res.json({ success: true, token, user });
+		} catch (error) {
+			console.error("[Universal OAuth] Google native login error:", error);
+			return res
+				.status(500)
+				.json({
+					error: "server_error",
+					message: "Failed to sign in with Google",
+				});
+		}
+	},
 
 	/**
 	 * Show OAuth success page for web browsers
