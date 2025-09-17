@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
+import { signInWithGoogleNative } from "../auth/googleNative";
 
 /**
  * Universal Authentication Service
@@ -48,7 +49,30 @@ export class UniversalAuth {
 	static async authenticateWithProvider(provider: string): Promise<AuthResult> {
 		try {
 			console.log(`[Universal Auth] Starting ${provider} authentication`);
-			
+
+			// Native Google Sign-In path for mobile
+			if (Platform.OS !== "web" && provider === "google") {
+				const native = await signInWithGoogleNative();
+				if (native.idToken) {
+					// Exchange idToken with backend for app auth token
+					const exchangeResp = await fetch(`${API_URL}/api/auth/oauth/google/native`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ idToken: native.idToken }),
+					});
+					if (!exchangeResp.ok) {
+						const errData = await exchangeResp.json().catch(() => ({}));
+						return { success: false, error: errData.message || "Google token exchange failed" };
+					}
+					const { token, user } = await exchangeResp.json();
+					if (token) {
+						await AsyncStorage.setItem(TOKEN_KEY, token);
+						return { success: true, token, user };
+					}
+				}
+				// If no idToken (cancelled or error), fall through to universal OAuth flow for completeness
+			}
+
 			// For web platforms, redirect directly to the OAuth endpoint
 			// Skip provider check to avoid delay - let backend handle validation
 			if (Platform.OS === "web") {

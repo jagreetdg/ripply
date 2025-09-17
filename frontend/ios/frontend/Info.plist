@@ -31,6 +31,12 @@
           <string>com.ripply.app</string>
         </array>
       </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.341363879666-aklnvkpa9lr5agvg8hhae5fh90ev3g5h</string>
+        </array>
+      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>1</string>
